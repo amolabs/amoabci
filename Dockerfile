@@ -1,7 +1,7 @@
 FROM golang:alpine as builder
 
 ENV PACKAGES make git libc-dev bash gcc linux-headers eudev-dev
-ENV DIR /go/src/github.com/FelixSeol/AMOtestnet/blockchain
+ENV DIR /go/src/github.com/amolabs/amoabci
 
 WORKDIR $DIR
 
@@ -18,7 +18,7 @@ RUN apk add --update ca-certificates
 
 WORKDIR /root
 
-COPY --from=builder /go/src/github.com/FelixSeol/AMOtestnet/blockchain/amod /usr/bin/amod
+COPY --from=builder /go/src/github.com/amolabs/amoabci/amod /usr/bin/amod
 
 EXPOSE 26656 26657 26658
 
