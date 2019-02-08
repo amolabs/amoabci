@@ -1,0 +1,279 @@
+package amo
+
+import (
+	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"github.com/amolabs/amoabci/amo/types"
+	abci "github.com/tendermint/tendermint/abci/types"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/version"
+	"strconv"
+)
+
+var (
+	stateKey                          = []byte("stateKey")
+	kvPairPrefixKey                   = []byte("kvPairKey:")
+	accountPrefixKey                  = []byte("accountKey:")
+	fileBuyerPrefixKey                = []byte("buyerKey:")
+	ProtocolVersion  version.Protocol = 0x1
+)
+
+type State struct {
+	db      dbm.DB
+	Size    int64  `json:"size"`
+	Height  int64  `json:"height"`
+	AppHash []byte `json:"app_hash"`
+}
+
+func loadState(db dbm.DB) State {
+	stateBytes := db.Get(stateKey)
+	var state State
+	if len(stateBytes) != 0 {
+		err := json.Unmarshal(stateBytes, &state)
+		if err != nil {
+			panic(err)
+		}
+	}
+	state.db = db
+	return state
+}
+
+func saveState(state State) {
+	stateBytes, err := json.Marshal(state)
+	if err != nil {
+		panic(err)
+	}
+	state.db.Set(stateKey, stateBytes)
+}
+
+func prefixKey(key []byte) []byte {
+	return append(kvPairPrefixKey, key...)
+}
+
+func accountFixKey(key []byte) []byte {
+	return append(accountPrefixKey, key...)
+}
+
+func buyerFixKey(key []byte) []byte {
+	return append(fileBuyerPrefixKey, key...)
+}
+
+var _ abci.Application = (*AMOApplication)(nil)
+
+type AMOApplication struct {
+	abci.BaseApplication
+	state State
+}
+
+func NewAMOApplication(db dbm.DB) *AMOApplication {
+	state := loadState(db)
+	app := &AMOApplication{state: state}
+	(*app).SetAccount(&types.Account{
+		Address: types.Address("aaaaa"),
+		Balance: 3000,
+		PurchasedFiles: make(types.HashSet, 0),
+	})
+	return app
+}
+
+func (app *AMOApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
+	return abci.ResponseInfo{
+		Data:       fmt.Sprintf("{\"size\":%v}", app.state.Size),
+		Version:    version.ABCIVersion,
+		AppVersion: ProtocolVersion.Uint64(),
+	}
+}
+
+func (app *AMOApplication) GetUint32(key string) uint32 {
+	bytes := app.state.db.Get(prefixKey([]byte(key)))
+	if bytes == nil {
+		return 0
+	} else {
+		return binary.LittleEndian.Uint32(bytes)
+	}
+}
+
+func (app *AMOApplication) SetUint32(key string, value uint32) {
+	bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bytes, value)
+	app.state.db.Set(prefixKey([]byte(key)), bytes)
+}
+
+func (app *AMOApplication) GetAccount(key types.Address) types.Account {
+	value := app.state.db.Get(accountFixKey([]byte(key)))
+	if value == nil {
+		return types.Account{
+			Address: types.Address(key),
+			Balance: 0,
+			PurchasedFiles: make(types.HashSet, 0),
+		}
+	}
+	var account types.Account
+	err := json.Unmarshal(value, &account)
+	if err != nil {
+		panic(err)
+	}
+	return account
+}
+
+func (app *AMOApplication) SetAccount(account *types.Account) {
+	value, _ := json.Marshal(account)
+	app.state.db.Set(accountFixKey([]byte(string((*account).Address))), value)
+}
+
+func (app *AMOApplication) SetBuyer(fileHash types.Hash, addressSet *types.AddressSet) {
+	value, _ := json.Marshal(addressSet)
+	app.state.db.Set(buyerFixKey(fileHash[:]), value)
+}
+
+func (app *AMOApplication) GetBuyer(fileHash types.Hash) types.AddressSet {
+	value := app.state.db.Get(buyerFixKey(fileHash[:]))
+	addressSet := types.AddressSet{}
+	if value != nil {
+		err := json.Unmarshal(value, &addressSet)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return addressSet
+}
+
+func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
+	message, payload := types.ParseTx(tx)
+	var tags []cmn.KVPair
+	var resCode = TxCodeOK
+
+	switch message.Type {
+	case types.TxTransfer:
+		transfer, _ := payload.(*types.Transfer)
+		resCode, tags = app.procTransfer(transfer)
+	case types.TxPurchase:
+		purchase, _ := payload.(*types.Purchase)
+		resCode, tags = app.procPurchase(purchase)
+	}
+	return abci.ResponseDeliverTx{Code: resCode, Tags: tags}
+}
+
+func (app *AMOApplication) procTransfer(transfer *types.Transfer) (uint32, []cmn.KVPair) {
+	from := app.GetAccount(transfer.From)
+	to := app.GetAccount(transfer.To)
+	from.Balance -= transfer.Amount
+	to.Balance += transfer.Amount
+	app.SetAccount(&from)
+	app.SetAccount(&to)
+	app.state.Size += 1
+	tags := []cmn.KVPair{
+		{Key: []byte(transfer.From), Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
+		{Key: []byte(transfer.To), Value: []byte(strconv.FormatUint(uint64(to.Balance), 10))},
+	}
+	return TxCodeOK, tags
+}
+
+func (app *AMOApplication) procPurchase(purchase *types.Purchase) (uint32, []cmn.KVPair) {
+	var metaData types.PDSNMetaData
+	err := types.RequestMetaData(purchase.FileHash, &metaData)
+	if err != nil {
+		panic(err)
+	}
+	from := app.GetAccount(purchase.From)
+	from.Balance -= metaData.Price
+	from.PurchasedFiles[metaData.FileHash] = true
+	app.SetAccount(&from)
+	buyer := app.GetBuyer(metaData.FileHash)
+	buyer[from.Address] = true
+	app.SetBuyer(metaData.FileHash, &buyer)
+	result, err := json.Marshal(metaData)
+	if err != nil {
+		panic(err)
+	}
+	tags := []cmn.KVPair {
+		{Key: []byte(hex.EncodeToString(metaData.FileHash[:])), Value: result},
+		{Key: []byte(purchase.From), Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
+	}
+	return TxCodeOK, tags
+}
+
+func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
+	message, payload := types.ParseTx(tx)
+	var resCode = TxCodeOK
+
+	switch message.Type {
+	case types.TxTransfer:
+		transfer, _ := payload.(*types.Transfer)
+		from := app.GetAccount(transfer.From)
+		to := app.GetAccount(transfer.To)
+		if from.Balance < transfer.Amount {
+			resCode = TxCodeNotEnoughBalance
+			break
+		}
+		if from.Address == to.Address {
+			resCode = TxCodeSelfTransaction
+			break
+		}
+	case types.TxPurchase:
+		purchase, _ := payload.(*types.Purchase)
+		var metaData types.PDSNMetaData
+		err := types.RequestMetaData(purchase.FileHash, &metaData)
+		if err != nil {
+			panic(err)
+		}
+		from := app.GetAccount(purchase.From)
+		if from.Balance < metaData.Price {
+			resCode = TxCodeNotEnoughBalance
+			break
+		}
+		if _, ok := app.GetBuyer(purchase.FileHash)[from.Address]; ok {
+			resCode = TxCodeAlreadyBought
+			break
+		}
+		if from.Address == metaData.Owner {
+			resCode = TxCodeSelfTransaction
+			break
+		}
+	}
+	return abci.ResponseCheckTx{Code: resCode}
+}
+
+func (app *AMOApplication) Commit() abci.ResponseCommit {
+	appHash := make([]byte, 8)
+	binary.PutVarint(appHash, app.state.Size)
+	app.state.AppHash = appHash
+	app.state.Height += 1
+	saveState(app.state)
+	return abci.ResponseCommit{Data: appHash}
+}
+
+func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuery) {
+	if reqQuery.Prove {
+		value := app.state.db.Get(prefixKey(reqQuery.Data))
+		resQuery.Index = -1 // TODO make Proof return index
+		resQuery.Key = reqQuery.Data
+		resQuery.Value = value
+		if value != nil {
+			resQuery.Log = "exists"
+		} else {
+			resQuery.Log = "does not exist"
+		}
+		return
+	} else {
+		resQuery.Key = reqQuery.Data
+		var value []byte
+		switch len(resQuery.Key) {
+		case 5:
+			value, _ = json.Marshal(app.GetAccount(types.Address(string(reqQuery.Data))))
+			resQuery.Value = value
+		case types.HashSize<<1:
+			value, _ = json.Marshal(app.GetBuyer(*types.NewHashByHexBytes(reqQuery.Data)))
+			resQuery.Value = value
+		}
+		if value != nil {
+			resQuery.Log = "exists"
+		} else {
+			resQuery.Log = "does not exist"
+		}
+		return
+	}
+}

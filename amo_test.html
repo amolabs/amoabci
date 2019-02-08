@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/themes/prism.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/plugins/line-numbers/prism-line-numbers.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.16/vue.js"></script>
+</head>
+<body>
+  <div class="container-fluid" id="app">
+    <h1 class="display-4">AMO Test</h1>
+      <div class="row">
+        <div class="col-8">
+          <div class="row">
+            <div class="col-8">
+                <input class="form-control" value="localhost:26657" placeholder="Host" v-model="host"/>
+            </div>
+            <div class="col-4">
+              <button class="form-control btn btn-primary" id="conn_test" @click="connectionCheck">Test</button>
+            </div>
+            <div class="w-100"></div>
+            <div class="col-12">
+              <hr/>
+              <h3>Input</h3>
+              <pre><code class="line-numbers language-json" id="input" data-lang="json"></code></pre>
+              <hr/>
+              <h3>URI</h3>
+              <pre><code class="line-numbers language-html" id="uri" data-lang="html"></code></pre>
+              <hr/>
+              <h3>Output</h3>
+              <div class="form-check">
+                <input type="checkbox" v-model="readable" id="readable" class="form-check-input"/>
+                <label for="readable" class="form-check-label">Readable</label>
+              </div>
+              <pre><code class="line-numbers language-json" id="output" data-lang="json"></code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="col-4">
+          <nav>
+            <div class="nav nav-tabs" role="tablist" id="nav-tab">
+              <a class="nav-link active" id="transaction-tab" data-toggle="tab" href="#transaction" role="tab" aria-controls="home" aria-selected="true">
+                  Transaction
+              </a>
+            </div>
+          </nav>
+          <div class="tab-content" id="nav-tabContent">
+            <div class="tab-pane fade show active" id="transaction" role="tabpanel">
+              <div class="form-group">
+                <label for="m_type">Message type</label>
+                <selector id="m_type"
+                          :items="message_type"
+                          sel-key="msg_selected"
+                          v-on:changed="changeSelected"></selector>
+              </div>
+              <div class="form-group" v-if="msg_selected === 'broadcast_tx_commit'">
+                <label for="t_type">Transaction type</label>
+                <selector id="t_type"
+                          :items="transaction_type"
+                          sel-key="tx_selected"
+                          v-on:changed="changeSelected"></selector>
+              </div>
+              <hr/>
+              <h4>Parameters</h4>
+              <div v-if="(msg_selected === 'broadcast_tx_commit') && tx_selected === 'transfer'">
+                <div class="form-group">
+                  <label for="transfer_from">From</label>
+                  <input class="form-control" placeholder="Address" id="transfer_from"/>
+                </div>
+                <div class="form-group">
+                  <label for="transfer_to">To</label>
+                  <input class="form-control" placeholder="Address" id="transfer_to"/>
+                </div>
+                <div class="form-group">
+                  <label for="transfer_amount">Account</label>
+                  <input class="form-control" placeholder="uint32" id="transfer_amount"/>
+                </div>
+              </div>
+              <div v-else-if="(msg_selected === 'broadcast_tx_commit') && tx_selected === 'purchase'">
+                <div class="form-group">
+                  <label for="purchase_from">From</label>
+                  <input class="form-control" placeholder="Address" id="purchase_from"/>
+                </div>
+                <div class="form-group">
+                  <label for="purchase_file_hash">File hash</label>
+                  <input class="form-control" placeholder="Hash" id="purchase_file_hash"/>
+                </div>
+              </div>
+              <div v-else-if="msg_selected === 'abci_query'">
+                <div class="form-group">
+                  <label for="abci_query_">Data</label>
+                  <input class="form-control" placeholder="String" id="abci_query_"/>
+                </div>
+              </div>
+              <div v-else-if="msg_selected === 'block'">
+                <div class="form-group">
+                  <label for="abci_query_">Height</label>
+                  <input class="form-control" placeholder="uint32" id="block_"/>
+                </div>
+              </div>
+              <div v-else-if="msg_selected === 'block_results'">
+                <div class="form-group">
+                  <label for="abci_query_">Height</label>
+                  <input class="form-control" placeholder="uint32" id="block_results_"/>
+                </div>
+              </div>
+            </div>
+            <hr/>
+            <button class="btn btn-primary" @click="buildURI">Generate</button>
+            <button class="btn btn-primary" @click="SendURI">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      function toHexString(byteArray) {
+        return Array.from(byteArray, function(byte) {
+          return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+        }).join('');
+      }
+      function string2bytes(str) {
+        let bytes = [], p = 0;
+        for (let i = 0; i < str.length; i++) {
+          let c = str.charCodeAt(i);
+          if (c < 128) {
+            bytes[p++] = c;
+          } else if (c < 2048) {
+            bytes[p++] = (c >> 6) | 192;
+            bytes[p++] = (c & 63) | 128;
+          } else if (
+            ((c & 0xFC00) === 0xD800) && (i + 1) < str.length &&
+            ((str.charCodeAt(i + 1) & 0xFC00) === 0xDC00)) {
+            // Surrogate Pair
+            c = 0x10000 + ((c & 0x03FF) << 10) + (str.charCodeAt(++i) & 0x03FF);
+            bytes[p++] = (c >> 18) | 240;
+            bytes[p++] = ((c >> 12) & 63) | 128;
+            bytes[p++] = ((c >> 6) & 63) | 128;
+            bytes[p++] = (c & 63) | 128;
+          } else {
+            bytes[p++] = (c >> 12) | 224;
+            bytes[p++] = ((c >> 6) & 63) | 128;
+            bytes[p++] = (c & 63) | 128;
+          }
+        }
+        return toHexString(bytes);
+      }
+
+      Vue.component('selector', {
+        props: {
+          items: Array,
+          selKey: String,
+        },
+        data: function() {
+          return {
+            selected: this.items[0]
+          };
+        },
+        watch: {
+          selected: function(newVal) {
+            this.$emit('changed', this.selKey, newVal)
+          }
+        },
+        template: '<select class="form-control" v-model="selected">' +
+                  '   <option v-for="item in items" :value="item">{{ item }}</option>' +
+                  '</select>'
+      });
+      const app = new Vue({
+        el: "#app",
+        data: {
+          host: 'localhost:26657',
+          message_type: ['broadcast_tx_commit', 'abci_query', 'abci_info', 'block', 'block_results'],
+          msg_selected: 'broadcast_tx_commit',
+          transaction_type: ['transfer', 'purchase',],
+          tx_selected: 'transfer',
+          readable: false,
+          endpoints: {
+            transfer: {
+              tx: {
+                isRaw: true,
+                payload: {
+                  'from': 'Address',
+                  to: 'Address',
+                  amount: 'uint32'
+                },
+              },
+            },
+            purchase: {
+              tx: {
+                isRaw: true,
+                payload: {
+                  'from': 'Address',
+                  'file_hash': 'Hash',
+                }
+              }
+            },
+            abci_query: {
+              data: {
+                isRaw: true,
+                payload: {
+                  '': 'String'
+                }
+              }
+            },
+            abci_info: {
+              '': {
+              }
+            },
+            block: {
+              height: {
+                isRaw: false,
+                payload: {
+                  '': 'uint32'
+                }
+              }
+            },
+            block_results: {
+              height: {
+                isRaw: false,
+                payload: {
+                  '': 'uint32'
+                }
+              }
+            }
+          }
+        },
+        methods: {
+          isTransaction: function() {
+            return (this.msg_selected === 'broadcast_tx_commit');
+          },
+          changeSelected: function(selKey, newVal) {
+            this[selKey] = newVal;
+          },
+          buildURI: function() {
+            let uri = `http://${this.host}/${this.msg_selected}?`;
+            const payload = {};
+            const selection = this.isTransaction() ? this.tx_selected : this.msg_selected;
+            const params =  this.endpoints[selection];
+            for (const key in params) {
+              if (key === '') {
+                this.setCode("", uri, "");
+                continue;
+              }
+              uri += `${key}=`;
+              const param = params[key];
+              if (param.isRaw) {
+                uri += '0x';
+              }
+              for (const p in param.payload) {
+                let val = $(`#${selection}_${p}`).val();
+                switch (param.payload[p]) {
+                  case 'uint32':
+                    val = parseInt(val, 10);
+                    break;
+                }
+                if (this.isTransaction()) {
+                  payload[p] = val;
+                } else {
+                  let msg = param.isRaw ? string2bytes(val) : val;
+                  uri += msg;
+                  this.setCode("", uri, "");
+                }
+              }
+              if (this.isTransaction()) {
+                let msg = {
+                  type: this.tx_selected,
+                  timestamp: Date.now(),
+                  payload
+                };
+                const pretty = JSON.stringify(msg, null, 2);
+                msg = string2bytes(JSON.stringify(msg));
+                uri += msg;
+                this.setCode(pretty, uri, "");
+              }
+              uri += '&';
+            }
+            return uri;
+          },
+          SendURI: function() {
+            this.sendAjax(this.buildURI());
+          },
+          connectionCheck: function() {
+            const url = `http://${this.host}/status`;
+            this.setCode("", url, "");
+            this.sendAjax(url)
+          },
+          sendAjax: function(url) {
+            $.ajax({
+              url,
+              dataType: 'json',
+              success: (data) => {
+                const output = $('#output');
+                if (this.isTransaction() && this.readable) {
+                  const deliver_tx = data.result.deliver_tx;
+                  const check_tx = data.result.check_tx;
+                  if (deliver_tx.hasOwnProperty('tags')) {
+                    this.makeReadable(deliver_tx.tags)
+                  }
+                  if (check_tx.hasOwnProperty('tags')) {
+                    this.makeReadable(check_tx.tags);
+                  }
+                } else if (this.msg_selected === 'abci_query') {
+                  const response = data.result.response;
+                  response.key = atob(response.key);
+                  response.value = JSON.parse(atob(response.value));
+                }
+                output.text(JSON.stringify(data, null, 2));
+                Prism.highlightAll();
+              }
+            });
+          },
+          makeReadable: function(obj) {
+            for (const key in obj) {
+              if (typeof obj[key] === 'object') {
+                this.makeReadable(obj[key]);
+              } else {
+                obj[key] = atob(obj[key]);
+              }
+            }
+          },
+          setCode: function(input_str, uri_str, output_str) {
+            const input = $('#input');
+            const output = $('#output');
+            const uri = $('#uri');
+            input.text(input_str);
+            output.text(output_str);
+            uri.text(uri_str);
+            Prism.highlightAll();
+          }
+        }
+      });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    </body>
+</html>
