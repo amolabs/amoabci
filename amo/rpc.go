@@ -18,15 +18,15 @@ func addRoutes() {
 
 func rpcTransfer(from atypes.Address, to atypes.Address, amount *uint64) (*ctypes.ResultBroadcastTxCommit, error) {
 	return core.BroadcastTxCommit(makeMessage(atypes.TxTransfer, atypes.Transfer{
-		From: from,
-		To: to,
+		From:   from,
+		To:     to,
 		Amount: *amount,
 	}))
 }
 
 func rpcPurchase(from atypes.Address, fileHash atypes.Hash) (*ctypes.ResultBroadcastTxCommit, error) {
 	return core.BroadcastTxCommit(makeMessage(atypes.TxPurchase, atypes.Purchase{
-		From: from,
+		From:     from,
 		FileHash: fileHash,
 	}))
 }
@@ -37,9 +37,9 @@ func makeMessage(t string, payload interface{}) types.Tx {
 		panic(err)
 	}
 	msg := atypes.Message{
-		Type: t,
+		Type:      t,
 		Timestamp: tmtime.Now().Unix(),
-		Payload: raw,
+		Payload:   raw,
 	}
 	tx, err := json.Marshal(msg)
 	if err != nil {

@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	stateKey                          = []byte("stateKey")
-	kvPairPrefixKey                   = []byte("kvPairKey:")
-	accountPrefixKey                  = []byte("accountKey:")
-	fileBuyerPrefixKey                = []byte("buyerKey:")
-	ProtocolVersion  version.Protocol = 0x1
+	stateKey                            = []byte("stateKey")
+	kvPairPrefixKey                     = []byte("kvPairKey:")
+	accountPrefixKey                    = []byte("accountKey:")
+	fileBuyerPrefixKey                  = []byte("buyerKey:")
+	ProtocolVersion    version.Protocol = 0x1
 )
 
 type State struct {
@@ -72,8 +72,8 @@ func NewAMOApplication(db dbm.DB) *AMOApplication {
 	state := loadState(db)
 	app := &AMOApplication{state: state}
 	(*app).SetAccount(&types.Account{
-		Address: types.Address("aaaaa"),
-		Balance: 3000,
+		Address:        types.Address("aaaaa"),
+		Balance:        3000,
 		PurchasedFiles: make(types.HashSet, 0),
 	})
 	return app
@@ -106,8 +106,8 @@ func (app *AMOApplication) GetAccount(key types.Address) types.Account {
 	value := app.state.db.Get(accountFixKey([]byte(key)))
 	if value == nil {
 		return types.Account{
-			Address: types.Address(key),
-			Balance: 0,
+			Address:        types.Address(key),
+			Balance:        0,
 			PurchasedFiles: make(types.HashSet, 0),
 		}
 	}
@@ -189,7 +189,7 @@ func (app *AMOApplication) procPurchase(purchase *types.Purchase) (uint32, []cmn
 	if err != nil {
 		panic(err)
 	}
-	tags := []cmn.KVPair {
+	tags := []cmn.KVPair{
 		{Key: []byte(hex.EncodeToString(metaData.FileHash[:])), Value: result},
 		{Key: []byte(purchase.From), Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
 	}
@@ -265,7 +265,7 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 		case 5:
 			value, _ = json.Marshal(app.GetAccount(types.Address(string(reqQuery.Data))))
 			resQuery.Value = value
-		case types.HashSize<<1:
+		case types.HashSize << 1:
 			value, _ = json.Marshal(app.GetBuyer(*types.NewHashByHexBytes(reqQuery.Data)))
 			resQuery.Value = value
 		}
