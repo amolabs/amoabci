@@ -13,3 +13,11 @@
 
 # GoLand
 .idea/
+
+# vim
+.*.sw*
+tags
+TAGS
+
+# dep
+vendor

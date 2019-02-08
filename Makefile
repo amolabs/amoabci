@@ -2,9 +2,14 @@ all: build
 
 GO := $(shell command -v go 2> /dev/null)
 FS := /
+BUILDENV=CGO_ENABLED=0
 
 ifeq ($(GO),)
   $(error could not find go. Is it in PATH? $(GO))
+endif
+
+ifneq ($(TARGET),)
+  BUILDENV += GOOS=$(TARGET)
 endif
 
 GOPATH ?= $(shell $(GO) env GOPATH)
@@ -46,6 +51,6 @@ vendor-deps:
 
 build:
 	@echo "--> Building amo daemon"
-	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o amod .
+	$(BUILDENV) go build -a -installsuffix cgo -o amod .
 
 .PHONY: build
