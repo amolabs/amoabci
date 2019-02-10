@@ -14,11 +14,8 @@ import (
 )
 
 var (
-	stateKey                            = []byte("stateKey")
-	kvPairPrefixKey                     = []byte("kvPairKey:")
-	accountPrefixKey                    = []byte("accountKey:")
-	fileBuyerPrefixKey                  = []byte("buyerKey:")
-	ProtocolVersion    version.Protocol = 0x1
+	stateKey                         = []byte("stateKey")
+	ProtocolVersion version.Protocol = 0x1
 )
 
 type State struct {
@@ -49,24 +46,12 @@ func saveState(state State) {
 	state.db.Set(stateKey, stateBytes)
 }
 
-func prefixKey(key []byte) []byte {
-	return append(kvPairPrefixKey, key...)
-}
-
-func accountFixKey(key []byte) []byte {
-	return append(accountPrefixKey, key...)
-}
-
-func buyerFixKey(key []byte) []byte {
-	return append(fileBuyerPrefixKey, key...)
-}
-
-var _ abci.Application = (*AMOApplication)(nil)
-
 type AMOApplication struct {
 	abci.BaseApplication
 	state State
 }
+
+var _ abci.Application = (*AMOApplication)(nil)
 
 func NewAMOApplication(db dbm.DB) *AMOApplication {
 	state := loadState(db)
@@ -85,60 +70,6 @@ func (app *AMOApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo
 		Version:    version.ABCIVersion,
 		AppVersion: ProtocolVersion.Uint64(),
 	}
-}
-
-func (app *AMOApplication) GetUint32(key string) uint32 {
-	bytes := app.state.db.Get(prefixKey([]byte(key)))
-	if bytes == nil {
-		return 0
-	} else {
-		return binary.LittleEndian.Uint32(bytes)
-	}
-}
-
-func (app *AMOApplication) SetUint32(key string, value uint32) {
-	bytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bytes, value)
-	app.state.db.Set(prefixKey([]byte(key)), bytes)
-}
-
-func (app *AMOApplication) GetAccount(key types.Address) types.Account {
-	value := app.state.db.Get(accountFixKey([]byte(key)))
-	if value == nil {
-		return types.Account{
-			Address:        types.Address(key),
-			Balance:        0,
-			PurchasedFiles: make(types.HashSet, 0),
-		}
-	}
-	var account types.Account
-	err := json.Unmarshal(value, &account)
-	if err != nil {
-		panic(err)
-	}
-	return account
-}
-
-func (app *AMOApplication) SetAccount(account *types.Account) {
-	value, _ := json.Marshal(account)
-	app.state.db.Set(accountFixKey([]byte(string((*account).Address))), value)
-}
-
-func (app *AMOApplication) SetBuyer(fileHash types.Hash, addressSet *types.AddressSet) {
-	value, _ := json.Marshal(addressSet)
-	app.state.db.Set(buyerFixKey(fileHash[:]), value)
-}
-
-func (app *AMOApplication) GetBuyer(fileHash types.Hash) types.AddressSet {
-	value := app.state.db.Get(buyerFixKey(fileHash[:]))
-	addressSet := types.AddressSet{}
-	if value != nil {
-		err := json.Unmarshal(value, &addressSet)
-		if err != nil {
-			panic(err)
-		}
-	}
-	return addressSet
 }
 
 func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
@@ -248,21 +179,12 @@ func (app *AMOApplication) Commit() abci.ResponseCommit {
 
 func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuery) {
 	if reqQuery.Prove {
-		value := app.state.db.Get(prefixKey(reqQuery.Data))
-		resQuery.Index = -1 // TODO make Proof return index
-		resQuery.Key = reqQuery.Data
-		resQuery.Value = value
-		if value != nil {
-			resQuery.Log = "exists"
-		} else {
-			resQuery.Log = "does not exist"
-		}
 		return
 	} else {
 		resQuery.Key = reqQuery.Data
 		var value []byte
 		switch len(resQuery.Key) {
-		case 5:
+		case types.AddressSize:
 			value, _ = json.Marshal(app.GetAccount(types.Address(string(reqQuery.Data))))
 			resQuery.Value = value
 		case types.HashSize << 1:

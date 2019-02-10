@@ -74,8 +74,8 @@
                   <input class="form-control" placeholder="Address" id="transfer_to"/>
                 </div>
                 <div class="form-group">
-                  <label for="transfer_amount">Account</label>
-                  <input class="form-control" placeholder="uint32" id="transfer_amount"/>
+                  <label for="transfer_amount">Amount</label>
+                  <input class="form-control" placeholder="uint64" id="transfer_amount"/>
                 </div>
               </div>
               <div v-else-if="(msg_selected === 'broadcast_tx_commit') && tx_selected === 'purchase'">

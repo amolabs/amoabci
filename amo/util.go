@@ -15,6 +15,8 @@ import (
 	"os"
 )
 
+const RootName = "blockchain"
+
 type Context struct {
 	Config *cfg.Config
 	Logger log.Logger
@@ -36,7 +38,7 @@ func StartInProcess(db dbm.DB) (*node.Node, error) {
 	config := ctx.Config
 
 	// Create config folder
-	config.SetRoot("amo_app")
+	config.SetRoot(RootName)
 	cfg.EnsureRoot(config.RootDir)
 
 	// Set config -> to func
@@ -137,4 +139,3 @@ func InitFilesWithConfig(config *cfg.Config, logger log.Logger) error {
 
 	return nil
 }
-

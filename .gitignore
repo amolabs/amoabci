@@ -21,3 +21,6 @@ TAGS
 
 # dep
 vendor
+
+# blockchain data
+blockchain/

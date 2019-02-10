@@ -1,6 +1,8 @@
 package types
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestRequestMetaData(t *testing.T) {
 	var metaData PDSNMetaData
