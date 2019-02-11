@@ -1,7 +1,6 @@
 package amo
 
 import (
-	"encoding/json"
 	"github.com/amolabs/amoabci/amo/encoding/binary"
 	"github.com/amolabs/amoabci/amo/types"
 )
@@ -20,13 +19,13 @@ func buyerFixKey(key []byte) []byte {
 }
 
 func (app *AMOApplication) SetAccount(account *types.Account) {
-	value, _ := json.Marshal(account)
-	app.state.db.Set(accountFixKey([]byte(string((*account).Address))), value)
+	value, _ := binary.Serialize(account)
+	app.state.db.Set(accountFixKey([]byte((*account).Address)), value)
 }
 
 func (app *AMOApplication) GetAccount(key types.Address) types.Account {
 	value := app.state.db.Get(accountFixKey([]byte(key)))
-	if value == nil {
+	if len(value) == 0 {
 		return types.Account{
 			Address:        types.Address(key),
 			Balance:        0,
@@ -34,7 +33,7 @@ func (app *AMOApplication) GetAccount(key types.Address) types.Account {
 		}
 	}
 	var account types.Account
-	err := json.Unmarshal(value, &account)
+	err := binary.Deserialize(value, &account)
 	if err != nil {
 		panic(err)
 	}
@@ -49,7 +48,7 @@ func (app *AMOApplication) SetBuyer(fileHash types.Hash, addressSet *types.Addre
 func (app *AMOApplication) GetBuyer(fileHash types.Hash) types.AddressSet {
 	value := app.state.db.Get(buyerFixKey(fileHash[:]))
 	addressSet := types.AddressSet{}
-	if value != nil {
+	if len(value) == 0 {
 		err := binary.Deserialize(value, &addressSet)
 		if err != nil {
 			panic(err)

@@ -59,7 +59,7 @@ func NewAMOApplication(db dbm.DB) *AMOApplication {
 	(*app).SetAccount(&types.Account{
 		Address:        types.Address("aaaaa"),
 		Balance:        3000,
-		PurchasedFiles: make(types.HashSet, 0),
+		PurchasedFiles: make(types.HashSet),
 	})
 	return app
 }

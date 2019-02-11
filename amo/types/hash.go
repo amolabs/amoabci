@@ -3,7 +3,7 @@ package types
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
+	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 const (
@@ -15,7 +15,7 @@ type Hash [HashSize]byte
 
 func NewHash(data []byte) *Hash {
 	if len(data) != HashSize {
-		panic(errors.New("hash: wrong hash size"))
+		panic(cmn.NewError("hash: wrong hash size"))
 	}
 	var h Hash
 	copy(h[:], data)
@@ -24,7 +24,7 @@ func NewHash(data []byte) *Hash {
 
 func NewHashByHexString(hexString string) *Hash {
 	if len(hexString) != HashSize<<1 {
-		panic(errors.New("hash: wrong hash size"))
+		panic(cmn.NewError("hash: wrong hash size"))
 	}
 	var h Hash
 	hash, err := hex.DecodeString(hexString)
@@ -37,7 +37,7 @@ func NewHashByHexString(hexString string) *Hash {
 
 func NewHashByHexBytes(hexBytes []byte) *Hash {
 	if len(hexBytes) != HashSize<<1 {
-		panic(errors.New("hash: wrong hash size"))
+		panic(cmn.NewError("hash: wrong hash size"))
 	}
 	var h Hash
 	_, err := hex.Decode(h[:], hexBytes)
