@@ -8,7 +8,7 @@ import (
 
 func TestAccountBinary(t *testing.T) {
 	acc := Account{
-		Address:        Address("aaaaa"),
+		Address:        testAddr,
 		Balance:        5000,
 		PurchasedFiles: make(HashSet),
 	}

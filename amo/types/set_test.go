@@ -9,7 +9,7 @@ import (
 
 func TestAddressSetType(t *testing.T) {
 	set := make(AddressSet)
-	key := Address("aaaaa")
+	key := testAddr
 	set[key] = true
 
 	b1, err := json.Marshal(set)
@@ -45,10 +45,8 @@ func TestHashSetType(t *testing.T) {
 
 func TestAddressSetBinary(t *testing.T) {
 	set := make(AddressSet)
-	set[Address("aaaaa")] = true
-	set[Address("bbbbb")] = true
-	set[Address("ccccc")] = true
-	set[Address("ddddd")] = true
+	set[testAddr] = true
+	set[testAddr2] = true
 	b, _ := binary.Serialize(set)
 	t.Log(b)
 	var set2 AddressSet

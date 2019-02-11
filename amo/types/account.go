@@ -6,25 +6,22 @@ import (
 )
 
 type Account struct {
-	Address        `json:"address"`
 	Balance        uint64  `json:"balance"`
 	PurchasedFiles HashSet `json:"purchased_files"`
 }
 
 func (acc Account) Serialize() ([]byte, error) {
-	data := make([]byte, AddressSize+64/8+len(acc.PurchasedFiles)*HashSize)
-	copy(data, acc.Address)
-	gobinary.PutUvarint(data[AddressSize:], acc.Balance)
+	data := make([]byte, 64/8+len(acc.PurchasedFiles)*HashSize)
+	gobinary.PutUvarint(data, acc.Balance)
 	hset, _ := binary.Serialize(acc.PurchasedFiles)
-	copy(data[AddressSize+64/8:], hset)
+	copy(data[64/8:], hset)
 	return data, nil
 }
 
 func (acc *Account) Deserialize(data []byte) error {
 	*acc = Account{}
-	acc.Address = Address(data[0:AddressSize])
-	acc.Balance, _ = gobinary.Uvarint(data[AddressSize:])
-	err := binary.Deserialize(data[AddressSize+64/8:], &acc.PurchasedFiles)
+	acc.Balance, _ = gobinary.Uvarint(data)
+	err := binary.Deserialize(data[64/8:], &acc.PurchasedFiles)
 	if err != nil {
 		panic(nil)
 	}

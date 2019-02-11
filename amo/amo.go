@@ -56,8 +56,8 @@ var _ abci.Application = (*AMOApplication)(nil)
 func NewAMOApplication(db dbm.DB) *AMOApplication {
 	state := loadState(db)
 	app := &AMOApplication{state: state}
-	(*app).SetAccount(&types.Account{
-		Address:        types.Address("aaaaa"),
+	addr := *types.NewAddressFromBytes([]byte("a8cxVrk1ju91UaJf7U1Hscgn3sRqzfmjgg"))
+	(*app).SetAccount(addr, &types.Account{
 		Balance:        3000,
 		PurchasedFiles: make(types.HashSet),
 	})
@@ -93,12 +93,12 @@ func (app *AMOApplication) procTransfer(transfer *types.Transfer) (uint32, []cmn
 	to := app.GetAccount(transfer.To)
 	from.Balance -= transfer.Amount
 	to.Balance += transfer.Amount
-	app.SetAccount(&from)
-	app.SetAccount(&to)
+	app.SetAccount(transfer.From ,&from)
+	app.SetAccount(transfer.To ,&to)
 	app.state.Size += 1
 	tags := []cmn.KVPair{
-		{Key: []byte(transfer.From), Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
-		{Key: []byte(transfer.To), Value: []byte(strconv.FormatUint(uint64(to.Balance), 10))},
+		{Key: transfer.From[:], Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
+		{Key: transfer.To[:], Value: []byte(strconv.FormatUint(uint64(to.Balance), 10))},
 	}
 	return TxCodeOK, tags
 }
@@ -112,9 +112,9 @@ func (app *AMOApplication) procPurchase(purchase *types.Purchase) (uint32, []cmn
 	from := app.GetAccount(purchase.From)
 	from.Balance -= metaData.Price
 	from.PurchasedFiles[metaData.FileHash] = true
-	app.SetAccount(&from)
+	app.SetAccount(purchase.From ,&from)
 	buyer := app.GetBuyer(metaData.FileHash)
-	buyer[from.Address] = true
+	buyer[purchase.From] = true
 	app.SetBuyer(metaData.FileHash, &buyer)
 	result, err := json.Marshal(metaData)
 	if err != nil {
@@ -122,7 +122,7 @@ func (app *AMOApplication) procPurchase(purchase *types.Purchase) (uint32, []cmn
 	}
 	tags := []cmn.KVPair{
 		{Key: []byte(hex.EncodeToString(metaData.FileHash[:])), Value: result},
-		{Key: []byte(purchase.From), Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
+		{Key: purchase.From[:], Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
 	}
 	return TxCodeOK, tags
 }
@@ -135,12 +135,11 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 	case types.TxTransfer:
 		transfer, _ := payload.(*types.Transfer)
 		from := app.GetAccount(transfer.From)
-		to := app.GetAccount(transfer.To)
 		if from.Balance < transfer.Amount {
 			resCode = TxCodeNotEnoughBalance
 			break
 		}
-		if from.Address == to.Address {
+		if transfer.From == transfer.To {
 			resCode = TxCodeSelfTransaction
 			break
 		}
@@ -156,11 +155,11 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 			resCode = TxCodeNotEnoughBalance
 			break
 		}
-		if _, ok := app.GetBuyer(purchase.FileHash)[from.Address]; ok {
+		if _, ok := app.GetBuyer(purchase.FileHash)[purchase.From]; ok {
 			resCode = TxCodeAlreadyBought
 			break
 		}
-		if from.Address == metaData.Owner {
+		if purchase.From == metaData.Owner {
 			resCode = TxCodeSelfTransaction
 			break
 		}
@@ -185,7 +184,7 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 		var value []byte
 		switch len(resQuery.Key) {
 		case types.AddressSize:
-			value, _ = json.Marshal(app.GetAccount(types.Address(string(reqQuery.Data))))
+			value, _ = json.Marshal(app.GetAccount(*types.NewAddressFromBytes(reqQuery.Data)))
 			resQuery.Value = value
 		case types.HashSize << 1:
 			value, _ = json.Marshal(app.GetBuyer(*types.NewHashByHexBytes(reqQuery.Data)))

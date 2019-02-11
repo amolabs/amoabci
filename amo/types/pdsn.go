@@ -16,7 +16,7 @@ var FileHashes = map[Hash]PDSNMetaData{
 	h1: {
 		FileHash: h1,
 		Price:    100,
-		Owner:    "aaaaa",
+		Owner:    testAddr,
 	},
 }
 

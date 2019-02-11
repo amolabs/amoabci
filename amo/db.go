@@ -18,16 +18,15 @@ func buyerFixKey(key []byte) []byte {
 	return append(fileBuyerPrefixKey, key...)
 }
 
-func (app *AMOApplication) SetAccount(account *types.Account) {
+func (app *AMOApplication) SetAccount(address types.Address, account *types.Account) {
 	value, _ := binary.Serialize(account)
-	app.state.db.Set(accountFixKey([]byte((*account).Address)), value)
+	app.state.db.Set(accountFixKey(address[:]), value)
 }
 
-func (app *AMOApplication) GetAccount(key types.Address) types.Account {
-	value := app.state.db.Get(accountFixKey([]byte(key)))
+func (app *AMOApplication) GetAccount(address types.Address) types.Account {
+	value := app.state.db.Get(accountFixKey(address[:]))
 	if len(value) == 0 {
 		return types.Account{
-			Address:        types.Address(key),
 			Balance:        0,
 			PurchasedFiles: make(types.HashSet),
 		}
