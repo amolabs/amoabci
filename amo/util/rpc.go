@@ -1,4 +1,4 @@
-package amo
+package util
 
 import (
 	"encoding/json"

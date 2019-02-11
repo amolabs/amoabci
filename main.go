@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/amolabs/amoabci/amo"
+	"github.com/amolabs/amoabci/amo/util"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -14,6 +14,6 @@ func main() {
 
 func initApp() error {
 	db := dbm.NewMemDB()
-	_, err := amo.StartInProcess(db)
+	_, err := util.StartInProcess(db)
 	return err
 }

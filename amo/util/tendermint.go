@@ -1,7 +1,8 @@
-package amo
+package util
 
 import (
 	"fmt"
+	"github.com/amolabs/amoabci/amo"
 	cfg "github.com/tendermint/tendermint/config"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -55,7 +56,7 @@ func StartInProcess(db dbm.DB) (*node.Node, error) {
 	}
 
 	// Create AMO abci
-	app := NewAMOApplication(db)
+	app := amo.NewAMOApplication(db)
 	addRoutes()
 	// Create tendermint and combine AMO abci
 	tmNode, err := node.NewNode(
