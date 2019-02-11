@@ -5,7 +5,9 @@ import (
 	"github.com/tendermint/tendermint/types"
 )
 
-const ChainID = "amo-testnet"
+const (
+	ChainID = "amo-testnet"
+)
 
 type GenesisOwner struct {
 	Address types.Address `json:"address"`

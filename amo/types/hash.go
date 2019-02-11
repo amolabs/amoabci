@@ -11,11 +11,15 @@ const (
 	HelloWorld = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
 )
 
+var (
+	hashWrongSizeError = cmn.NewError("hash: wrong hash size")
+)
+
 type Hash [HashSize]byte
 
 func NewHash(data []byte) *Hash {
 	if len(data) != HashSize {
-		panic(cmn.NewError("hash: wrong hash size"))
+		panic(hashWrongSizeError)
 	}
 	var h Hash
 	copy(h[:], data)
@@ -24,7 +28,7 @@ func NewHash(data []byte) *Hash {
 
 func NewHashByHexString(hexString string) *Hash {
 	if len(hexString) != HashSize<<1 {
-		panic(cmn.NewError("hash: wrong hash size"))
+		panic(hashWrongSizeError)
 	}
 	var h Hash
 	hash, err := hex.DecodeString(hexString)
@@ -37,7 +41,7 @@ func NewHashByHexString(hexString string) *Hash {
 
 func NewHashByHexBytes(hexBytes []byte) *Hash {
 	if len(hexBytes) != HashSize<<1 {
-		panic(cmn.NewError("hash: wrong hash size"))
+		panic(hashWrongSizeError)
 	}
 	var h Hash
 	_, err := hex.Decode(h[:], hexBytes)

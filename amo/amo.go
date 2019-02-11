@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	stateKey                         = []byte("stateKey")
+	stateKey        = []byte("stateKey")
 	ProtocolVersion version.Protocol = 0x1
 )
 

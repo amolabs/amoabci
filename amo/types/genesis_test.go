@@ -9,10 +9,15 @@ import (
 )
 
 const testPriKey = "7e86b1729aa04fd8563fbe09587366d0e646c280677c1a5bd55769a62d589c866d94b84063700bd987d2de8b3aad7c3afaec329d542343019ee093103c7244b4"
+var secret, _ = hex.DecodeString(testPriKey)
+var priKey = ed25519.GenPrivKeyFromSecret(secret)
+
+func TestGenAddress(t *testing.T) {
+	key := priKey.PubKey()
+	t.Log(string(GenAddress(key)))
+}
 
 func TestAMOGenesisDoc(t *testing.T) {
-	secret, _ := hex.DecodeString(testPriKey)
-	priKey := ed25519.GenPrivKeyFromSecret(secret)
 	key := priKey.PubKey()
 	genDoc := AMOGenesisDoc{
 		GenesisDoc: types.GenesisDoc{
