@@ -51,4 +51,6 @@ func TestAMOGenesisDoc(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(genDoc)
+	//genDoc.SaveAs("test1.json")
+	//genDoc.GenesisDoc.SaveAs("test2.json")
 }

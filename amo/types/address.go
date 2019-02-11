@@ -12,8 +12,8 @@ const (
 )
 
 var (
-	testAddr = *NewAddressFromBytes([]byte("a8cxVrk1ju91UaJf7U1Hscgn3sRqzfmjgg"))
-	testAddr2 = *NewAddressFromBytes([]byte("aH2JdDUP5NoFmeEQEqDREZnkmCh8V7co7y"))
+	testAddr = *NewAddress([]byte("a8cxVrk1ju91UaJf7U1Hscgn3sRqzfmjgg"))
+	testAddr2 = *NewAddress([]byte("aH2JdDUP5NoFmeEQEqDREZnkmCh8V7co7y"))
 )
 
 type Address [AddressSize]byte
@@ -27,11 +27,11 @@ func (addr Address) MarshalJSON() ([]byte, error) {
 }
 
 func (addr *Address) UnmarshalJSON(data []byte) error {
-	*addr = *NewAddressFromBytes(data[1 : AddressSize+1])
+	*addr = *NewAddress(data[1 : AddressSize+1])
 	return nil
 }
 
-func NewAddressFromBytes(bAddr []byte) *Address {
+func NewAddress(bAddr []byte) *Address {
 	addr := Address{}
 	copy(addr[:], bAddr)
 	return &addr
@@ -53,7 +53,7 @@ func GenAddress(pubKey crypto.PubKey) Address {
 	checksum := doubleHash(doubleHash(r160))[:4]
 	address := append(er160, checksum...)
 	encoded := base58.Encode(address)
-	return *NewAddressFromBytes([]byte(encoded))
+	return *NewAddress([]byte(encoded))
 }
 
 var _ json.Marshaler = (*Address)(nil)

@@ -56,7 +56,7 @@ var _ abci.Application = (*AMOApplication)(nil)
 func NewAMOApplication(db dbm.DB) *AMOApplication {
 	state := loadState(db)
 	app := &AMOApplication{state: state}
-	addr := *types.NewAddressFromBytes([]byte("a8cxVrk1ju91UaJf7U1Hscgn3sRqzfmjgg"))
+	addr := *types.NewAddress([]byte("a8cxVrk1ju91UaJf7U1Hscgn3sRqzfmjgg"))
 	(*app).SetAccount(addr, &types.Account{
 		Balance:        3000,
 		PurchasedFiles: make(types.HashSet),
@@ -184,7 +184,7 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 		var value []byte
 		switch len(resQuery.Key) {
 		case types.AddressSize:
-			value, _ = json.Marshal(app.GetAccount(*types.NewAddressFromBytes(reqQuery.Data)))
+			value, _ = json.Marshal(app.GetAccount(*types.NewAddress(reqQuery.Data)))
 			resQuery.Value = value
 		case types.HashSize << 1:
 			value, _ = json.Marshal(app.GetBuyer(*types.NewHashByHexBytes(reqQuery.Data)))

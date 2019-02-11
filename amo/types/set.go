@@ -35,7 +35,7 @@ func (set *AddressSet) UnmarshalJSON(data []byte) error {
 	}
 	addresses := bytes.Split(data[1:len(data)-1], []byte(","))
 	for _, address := range addresses {
-		(*set)[*NewAddressFromBytes(address[1:len(address)-1])] = true
+		(*set)[*NewAddress(address[1:len(address)-1])] = true
 	}
 	return nil
 }
@@ -54,7 +54,7 @@ func (set *AddressSet) Deserialize(data []byte) error {
 	length := len(data) / AddressSize
 	*set = make(map[Address]bool, length)
 	for i := 0; i < length; i++ {
-		(*set)[*NewAddressFromBytes(data[i*AddressSize:(i+1)*AddressSize])] = true
+		(*set)[*NewAddress(data[i*AddressSize:(i+1)*AddressSize])] = true
 	}
 	return nil
 }
