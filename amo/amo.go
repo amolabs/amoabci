@@ -93,8 +93,8 @@ func (app *AMOApplication) procTransfer(transfer *types.Transfer) (uint32, []cmn
 	to := app.GetAccount(transfer.To)
 	from.Balance -= transfer.Amount
 	to.Balance += transfer.Amount
-	app.SetAccount(transfer.From ,&from)
-	app.SetAccount(transfer.To ,&to)
+	app.SetAccount(transfer.From, from)
+	app.SetAccount(transfer.To, to)
 	app.state.Size += 1
 	tags := []cmn.KVPair{
 		{Key: transfer.From[:], Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
@@ -112,10 +112,10 @@ func (app *AMOApplication) procPurchase(purchase *types.Purchase) (uint32, []cmn
 	from := app.GetAccount(purchase.From)
 	from.Balance -= metaData.Price
 	from.PurchasedFiles[metaData.FileHash] = true
-	app.SetAccount(purchase.From ,&from)
+	app.SetAccount(purchase.From, from)
 	buyer := app.GetBuyer(metaData.FileHash)
-	buyer[purchase.From] = true
-	app.SetBuyer(metaData.FileHash, &buyer)
+	(*buyer)[purchase.From] = true
+	app.SetBuyer(metaData.FileHash, buyer)
 	result, err := json.Marshal(metaData)
 	if err != nil {
 		panic(err)
@@ -155,7 +155,7 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 			resCode = TxCodeNotEnoughBalance
 			break
 		}
-		if _, ok := app.GetBuyer(purchase.FileHash)[purchase.From]; ok {
+		if _, ok := (*app.GetBuyer(purchase.FileHash))[purchase.From]; ok {
 			resCode = TxCodeAlreadyBought
 			break
 		}

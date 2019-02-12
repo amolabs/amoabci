@@ -23,10 +23,10 @@ func (app *AMOApplication) SetAccount(address types.Address, account *types.Acco
 	app.state.db.Set(accountFixKey(address[:]), value)
 }
 
-func (app *AMOApplication) GetAccount(address types.Address) types.Account {
+func (app *AMOApplication) GetAccount(address types.Address) *types.Account {
 	value := app.state.db.Get(accountFixKey(address[:]))
 	if len(value) == 0 {
-		return types.Account{
+		return &types.Account{
 			Balance:        0,
 			PurchasedFiles: make(types.HashSet),
 		}
@@ -36,7 +36,7 @@ func (app *AMOApplication) GetAccount(address types.Address) types.Account {
 	if err != nil {
 		panic(err)
 	}
-	return account
+	return &account
 }
 
 func (app *AMOApplication) SetBuyer(fileHash types.Hash, addressSet *types.AddressSet) {
@@ -44,14 +44,15 @@ func (app *AMOApplication) SetBuyer(fileHash types.Hash, addressSet *types.Addre
 	app.state.db.Set(buyerFixKey(fileHash[:]), value)
 }
 
-func (app *AMOApplication) GetBuyer(fileHash types.Hash) types.AddressSet {
+func (app *AMOApplication) GetBuyer(fileHash types.Hash) *types.AddressSet {
 	value := app.state.db.Get(buyerFixKey(fileHash[:]))
-	addressSet := types.AddressSet{}
 	if len(value) == 0 {
-		err := binary.Deserialize(value, &addressSet)
-		if err != nil {
-			panic(err)
-		}
+		return &types.AddressSet{}
 	}
-	return addressSet
+	var addressSet types.AddressSet
+	err := binary.Deserialize(value, &addressSet)
+	if err != nil {
+		panic(err)
+	}
+	return &addressSet
 }

@@ -17,17 +17,6 @@ var (
 	priKey = ed25519.GenPrivKeyFromSecret(secret)
 )
 
-func TestGenAddress(t *testing.T) {
-	key := priKey.PubKey()
-	t.Log(GenAddress(key))
-}
-
-func TestGenRandomAddress(t *testing.T) {
-	pri := ed25519.GenPrivKey()
-	pub := pri.PubKey()
-	t.Log(GenAddress(pub))
-}
-
 func TestAMOGenesisDoc(t *testing.T) {
 	key := priKey.PubKey()
 	genDoc := AMOGenesisDoc{
