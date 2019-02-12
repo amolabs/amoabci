@@ -27,7 +27,7 @@ func TestAddressSetType(t *testing.T) {
 
 func TestHashSetType(t *testing.T) {
 	set := make(HashSet)
-	key := NewHashByHexString(HelloWorld)
+	key := NewHashFromHexString(HelloWorld)
 	set[*key] = true
 
 	b1, err := json.Marshal(set)

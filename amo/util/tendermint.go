@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"github.com/amolabs/amoabci/amo"
+	"github.com/spf13/viper"
 	cfg "github.com/tendermint/tendermint/config"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -14,9 +15,13 @@ import (
 	"github.com/tendermint/tendermint/types"
 	tmtime "github.com/tendermint/tendermint/types/time"
 	"os"
+	"path/filepath"
 )
 
-const RootName = "blockchain"
+const (
+	RootName   = "blockchain"
+	configFile = "config/config.toml"
+)
 
 type Context struct {
 	Config *cfg.Config
@@ -34,18 +39,45 @@ func NewContext(config *cfg.Config, logger log.Logger) *Context {
 	return &Context{config, logger}
 }
 
+func createConfigFile(ctx *Context, path string) {
+	config := ctx.Config
+	config.Consensus.CreateEmptyBlocks = false
+	config.RPC.CORSAllowedOrigins = []string{"*"}
+	cfg.EnsureRoot(config.RootDir)
+	cfg.WriteConfigFile(path, config)
+}
+
+func loadConfigFile(config *cfg.Config, configFilePath string) error {
+	v := viper.New()
+	v.SetConfigFile(configFilePath)
+	err := v.ReadInConfig()
+	if err != nil {
+		return err
+	}
+	err = v.Unmarshal(config)
+	if err != nil {
+		return err
+	}
+	err = config.ValidateBasic()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func StartInProcess(db dbm.DB) (*node.Node, error) {
 	ctx := NewDefaultContext()
 	config := ctx.Config
-
-	// Create config folder
 	config.SetRoot(RootName)
-	cfg.EnsureRoot(config.RootDir)
-
-	// Set config -> to func
-	config.Consensus.CreateEmptyBlocks = false
-	config.RPC.CORSAllowedOrigins = []string{"*"}
-
+	configFilePath := filepath.Join(ctx.Config.RootDir, configFile)
+	if !cmn.FileExists(configFilePath) {
+		createConfigFile(ctx, configFilePath)
+	} else {
+		// load config file
+		if err := loadConfigFile(config, configFilePath); err != nil {
+			return nil, err
+		}
+	}
 	// Create config
 	if err := InitFilesWithConfig(config, ctx.Logger); err != nil {
 		panic(err)
@@ -86,6 +118,7 @@ func StartInProcess(db dbm.DB) (*node.Node, error) {
 	})
 
 	select {}
+	return nil, nil
 }
 
 // From tendermint/cmd/tendermint/commands/init

@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	stateKey        = []byte("stateKey")
+	stateKey                         = []byte("stateKey")
 	ProtocolVersion version.Protocol = 0x1
 )
 
@@ -187,7 +187,7 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 			value, _ = json.Marshal(app.GetAccount(*types.NewAddress(reqQuery.Data)))
 			resQuery.Value = value
 		case types.HashSize << 1:
-			value, _ = json.Marshal(app.GetBuyer(*types.NewHashByHexBytes(reqQuery.Data)))
+			value, _ = json.Marshal(app.GetBuyer(*types.NewHashFromHexBytes(reqQuery.Data)))
 			resQuery.Value = value
 		}
 		if value != nil {

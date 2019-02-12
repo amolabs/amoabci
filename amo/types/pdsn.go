@@ -10,7 +10,7 @@ type PDSNMetaData struct {
 	Owner    Address `json:"owner"`
 }
 
-var h1 = *NewHashByHexString(HelloWorld)
+var h1 = *NewHashFromHexString(HelloWorld)
 
 var FileHashes = map[Hash]PDSNMetaData{
 	h1: {

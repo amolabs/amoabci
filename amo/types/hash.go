@@ -26,7 +26,7 @@ func NewHash(data []byte) *Hash {
 	return &h
 }
 
-func NewHashByHexString(hexString string) *Hash {
+func NewHashFromHexString(hexString string) *Hash {
 	if len(hexString) != HashSize<<1 {
 		panic(hashWrongSizeError)
 	}
@@ -39,7 +39,7 @@ func NewHashByHexString(hexString string) *Hash {
 	return &h
 }
 
-func NewHashByHexBytes(hexBytes []byte) *Hash {
+func NewHashFromHexBytes(hexBytes []byte) *Hash {
 	if len(hexBytes) != HashSize<<1 {
 		panic(hashWrongSizeError)
 	}
@@ -60,7 +60,7 @@ func (h Hash) MarshalJSON() ([]byte, error) {
 }
 
 func (h *Hash) UnmarshalJSON(data []byte) error {
-	*h = *NewHashByHexBytes(data[1 : HashSize<<1+1])
+	*h = *NewHashFromHexBytes(data[1 : HashSize<<1+1])
 	return nil
 }
 

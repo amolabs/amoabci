@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	AddressSize = 34
+	AddressSize    = 34
 	AddressVersion = byte(0x0)
 )
 
 var (
-	testAddr = *NewAddress([]byte("a8cxVrk1ju91UaJf7U1Hscgn3sRqzfmjgg"))
+	testAddr  = *NewAddress([]byte("a8cxVrk1ju91UaJf7U1Hscgn3sRqzfmjgg"))
 	testAddr2 = *NewAddress([]byte("aH2JdDUP5NoFmeEQEqDREZnkmCh8V7co7y"))
 )
 
@@ -47,7 +47,7 @@ func doubleHash(b []byte) []byte {
 
 func GenAddress(pubKey crypto.PubKey) Address {
 	r160 := crypto.Ripemd160(doubleHash(pubKey.Bytes()))
-	er160 := make([]byte, 1 + 160/8)
+	er160 := make([]byte, 1+160/8)
 	er160[0] = AddressVersion
 	copy(er160[1:], r160)
 	checksum := doubleHash(doubleHash(r160))[:4]
