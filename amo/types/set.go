@@ -6,17 +6,8 @@ import (
 	"github.com/amolabs/amoabci/amo/encoding/binary"
 )
 
-type Iterator interface {
-	Next(c chan interface{})
-}
-
 type HashSet map[Hash]bool
-
 type AddressSet map[Address]bool
-
-func Next(iter Iterator, c chan interface{}) {
-
-}
 
 func (set AddressSet) MarshalJSON() ([]byte, error) {
 	d := make([]Address, len(set))
