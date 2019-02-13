@@ -72,7 +72,7 @@ func setOwners(app *amo.AMOApplication, owners []atypes.GenesisOwner) {
 		encoded := strings.ToUpper(hex.EncodeToString(owner.Address))
 		address := atypes.NewAddress([]byte(encoded))
 		account := atypes.Account{
-			Balance: owner.Amount,
+			Balance:        owner.Amount,
 			PurchasedFiles: make(atypes.HashSet),
 		}
 		app.SetAccount(*address, &account)
@@ -196,8 +196,8 @@ func InitFilesWithConfig(config *cfg.Config, logger log.Logger) error {
 		}}
 		genDoc.Owners = []atypes.GenesisOwner{{
 			Address: key.Address(),
-			PubKey: key,
-			Amount: 3000,
+			PubKey:  key,
+			Amount:  3000,
 		}}
 		if err := genDoc.SaveAs(genFile); err != nil {
 			return err

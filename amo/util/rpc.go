@@ -66,12 +66,12 @@ func rpcDumpBlocks(start, size int64) (*ResultDumpBlocks, error) {
 			return nil, fmt.Errorf("Height must be less than or equal to the current blockchain height")
 		}
 	}
-	length := common.MaxInt64(lastHeight-start, size)
+	length := common.MinInt64(lastHeight-start+1, size)
 	result := ResultDumpBlocks{
 		Blocks: make([]ctypes.ResultBlock, length),
 	}
 	for i := int64(0); i < length; i++ {
-		height := int64(i+start)
+		height := int64(i + start)
 		block, err := core.Block(&height)
 		if err != nil {
 			return nil, err

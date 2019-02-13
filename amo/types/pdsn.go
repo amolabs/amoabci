@@ -11,7 +11,7 @@ type PDSNMetaData struct {
 }
 
 var (
-	H1 = *NewHashFromHexString(HelloWorld)
+	H1            = *NewHashFromHexString(HelloWorld)
 	SampleAddress = NewAddress([]byte("B2F18D445ADD140711B64E7370C8AD44DA083EEB"))
 )
 
