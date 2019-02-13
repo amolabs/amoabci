@@ -5,6 +5,11 @@ import (
 	"testing"
 )
 
+var (
+	testAddr = GenAddress(priKey.PubKey()) // B2F18D445ADD140711B64E7370C8AD44DA083EEB
+	testAddr2 = GenAddress(priKey2.PubKey())
+)
+
 func TestGenAddress(t *testing.T) {
 	key := priKey.PubKey()
 	t.Log(GenAddress(key))

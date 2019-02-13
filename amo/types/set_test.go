@@ -12,7 +12,7 @@ func TestAddressSetJSON(t *testing.T) {
 	r := require.New(t)
 	set := make(AddressSet)
 	key := testAddr
-	set[key] = true
+	set[*key] = true
 	b1, err := json.Marshal(set)
 	r.NoError(err)
 	t.Log(string(b1))
@@ -25,8 +25,8 @@ func TestAddressSetJSON(t *testing.T) {
 func TestAddressSetBinary(t *testing.T) {
 	r := require.New(t)
 	set := make(AddressSet)
-	set[testAddr] = true
-	set[testAddr2] = true
+	set[*testAddr] = true
+	set[*testAddr2] = true
 	b, err := binary.Serialize(set)
 	r.NoError(err)
 	var set2 AddressSet

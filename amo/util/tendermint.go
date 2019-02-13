@@ -1,8 +1,9 @@
 package util
 
 import (
-	"fmt"
+	"encoding/hex"
 	"github.com/amolabs/amoabci/amo"
+	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/spf13/viper"
 	cfg "github.com/tendermint/tendermint/config"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -16,6 +17,7 @@ import (
 	tmtime "github.com/tendermint/tendermint/types/time"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -65,6 +67,18 @@ func loadConfigFile(config *cfg.Config, configFilePath string) error {
 	return nil
 }
 
+func setOwners(app *amo.AMOApplication, owners []atypes.GenesisOwner) {
+	for _, owner := range owners {
+		encoded := strings.ToUpper(hex.EncodeToString(owner.Address))
+		address := atypes.NewAddress([]byte(encoded))
+		account := atypes.Account{
+			Balance: owner.Amount,
+			PurchasedFiles: make(atypes.HashSet),
+		}
+		app.SetAccount(*address, &account)
+	}
+}
+
 func StartInProcess(db dbm.DB) (*node.Node, error) {
 	ctx := NewDefaultContext()
 	config := ctx.Config
@@ -90,13 +104,20 @@ func StartInProcess(db dbm.DB) (*node.Node, error) {
 	// Create AMO abci
 	app := amo.NewAMOApplication(db)
 	addRoutes()
+	var genDoc atypes.AMOGenesisDoc
+	err = genDoc.GenesisDocFromFile(config.GenesisFile())
+	if err != nil {
+		panic(err)
+	}
 	// Create tendermint and combine AMO abci
 	tmNode, err := node.NewNode(
 		config,
 		privval.LoadOrGenFilePV(config.PrivValidatorKeyFile(), config.PrivValidatorStateFile()),
 		nodeKey,
 		proxy.NewLocalClientCreator(app),
-		node.DefaultGenesisDocProviderFunc(config),
+		func() (*types.GenesisDoc, error) {
+			return &genDoc.GenesisDoc, nil
+		},
 		node.DefaultDBProvider,
 		node.DefaultMetricsProvider(config.Instrumentation),
 		ctx.Logger.With("module", "node"),
@@ -104,6 +125,16 @@ func StartInProcess(db dbm.DB) (*node.Node, error) {
 	if err != nil {
 		return nil, err
 	}
+	setOwners(app, genDoc.Owners)
+
+	// TEST CODE
+	buyer := app.GetBuyer(atypes.H1)
+	(*buyer)[*atypes.SampleAddress] = true
+	app.SetBuyer(atypes.H1, buyer)
+	acc := app.GetAccount(*atypes.SampleAddress)
+	acc.PurchasedFiles[atypes.H1] = true
+	app.SetAccount(*atypes.SampleAddress, acc)
+	// TEST CODE
 
 	// Run
 	err = tmNode.Start()
@@ -153,18 +184,21 @@ func InitFilesWithConfig(config *cfg.Config, logger log.Logger) error {
 	if cmn.FileExists(genFile) {
 		logger.Info("Found genesis file", "path", genFile)
 	} else {
-		genDoc := types.GenesisDoc{
-			ChainID:         fmt.Sprintf("test-chain-%v", cmn.RandStr(6)),
-			GenesisTime:     tmtime.Now(),
-			ConsensusParams: types.DefaultConsensusParams(),
-		}
+		genDoc := atypes.AMOGenesisDoc{}
+		genDoc.ChainID = atypes.ChainID
+		genDoc.GenesisTime = tmtime.Now()
+		genDoc.ConsensusParams = types.DefaultConsensusParams()
 		key := pv.GetPubKey()
 		genDoc.Validators = []types.GenesisValidator{{
 			Address: key.Address(),
 			PubKey:  key,
 			Power:   10,
 		}}
-
+		genDoc.Owners = []atypes.GenesisOwner{{
+			Address: key.Address(),
+			PubKey: key,
+			Amount: 3000,
+		}}
 		if err := genDoc.SaveAs(genFile); err != nil {
 			return err
 		}

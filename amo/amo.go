@@ -56,11 +56,6 @@ var _ abci.Application = (*AMOApplication)(nil)
 func NewAMOApplication(db dbm.DB) *AMOApplication {
 	state := loadState(db)
 	app := &AMOApplication{state: state}
-	addr := *types.NewAddress([]byte("a8cxVrk1ju91UaJf7U1Hscgn3sRqzfmjgg"))
-	(*app).SetAccount(addr, &types.Account{
-		Balance:        3000,
-		PurchasedFiles: make(types.HashSet),
-	})
 	return app
 }
 

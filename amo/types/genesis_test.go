@@ -15,6 +15,7 @@ const (
 var (
 	secret, _ = hex.DecodeString(testPriKey)
 	priKey    = ed25519.GenPrivKeyFromSecret(secret)
+	priKey2   = ed25519.GenPrivKey()
 )
 
 func TestAMOGenesisDoc(t *testing.T) {
