@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/sha256"
 	"encoding/hex"
-	"github.com/tendermint/btcd/btcec"
 	tmc "github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"io"
@@ -16,9 +14,16 @@ import (
 type PrivKeyP256 [32]byte
 type PubKeyP256 [65]byte
 
+var (
+	c = elliptic.P256()
+	h = tmc.Sha256
+)
+
 func GenPrivKeyFromSecret(secret []byte) PrivKeyP256 {
-	privKey32 := sha256.Sum256(secret)
-	return PrivKeyP256(privKey32)
+	privKey32 := h(secret)
+	priv := PrivKeyP256{}
+	copy(priv[:], privKey32)
+	return priv
 }
 
 func GenPrivKey() PrivKeyP256 {
@@ -26,7 +31,7 @@ func GenPrivKey() PrivKeyP256 {
 }
 
 func genPrivKey(rand io.Reader) PrivKeyP256 {
-	p256, err := ecdsa.GenerateKey(elliptic.P256(), rand)
+	p256, err := ecdsa.GenerateKey(c, rand)
 	if err != nil {
 		panic(err)
 	}
@@ -39,24 +44,51 @@ func (privKey PrivKeyP256) Bytes() []byte {
 	return privKey[:]
 }
 
+func (privKey PrivKeyP256) ToECDSA() *ecdsa.PrivateKey {
+	X, Y := c.ScalarBaseMult(privKey[:])
+	return &ecdsa.PrivateKey{
+		D: new(big.Int).SetBytes(privKey[:]),
+		PublicKey: ecdsa.PublicKey{
+			Curve: elliptic.P256(),
+			X: X,
+			Y: Y,
+		},
+	}
+}
+
 func (privKey PrivKeyP256) Sign(msg []byte) ([]byte, error) {
-	priv, _ := btcec.PrivKeyFromBytes(elliptic.P256(), privKey[:])
-	sig, err := priv.Sign(tmc.Sha256(msg))
+	priv :=  privKey.ToECDSA()
+	r, s, err := ecdsa.Sign(tmc.CReader(), priv, h(msg))
 	if err != nil {
 		return nil, err
 	}
-	return sig.Serialize(), nil
+	rb := r.Bytes()
+	sb := s.Bytes()
+	sig := make([]byte, 0, len(rb)+len(sb))
+	sig = append(sig, rb...)
+	sig = append(sig, sb...)
+	// concat r, s
+	return sig, nil
 }
 
 func (privKey PrivKeyP256) PubKey() tmc.PubKey {
-	_, pub := btcec.PrivKeyFromBytes(elliptic.P256(), privKey[:])
-	pubKey := PubKeyP256{}
-	copy(pubKey[:], pub.SerializeUncompressed())
+	priv := privKey.ToECDSA()
+	pubKey := PubKeyP256{0x04}
+	copy(pubKey[1:], priv.X.Bytes())
+	copy(pubKey[33:], priv.Y.Bytes())
 	return pubKey
 }
 
 func (privKey PrivKeyP256) Equals(other tmc.PrivKey) bool {
 	return bytes.Equal(privKey[:], other.Bytes())
+}
+
+func (privKey *PrivKeyP256) SetBytes(buf []byte) {
+	copy(privKey[:], buf)
+}
+
+func (privKey PrivKeyP256) String() string {
+	return hex.EncodeToString(privKey[:])
 }
 
 func (pubKey PubKeyP256) Address() tmc.Address {
@@ -67,32 +99,25 @@ func (pubKey PubKeyP256) Bytes() []byte {
 	return pubKey[:]
 }
 
-func (pubKey PubKeyP256) VerifyBytes(msg []byte, sig []byte) bool {
-	var pub = btcec.PublicKey{}
-	pub.Curve = elliptic.P256()
-	pub.X = new(big.Int).SetBytes(pubKey[1:33])
-	pub.Y = new(big.Int).SetBytes(pubKey[33:])
-	parsedSig, err := btcec.ParseSignature(sig[:], elliptic.P256())
-	if err != nil {
-		return false
+func (pubKey PubKeyP256) ToECDSA() *ecdsa.PublicKey {
+	return &ecdsa.PublicKey{
+		Curve: c,
+		X: new(big.Int).SetBytes(pubKey[1:33]),
+		Y: new(big.Int).SetBytes(pubKey[33:]),
 	}
-	return parsedSig.Verify(tmc.Sha256(msg), &pub)
+}
+
+func (pubKey PubKeyP256) VerifyBytes(msg []byte, sig []byte) bool {
+	return ecdsa.Verify(pubKey.ToECDSA(), h(msg), new(big.Int).SetBytes(sig[:32]), new(big.Int).SetBytes(sig[32:]))
 }
 
 func (pubKey PubKeyP256) Equals(other tmc.PubKey) bool {
 	return bytes.Equal(pubKey[:], other.Bytes())
 }
 
+func (pubKey PubKeyP256) String() string {
+	return hex.EncodeToString(pubKey[:])
+}
+
 var _ tmc.PrivKey = PrivKeyP256{}
 var _ tmc.PubKey = PubKeyP256{}
-
-// TEST CODE
-func genPribKeyP256FromHexString(hs string) PrivKeyP256 {
-	b, err := hex.DecodeString(hs)
-	if err != nil {
-		panic(err)
-	}
-	privKey := PrivKeyP256{}
-	copy(privKey[:], b)
-	return privKey
-}
