@@ -1,26 +1,17 @@
-package types
+package genesis
 
 import (
 	"bytes"
 	"fmt"
-	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/encoding/amino"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/types"
 	"io/ioutil"
 )
 
-var cdc = amino.NewCodec()
-
 const (
 	GenesisOwnerAminoName = "amo/GenesisOwner"
 )
-
-func init() {
-	cryptoAmino.RegisterAmino(cdc)
-	cdc.RegisterConcrete(GenesisOwner{}, GenesisOwnerAminoName, nil)
-}
 
 const (
 	ChainID = "amo-testnet"

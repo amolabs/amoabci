@@ -11,7 +11,7 @@ const (
 )
 
 type Message struct {
-	Type      string          `json:"type"`
+	Command   string          `json:"command"`
 	Timestamp int64           `json:"timestamp"`
 	Payload   json.RawMessage `json:"payload"`
 }
@@ -35,10 +35,10 @@ func ParseTx(tx []byte) (Message, interface{}) {
 		panic(err)
 	}
 
-	message.Type = strings.ToLower(message.Type)
+	message.Command = strings.ToLower(message.Command)
 
 	var payload interface{}
-	switch message.Type {
+	switch message.Command {
 	case TxTransfer:
 		payload = new(Transfer)
 	case TxPurchase:

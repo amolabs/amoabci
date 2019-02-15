@@ -22,7 +22,7 @@ func TestParseTx(t *testing.T) {
 	msg, payload := ParseTx(MSG)
 	purchase := payload.(*Purchase)
 
-	if msg.Timestamp != 1548399359964 || msg.Type != TxPurchase {
+	if msg.Timestamp != 1548399359964 || msg.Command != TxPurchase {
 		t.Fail()
 	}
 

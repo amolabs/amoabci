@@ -72,7 +72,7 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 	var tags []cmn.KVPair
 	var resCode = TxCodeOK
 
-	switch message.Type {
+	switch message.Command {
 	case types.TxTransfer:
 		transfer, _ := payload.(*types.Transfer)
 		resCode, tags = app.procTransfer(transfer)
@@ -126,7 +126,7 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 	message, payload := types.ParseTx(tx)
 	var resCode = TxCodeOK
 
-	switch message.Type {
+	switch message.Command {
 	case types.TxTransfer:
 		transfer, _ := payload.(*types.Transfer)
 		from := app.GetAccount(transfer.From)

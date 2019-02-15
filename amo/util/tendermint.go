@@ -3,7 +3,10 @@ package util
 import (
 	"encoding/hex"
 	"github.com/amolabs/amoabci/amo"
+	"github.com/amolabs/amoabci/amo/crypto/p256"
+	"github.com/amolabs/amoabci/amo/privval"
 	atypes "github.com/amolabs/amoabci/amo/types"
+	"github.com/amolabs/amoabci/amo/types/genesis"
 	"github.com/spf13/viper"
 	cfg "github.com/tendermint/tendermint/config"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -11,7 +14,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/privval"
+
 	"github.com/tendermint/tendermint/proxy"
 	"github.com/tendermint/tendermint/types"
 	tmtime "github.com/tendermint/tendermint/types/time"
@@ -67,7 +70,7 @@ func loadConfigFile(config *cfg.Config, configFilePath string) error {
 	return nil
 }
 
-func setOwners(app *amo.AMOApplication, owners []atypes.GenesisOwner) {
+func setOwners(app *amo.AMOApplication, owners []genesis.GenesisOwner) {
 	for _, owner := range owners {
 		encoded := strings.ToUpper(hex.EncodeToString(owner.Address))
 		address := atypes.NewAddress([]byte(encoded))
@@ -104,7 +107,7 @@ func StartInProcess(db dbm.DB) (*node.Node, error) {
 	// Create AMO abci
 	app := amo.NewAMOApplication(db)
 	addRoutes()
-	var genDoc atypes.AMOGenesisDoc
+	var genDoc genesis.AMOGenesisDoc
 	err = genDoc.GenesisDocFromFile(config.GenesisFile())
 	if err != nil {
 		panic(err)
@@ -158,12 +161,17 @@ func InitFilesWithConfig(config *cfg.Config, logger log.Logger) error {
 	privValKeyFile := config.PrivValidatorKeyFile()
 	privValStateFile := config.PrivValidatorStateFile()
 	var pv *privval.FilePV
+	// TODO: change ed25519 -> p256
 	if cmn.FileExists(privValKeyFile) {
 		pv = privval.LoadFilePV(privValKeyFile, privValStateFile)
 		logger.Info("Found private validator", "keyFile", privValKeyFile,
 			"stateFile", privValStateFile)
 	} else {
 		pv = privval.GenFilePV(privValKeyFile, privValStateFile)
+		priv := p256.GenPrivKey()
+		pv.Key.PrivKey = priv
+		pv.Key.PubKey = priv.PubKey()
+		pv.Key.Address = pv.Key.PubKey.Address()
 		pv.Save()
 		logger.Info("Generated private validator", "keyFile", privValKeyFile,
 			"stateFile", privValStateFile)
@@ -184,8 +192,8 @@ func InitFilesWithConfig(config *cfg.Config, logger log.Logger) error {
 	if cmn.FileExists(genFile) {
 		logger.Info("Found genesis file", "path", genFile)
 	} else {
-		genDoc := atypes.AMOGenesisDoc{}
-		genDoc.ChainID = atypes.ChainID
+		genDoc := genesis.AMOGenesisDoc{}
+		genDoc.ChainID = genesis.ChainID
 		genDoc.GenesisTime = tmtime.Now()
 		genDoc.ConsensusParams = types.DefaultConsensusParams()
 		key := pv.GetPubKey()
@@ -194,7 +202,7 @@ func InitFilesWithConfig(config *cfg.Config, logger log.Logger) error {
 			PubKey:  key,
 			Power:   10,
 		}}
-		genDoc.Owners = []atypes.GenesisOwner{{
+		genDoc.Owners = []genesis.GenesisOwner{{
 			Address: key.Address(),
 			PubKey:  key,
 			Amount:  3000,

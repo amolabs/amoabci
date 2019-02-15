@@ -34,13 +34,13 @@ func rpcPurchase(from atypes.Address, fileHash atypes.Hash) (*ctypes.ResultBroad
 	}))
 }
 
-func makeMessage(t string, payload interface{}) types.Tx {
+func makeMessage(cmd string, payload interface{}) types.Tx {
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		panic(err)
 	}
 	msg := atypes.Message{
-		Type:      t,
+		Command:   cmd,
 		Timestamp: tmtime.Now().Unix(),
 		Payload:   raw,
 	}

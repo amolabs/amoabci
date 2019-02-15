@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/hex"
+	"github.com/tendermint/go-amino"
 	tmc "github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"io"
@@ -18,6 +19,16 @@ var (
 	c = elliptic.P256()
 	h = tmc.Sha256
 )
+
+const (
+	PrivKeyAminoName = "amo/PrivKeyP256"
+	PubKeyAminoName = "amo/PubKeyP256"
+)
+
+func RegisterAmino(cdc *amino.Codec) {
+	cdc.RegisterConcrete(PrivKeyP256{}, PrivKeyAminoName, nil)
+	cdc.RegisterConcrete(PubKeyP256{}, PubKeyAminoName, nil)
+}
 
 func GenPrivKeyFromSecret(secret []byte) PrivKeyP256 {
 	privKey32 := h(secret)
