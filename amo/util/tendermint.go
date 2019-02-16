@@ -3,8 +3,6 @@ package util
 import (
 	"encoding/hex"
 	"github.com/amolabs/amoabci/amo"
-	"github.com/amolabs/amoabci/amo/crypto/p256"
-	"github.com/amolabs/amoabci/amo/privval"
 	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/amo/types/genesis"
 	"github.com/spf13/viper"
@@ -14,6 +12,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/tendermint/privval"
 
 	"github.com/tendermint/tendermint/proxy"
 	"github.com/tendermint/tendermint/types"
@@ -168,10 +167,12 @@ func InitFilesWithConfig(config *cfg.Config, logger log.Logger) error {
 			"stateFile", privValStateFile)
 	} else {
 		pv = privval.GenFilePV(privValKeyFile, privValStateFile)
+		/*
 		priv := p256.GenPrivKey()
 		pv.Key.PrivKey = priv
 		pv.Key.PubKey = priv.PubKey()
 		pv.Key.Address = pv.Key.PubKey.Address()
+		*/
 		pv.Save()
 		logger.Info("Generated private validator", "keyFile", privValKeyFile,
 			"stateFile", privValStateFile)
