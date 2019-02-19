@@ -1,0 +1,46 @@
+# vim: set expandtab:
+version: '3.3'
+services:
+  seed:
+    container_name: seed
+    image: amod
+    networks:
+      amohub:
+        ipv4_address: 192.167.10.2
+    environment:
+      - MONIKER=seed
+      - SEEDS=
+    #ports:
+    #  - "26656-26657:26656-26657"
+
+  val1:
+    depends_on:
+      - seed
+    container_name: val1
+    image: amod
+    networks:
+      - amohub
+    environment:
+      - MONIKER=anonymous
+      - SEEDS=1d10fa5a91f10efe6a486f14b5ffc8cb7f80d428@seed:26656
+
+  #val2:
+  #  container_name: val2
+  #  build: .
+
+  #rep1:
+  #  container_name: rep1
+  #  build: .
+
+  #rep2:
+  #  container_name: rep2
+  #  build: .
+
+networks:
+  amohub:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      -
+        subnet: 192.167.10.0/16

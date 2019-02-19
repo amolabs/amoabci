@@ -89,6 +89,7 @@ func StartInProcess(db dbm.DB) (*node.Node, error) {
 	if !cmn.FileExists(configFilePath) {
 		createConfigFile(ctx, configFilePath)
 	} else {
+		cfg.EnsureRoot(config.RootDir)
 		// load config file
 		if err := loadConfigFile(config, configFilePath); err != nil {
 			return nil, err

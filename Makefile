@@ -1,8 +1,10 @@
+.PHONY: build docker run-cluster
+
 all: build
 
 GO := $(shell command -v go 2> /dev/null)
 FS := /
-BUILDENV=CGO_ENABLED=0
+#BUILDENV=CGO_ENABLED=0
 
 ifeq ($(GO),)
   $(error could not find go. Is it in PATH? $(GO))
@@ -28,7 +30,8 @@ cd $(GITHUBDIR)$(FS)$(1)$(FS)$(2) && git fetch origin && git checkout -q $(3)
 
 go_install = $(call go_get,$(1),$(2),$(3)) && cd $(GITHUBDIR)$(FS)$(1)$(FS)$(2) && $(GO) install
 
-tools: $(GOPATH)/bin/dep $(GOPATH)/bin/gometalinter $(GOPATH)/bin/statik $(GOPATH)/bin/goimports
+#tools: $(GOPATH)/bin/dep $(GOPATH)/bin/gometalinter $(GOPATH)/bin/statik $(GOPATH)/bin/goimports
+tools: $(GOPATH)/bin/dep
 
 $(GOPATH)/bin/dep:
 	$(call go_get,golang,dep,22125cfaa6ddc71e145b1535d4b7ee9744fefff2)
@@ -51,6 +54,10 @@ vendor-deps:
 
 build:
 	@echo "--> Building amo daemon"
-	$(BUILDENV) go build -a -installsuffix cgo -o amod .
+	$(BUILDENV) go build -a -o amod .
 
-.PHONY: build
+docker:
+	docker build -t amod .
+
+run-cluster: docker
+	docker-compose up
