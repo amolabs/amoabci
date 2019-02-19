@@ -51,3 +51,19 @@ tendermint init
 tendermint node
 ```
 
+## Test with Docker
+For test setup details, see [test-env.md](https://github.com/amolabs/docs/blob/master/test-env.md).
+
+### Pre-requisites
+* [docker](https://www.docker.com)
+* [docker-compose](https://www.docker.com)
+
+### Run
+To build docker image, run:
+```bash
+make docker
+```
+To run test containers using docker-compose, run:
+```bash
+make run-cluster
+```
