@@ -1,24 +1,22 @@
 package db
 
 import (
-	"encoding/binary"
+	"github.com/amolabs/amoabci/amo/encoding/binary"
+	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/types"
 	"path"
 )
 
-const (
-	dbBalanceName = "balance"
-	dbParcelName = "parcel"
-	dbRequestName = "request"
-	dbUsageName = "usage"
+var (
+	prefixBalance = []byte("balance:")
+	prefixParcel = []byte("parcel:")
+	prefixRequest = []byte("request:")
+	prefixUsage = []byte("usage:")
 )
 
 type Store struct {
-	balance db.DB
-	parcel db.DB
-	request db.DB
-	usage db.DB
+	store db.DB
 }
 
 func getGoLevelDB(name, dir string) *db.GoLevelDB {
@@ -30,27 +28,37 @@ func getGoLevelDB(name, dir string) *db.GoLevelDB {
 }
 
 func NewStore(root string) *Store {
-	store := Store{
-		balance: getGoLevelDB(dbBalanceName, path.Join(root, dbBalanceName)),
-		parcel: getGoLevelDB(dbParcelName, path.Join(root, dbParcelName)),
-		request: getGoLevelDB(dbRequestName, path.Join(root, dbRequestName)),
-		usage: getGoLevelDB(dbUsageName, path.Join(root, dbUsageName)),
-	}
-	return &store
+	return &Store{getGoLevelDB("store", path.Join(root, "store"))}
 }
 
 // Balance store
-func (s Store) SetBalance(addr types.Address, balance uint64) {
-	b := make([]byte, 64/8)
-	binary.LittleEndian.PutUint64(b, balance)
- 	s.balance.Set(addr.Bytes(), b)
+func (s Store) setBalance(key []byte, balance *atypes.Currency) {
+	b, _ := balance.Serialize()
+	s.store.Set(append(prefixBalance, key...), b)
 }
 
-func (s Store) GetBalance(addr types.Address) uint64 {
-	return binary.LittleEndian.Uint64(s.balance.Get(addr.Bytes()))
+func (s Store) getBalance(key []byte) []byte {
+	return s.store.Get(append(prefixBalance, key...))
+}
+
+func (s Store) SetBalance(addr types.Address, balance atypes.Currency) {
+ 	s.setBalance(addr.Bytes(), &balance)
+}
+
+func (s Store) GetBalance(addr types.Address) *atypes.Currency {
+	var c atypes.Currency
+	_ := binary.Deserialize(s.getBalance(addr.Bytes()), &c)
+	return &c
 }
 
 // Parcel store
+func (s Store) setParcel(key []byte, value *ParcelValue) {
+
+}
+
+func (s Store) getParcel(key []byte) *ParcelValue {
+	return nil
+}
 
 // Request store
 
