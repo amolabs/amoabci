@@ -60,4 +60,4 @@ docker:
 	docker build -t amod .
 
 run-cluster: docker
-	docker-compose up
+	docker-compose up -d
