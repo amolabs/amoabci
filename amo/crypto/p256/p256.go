@@ -60,7 +60,7 @@ func (privKey PrivKeyP256) ToECDSA() *ecdsa.PrivateKey {
 	return &ecdsa.PrivateKey{
 		D: new(big.Int).SetBytes(privKey[:]),
 		PublicKey: ecdsa.PublicKey{
-			Curve: elliptic.P256(),
+			Curve: c,
 			X: X,
 			Y: Y,
 		},
@@ -119,6 +119,9 @@ func (pubKey PubKeyP256) ToECDSA() *ecdsa.PublicKey {
 }
 
 func (pubKey PubKeyP256) VerifyBytes(msg []byte, sig []byte) bool {
+	if len(sig) != 64 {
+		return false
+	}
 	return ecdsa.Verify(pubKey.ToECDSA(), h(msg), new(big.Int).SetBytes(sig[:32]), new(big.Int).SetBytes(sig[32:]))
 }
 
