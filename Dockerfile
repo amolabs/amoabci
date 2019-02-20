@@ -6,13 +6,15 @@ ENV DIR /go/src/github.com/amolabs/amoabci
 
 WORKDIR $DIR
 
-COPY Makefile Gopkg.toml Gopkg.lock main.go $DIR/
-COPY amo $DIR/amo
+COPY Makefile Gopkg.toml Gopkg.lock $DIR/
 
 RUN apk add --no-cache $PACKAGES \
     && make tools \
-    && make vendor-deps \
-    && make TARGET=linux
+    && make vendor-deps
+
+COPY main.go $DIR/
+COPY amo $DIR/amo
+RUN make TARGET=linux
 
 FROM alpine:edge
 
