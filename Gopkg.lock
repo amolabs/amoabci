@@ -338,13 +338,14 @@
   version = "v0.14.1"
 
 [[projects]]
-  digest = "1:cebf0a1f82aa71e8f8404e5ae190a34b95a4c5da1d311488f6fcdd5782ce30cf"
+  digest = "1:1a70c41c0895c3d1f35b52d3859fae618effa25c5225c6bde938a4426b9c2998"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
     "abci/example/code",
     "abci/example/counter",
     "abci/example/kvstore",
+    "abci/server",
     "abci/types",
     "blockchain",
     "config",
@@ -523,9 +524,11 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/pkg/errors",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/require",
     "github.com/tendermint/go-amino",
+    "github.com/tendermint/tendermint/abci/server",
     "github.com/tendermint/tendermint/abci/types",
     "github.com/tendermint/tendermint/config",
     "github.com/tendermint/tendermint/crypto",
@@ -537,6 +540,7 @@
     "github.com/tendermint/tendermint/libs/log",
     "github.com/tendermint/tendermint/node",
     "github.com/tendermint/tendermint/p2p",
+    "github.com/tendermint/tendermint/p2p/conn",
     "github.com/tendermint/tendermint/privval",
     "github.com/tendermint/tendermint/proxy",
     "github.com/tendermint/tendermint/rpc/core",

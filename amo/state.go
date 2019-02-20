@@ -3,12 +3,17 @@ package amo
 import (
 	"github.com/amolabs/amoabci/amo/encoding/binary"
 	"github.com/amolabs/amoabci/amo/types"
+	"github.com/tendermint/tendermint/libs/db"
 )
 
 var (
 	accountPrefixKey   = []byte("accountKey:")
 	fileBuyerPrefixKey = []byte("buyerKey:")
 )
+
+func LoadDB() (db.DB, error) {
+	return db.NewMemDB(), nil
+}
 
 func accountFixKey(key []byte) []byte {
 	return append(accountPrefixKey, key...)
