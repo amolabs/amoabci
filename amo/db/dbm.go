@@ -4,7 +4,6 @@ import (
 	"github.com/amolabs/amoabci/amo/encoding/binary"
 	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/tendermint-amo/libs/db"
-	"github.com/amolabs/tendermint-amo/types"
 	"path"
 )
 
@@ -41,13 +40,13 @@ func (s Store) getBalance(key []byte) []byte {
 	return s.store.Get(append(prefixBalance, key...))
 }
 
-func (s Store) SetBalance(addr types.Address, balance atypes.Currency) {
- 	s.setBalance(addr.Bytes(), &balance)
+func (s Store) SetBalance(addr *atypes.Address, balance *atypes.Currency) {
+ 	s.setBalance(addr[:], balance)
 }
 
-func (s Store) GetBalance(addr types.Address) *atypes.Currency {
+func (s Store) GetBalance(addr *atypes.Address) *atypes.Currency {
 	var c atypes.Currency
-	_ := binary.Deserialize(s.getBalance(addr.Bytes()), &c)
+	_ = binary.Deserialize(s.getBalance(addr[:]), &c)
 	return &c
 }
 

@@ -21,7 +21,6 @@ var (
 
 type State struct {
 	db      dbm.DB
-	store   adb.Store
 	Size    int64  `json:"size"`
 	Height  int64  `json:"height"`
 	AppHash []byte `json:"app_hash"`
@@ -51,14 +50,17 @@ func saveState(state State) {
 type AMOApplication struct {
 	abci.BaseApplication
 	state State
+	store   adb.Store
 }
 
 var _ abci.Application = (*AMOApplication)(nil)
 
 func NewAMOApplication(db dbm.DB, root string) *AMOApplication {
 	state := loadState(db)
-	state.store = *adb.NewStore(root)
-	app := &AMOApplication{state: state}
+	app := &AMOApplication{
+		state: state,
+		store: *adb.NewStore(root),
+	}
 	return app
 }
 
@@ -87,16 +89,16 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 }
 
 func (app *AMOApplication) procTransfer(transfer *types.Transfer) (uint32, []cmn.KVPair) {
-	from := app.GetAccount(transfer.From)
-	to := app.GetAccount(transfer.To)
-	from.Balance -= transfer.Amount
-	to.Balance += transfer.Amount
-	app.SetAccount(transfer.From, from)
-	app.SetAccount(transfer.To, to)
+	fromBalance := app.store.GetBalance(&transfer.From)
+	toBalance := app.store.GetBalance(&transfer.To)
+	*fromBalance -= transfer.Amount
+	*toBalance -= transfer.Amount
+	app.store.SetBalance(&transfer.From, fromBalance)
+	app.store.SetBalance(&transfer.To, toBalance)
 	app.state.Size += 1
 	tags := []cmn.KVPair{
-		{Key: transfer.From[:], Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
-		{Key: transfer.To[:], Value: []byte(strconv.FormatUint(uint64(to.Balance), 10))},
+		{Key: transfer.From[:], Value: []byte(strconv.FormatUint(uint64(*fromBalance), 10))},
+		{Key: transfer.To[:], Value: []byte(strconv.FormatUint(uint64(*toBalance), 10))},
 	}
 	return TxCodeOK, tags
 }
@@ -132,8 +134,8 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 	switch message.Command {
 	case types.TxTransfer:
 		transfer, _ := payload.(*types.Transfer)
-		from := app.GetAccount(transfer.From)
-		if from.Balance < transfer.Amount {
+		fromBalance := app.store.GetBalance(&transfer.From)
+		if *fromBalance < transfer.Amount {
 			resCode = TxCodeNotEnoughBalance
 			break
 		}
