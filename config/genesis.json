@@ -1,0 +1,30 @@
+{
+  "genesis_time": "2019-02-21T08:32:00.52824293Z",
+  "chain_id": "amo-test-dev",
+  "consensus_params": {
+    "block_size": {
+      "max_bytes": "22020096",
+      "max_gas": "-1"
+    },
+    "evidence": {
+      "max_age": "100000"
+    },
+    "validator": {
+      "pub_key_types": [
+        "ed25519"
+      ]
+    }
+  },
+  "validators": [
+    {
+      "address": "E0D7123DD8D0D54AC52D84D96C02F648C2135ABC",
+      "pub_key": {
+        "type": "tendermint/PubKeyEd25519",
+        "value": "Vikc0Un70QMr5e8JczAKi9NPuncR3tf6529zGyupXO0="
+      },
+      "power": "10",
+      "name": ""
+    }
+  ],
+  "app_hash": ""
+}

@@ -16,18 +16,18 @@ COPY main.go $DIR/
 COPY amo $DIR/amo
 RUN make TARGET=linux
 
-FROM alpine:edge
+FROM amolabs/tendermint-amo:latest
 
-RUN apk add --update ca-certificates
+# tendermint base image uses /tendermint as a home directory
+WORKDIR /tendermint
 
-WORKDIR /root
+#RUN apk add --update ca-certificates
 
 COPY --from=builder /go/src/github.com/amolabs/amoabci/amod /usr/bin/amod
-COPY run.sh /root
-COPY config/* /root/
+COPY run.sh config/* ./
 
 EXPOSE 26656 26657
 
-# TODO: use ENTRYPOINT
-#CMD ["amod"]
-CMD ["/bin/sh", "/root/run.sh"]
+# We need to override ENTRYPOINT from tendermint base image.
+ENTRYPOINT ["/bin/sh"]
+CMD ["/tendermint/run.sh"]

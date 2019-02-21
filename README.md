@@ -55,15 +55,30 @@ tendermint node
 For test setup details, see [test-env.md](https://github.com/amolabs/docs/blob/master/test-env.md).
 
 ### Pre-requisites
+* [tendermint-amo](https://github.com/amolabs/tendermint-amo)
 * [docker](https://www.docker.com)
 * [docker-compose](https://www.docker.com)
 
-### Run
-To build docker image, run:
+### Build
+First, we need to build tendermint node image, and use it as a base image when
+building an amod image.
 ```bash
+cd $GOPATH/src/github.com/amolabs/tendermint-amo
+make build-linux
+make build-docker
+```
+This will put an image with the tag amolabs/tendermint-amo:latest in the local image pool.
+
+Next, build an amod image
+```bash
+cd $GOPATH/src/github.com/amolabs/amoabci
 make docker
 ```
+This will put an image with the tag amod:latest in the local image pool.
+
+### Run
 To run test containers using docker-compose, run:
 ```bash
 make run-cluster
 ```
+This will run one seed node and two non-seed validator nodes.
