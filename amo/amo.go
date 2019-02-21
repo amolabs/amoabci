@@ -151,10 +151,7 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 			resCode = TxCodeNotEnoughBalance
 			break
 		}
-		if _, ok := (*app.GetBuyer(purchase.FileHash))[purchase.From]; ok {
-			resCode = TxCodeAlreadyBought
-			break
-		}
+		// TODO: TxCodeAlreadyBought
 		if purchase.From == metaData.Owner {
 			resCode = TxCodeSelfTransaction
 			break
