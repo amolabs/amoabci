@@ -1,4 +1,4 @@
-package types
+package genesis
 
 import (
 	"encoding/hex"
