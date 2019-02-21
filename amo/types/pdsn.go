@@ -5,9 +5,9 @@ import (
 )
 
 type PDSNMetaData struct {
-	FileHash Hash    `json:"file_hash"`
-	Price    uint64  `json:"price"`
-	Owner    Address `json:"owner"`
+	FileHash Hash     `json:"file_hash"`
+	Price    Currency `json:"price"`
+	Owner    Address  `json:"owner"`
 }
 
 var (

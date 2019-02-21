@@ -109,20 +109,16 @@ func (app *AMOApplication) procPurchase(purchase *types.Purchase) (uint32, []cmn
 	if err != nil {
 		panic(err)
 	}
-	from := app.GetAccount(purchase.From)
-	from.Balance -= metaData.Price
-	from.PurchasedFiles[metaData.FileHash] = true
-	app.SetAccount(purchase.From, from)
-	buyer := app.GetBuyer(metaData.FileHash)
-	(*buyer)[purchase.From] = true
-	app.SetBuyer(metaData.FileHash, buyer)
+	fromBalance := app.store.GetBalance(&purchase.From)
+	*fromBalance -= metaData.Price
+	// TODO: Add purchased files
 	result, err := json.Marshal(metaData)
 	if err != nil {
 		panic(err)
 	}
 	tags := []cmn.KVPair{
 		{Key: []byte(hex.EncodeToString(metaData.FileHash[:])), Value: result},
-		{Key: purchase.From[:], Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
+		{Key: purchase.From[:], Value: []byte(strconv.FormatUint(uint64(*fromBalance), 10))},
 	}
 	return TxCodeOK, tags
 }
@@ -150,8 +146,8 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 		if err != nil {
 			panic(err)
 		}
-		from := app.GetAccount(purchase.From)
-		if from.Balance < metaData.Price {
+		fromBalance := app.store.GetBalance(&purchase.From)
+		if *fromBalance < metaData.Price {
 			resCode = TxCodeNotEnoughBalance
 			break
 		}
