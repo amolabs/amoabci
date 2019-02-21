@@ -17,9 +17,9 @@ type Message struct {
 }
 
 type Transfer struct {
-	From   Address `json:"from"`
-	To     Address `json:"to"`
-	Amount uint64  `json:"amount"`
+	From   Address  `json:"from"`
+	To     Address  `json:"to"`
+	Amount Currency `json:"amount"`
 }
 
 type Purchase struct {
