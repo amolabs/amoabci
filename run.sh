@@ -6,12 +6,17 @@ echo "set seeds =" $SEEDS
 cp config.toml.in config.toml
 sed -e s/@moniker@/$MONIKER/ -i.tmp config.toml
 sed -e s/@seeds@/$SEEDS/ -i.tmp config.toml
-mkdir -p blockchain/config
-mkdir -p blockchain/data
-mv -f config.toml blockchain/config/
+mkdir config
+mkdir data
+mv -f config.toml config/
 if [ "$MONIKER" == "seed" ]; then
-	cp node_key.json blockchain/config/
-	cp priv_validator_key.json blockchain/config/
-	cp priv_validator_state.json blockchain/data/
+	mv node_key.json config/
+	mv priv_validator_key.json config/
+	mv priv_validator_state.json data/
 fi
-amod
+mv genesis.json config/
+amod &
+if [ "$MONIKER" == "seed" ]; then
+	/usr/bin/tendermint init
+fi
+/usr/bin/tendermint node
