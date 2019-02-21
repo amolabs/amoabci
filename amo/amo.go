@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	adb "github.com/amolabs/amoabci/amo/db"
 	"github.com/amolabs/amoabci/amo/types"
 	abci "github.com/amolabs/tendermint-amo/abci/types"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
@@ -20,6 +21,7 @@ var (
 
 type State struct {
 	db      dbm.DB
+	store   adb.Store
 	Size    int64  `json:"size"`
 	Height  int64  `json:"height"`
 	AppHash []byte `json:"app_hash"`
@@ -53,8 +55,9 @@ type AMOApplication struct {
 
 var _ abci.Application = (*AMOApplication)(nil)
 
-func NewAMOApplication(db dbm.DB) *AMOApplication {
+func NewAMOApplication(db dbm.DB, root string) *AMOApplication {
 	state := loadState(db)
+	state.store = *adb.NewStore(root)
 	app := &AMOApplication{state: state}
 	return app
 }

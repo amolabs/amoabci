@@ -24,7 +24,9 @@ func initApp() error {
 	if err != nil {
 		return err
 	}
-	app = amo.NewAMOApplication(db)
+	// TODO: load amo home
+	storeRoot := "blockchain"
+	app = amo.NewAMOApplication(db, storeRoot)
 	srv, err := server.NewServer("tcp://0.0.0.0:46658", "socket", app)
 	if err != nil {
 		return err
