@@ -10,8 +10,8 @@ services:
     environment:
       - MONIKER=seed
       - SEEDS=
-    ports:
-      - "26656-26657:26656-26657"
+    #ports:
+    #  - "26656-26657:26656-26657"
 
   val1:
     depends_on:
