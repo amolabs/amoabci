@@ -14,3 +14,7 @@ func (c *Currency) Deserialize(data []byte) error {
 	*c = Currency(binary.LittleEndian.Uint64(data))
 	return nil
 }
+
+func (c *Currency) Add(op *Currency) {
+	*c += *op
+}
