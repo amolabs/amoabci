@@ -3,7 +3,7 @@ package privval
 import (
 	"github.com/amolabs/amoabci/amo/crypto/p256"
 	"github.com/tendermint/go-amino"
-	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
+	cryptoAmino "github.com/amolabs/tendermint-amo/crypto/encoding/amino"
 )
 
 var cdc = amino.NewCodec()

@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/amolabs/amoabci/amo"
-	"github.com/tendermint/tendermint/abci/server"
-	"github.com/tendermint/tendermint/abci/types"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/libs/log"
 	"os"
+
+	"github.com/amolabs/amoabci/amo"
+	"github.com/amolabs/tendermint-amo/abci/server"
+	"github.com/amolabs/tendermint-amo/abci/types"
+	cmn "github.com/amolabs/tendermint-amo/libs/common"
+	"github.com/amolabs/tendermint-amo/libs/log"
 )
 
 func main() {
@@ -35,7 +36,7 @@ func initApp() error {
 	cmn.TrapSignal(func() {
 		// Cleanup
 		err := srv.Stop()
-		if err!= nil {
+		if err != nil {
 			panic(err)
 		}
 	})

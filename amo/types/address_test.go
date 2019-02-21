@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/amolabs/tendermint-amo/crypto/ed25519"
 	"testing"
 )
 

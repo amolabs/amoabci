@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/libs/log"
-	p2pconn "github.com/tendermint/tendermint/p2p/conn"
-	"github.com/tendermint/tendermint/types"
+	"github.com/amolabs/tendermint-amo/crypto/ed25519"
+	cmn "github.com/amolabs/tendermint-amo/libs/common"
+	"github.com/amolabs/tendermint-amo/libs/log"
+	p2pconn "github.com/amolabs/tendermint-amo/p2p/conn"
+	"github.com/amolabs/tendermint-amo/types"
 )
 
 // Socket errors.

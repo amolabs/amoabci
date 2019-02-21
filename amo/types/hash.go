@@ -3,7 +3,7 @@ package types
 import (
 	"encoding/hex"
 	"encoding/json"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	cmn "github.com/amolabs/tendermint-amo/libs/common"
 )
 
 const (

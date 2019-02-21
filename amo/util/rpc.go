@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	atypes "github.com/amolabs/amoabci/amo/types"
-	"github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/rpc/core"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/tendermint/tendermint/rpc/lib/server"
-	"github.com/tendermint/tendermint/types"
-	tmtime "github.com/tendermint/tendermint/types/time"
+	"github.com/amolabs/tendermint-amo/libs/common"
+	"github.com/amolabs/tendermint-amo/rpc/core"
+	ctypes "github.com/amolabs/tendermint-amo/rpc/core/types"
+	"github.com/amolabs/tendermint-amo/rpc/lib/server"
+	"github.com/amolabs/tendermint-amo/types"
+	tmtime "github.com/amolabs/tendermint-amo/types/time"
 )
 
 func addRoutes() {

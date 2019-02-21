@@ -3,8 +3,8 @@ package db
 import (
 	"github.com/amolabs/amoabci/amo/encoding/binary"
 	atypes "github.com/amolabs/amoabci/amo/types"
-	"github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/types"
+	"github.com/amolabs/tendermint-amo/libs/db"
+	"github.com/amolabs/tendermint-amo/types"
 	"path"
 )
 

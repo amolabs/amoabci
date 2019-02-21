@@ -3,7 +3,7 @@ package amo
 import (
 	"github.com/amolabs/amoabci/amo/encoding/binary"
 	"github.com/amolabs/amoabci/amo/types"
-	"github.com/tendermint/tendermint/libs/db"
+	"github.com/amolabs/tendermint-amo/libs/db"
 )
 
 var (

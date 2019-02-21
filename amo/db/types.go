@@ -2,7 +2,7 @@ package db
 
 import (
 	"github.com/amolabs/amoabci/amo/encoding/binary"
-	"github.com/tendermint/tendermint/crypto"
+	"github.com/amolabs/tendermint-amo/crypto"
 )
 
 type ParcelValue struct {

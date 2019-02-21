@@ -3,7 +3,7 @@ package genesis
 import (
 	"github.com/amolabs/amoabci/amo/crypto/p256"
 	"github.com/tendermint/go-amino"
-	"github.com/tendermint/tendermint/crypto/encoding/amino"
+	"github.com/amolabs/tendermint-amo/crypto/encoding/amino"
 )
 
 var cdc = amino.NewCodec()

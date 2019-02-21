@@ -3,7 +3,7 @@ package types
 import (
 	"encoding/hex"
 	"encoding/json"
-	"github.com/tendermint/tendermint/crypto"
+	"github.com/amolabs/tendermint-amo/crypto"
 	"strings"
 )
 

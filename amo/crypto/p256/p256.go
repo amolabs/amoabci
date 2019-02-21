@@ -6,8 +6,8 @@ import (
 	"crypto/elliptic"
 	"encoding/hex"
 	"github.com/tendermint/go-amino"
-	tmc "github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/tmhash"
+	tmc "github.com/amolabs/tendermint-amo/crypto"
+	"github.com/amolabs/tendermint-amo/crypto/tmhash"
 	"io"
 	"math/big"
 )
