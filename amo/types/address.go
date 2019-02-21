@@ -7,8 +7,13 @@ import (
 )
 
 const (
-	AddressSize    = 40
-	AddressVersion = byte(0x0)
+	addressPrefixLength = 2
+	AddressSize = addressPrefixLength + 33
+)
+
+var (
+	addressTestPrefix = []byte{0x0, 0x7F}
+	addressMainPrefix = []byte{0x0, 0x6E}
 )
 
 type Address [AddressSize]byte
@@ -36,15 +41,23 @@ func (addr Address) String() string {
 	return string(addr[:])
 }
 
-func GenAddress(pubKey crypto.PubKey) *Address {
+func GenAddress(pubKey crypto.PubKey, prefix []byte) *Address {
 	r160 := crypto.Ripemd160(crypto.Sha256(pubKey.Bytes()))
-	er160 := make([]byte, 1+160/8)
-	er160[0] = AddressVersion
-	copy(er160[1:], r160)
+	er160 := make([]byte, addressPrefixLength+160/8)
+	copy(er160[:addressPrefixLength], prefix)
+	copy(er160[addressPrefixLength:], r160)
 	checksum := crypto.Sha256(crypto.Sha256(r160))[:4]
 	address := append(er160, checksum...)
 	encoded := base58.Encode(address)
 	return NewAddress([]byte(encoded))
+}
+
+func GenTestAddress(pubKey crypto.PubKey) *Address  {
+	return GenAddress(pubKey, addressTestPrefix)
+}
+
+func GenMainAddress(pubKey crypto.PubKey) *Address  {
+	return  GenAddress(pubKey, addressMainPrefix)
 }
 
 var _ json.Marshaler = (*Address)(nil)
