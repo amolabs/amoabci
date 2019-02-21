@@ -1,6 +1,7 @@
 package main
 
 import (
+	dbm "github.com/amolabs/tendermint-amo/libs/db"
 	"os"
 
 	"github.com/amolabs/amoabci/amo"
@@ -20,10 +21,7 @@ func main() {
 func initApp() error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	var app types.Application
-	db, err := amo.LoadDB()
-	if err != nil {
-		return err
-	}
+	db := dbm.NewMemDB()
 	// TODO: load amo home
 	storeRoot := "blockchain"
 	app = amo.NewAMOApplication(db, storeRoot)
