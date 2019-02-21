@@ -25,7 +25,7 @@ func initApp() error {
 		return err
 	}
 	app = amo.NewAMOApplication(db)
-	srv, err := server.NewServer("tcp://0.0.0.0:46658", "socket", app)
+	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
 	if err != nil {
 		return err
 	}
