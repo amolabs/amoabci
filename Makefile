@@ -1,9 +1,11 @@
-.PHONY: build docker run-cluster
+.PHONY: build docker run-cluster test
 
 all: build
 
 GO := $(shell command -v go 2> /dev/null)
 FS := /
+# go source code files including files from vendor directory
+GOSRCS=$(shell find . -name \*.go)
 #BUILDENV=CGO_ENABLED=0
 
 ifeq ($(GO),)
@@ -30,6 +32,9 @@ cd $(GITHUBDIR)$(FS)$(1)$(FS)$(2) && git fetch origin && git checkout -q $(3)
 
 go_install = $(call go_get,$(1),$(2),$(3)) && cd $(GITHUBDIR)$(FS)$(1)$(FS)$(2) && $(GO) install
 
+tags: $(GOSRCS)
+	gotags -R -f tags .
+
 #tools: $(GOPATH)/bin/dep $(GOPATH)/bin/gometalinter $(GOPATH)/bin/statik $(GOPATH)/bin/goimports
 tools: $(GOPATH)/bin/dep
 
@@ -55,6 +60,9 @@ vendor-deps:
 build:
 	@echo "--> Building amo daemon"
 	$(BUILDENV) go build -a -o amod .
+
+test:
+	go test ./...
 
 docker:
 	docker build -t amod .
