@@ -2,11 +2,12 @@ package db
 
 import (
 	"github.com/amolabs/amoabci/amo/encoding/binary"
+	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/tendermint-amo/crypto"
 )
 
 type ParcelValue struct {
-	Owner crypto.Address
+	Owner atypes.Address
 	Custody crypto.PubKey
 	Info []byte `json:"info,omitempty"`
 }

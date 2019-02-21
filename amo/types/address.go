@@ -1,10 +1,9 @@
 package types
 
 import (
-	"encoding/hex"
 	"encoding/json"
+	"github.com/amolabs/amoabci/amo/encoding/base58"
 	"github.com/amolabs/tendermint-amo/crypto"
-	"strings"
 )
 
 const (
@@ -37,27 +36,15 @@ func (addr Address) String() string {
 	return string(addr[:])
 }
 
-func doubleHash(b []byte) []byte {
-	return crypto.Sha256(crypto.Sha256(b))
-}
-
-/*
-func GenAddress(pubKey crypto.PubKey) Address {
-	r160 := crypto.Ripemd160(doubleHash(pubKey.Bytes()))
+func GenAddress(pubKey crypto.PubKey) *Address {
+	r160 := crypto.Ripemd160(crypto.Sha256(pubKey.Bytes()))
 	er160 := make([]byte, 1+160/8)
 	er160[0] = AddressVersion
 	copy(er160[1:], r160)
-	checksum := doubleHash(doubleHash(r160))[:4]
+	checksum := crypto.Sha256(crypto.Sha256(r160))[:4]
 	address := append(er160, checksum...)
 	encoded := base58.Encode(address)
-	return *NewAddress([]byte(encoded))
-}
-*/
-
-func GenAddress(pubKey crypto.PubKey) *Address {
-	addr := Address{}
-	copy(addr[:], strings.ToUpper(hex.EncodeToString(pubKey.Address())))
-	return &addr
+	return NewAddress([]byte(encoded))
 }
 
 var _ json.Marshaler = (*Address)(nil)
