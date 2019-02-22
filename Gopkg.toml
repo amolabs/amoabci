@@ -24,10 +24,13 @@
 #   go-tests = true
 #   unused-packages = true
 
-
 [[constraint]]
   name = "github.com/amolabs/tendermint-amo"
   branch = "release/v0.29.2a"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  version = "~0.0.1"
 
 [prune]
   go-tests = true

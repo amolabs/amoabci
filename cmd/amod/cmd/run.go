@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"os"
@@ -8,13 +8,25 @@ import (
 	"github.com/amolabs/tendermint-amo/abci/types"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
 	"github.com/amolabs/tendermint-amo/libs/log"
+
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	err := initApp()
-	if err != nil {
-		panic(err)
-	}
+/* Commands (expected hierarchy)
+ *
+ * amod |- run
+ */
+
+var runCmd = &cobra.Command{
+	Use:	"run",
+	Short:	"Executes the 'amo' daemon",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := initApp()
+		if err != nil {
+			return err
+		}
+		return nil
+	},
 }
 
 func initApp() error {
@@ -41,4 +53,8 @@ func initApp() error {
 		}
 	})
 	return nil
+}
+
+func init() {
+	// init here if needed
 }
