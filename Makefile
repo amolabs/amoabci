@@ -1,6 +1,6 @@
 .PHONY: build docker run-cluster test
 
-all: build
+all: install
 
 GO := $(shell command -v go 2> /dev/null)
 FS := /
@@ -58,13 +58,22 @@ vendor-deps:
 	@dep ensure -v -vendor-only
 
 build:
-	@echo "--> Building amo daemon"
-	$(BUILDENV) go build -a -o amod .
+	@echo "--> Building amo daemon (amod)"
+	go build ./cmd/amod
+	@echo "--> Building amo console (amocli)"
+	go build ./cmd/amocli
+
+install:
+	@echo "--> Installing amo daemon (amod)"
+	go install ./cmd/amod
+	@echo "--> Installing amo console (amocli)"
+	go install ./cmd/amocli
 
 test:
 	go test ./...
 
 docker:
+	go build -o amod ./cmd/amod
 	docker build -t amod .
 
 run-cluster: docker
