@@ -36,7 +36,7 @@ tags: $(GOSRCS)
 	gotags -R -f tags .
 
 #tools: $(GOPATH)/bin/dep $(GOPATH)/bin/gometalinter $(GOPATH)/bin/statik $(GOPATH)/bin/goimports
-tools: $(GOPATH)/bin/dep
+get_tools: $(GOPATH)/bin/dep
 
 $(GOPATH)/bin/dep:
 	$(call go_get,golang,dep,22125cfaa6ddc71e145b1535d4b7ee9744fefff2)
@@ -52,10 +52,15 @@ $(GOPATH)/bin/statik:
 $(GOPATH)/bin/goimports:
 	go get golang.org/x/tools/cmd/goimports
 
-vendor-deps:
+get_vendor_deps:
 	@echo "--> Generating vendor directory via dep ensure"
 	@rm -rf .vendor-new
 	@dep ensure -v -vendor-only
+
+update_vendor_deps:
+	@echo "--> Running dep ensure"
+	@rm -rf .vendor-new
+	@dep ensure -v -update
 
 build:
 	@echo "--> Building amo daemon (amod)"
