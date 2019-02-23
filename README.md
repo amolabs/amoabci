@@ -1,6 +1,8 @@
 # Tendermint ABCI App for AMO blockchain
 
+<!--
 ***NOTE: Tendermint node and the app are built into one single binary in current implementation. This may change in the future.***
+-->
 
 ## Installation
 ### Pre-requisites
@@ -9,19 +11,22 @@
 * [tendermint](https://github.com/tendermint/tendermint)
 
 ### Build from source
-* <s>run commands to build Tendermint node:</s>
+* <s>run commands to build Tendermint-amo node:</s>
 ```bash
-git clone https://github.com/tendermint/tendermint
+git clone https://github.com/amolabs/tendermint-amo
+cd tendermint-amo
 make get_tools
 make get_vendor_deps
 make install
 ```
 
-* run commands to build AMO ABCI app:
+* run commands to install AMO ABCI app (amod, amocli) :
 ```bash
 git clone https://github.com/amolabs/amoabci
 cd amoabci
-make
+make get_tools
+make get_vendor_deps
+make install
 ```
 In order to build for another platform (cross-compile) use `TARGET` variable. ex)
 ```bash
@@ -36,7 +41,7 @@ make TARGET=linux
 ### Run ABCI app
 * run commands:
 ```bash
-amod
+amod run
 ```
 
 ### Prepare keys
@@ -45,7 +50,7 @@ amod
 tendermint init
 ```
 
-### <s>Run Tendermint node</s>
+### Run Tendermint node
 * run commands:
 ```bash
 tendermint node
