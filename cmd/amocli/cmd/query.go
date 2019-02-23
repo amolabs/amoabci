@@ -11,13 +11,13 @@ import (
 
 /* Commands (expected hierarchy)
  *
- * amoconsole |- query |- address
+ * amocli |- query |- address
  */
 
 var queryCmd = &cobra.Command{
 	Use:     "query",
 	Aliases: []string{"q"},
-	Short:   "Performs a query ...",
+	Short:   "Performs the query specified by users",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := cmd.Help(); err != nil {
 			return err
@@ -29,7 +29,7 @@ var queryCmd = &cobra.Command{
 
 var queryAddressCmd = &cobra.Command{
 	Use:   "address [address]",
-	Short: "Shows address's general information",
+	Short: "Show general information of specified address",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		target := atypes.NewAddress([]byte(args[0]))

@@ -13,14 +13,14 @@ import (
 
 /* Commands (expected hierarchy)
  *
- * amoconsole |- tx |- transfer --from <address> --to <address> --amount <number>
- *		    		|- purchase --from <address> --file <hash>
+ * amocli |- tx |- transfer --from <address> --to <address> --amount <number>
+ *		    	|- purchase --from <address> --file <hash>
  */
 
 var txCmd = &cobra.Command{
 	Use:     "tx",
 	Aliases: []string{"t"},
-	Short:   "Performs a transaction",
+	Short:   "Perform a transaction",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := cmd.Help(); err != nil {
 			return err
@@ -32,14 +32,14 @@ var txCmd = &cobra.Command{
 
 var txTransferCmd = &cobra.Command{
 	Use:   "transfer",
-	Short: "Transfers the specified amount of money from <address> to <address>",
+	Short: "Transfer the specified amount of money from <address> to <address>",
 	Args:  cobra.NoArgs,
 	RunE:  txTransferFunc,
 }
 
 var txPurchaseCmd = &cobra.Command{
 	Use:   "purchase",
-	Short: "Purchases the file specified with file's <hash>",
+	Short: "Purchase the file specified with file's <hash>",
 	Args:  cobra.NoArgs,
 	RunE:  txPurchaseFunc,
 }

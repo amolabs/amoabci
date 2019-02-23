@@ -19,7 +19,7 @@ import (
 
 var runCmd = &cobra.Command{
 	Use:	"run",
-	Short:	"Executes the 'amo' daemon",
+	Short:	"Execute the daemon",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := initApp()
 		if err != nil {

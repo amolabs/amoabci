@@ -8,15 +8,15 @@ import (
 
 /* Commands (expected hierarchy)
  *
- * amoconsole |- key |- list
- *		  			 |- generate <nickname>
- *				 	 |- remove <nickname>
+ * amocli |- key |- list
+ *				 |- generate <nickname>
+ *			 	 |- remove <nickname>
  */
 
 var keyCmd = &cobra.Command{
 	Use:     "key",
 	Aliases: []string{"k"},
-	Short:   "Manages the key(wallet)-related features",
+	Short:   "Manage the key(wallet)-related features",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := cmd.Help(); err != nil {
 			return err
@@ -37,7 +37,7 @@ func init() {
 
 var keyListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "Shows all of keys stored on the local storage",
+	Short: "Show all of keys stored on the local storage",
 	Args:  cobra.NoArgs,
 	RunE:  keyListFunc,
 }
@@ -48,7 +48,7 @@ func keyListFunc(cmd *cobra.Command, args []string) error {
 
 var keyGenCmd = &cobra.Command{
 	Use:   "generate [nickname]",
-	Short: "Generates a key with a specified nickname",
+	Short: "Generate a key with a specified nickname",
 	Args:  cobra.MinimumNArgs(1),
 	RunE:  keyGenFunc,
 }
@@ -65,7 +65,7 @@ func keyGenFunc(cmd *cobra.Command, args []string) error {
 
 var keyRemoveCmd = &cobra.Command{
 	Use:   "remove [nickname]",
-	Short: "Removes the specified key",
+	Short: "Remove the specified key",
 	Args:  cobra.MinimumNArgs(1),
 	RunE:  keyRemoveFunc,
 }

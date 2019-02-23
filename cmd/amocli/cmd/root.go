@@ -8,8 +8,8 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:               "amoconsole",
-	Short:             "Console app for a user to interact with 'amo' daemon",
+	Use:               "amocli",
+	Short:             "Console app for a user to interact with AMO daemon",
 	PersistentPreRunE: loadConfig,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := cmd.Help(); err != nil {

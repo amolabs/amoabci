@@ -9,7 +9,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:               "amod",
-	Short:             "'amo' daemon",
+	Short:             "AMO daemon management",
 	PersistentPreRunE: loadConfig,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := cmd.Help(); err != nil {

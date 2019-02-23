@@ -11,7 +11,7 @@ const VERSION = "0.1"
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Shows version info",
+	Short: "Show version info",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(VERSION)
 	},
