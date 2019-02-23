@@ -11,7 +11,7 @@
 * [tendermint](https://github.com/tendermint/tendermint)
 
 ### Build from source
-* <s>run commands to build Tendermint-amo node:</s>
+* run commands to build Tendermint-amo node:
 ```bash
 git clone https://github.com/amolabs/tendermint-amo
 cd tendermint-amo
@@ -20,7 +20,7 @@ make get_vendor_deps
 make install
 ```
 
-* run commands to install AMO ABCI app (amod, amocli) :
+* run commands to install AMO ABCI app (amod, amocli):
 ```bash
 git clone https://github.com/amolabs/amoabci
 cd amoabci
