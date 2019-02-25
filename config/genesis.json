@@ -1,5 +1,5 @@
 {
-  "genesis_time": "2019-02-21T08:32:00.52824293Z",
+  "genesis_time": "2019-02-25T11:10:25.475921037Z",
   "chain_id": "amo-test-dev",
   "consensus_params": {
     "block_size": {
@@ -17,10 +17,10 @@
   },
   "validators": [
     {
-      "address": "E0D7123DD8D0D54AC52D84D96C02F648C2135ABC",
+      "address": "A1C4398F86DA21190CC492BEF298BB931B119618",
       "pub_key": {
-        "type": "tendermint/PubKeyEd25519",
-        "value": "Vikc0Un70QMr5e8JczAKi9NPuncR3tf6529zGyupXO0="
+        "type": "amo/PubKeyP256",
+        "value": "BKR6Tc9XxtokHaeTl0Mogrs+l17LBluh0wzOdXhqVnuHw15241VefwPrwIRce6eqMlAut1Q+zatKLZQEw25pN9k="
       },
       "power": "10",
       "name": ""
