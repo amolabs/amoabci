@@ -24,6 +24,7 @@ WORKDIR /tendermint
 #RUN apk add --update ca-certificates
 
 COPY --from=builder /go/src/github.com/amolabs/amoabci/amod /usr/bin/amod
+COPY --from=builder /go/src/github.com/amolabs/amoabci/amocli /usr/bin/amocli
 COPY run.sh config/* ./
 
 EXPOSE 26656 26657
