@@ -30,7 +30,7 @@ make install
 ```
 In order to build for another platform (cross-compile) use `TARGET` variable. ex)
 ```bash
-make TARGET=linux
+make TARGET=linux install
 ```
 
 ### Gather network information
