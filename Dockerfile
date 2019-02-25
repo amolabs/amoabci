@@ -9,8 +9,8 @@ WORKDIR $DIR
 COPY Makefile Gopkg.toml Gopkg.lock $DIR/
 
 RUN apk add --no-cache $PACKAGES \
-    && make tools \
-    && make vendor-deps
+    && make get_tools \
+    && make get_vendor_deps
 
 COPY main.go $DIR/
 COPY amo $DIR/amo
