@@ -69,7 +69,8 @@ func init() {
 
 func txTransferFunc(cmd *cobra.Command, args []string) error {
 	var from, to string
-	var amount uint64
+	var tmp uint64
+	var amount atypes.Currency
 	var err error
 
 	flags := cmd.Flags()
@@ -80,9 +81,10 @@ func txTransferFunc(cmd *cobra.Command, args []string) error {
 	if to, err = flags.GetString("to"); err != nil {
 		return err
 	}
-	if amount, err = flags.GetUint64("amount"); err != nil {
+	if tmp, err = flags.GetUint64("amount"); err != nil {
 		return err
 	}
+	amount = atypes.Currency(tmp)
 
 	fromAddr := atypes.NewAddress([]byte(from))
 	toAddr := atypes.NewAddress([]byte(to))

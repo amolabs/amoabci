@@ -8,7 +8,7 @@ import (
 )
 
 // Transfer handles transfer transaction
-func Transfer(from, to atypes.Address, amount *uint64) (*ctypes.ResultBroadcastTxCommit, error) {
+func Transfer(from, to atypes.Address, amount *atypes.Currency) (*ctypes.ResultBroadcastTxCommit, error) {
 	return util.RPCBroadcastTxCommit(util.MakeMessage(atypes.TxTransfer, atypes.Transfer{
 		From:   from,
 		To:     to,

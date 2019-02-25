@@ -12,9 +12,9 @@ RUN apk add --no-cache $PACKAGES \
     && make get_tools \
     && make get_vendor_deps
 
-COPY main.go $DIR/
 COPY amo $DIR/amo
-RUN make TARGET=linux
+COPY cmd $DIR/cmd
+RUN make TARGET=linux build
 
 FROM amolabs/tendermint-amo:latest
 
