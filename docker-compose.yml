@@ -22,7 +22,7 @@ services:
       - amonet
     environment:
       - MONIKER=val1
-      - SEEDS=1d10fa5a91f10efe6a486f14b5ffc8cb7f80d428@seed:26656
+      - SEEDS=f9fd62c026446c0d65023607a3398f574c7d4ba4@seed:26656
 
   val2:
     depends_on:
@@ -33,7 +33,7 @@ services:
       - amonet
     environment:
       - MONIKER=val2
-      - SEEDS=1d10fa5a91f10efe6a486f14b5ffc8cb7f80d428@seed:26656
+      - SEEDS=f9fd62c026446c0d65023607a3398f574c7d4ba4@seed:26656
 
   #rep1:
   #  container_name: rep1

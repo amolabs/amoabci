@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "release/v0.29.2a"
-  digest = "1:065bb23f4d4fda646421f77e74be185a908863a2a65856c0df932556b0de2c11"
+  digest = "1:0f037154099505f8bce6c31d95c82dd24c553f021373df7ef3b04f08a9e88d67"
   name = "github.com/amolabs/tendermint-amo"
   packages = [
     "abci/client",
@@ -22,6 +22,7 @@
     "crypto/merkle",
     "crypto/multisig",
     "crypto/multisig/bitarray",
+    "crypto/p256",
     "crypto/secp256k1",
     "crypto/tmhash",
     "evidence",
@@ -58,7 +59,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "bec9bc5d8d3cd3a04e096e3d00f6dbbbd4e8e635"
+  revision = "f32f56fe77865f84e452409e7b0e68e39fc9f3e8"
 
 [[projects]]
   branch = "master"
@@ -555,6 +556,7 @@
     "github.com/amolabs/tendermint-amo/crypto",
     "github.com/amolabs/tendermint-amo/crypto/ed25519",
     "github.com/amolabs/tendermint-amo/crypto/encoding/amino",
+    "github.com/amolabs/tendermint-amo/crypto/p256",
     "github.com/amolabs/tendermint-amo/crypto/tmhash",
     "github.com/amolabs/tendermint-amo/libs/common",
     "github.com/amolabs/tendermint-amo/libs/db",
