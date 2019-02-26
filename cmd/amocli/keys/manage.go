@@ -1,9 +1,9 @@
 package keys
 
 import (
-	"crypto/sha256"
 	"errors"
 
+	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric"
 
 	"github.com/amolabs/amoabci/amo/crypto/p256"
@@ -21,10 +21,7 @@ func GenerateKey(nickname string, passphrase []byte) error {
 	rawPubKey := rawPrivKey.PubKey()
 	rawAddress := rawPubKey.Address()
 
-	hash := sha256.New()
-	hash.Write(passphrase)
-
-	encPrivKey := xsalsa20symmetric.EncryptSymmetric(rawPrivKey.Bytes(), hash.Sum(nil))
+	encPrivKey := xsalsa20symmetric.EncryptSymmetric(rawPrivKey.Bytes(), crypto.Sha256(passphrase))
 
 	keyList, err := LoadKeyList()
 	if err != nil {
@@ -54,12 +51,9 @@ func RemoveKey(nickname string, passphrase []byte) error {
 		return err
 	}
 
-	hash := sha256.New()
-	hash.Write(passphrase)
-
 	key := keyList[nickname]
 
-	_, err = xsalsa20symmetric.DecryptSymmetric(key.EncPrivKey, hash.Sum(nil))
+	_, err = xsalsa20symmetric.DecryptSymmetric(key.EncPrivKey, crypto.Sha256(passphrase))
 	if err != nil {
 		return err
 	}
