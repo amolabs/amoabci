@@ -8,7 +8,7 @@
 ### Pre-requisites
 * [golang](https://golang.org/dl/)
 * [golang/dep](https://golang.github.io/dep/docs/installation.html)
-* [tendermint](https://github.com/tendermint/tendermint)
+* [tendermint-amo](https://github.com/amolabs/tendermint-amo)
 
 ### Build from source
 * run commands to build Tendermint-amo node:
