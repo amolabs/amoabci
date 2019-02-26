@@ -2,8 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"syscall"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/amolabs/amoabci/cmd/amocli/keys"
 )
 
 /* Commands (expected hierarchy)
@@ -43,6 +47,11 @@ var keyListCmd = &cobra.Command{
 }
 
 func keyListFunc(cmd *cobra.Command, args []string) error {
+	err := keys.List()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -54,12 +63,25 @@ var keyGenCmd = &cobra.Command{
 }
 
 func keyGenFunc(cmd *cobra.Command, args []string) error {
-	var nickname string
+	nickname := args[0]
 
-	nickname = args[0]
+	exists, err := keys.CheckKey(nickname)
+	if exists {
+		return err
+	}
 
-	fmt.Println(nickname)
+	fmt.Printf("Type passphrase: ")
+	passphrase, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return err
+	}
 
+	err = keys.GenerateKey(nickname, passphrase)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\nSuccessfully generated the key with nickname: %s\n", nickname)
 	return nil
 }
 
@@ -71,11 +93,24 @@ var keyRemoveCmd = &cobra.Command{
 }
 
 func keyRemoveFunc(cmd *cobra.Command, args []string) error {
-	var nickname string
+	nickname := args[0]
 
-	nickname = args[0]
+	exists, err := keys.CheckKey(nickname)
+	if !exists {
+		return err
+	}
 
-	fmt.Println(nickname)
+	fmt.Printf("Type passphrase: ")
+	passphrase, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return err
+	}
 
+	err = keys.RemoveKey(nickname, passphrase)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\nSuccessfully removed the key with nickname: %s\n", nickname)
 	return nil
 }
