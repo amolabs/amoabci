@@ -3,7 +3,7 @@ version: '3.3'
 services:
   seed:
     container_name: seed
-    image: amod
+    image: amolabs/amod
     networks:
       amonet:
         ipv4_address: 192.167.10.2
@@ -17,7 +17,7 @@ services:
     depends_on:
       - seed
     container_name: val1
-    image: amod
+    image: amolabs/amod
     networks:
       - amonet
     environment:
@@ -28,7 +28,7 @@ services:
     depends_on:
       - seed
     container_name: val2
-    image: amod
+    image: amolabs/amod
     networks:
       - amonet
     environment:
