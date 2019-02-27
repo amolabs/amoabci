@@ -3,9 +3,15 @@ package types
 import (
 	"encoding/json"
 	"github.com/amolabs/amoabci/amo/encoding/binary"
+	"github.com/amolabs/tendermint-amo/crypto/p256"
 	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
+)
+
+var (
+	testAddr  = GenAddress(p256.GenPrivKey().PubKey()) // B2F18D445ADD140711B64E7370C8AD44DA083EEB
+	testAddr2 = GenAddress(p256.GenPrivKey().PubKey())
 )
 
 func TestAddressSetJSON(t *testing.T) {
