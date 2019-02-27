@@ -32,7 +32,12 @@ var keyCmd = &cobra.Command{
 
 func init() {
 	listCmd := keyListCmd
+
 	genCmd := keyGenCmd
+	genCmd.Flags().SortFlags = false
+	genCmd.Flags().BoolP("encrypt", "e", true,
+		"encrypt the private key with passphrase. default: true")
+
 	removeCmd := keyRemoveCmd
 
 	cmd := keyCmd
@@ -65,23 +70,35 @@ var keyGenCmd = &cobra.Command{
 func keyGenFunc(cmd *cobra.Command, args []string) error {
 	nickname := args[0]
 
-	exists, err := keys.CheckKey(nickname)
-	if exists {
+	keyStatus, err := keys.CheckKey(nickname)
+	if keyStatus > keys.NoExists {
 		return err
 	}
 
-	fmt.Printf("Type passphrase: ")
-	passphrase, err := terminal.ReadPassword(int(syscall.Stdin))
+	flags := cmd.Flags()
+
+	encrypt, err := flags.GetBool("encrypt")
 	if err != nil {
 		return err
 	}
 
-	err = keys.GenerateKey(nickname, passphrase)
+	var passphrase []byte
+
+	if encrypt {
+		fmt.Printf("Type passphrase: ")
+		passphrase, err = terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println()
+		if err != nil {
+			return err
+		}
+	}
+
+	err = keys.GenerateKey(nickname, passphrase, encrypt)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("\nSuccessfully generated the key with nickname: %s\n", nickname)
+	fmt.Printf("Successfully generated the key with nickname: %s\n", nickname)
 	return nil
 }
 
@@ -95,15 +112,20 @@ var keyRemoveCmd = &cobra.Command{
 func keyRemoveFunc(cmd *cobra.Command, args []string) error {
 	nickname := args[0]
 
-	exists, err := keys.CheckKey(nickname)
-	if !exists {
+	keyStatus, err := keys.CheckKey(nickname)
+	if keyStatus < keys.Exists {
 		return err
 	}
 
-	fmt.Printf("Type passphrase: ")
-	passphrase, err := terminal.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		return err
+	var passphrase []byte
+
+	if keyStatus == keys.Encrypted {
+		fmt.Printf("Type passphrase: ")
+		passphrase, err = terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println()
+		if err != nil {
+			return err
+		}
 	}
 
 	err = keys.RemoveKey(nickname, passphrase)
@@ -111,6 +133,6 @@ func keyRemoveFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("\nSuccessfully removed the key with nickname: %s\n", nickname)
+	fmt.Printf("Successfully removed the key with nickname: %s\n", nickname)
 	return nil
 }

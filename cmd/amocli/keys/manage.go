@@ -9,29 +9,47 @@ import (
 )
 
 type KeyInfo struct {
-	Type       string `json:"type"`
-	Address    []byte `json:"address"`
-	PubKey     []byte `json:"pubKey"`
-	EncPrivKey []byte `json:"encPrivKey"`
+	Type      string `json:"type"`
+	Address   []byte `json:"address"`
+	PubKey    []byte `json:"pub_key"`
+	PrivKey   []byte `json:"priv_key"`
+	Encrypted bool   `json:"encrypted"`
 }
 
-func GenerateKey(nickname string, passphrase []byte) error {
+type KeyStatus int
+
+const (
+	Unknown KeyStatus = 1 + iota
+	NoExists
+	Exists
+	Encrypted
+)
+
+func GenerateKey(nickname string, passphrase []byte, encrypt bool) error {
+	var privKeyBytes []byte
+
 	privKey := p256.GenPrivKey()
 	pubKey := privKey.PubKey()
 	address := pubKey.Address()
 
-	encPrivKey := xsalsa20symmetric.EncryptSymmetric(privKey.Bytes(), crypto.Sha256(passphrase))
+	newKey := KeyInfo{
+		Type:    p256.PrivKeyAminoName,
+		Address: address.Bytes(),
+		PubKey:  pubKey.Bytes(),
+	}
+
+	if encrypt {
+		privKeyBytes = xsalsa20symmetric.EncryptSymmetric(privKey.Bytes(), crypto.Sha256(passphrase))
+	} else {
+		privKeyBytes = privKey.Bytes()
+	}
+
+	newKey.PrivKey = privKeyBytes
+	newKey.Encrypted = encrypt
 
 	keyList, err := LoadKeyList()
 	if err != nil {
 		return err
-	}
-
-	newKey := KeyInfo{
-		Type:       p256.PrivKeyAminoName,
-		Address:    address.Bytes(),
-		PubKey:     pubKey.Bytes(),
-		EncPrivKey: encPrivKey,
 	}
 
 	keyList[nickname] = newKey
@@ -52,9 +70,11 @@ func RemoveKey(nickname string, passphrase []byte) error {
 
 	key := keyList[nickname]
 
-	_, err = xsalsa20symmetric.DecryptSymmetric(key.EncPrivKey, crypto.Sha256(passphrase))
-	if err != nil {
-		return err
+	if key.Encrypted {
+		_, err = xsalsa20symmetric.DecryptSymmetric(key.PrivKey, crypto.Sha256(passphrase))
+		if err != nil {
+			return err
+		}
 	}
 
 	delete(keyList, nickname)
@@ -67,16 +87,20 @@ func RemoveKey(nickname string, passphrase []byte) error {
 	return nil
 }
 
-func CheckKey(nickname string) (bool, error) {
+func CheckKey(nickname string) (KeyStatus, error) {
 	keyList, err := LoadKeyList()
 	if err != nil {
-		return false, err
+		return Unknown, err
 	}
 
-	_, exists := keyList[nickname]
+	key, exists := keyList[nickname]
 	if !exists {
-		return false, errors.New("The key doesn't exist")
+		return NoExists, errors.New("The key doesn't exist")
 	}
 
-	return true, errors.New("The key already exists")
+	if !key.Encrypted {
+		return Exists, errors.New("The key already exists")
+	}
+
+	return Encrypted, errors.New("The key already exists")
 }
