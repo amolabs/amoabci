@@ -4,9 +4,8 @@ import (
 	"errors"
 
 	"github.com/amolabs/tendermint-amo/crypto"
+	"github.com/amolabs/tendermint-amo/crypto/p256"
 	"github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric"
-
-	"github.com/amolabs/amoabci/amo/crypto/p256"
 )
 
 type KeyInfo struct {
@@ -17,11 +16,11 @@ type KeyInfo struct {
 }
 
 func GenerateKey(nickname string, passphrase []byte) error {
-	rawPrivKey := p256.GenPrivKey()
-	rawPubKey := rawPrivKey.PubKey()
-	rawAddress := rawPubKey.Address()
+	privKey := p256.GenPrivKey()
+	pubKey := privKey.PubKey()
+	address := pubKey.Address()
 
-	encPrivKey := xsalsa20symmetric.EncryptSymmetric(rawPrivKey.Bytes(), crypto.Sha256(passphrase))
+	encPrivKey := xsalsa20symmetric.EncryptSymmetric(privKey.Bytes(), crypto.Sha256(passphrase))
 
 	keyList, err := LoadKeyList()
 	if err != nil {
@@ -30,8 +29,8 @@ func GenerateKey(nickname string, passphrase []byte) error {
 
 	newKey := KeyInfo{
 		Type:       p256.PrivKeyAminoName,
-		Address:    rawAddress.Bytes(),
-		PubKey:     rawPubKey.Bytes(),
+		Address:    address.Bytes(),
+		PubKey:     pubKey.Bytes(),
 		EncPrivKey: encPrivKey,
 	}
 
@@ -75,7 +74,7 @@ func CheckKey(nickname string) (bool, error) {
 	}
 
 	_, exists := keyList[nickname]
-	if  !exists {
+	if !exists {
 		return false, errors.New("The key doesn't exist")
 	}
 

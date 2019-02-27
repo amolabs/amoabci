@@ -2,7 +2,6 @@ package keys
 
 import (
 	"encoding/json"
-	"os"
 
 	"github.com/amolabs/amoabci/cmd/amocli/util"
 )
@@ -10,12 +9,13 @@ import (
 func LoadKeyList() (map[string]KeyInfo, error) {
 	keyList := make(map[string]KeyInfo)
 
+	keyDir := util.DefaultKeyPath()
 	keyFile := util.DefaultKeyFilePath()
 
-	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
-		os.MkdirAll(util.DefaultKeyPath(), os.ModePerm)
-		os.OpenFile(keyFile, os.O_RDONLY|os.O_CREATE, 0600)
-	}
+	//if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+	//}
+
+	util.CreateFile(keyDir, keyFile)
 
 	rawKeyList, err := util.LoadFile(keyFile)
 	if err != nil {
@@ -40,12 +40,10 @@ func SaveKeyList(keyList map[string]KeyInfo) error {
 		return err
 	}
 
+	keyDir := util.DefaultKeyPath()
 	keyFile := util.DefaultKeyFilePath()
 
-	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
-		os.MkdirAll(util.DefaultKeyPath(), os.ModePerm)
-		os.OpenFile(keyFile, os.O_RDONLY|os.O_CREATE, 0600)
-	}
+	util.CreateFile(keyDir, keyFile)
 
 	err = util.SaveFile(rawKeyList, keyFile)
 	if err != nil {
