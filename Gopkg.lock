@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "release/v0.29.2a"
-  digest = "1:0f037154099505f8bce6c31d95c82dd24c553f021373df7ef3b04f08a9e88d67"
+  digest = "1:c458319a6d1b3494f2358fd5b0084fae91e75df39e0e04b2ed008944f856c42d"
   name = "github.com/amolabs/tendermint-amo"
   packages = [
     "abci/client",
@@ -25,6 +25,7 @@
     "crypto/p256",
     "crypto/secp256k1",
     "crypto/tmhash",
+    "crypto/xsalsa20symmetric",
     "evidence",
     "libs/autofile",
     "libs/clist",
@@ -312,7 +313,7 @@
     "xfs",
   ]
   pruneopts = "UT"
-  revision = "e4d4a2206da023361ed100d85c5f2cf9c8364e9f"
+  revision = "6ed1f7e1041181781dd2826d3001075d011a80cc"
 
 [[projects]]
   digest = "1:c4556a44e350b50a490544d9b06e9fba9c286c21d6c0e47f54f3a9214597298c"
@@ -421,7 +422,7 @@
   version = "v0.14.1"
 
 [[projects]]
-  digest = "1:b6621a5e9003d7d809993d49217a841d27ef85b4bc0459115d3fd1f8c1518999"
+  digest = "1:7167a54e830f17b9e1795cdcacd30dada3cfd6ff6f9c2548f7b7141c7fd66527"
   name = "golang.org/x/crypto"
   packages = [
     "chacha20poly1305",
@@ -436,6 +437,7 @@
     "poly1305",
     "ripemd160",
     "salsa20/salsa",
+    "ssh/terminal",
   ]
   pruneopts = "UT"
   revision = "505ab145d0a99da450461ae2c1a9f6cd10d1f447"
@@ -458,14 +460,15 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ad5e62a015226e008f9ca24cdf00d65c74f004f1b247cfa033ca9e3afcf41b29"
+  digest = "1:bdec0cac19c2981f8962586869eab879a5abb7adde65f71715a40a66edcf37d9"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
     "unix",
+    "windows",
   ]
   pruneopts = "UT"
-  revision = "cd391775e71e684db52b63df9affd58269495083"
+  revision = "775f8194d0f9e65c46913c7be783d3d95a29333c"
 
 [[projects]]
   digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"
@@ -496,10 +499,10 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "082222b4a5c572e33e82ee9162d1352c7cf38682"
+  revision = "fc2db5cae922db113989ef87b5b859cc8a179f59"
 
 [[projects]]
-  digest = "1:9ab5a33d8cb5c120602a34d2e985ce17956a4e8c2edce7e6961568f95e40c09a"
+  digest = "1:cbc746de4662c66fd24a037501bd65aa0f8ad0bfca0c92576e0abb88864e3741"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -535,8 +538,8 @@
     "tap",
   ]
   pruneopts = "UT"
-  revision = "a02b0774206b209466313a0b525d2c738fe407eb"
-  version = "v1.18.0"
+  revision = "2fdaae294f38ed9a121193c51ec99fecd3b13eb7"
+  version = "v1.19.0"
 
 [[projects]]
   digest = "1:4d2e5a73dc1500038e504a8d78b986630e3626dc027bc030ba5c75da257cdb96"
@@ -558,6 +561,7 @@
     "github.com/amolabs/tendermint-amo/crypto/encoding/amino",
     "github.com/amolabs/tendermint-amo/crypto/p256",
     "github.com/amolabs/tendermint-amo/crypto/tmhash",
+    "github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric",
     "github.com/amolabs/tendermint-amo/libs/common",
     "github.com/amolabs/tendermint-amo/libs/db",
     "github.com/amolabs/tendermint-amo/libs/log",
@@ -578,6 +582,7 @@
     "github.com/spf13/viper",
     "github.com/stretchr/testify/require",
     "github.com/tendermint/go-amino",
+    "golang.org/x/crypto/ssh/terminal",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
