@@ -555,7 +555,6 @@
     "github.com/amolabs/tendermint-amo/config",
     "github.com/amolabs/tendermint-amo/crypto",
     "github.com/amolabs/tendermint-amo/crypto/ed25519",
-    "github.com/amolabs/tendermint-amo/crypto/encoding/amino",
     "github.com/amolabs/tendermint-amo/libs/common",
     "github.com/amolabs/tendermint-amo/libs/db",
     "github.com/amolabs/tendermint-amo/libs/log",
@@ -573,7 +572,6 @@
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/require",
-    "github.com/tendermint/go-amino",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
