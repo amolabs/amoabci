@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"github.com/amolabs/tendermint-amo/types"
 	"strings"
 )
 
@@ -17,13 +18,13 @@ type Message struct {
 }
 
 type Transfer struct {
-	From   Address `json:"from"`
-	To     Address `json:"to"`
+	From   types.Address `json:"from"`
+	To     types.Address `json:"to"`
 	Amount Currency  `json:"amount"`
 }
 
 type Purchase struct {
-	From     Address `json:"from"`
+	From     types.Address `json:"from"`
 	FileHash Hash    `json:"file_hash"`
 }
 

@@ -2,12 +2,13 @@ package types
 
 import (
 	"errors"
+	"github.com/amolabs/tendermint-amo/types"
 )
 
 type PDSNMetaData struct {
 	FileHash Hash     `json:"file_hash"`
 	Price    Currency `json:"price"`
-	Owner    Address  `json:"owner"`
+	Owner    types.Address  `json:"owner"`
 }
 
 var (
@@ -19,7 +20,7 @@ var FileHashes = map[Hash]PDSNMetaData{
 	H1: {
 		FileHash: H1,
 		Price:    100,
-		Owner:    *SampleAddress,
+		Owner:    []byte("B2F18D445ADD140711B64E7370C8AD44DA083EEB"),
 	},
 }
 
