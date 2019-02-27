@@ -12,9 +12,6 @@ func LoadKeyList() (map[string]KeyInfo, error) {
 	keyDir := util.DefaultKeyPath()
 	keyFile := util.DefaultKeyFilePath()
 
-	//if _, err := os.Stat(keyFile); os.IsNotExist(err) {
-	//}
-
 	util.CreateFile(keyDir, keyFile)
 
 	rawKeyList, err := util.LoadFile(keyFile)
