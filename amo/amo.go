@@ -1,10 +1,12 @@
 package amo
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	adb "github.com/amolabs/amoabci/amo/db"
 	"github.com/amolabs/amoabci/amo/types"
 	abci "github.com/amolabs/tendermint-amo/abci/types"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
@@ -49,13 +51,17 @@ func saveState(state State) {
 type AMOApplication struct {
 	abci.BaseApplication
 	state State
+	store *adb.Store
 }
 
 var _ abci.Application = (*AMOApplication)(nil)
 
 func NewAMOApplication(db dbm.DB) *AMOApplication {
 	state := loadState(db)
-	app := &AMOApplication{state: state}
+	app := &AMOApplication{
+		state: state,
+		store: adb.NewStore("blockchain"),
+	}
 	return app
 }
 
@@ -84,16 +90,16 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 }
 
 func (app *AMOApplication) procTransfer(transfer *types.Transfer) (uint32, []cmn.KVPair) {
-	from := app.GetAccount(transfer.From)
-	to := app.GetAccount(transfer.To)
-	from.Balance -= transfer.Amount
-	to.Balance += transfer.Amount
-	app.SetAccount(transfer.From, from)
-	app.SetAccount(transfer.To, to)
+	fromBalance := *app.store.GetBalance(transfer.From)
+	toBalance := *app.store.GetBalance(transfer.To)
+	fromBalance -= transfer.Amount
+	toBalance += transfer.Amount
+	app.store.SetBalance(transfer.From, fromBalance)
+	app.store.SetBalance(transfer.To, toBalance)
 	app.state.Size += 1
 	tags := []cmn.KVPair{
-		{Key: transfer.From[:], Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
-		{Key: transfer.To[:], Value: []byte(strconv.FormatUint(uint64(to.Balance), 10))},
+		{Key: transfer.From, Value: []byte(strconv.FormatUint(uint64(fromBalance), 10))},
+		{Key: transfer.To, Value: []byte(strconv.FormatUint(uint64(toBalance), 10))},
 	}
 	return TxCodeOK, tags
 }
@@ -104,20 +110,16 @@ func (app *AMOApplication) procPurchase(purchase *types.Purchase) (uint32, []cmn
 	if err != nil {
 		panic(err)
 	}
-	from := app.GetAccount(purchase.From)
-	from.Balance -= metaData.Price
-	from.PurchasedFiles[metaData.FileHash] = true
-	app.SetAccount(purchase.From, from)
-	buyer := app.GetBuyer(metaData.FileHash)
-	(*buyer)[purchase.From] = true
-	app.SetBuyer(metaData.FileHash, buyer)
+	fromBalance := *app.store.GetBalance(purchase.From)
+	fromBalance -= metaData.Price
+	// TODO: modify ownership
 	result, err := json.Marshal(metaData)
 	if err != nil {
 		panic(err)
 	}
 	tags := []cmn.KVPair{
 		{Key: []byte(hex.EncodeToString(metaData.FileHash[:])), Value: result},
-		{Key: purchase.From[:], Value: []byte(strconv.FormatUint(uint64(from.Balance), 10))},
+		{Key: purchase.From[:], Value: []byte(strconv.FormatUint(uint64(fromBalance), 10))},
 	}
 	return TxCodeOK, tags
 }
@@ -129,12 +131,12 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 	switch message.Command {
 	case types.TxTransfer:
 		transfer, _ := payload.(*types.Transfer)
-		from := app.GetAccount(transfer.From)
-		if from.Balance < transfer.Amount {
+		fromBalance := *app.store.GetBalance(transfer.From)
+		if fromBalance < transfer.Amount {
 			resCode = TxCodeNotEnoughBalance
 			break
 		}
-		if transfer.From == transfer.To {
+		if bytes.Equal(transfer.From, transfer.To) {
 			resCode = TxCodeSelfTransaction
 			break
 		}
@@ -145,16 +147,13 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 		if err != nil {
 			panic(err)
 		}
-		from := app.GetAccount(purchase.From)
-		if from.Balance < metaData.Price {
+		fromBalance := *app.store.GetBalance(purchase.From)
+		if fromBalance < metaData.Price {
 			resCode = TxCodeNotEnoughBalance
 			break
 		}
-		if _, ok := (*app.GetBuyer(purchase.FileHash))[purchase.From]; ok {
-			resCode = TxCodeAlreadyBought
-			break
-		}
-		if purchase.From == metaData.Owner {
+		// TODO: TxCodeAlreadyBought
+		if bytes.Equal(purchase.From, metaData.Owner) {
 			resCode = TxCodeSelfTransaction
 			break
 		}
