@@ -72,3 +72,23 @@ func TestRequest(t *testing.T) {
 	assert.False(t, requestOutput.IsExpired())
 	tearDown(t)
 }
+
+func TestUsage(t *testing.T) {
+	setUp(t)
+	s := NewStore(testRoot)
+	testAddr := p256.GenPrivKey().PubKey().Address()
+	parcelID := cmn.RandBytes(32)
+	custody := cmn.RandBytes(32)
+	exp := time.Now()
+	exp = exp.Add(100 * time.Minute)
+	usageInput := dtypes.UsageValue{
+		Custody: custody,
+		Exp: exp,
+	}
+	s.SetUsage(testAddr, parcelID, &usageInput)
+	usageOutput := s.GetUsage(testAddr, parcelID)
+	assert.Equal(t, usageInput.Custody, (*usageOutput).Custody)
+	assert.Equal(t, usageInput.Exp.Unix(), (*usageOutput).Exp.Unix())
+	assert.False(t, usageOutput.IsExpired())
+	tearDown(t)
+}
