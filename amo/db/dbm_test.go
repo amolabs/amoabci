@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+	"time"
 )
 
 const testRoot = "store_test"
@@ -50,5 +51,24 @@ func TestParcel(t *testing.T) {
 	s.SetParcel(parcelID, &parcelInput)
 	parcelOutput := s.GetParcel(parcelID)
 	assert.Equal(t, parcelInput, *parcelOutput)
+	tearDown(t)
+}
+
+func TestRequest(t *testing.T) {
+	setUp(t)
+	s := NewStore(testRoot)
+	testAddr := p256.GenPrivKey().PubKey().Address()
+	parcelID := cmn.RandBytes(32)
+	exp := time.Now()
+	exp = exp.Add(100 * time.Minute)
+	requestInput := dtypes.RequestValue{
+		Payment: types.Currency(100),
+		Exp: exp,
+	}
+	s.SetRequest(testAddr, parcelID, &requestInput)
+	requestOutput := s.GetRequest(testAddr, parcelID)
+	assert.Equal(t, requestInput.Payment, (*requestOutput).Payment)
+	assert.Equal(t, requestInput.Exp.Unix(), (*requestOutput).Exp.Unix())
+	assert.False(t, requestOutput.IsExpired())
 	tearDown(t)
 }
