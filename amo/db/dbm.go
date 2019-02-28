@@ -1,6 +1,7 @@
 package db
 
 import (
+	dtypes "github.com/amolabs/amoabci/amo/db/types"
 	"github.com/amolabs/amoabci/amo/encoding/binary"
 	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/tendermint-amo/libs/db"
@@ -55,11 +56,11 @@ func (s Store) GetBalance(addr types.Address) *atypes.Currency {
 }
 
 // Parcel store
-func (s Store) setParcel(key []byte, value *ParcelValue) {
+func (s Store) setParcel(key []byte, value *dtypes.ParcelValue) {
 
 }
 
-func (s Store) getParcel(key []byte) *ParcelValue {
+func (s Store) getParcel(key []byte) *dtypes.ParcelValue {
 	return nil
 }
 
