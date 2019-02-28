@@ -113,3 +113,27 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *dtypes.Request
 }
 
 // Usage store
+func usageKey(buyer crypto.Address, parcelID []byte) []byte {
+	return append(prefixUsage, append(append(buyer, ':'), parcelID...)...)
+}
+
+func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *dtypes.UsageValue) {
+	b, err := value.Serialize()
+	if err != nil {
+		panic(err)
+	}
+	s.store.Set(usageKey(buyer, parcelID), b)
+}
+
+func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *dtypes.UsageValue {
+	b := s.store.Get(usageKey(buyer, parcelID))
+	if len(b) == 0 {
+		return nil
+	}
+	var usage dtypes.UsageValue
+	err := binary.Deserialize(b, &usage)
+	if err != nil {
+		panic(err)
+	}
+	return &usage
+}
