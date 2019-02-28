@@ -1,6 +1,7 @@
 package db
 
 import (
+	dtypes "github.com/amolabs/amoabci/amo/db/types"
 	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/tendermint-amo/crypto/p256"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
@@ -25,12 +26,29 @@ func tearDown(t *testing.T) {
 	}
 }
 
-func TestStore(t *testing.T) {
+func TestBalance(t *testing.T) {
 	setUp(t)
 	s := NewStore(testRoot)
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	balance := types.Currency(100)
 	s.SetBalance(testAddr, balance)
 	assert.Equal(t, balance, s.GetBalance(testAddr))
+	tearDown(t)
+}
+
+func TestParcel(t *testing.T) {
+	setUp(t)
+	s := NewStore(testRoot)
+	testAddr := p256.GenPrivKey().PubKey().Address()
+	custody := cmn.RandBytes(32)
+	parcelInput := dtypes.ParcelValue{
+		Owner: testAddr,
+		Custody: custody,
+		Info: []byte("test"),
+	}
+	parcelID := cmn.RandBytes(32)
+	s.SetParcel(parcelID, &parcelInput)
+	parcelOutput := s.GetParcel(parcelID)
+	assert.Equal(t, parcelInput, *parcelOutput)
 	tearDown(t)
 }
