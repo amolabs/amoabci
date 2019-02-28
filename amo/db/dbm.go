@@ -4,6 +4,7 @@ import (
 	dtypes "github.com/amolabs/amoabci/amo/db/types"
 	"github.com/amolabs/amoabci/amo/encoding/binary"
 	atypes "github.com/amolabs/amoabci/amo/types"
+	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/amolabs/tendermint-amo/types"
 	"path"
@@ -86,5 +87,29 @@ func (s Store) GetParcel(parcelID []byte) *dtypes.ParcelValue {
 }
 
 // Request store
+func requestKey(buyer crypto.Address, parcelID []byte) []byte {
+	return append(prefixRequest, append(append(buyer, ':'), parcelID...)...)
+}
+
+func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *dtypes.RequestValue) {
+	b, err := value.Serialize()
+	if err != nil {
+		panic(err)
+	}
+	s.store.Set(requestKey(buyer, parcelID), b)
+}
+
+func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *dtypes.RequestValue {
+	b := s.store.Get(requestKey(buyer, parcelID))
+	if len(b) == 0 {
+		return nil
+	}
+	var request dtypes.RequestValue
+	err := binary.Deserialize(b, &request)
+	if err != nil {
+		panic(err)
+	}
+	return &request
+}
 
 // Usage store
