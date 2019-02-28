@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	dbm "github.com/amolabs/tendermint-amo/libs/db"
 	"os"
 
 	"github.com/amolabs/amoabci/amo"
@@ -32,10 +33,7 @@ var runCmd = &cobra.Command{
 func initApp() error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	var app types.Application
-	db, err := amo.LoadDB()
-	if err != nil {
-		return err
-	}
+	db := dbm.NewMemDB()
 	app = amo.NewAMOApplication(db)
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
 	if err != nil {

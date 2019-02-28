@@ -178,11 +178,11 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 		var value []byte
 		switch len(resQuery.Key) {
 		case types.AddressSize:
-			value, _ = json.Marshal(app.GetAccount(*types.NewAddress(reqQuery.Data)))
-			resQuery.Value = value
+			// TODO
+			break
 		case types.HashSize << 1:
-			value, _ = json.Marshal(app.GetBuyer(*types.NewHashFromHexBytes(reqQuery.Data)))
-			resQuery.Value = value
+			// TODO
+			break
 		}
 		if value != nil {
 			resQuery.Log = "exists"
