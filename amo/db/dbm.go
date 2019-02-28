@@ -47,7 +47,10 @@ func (s Store) SetBalance(addr types.Address, balance atypes.Currency) {
 
 func (s Store) GetBalance(addr types.Address) *atypes.Currency {
 	var c atypes.Currency
-	_ := binary.Deserialize(s.getBalance(addr.Bytes()), &c)
+	err := binary.Deserialize(s.getBalance(addr.Bytes()), &c)
+	if err != nil {
+		return nil
+	}
 	return &c
 }
 
