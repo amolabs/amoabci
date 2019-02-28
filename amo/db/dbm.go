@@ -57,11 +57,32 @@ func (s Store) GetBalance(addr types.Address) *atypes.Currency {
 
 // Parcel store
 func (s Store) setParcel(key []byte, value *dtypes.ParcelValue) {
-
+	b, err := value.Serialize()
+	if err != nil {
+		panic(err)
+	}
+	s.store.Set(append(prefixParcel, key...), b)
 }
 
 func (s Store) getParcel(key []byte) *dtypes.ParcelValue {
-	return nil
+	b := s.store.Get(append(prefixParcel, key...))
+	if len(b) == 0 {
+		return nil
+	}
+	var parcel dtypes.ParcelValue
+	err := binary.Deserialize(b, &parcel)
+	if err != nil {
+		panic(err)
+	}
+	return &parcel
+}
+
+func (s Store) SetParcel(parcelID []byte, value *dtypes.ParcelValue) {
+	s.setParcel(parcelID, value)
+}
+
+func (s Store) GetParcel(parcelID []byte) *dtypes.ParcelValue {
+	return s.getParcel(parcelID)
 }
 
 // Request store
