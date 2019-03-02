@@ -50,16 +50,16 @@ func (s Store) GetBalance(addr types.Address) atypes.Currency {
 }
 
 // Parcel store
-func (s Store) SetParcel(addr crypto.Address, value *dtypes.ParcelValue) {
+func (s Store) SetParcel(parcelID []byte, value *dtypes.ParcelValue) {
 	b, err := value.Serialize()
 	if err != nil {
 		panic(err)
 	}
-	s.store.Set(append(prefixParcel, addr.Bytes()...), b)
+	s.store.Set(append(prefixParcel, parcelID...), b)
 }
 
-func (s Store) GetParcel(addr crypto.Address) *dtypes.ParcelValue {
-	b := s.store.Get(append(prefixParcel, addr.Bytes()...))
+func (s Store) GetParcel(parcelID []byte) *dtypes.ParcelValue {
+	b := s.store.Get(append(prefixParcel, parcelID...))
 	if len(b) == 0 {
 		return nil
 	}
