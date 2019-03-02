@@ -33,7 +33,7 @@ func TestBalance(t *testing.T) {
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	balance := types.Currency(100)
 	s.SetBalance(testAddr, balance)
-	assert.Equal(t, balance, *s.GetBalance(testAddr))
+	assert.Equal(t, balance, s.GetBalance(testAddr))
 	tearDown(t)
 }
 
