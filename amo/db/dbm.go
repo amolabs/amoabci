@@ -42,9 +42,12 @@ func (s Store) SetBalance(addr types.Address, balance atypes.Currency) {
 func (s Store) GetBalance(addr types.Address) atypes.Currency {
 	var c atypes.Currency
 	balance := s.store.Get(append(prefixBalance, addr.Bytes()...))
+	if len(balance) == 0 {
+		return 0
+	}
 	err := binary.Deserialize(balance, &c)
 	if err != nil {
-		return 0
+		panic(err)
 	}
 	return c
 }
