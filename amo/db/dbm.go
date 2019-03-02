@@ -34,39 +34,32 @@ func NewStore(root string) *Store {
 }
 
 // Balance store
-func (s Store) setBalance(key []byte, balance *atypes.Currency) {
-	b, _ := balance.Serialize()
-	s.store.Set(append(prefixBalance, key...), b)
-}
-
-func (s Store) getBalance(key []byte) []byte {
-	return s.store.Get(append(prefixBalance, key...))
-}
-
 func (s Store) SetBalance(addr types.Address, balance atypes.Currency) {
- 	s.setBalance(addr.Bytes(), &balance)
+	b, _ := balance.Serialize()
+	s.store.Set(append(prefixBalance, addr.Bytes()...), b)
 }
 
-func (s Store) GetBalance(addr types.Address) *atypes.Currency {
+func (s Store) GetBalance(addr types.Address) atypes.Currency {
 	var c atypes.Currency
-	err := binary.Deserialize(s.getBalance(addr.Bytes()), &c)
+	balance := s.store.Get(append(prefixBalance, addr.Bytes()...))
+	err := binary.Deserialize(balance, &c)
 	if err != nil {
-		return nil
+		return 0
 	}
-	return &c
+	return c
 }
 
 // Parcel store
-func (s Store) setParcel(key []byte, value *dtypes.ParcelValue) {
+func (s Store) SetParcel(addr crypto.Address, value *dtypes.ParcelValue) {
 	b, err := value.Serialize()
 	if err != nil {
 		panic(err)
 	}
-	s.store.Set(append(prefixParcel, key...), b)
+	s.store.Set(append(prefixParcel, addr.Bytes()...), b)
 }
 
-func (s Store) getParcel(key []byte) *dtypes.ParcelValue {
-	b := s.store.Get(append(prefixParcel, key...))
+func (s Store) GetParcel(addr crypto.Address) *dtypes.ParcelValue {
+	b := s.store.Get(append(prefixParcel, addr.Bytes()...))
 	if len(b) == 0 {
 		return nil
 	}
@@ -76,14 +69,6 @@ func (s Store) getParcel(key []byte) *dtypes.ParcelValue {
 		panic(err)
 	}
 	return &parcel
-}
-
-func (s Store) SetParcel(parcelID []byte, value *dtypes.ParcelValue) {
-	s.setParcel(parcelID, value)
-}
-
-func (s Store) GetParcel(parcelID []byte) *dtypes.ParcelValue {
-	return s.getParcel(parcelID)
 }
 
 // Request store
