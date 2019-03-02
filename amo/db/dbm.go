@@ -12,9 +12,9 @@ import (
 
 var (
 	prefixBalance = []byte("balance:")
-	prefixParcel = []byte("parcel:")
+	prefixParcel  = []byte("parcel:")
 	prefixRequest = []byte("request:")
-	prefixUsage = []byte("usage:")
+	prefixUsage   = []byte("usage:")
 )
 
 type Store struct {
@@ -53,16 +53,20 @@ func (s Store) GetBalance(addr types.Address) atypes.Currency {
 }
 
 // Parcel store
+func parcelKey(parcelID []byte) []byte {
+	return append(prefixParcel, parcelID...)
+}
+
 func (s Store) SetParcel(parcelID []byte, value *dtypes.ParcelValue) {
 	b, err := value.Serialize()
 	if err != nil {
 		panic(err)
 	}
-	s.store.Set(append(prefixParcel, parcelID...), b)
+	s.store.Set(parcelKey(parcelID), b)
 }
 
 func (s Store) GetParcel(parcelID []byte) *dtypes.ParcelValue {
-	b := s.store.Get(append(prefixParcel, parcelID...))
+	b := s.store.Get(parcelKey(parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -72,6 +76,10 @@ func (s Store) GetParcel(parcelID []byte) *dtypes.ParcelValue {
 		panic(err)
 	}
 	return &parcel
+}
+
+func (s Store) DeleteParcel(parcelID []byte) {
+	s.store.DeleteSync(parcelKey(parcelID))
 }
 
 // Request store
@@ -100,6 +108,10 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *dtypes.Request
 	return &request
 }
 
+func (s Store) DeleteRequest(buyer crypto.Address, parcelID []byte) {
+	s.store.DeleteSync(requestKey(buyer, parcelID))
+}
+
 // Usage store
 func usageKey(buyer crypto.Address, parcelID []byte) []byte {
 	return append(prefixUsage, append(append(buyer, ':'), parcelID...)...)
@@ -124,4 +136,8 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *dtypes.UsageValu
 		panic(err)
 	}
 	return &usage
+}
+
+func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
+	s.store.DeleteSync(usageKey(buyer, parcelID))
 }
