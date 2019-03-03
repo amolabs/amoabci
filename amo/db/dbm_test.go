@@ -51,6 +51,8 @@ func TestParcel(t *testing.T) {
 	s.SetParcel(parcelID, &parcelInput)
 	parcelOutput := s.GetParcel(parcelID)
 	assert.Equal(t, parcelInput, *parcelOutput)
+	t.Log(parcelInput)
+	t.Log(*parcelOutput)
 	tearDown(t)
 }
 
@@ -70,6 +72,8 @@ func TestRequest(t *testing.T) {
 	assert.Equal(t, requestInput.Payment, (*requestOutput).Payment)
 	assert.Equal(t, requestInput.Exp.Unix(), (*requestOutput).Exp.Unix())
 	assert.False(t, requestOutput.IsExpired())
+	t.Log(requestInput)
+	t.Log(*requestOutput)
 	tearDown(t)
 }
 
@@ -79,7 +83,7 @@ func TestUsage(t *testing.T) {
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := cmn.RandBytes(32)
 	custody := cmn.RandBytes(32)
-	exp := time.Now()
+	exp := time.Now().UTC()
 	exp = exp.Add(100 * time.Minute)
 	usageInput := dtypes.UsageValue{
 		Custody: custody,
@@ -90,5 +94,7 @@ func TestUsage(t *testing.T) {
 	assert.Equal(t, usageInput.Custody, (*usageOutput).Custody)
 	assert.Equal(t, usageInput.Exp.Unix(), (*usageOutput).Exp.Unix())
 	assert.False(t, usageOutput.IsExpired())
+	t.Log(usageInput)
+	t.Log(*usageOutput)
 	tearDown(t)
 }
