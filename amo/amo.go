@@ -1,18 +1,17 @@
 package amo
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/amolabs/amoabci/amo/code"
 	adb "github.com/amolabs/amoabci/amo/db"
+	"github.com/amolabs/amoabci/amo/operation"
 	"github.com/amolabs/amoabci/amo/types"
 	abci "github.com/amolabs/tendermint-amo/abci/types"
-	cmn "github.com/amolabs/tendermint-amo/libs/common"
 	dbm "github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/amolabs/tendermint-amo/version"
-	"strconv"
 )
 
 var (
@@ -62,6 +61,8 @@ func NewAMOApplication(db dbm.DB) *AMOApplication {
 		state: state,
 		store: adb.NewStore("blockchain"),
 	}
+	b, _ := hex.DecodeString("E5DB787809EC89BBF972B0E6193D552A7D973AD7")
+	app.store.SetBalance(b, 3000)
 	return app
 }
 
@@ -74,91 +75,25 @@ func (app *AMOApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo
 }
 
 func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
-	message, payload := types.ParseTx(tx)
-	var tags []cmn.KVPair
-	var resCode = TxCodeOK
-
+	message, op := operation.ParseTx(tx)
+	resCode, tags := op.Execute(app.store, message.Signer)
+	if resCode != code.TxCodeOK {
+		return abci.ResponseDeliverTx{Code: resCode}
+	}
+	// TODO: change state
 	switch message.Command {
-	case types.TxTransfer:
-		transfer, _ := payload.(*types.Transfer)
-		resCode, tags = app.procTransfer(transfer)
-	case types.TxPurchase:
-		purchase, _ := payload.(*types.Purchase)
-		resCode, tags = app.procPurchase(purchase)
+	case operation.TxTransfer:
+		app.state.Size += 1
 	}
 	return abci.ResponseDeliverTx{Code: resCode, Tags: tags}
 }
 
-func (app *AMOApplication) procTransfer(transfer *types.Transfer) (uint32, []cmn.KVPair) {
-	fromBalance := app.store.GetBalance(transfer.From)
-	toBalance := app.store.GetBalance(transfer.To)
-	fromBalance -= transfer.Amount
-	toBalance += transfer.Amount
-	app.store.SetBalance(transfer.From, fromBalance)
-	app.store.SetBalance(transfer.To, toBalance)
-	app.state.Size += 1
-	tags := []cmn.KVPair{
-		{Key: transfer.From, Value: []byte(strconv.FormatUint(uint64(fromBalance), 10))},
-		{Key: transfer.To, Value: []byte(strconv.FormatUint(uint64(toBalance), 10))},
-	}
-	return TxCodeOK, tags
-}
-
-func (app *AMOApplication) procPurchase(purchase *types.Purchase) (uint32, []cmn.KVPair) {
-	var metaData types.PDSNMetaData
-	err := types.RequestMetaData(purchase.FileHash, &metaData)
-	if err != nil {
-		panic(err)
-	}
-	fromBalance := app.store.GetBalance(purchase.From)
-	fromBalance -= metaData.Price
-	// TODO: modify ownership
-	result, err := json.Marshal(metaData)
-	if err != nil {
-		panic(err)
-	}
-	tags := []cmn.KVPair{
-		{Key: []byte(hex.EncodeToString(metaData.FileHash[:])), Value: result},
-		{Key: purchase.From[:], Value: []byte(strconv.FormatUint(uint64(fromBalance), 10))},
-	}
-	return TxCodeOK, tags
-}
-
 func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
-	message, payload := types.ParseTx(tx)
-	var resCode = TxCodeOK
-
-	switch message.Command {
-	case types.TxTransfer:
-		transfer, _ := payload.(*types.Transfer)
-		fromBalance := app.store.GetBalance(transfer.From)
-		if fromBalance < transfer.Amount {
-			resCode = TxCodeNotEnoughBalance
-			break
-		}
-		if bytes.Equal(transfer.From, transfer.To) {
-			resCode = TxCodeSelfTransaction
-			break
-		}
-	case types.TxPurchase:
-		purchase, _ := payload.(*types.Purchase)
-		var metaData types.PDSNMetaData
-		err := types.RequestMetaData(purchase.FileHash, &metaData)
-		if err != nil {
-			panic(err)
-		}
-		fromBalance := app.store.GetBalance(purchase.From)
-		if fromBalance < metaData.Price {
-			resCode = TxCodeNotEnoughBalance
-			break
-		}
-		// TODO: TxCodeAlreadyBought
-		if bytes.Equal(purchase.From, metaData.Owner) {
-			resCode = TxCodeSelfTransaction
-			break
-		}
+	message, op := operation.ParseTx(tx)
+	// TODO: implement signature verify logic
+	return abci.ResponseCheckTx{
+		Code: op.Check(app.store, message.Signer),
 	}
-	return abci.ResponseCheckTx{Code: resCode}
 }
 
 func (app *AMOApplication) Commit() abci.ResponseCommit {
