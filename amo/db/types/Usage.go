@@ -1,30 +1,24 @@
 package types
 
 import (
-	gobinary "encoding/binary"
 	"github.com/amolabs/amoabci/amo/encoding/binary"
+	cmn "github.com/amolabs/tendermint-amo/libs/common"
 	"time"
 )
 
+const UsageAminoName = "amo/UsageValue"
+
 type UsageValue struct {
-	Custody []byte
+	Custody cmn.HexBytes
 	Exp     time.Time
 }
 
 func (value UsageValue) Serialize() ([]byte, error) {
-	data := make([]byte, len(value.Custody)+64/8)
-	gobinary.LittleEndian.PutUint64(data, uint64(value.Exp.Unix()))
-	copy(data[64/8:], value.Custody)
-	return data, nil
+	return cdc.MarshalBinaryBare(value)
 }
 
 func (value *UsageValue) Deserialize(data []byte) error {
-	exp := time.Unix(int64(gobinary.LittleEndian.Uint64(data)), 0)
-	*value = UsageValue{
-		Custody: data[64/8:],
-		Exp: exp,
-	}
-	return nil
+	return cdc.UnmarshalBinaryBare(data, value)
 }
 
 func (value UsageValue) IsExpired() bool {
