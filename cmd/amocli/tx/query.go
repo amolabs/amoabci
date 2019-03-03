@@ -1,12 +1,12 @@
 package tx
 
 import (
-	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/cmd/amocli/util"
+	"github.com/amolabs/tendermint-amo/crypto"
 )
 
 // QueryAddressInfo is ..
-func QueryAddressInfo(target atypes.Address) ([]byte, error) {
+func QueryAddressInfo(target crypto.Address) ([]byte, error) {
 	result, err := util.RPCABCIQuery("", target[:])
 	if err != nil {
 		return nil, err

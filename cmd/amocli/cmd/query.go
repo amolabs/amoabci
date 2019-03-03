@@ -5,7 +5,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/cmd/amocli/tx"
 )
 
@@ -32,8 +31,8 @@ var queryAddressCmd = &cobra.Command{
 	Short: "Show general information of specified address",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		target := atypes.NewAddress([]byte(args[0]))
-		targetInfo, err := tx.QueryAddressInfo(*target)
+		target := []byte(args[0])
+		targetInfo, err := tx.QueryAddressInfo(target)
 		if err != nil {
 			return err
 		}

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/amolabs/tendermint-amo/types"
-	"strings"
-
 	"github.com/spf13/cobra"
 
 	atypes "github.com/amolabs/amoabci/amo/types"
@@ -38,12 +36,14 @@ var txTransferCmd = &cobra.Command{
 	RunE:  txTransferFunc,
 }
 
+/*
 var txPurchaseCmd = &cobra.Command{
 	Use:   "purchase",
 	Short: "Purchase the file specified with file's <hash>",
 	Args:  cobra.NoArgs,
 	RunE:  txPurchaseFunc,
 }
+*/
 
 func init() {
 	transferCmd := txTransferCmd
@@ -56,29 +56,28 @@ func init() {
 	transferCmd.MarkFlagRequired("to")
 	transferCmd.MarkFlagRequired("amount")
 
-	purchaseCmd := txPurchaseCmd
-	purchaseCmd.Flags().SortFlags = false
+	/*
+		purchaseCmd := txPurchaseCmd
+		purchaseCmd.Flags().SortFlags = false
 
-	purchaseCmd.Flags().String("from", "", "ex) a8cxVrk1ju91UaJf7U1Hscgn3sRqzfmjgg")
-	purchaseCmd.Flags().String("file_hash", "", "ex) 0xb94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9")
-	purchaseCmd.MarkFlagRequired("from")
-	purchaseCmd.MarkFlagRequired("file_hash")
+		purchaseCmd.Flags().String("from", "", "ex) a8cxVrk1ju91UaJf7U1Hscgn3sRqzfmjgg")
+		purchaseCmd.Flags().String("file_hash", "", "ex) 0xb94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9")
+		purchaseCmd.MarkFlagRequired("from")
+		purchaseCmd.MarkFlagRequired("file_hash")
 
-	cmd := txCmd
-	cmd.AddCommand(transferCmd, purchaseCmd)
+		cmd := txCmd
+		cmd.AddCommand(transferCmd, purchaseCmd)
+	*/
 }
 
 func txTransferFunc(cmd *cobra.Command, args []string) error {
-	var from, to string
+	var to string
 	var tmp uint64
 	var amount atypes.Currency
 	var err error
 
 	flags := cmd.Flags()
 
-	if from, err = flags.GetString("from"); err != nil {
-		return err
-	}
 	if to, err = flags.GetString("to"); err != nil {
 		return err
 	}
@@ -87,10 +86,9 @@ func txTransferFunc(cmd *cobra.Command, args []string) error {
 	}
 	amount = atypes.Currency(tmp)
 
-	fromAddr := types.Address([]byte(from))
 	toAddr := types.Address([]byte(to))
 
-	result, err := tx.Transfer(fromAddr, toAddr, &amount)
+	result, err := tx.Transfer(toAddr, &amount)
 	if err != nil {
 		return err
 	}
@@ -105,6 +103,7 @@ func txTransferFunc(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+/*
 func txPurchaseFunc(cmd *cobra.Command, args []string) error {
 	var from, fileHashString string
 	var err error
@@ -137,3 +136,4 @@ func txPurchaseFunc(cmd *cobra.Command, args []string) error {
 
 	return nil
 }
+*/

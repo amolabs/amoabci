@@ -8,7 +8,6 @@ import (
 	"github.com/amolabs/amoabci/amo/code"
 	adb "github.com/amolabs/amoabci/amo/db"
 	"github.com/amolabs/amoabci/amo/operation"
-	"github.com/amolabs/amoabci/amo/types"
 	abci "github.com/amolabs/tendermint-amo/abci/types"
 	dbm "github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/amolabs/tendermint-amo/version"
@@ -112,12 +111,6 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 		resQuery.Key = reqQuery.Data
 		var value []byte
 		switch len(resQuery.Key) {
-		case types.AddressSize:
-			// TODO
-			break
-		case types.HashSize << 1:
-			// TODO
-			break
 		}
 		if value != nil {
 			resQuery.Log = "exists"
