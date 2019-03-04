@@ -57,7 +57,7 @@ func (s Store) GetBalance(addr types.Address) atypes.Currency {
 }
 
 // Parcel store
-func parcelKey(parcelID []byte) []byte {
+func getParcelKey(parcelID []byte) []byte {
 	return append(prefixParcel, parcelID...)
 }
 
@@ -66,11 +66,11 @@ func (s Store) SetParcel(parcelID []byte, value *dtypes.ParcelValue) {
 	if err != nil {
 		panic(err)
 	}
-	s.store.Set(parcelKey(parcelID), b)
+	s.store.Set(getParcelKey(parcelID), b)
 }
 
 func (s Store) GetParcel(parcelID []byte) *dtypes.ParcelValue {
-	b := s.store.Get(parcelKey(parcelID))
+	b := s.store.Get(getParcelKey(parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -83,11 +83,11 @@ func (s Store) GetParcel(parcelID []byte) *dtypes.ParcelValue {
 }
 
 func (s Store) DeleteParcel(parcelID []byte) {
-	s.store.DeleteSync(parcelKey(parcelID))
+	s.store.DeleteSync(getParcelKey(parcelID))
 }
 
 // Request store
-func requestKey(buyer crypto.Address, parcelID []byte) []byte {
+func getRequestKey(buyer crypto.Address, parcelID []byte) []byte {
 	return append(prefixRequest, append(append(buyer, ':'), parcelID...)...)
 }
 
@@ -96,11 +96,11 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *dtypes.R
 	if err != nil {
 		panic(err)
 	}
-	s.store.Set(requestKey(buyer, parcelID), b)
+	s.store.Set(getRequestKey(buyer, parcelID), b)
 }
 
 func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *dtypes.RequestValue {
-	b := s.store.Get(requestKey(buyer, parcelID))
+	b := s.store.Get(getRequestKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -113,11 +113,11 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *dtypes.Request
 }
 
 func (s Store) DeleteRequest(buyer crypto.Address, parcelID []byte) {
-	s.store.DeleteSync(requestKey(buyer, parcelID))
+	s.store.DeleteSync(getRequestKey(buyer, parcelID))
 }
 
 // Usage store
-func usageKey(buyer crypto.Address, parcelID []byte) []byte {
+func getUsageKey(buyer crypto.Address, parcelID []byte) []byte {
 	return append(prefixUsage, append(append(buyer, ':'), parcelID...)...)
 }
 
@@ -126,11 +126,11 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *dtypes.Usa
 	if err != nil {
 		panic(err)
 	}
-	s.store.Set(usageKey(buyer, parcelID), b)
+	s.store.Set(getUsageKey(buyer, parcelID), b)
 }
 
 func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *dtypes.UsageValue {
-	b := s.store.Get(usageKey(buyer, parcelID))
+	b := s.store.Get(getUsageKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -143,5 +143,5 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *dtypes.UsageValu
 }
 
 func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
-	s.store.DeleteSync(usageKey(buyer, parcelID))
+	s.store.DeleteSync(getUsageKey(buyer, parcelID))
 }
