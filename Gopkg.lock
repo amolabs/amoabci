@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "release/v0.29.2a"
-  digest = "1:c458319a6d1b3494f2358fd5b0084fae91e75df39e0e04b2ed008944f856c42d"
+  digest = "1:46daaf4cdb086bb2cc08ce7dc34a55cf926bbd944044b33f11805b2d98a201cf"
   name = "github.com/amolabs/tendermint-amo"
   packages = [
     "abci/client",
@@ -60,7 +60,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "f32f56fe77865f84e452409e7b0e68e39fc9f3e8"
+  revision = "a90bb406b7faa9b8fb3d3b78b16240e346ef53c7"
 
 [[projects]]
   branch = "master"
@@ -473,7 +473,9 @@
     "github.com/amolabs/tendermint-amo/types/time",
     "github.com/amolabs/tendermint-amo/version",
     "github.com/spf13/cobra",
+    "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
+    "github.com/tendermint/go-amino",
     "golang.org/x/crypto/ssh/terminal",
   ]
   solver-name = "gps-cdcl"
