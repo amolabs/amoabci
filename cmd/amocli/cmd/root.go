@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var defaultCLIHome = os.ExpandEnv("$HOME/.amocli")
+
 var rootCmd = &cobra.Command{
 	Use:               "amocli",
 	Short:             "Console app for a user to interact with AMO daemon",
