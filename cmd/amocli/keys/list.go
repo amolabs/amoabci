@@ -17,16 +17,16 @@ func List() error {
 	}
 	sort.Strings(sortKey)
 
-	fmt.Printf("%-3s %-10s %-20s %-40s %-65s\n",
-		"seq", "nickname", "type", "address", "pubkey")
+	fmt.Printf("%-3s %-10s %-20s %-40s\n",
+		"seq", "nickname", "type", "address")
 
 	i := 0
 	for _, nickname := range sortKey {
 		i += 1
 		key := keyList[nickname]
 
-		fmt.Printf("%-3d %-10s %-20s %-40x %-65x\n",
-			i, nickname, key.Type, key.Address, key.PubKey)
+		fmt.Printf("%-3d %-10s %-20s %-40s\n",
+			i, nickname, key.Type, key.Address)
 	}
 
 	return nil
