@@ -10,7 +10,7 @@ import (
 
 type KeyInfo struct {
 	Type      string `json:"type"`
-	Address   []byte `json:"address"`
+	Address   string `json:"address"`
 	PubKey    []byte `json:"pub_key"`
 	PrivKey   []byte `json:"priv_key"`
 	Encrypted bool   `json:"encrypted"`
@@ -34,7 +34,7 @@ func GenerateKey(nickname string, passphrase []byte, encrypt bool) error {
 
 	newKey := KeyInfo{
 		Type:    p256.PrivKeyAminoName,
-		Address: address.Bytes(),
+		Address: address.String(),
 		PubKey:  pubKey.Bytes(),
 	}
 
