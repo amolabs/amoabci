@@ -34,14 +34,18 @@ func NewStore(root string) *Store {
 }
 
 // Balance store
+func getBalanceKey(addr types.Address) []byte {
+	return append(prefixBalance, addr.Bytes()...)
+}
+
 func (s Store) SetBalance(addr types.Address, balance atypes.Currency) {
 	b, _ := balance.Serialize()
-	s.store.Set(append(prefixBalance, addr.Bytes()...), b)
+	s.store.Set(getBalanceKey(addr), b)
 }
 
 func (s Store) GetBalance(addr types.Address) atypes.Currency {
 	var c atypes.Currency
-	balance := s.store.Get(append(prefixBalance, addr.Bytes()...))
+	balance := s.store.Get(getBalanceKey(addr))
 	if len(balance) == 0 {
 		return 0
 	}

@@ -61,7 +61,7 @@ func TestRequest(t *testing.T) {
 	s := NewStore(testRoot)
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := cmn.RandBytes(32)
-	exp := time.Now()
+	exp := time.Now().UTC()
 	exp = exp.Add(100 * time.Minute)
 	requestInput := dtypes.RequestValue{
 		Payment: types.Currency(100),
