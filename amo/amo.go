@@ -90,8 +90,8 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 }
 
 func (app *AMOApplication) procTransfer(transfer *types.Transfer) (uint32, []cmn.KVPair) {
-	fromBalance := *app.store.GetBalance(transfer.From)
-	toBalance := *app.store.GetBalance(transfer.To)
+	fromBalance := app.store.GetBalance(transfer.From)
+	toBalance := app.store.GetBalance(transfer.To)
 	fromBalance -= transfer.Amount
 	toBalance += transfer.Amount
 	app.store.SetBalance(transfer.From, fromBalance)
@@ -110,7 +110,7 @@ func (app *AMOApplication) procPurchase(purchase *types.Purchase) (uint32, []cmn
 	if err != nil {
 		panic(err)
 	}
-	fromBalance := *app.store.GetBalance(purchase.From)
+	fromBalance := app.store.GetBalance(purchase.From)
 	fromBalance -= metaData.Price
 	// TODO: modify ownership
 	result, err := json.Marshal(metaData)
@@ -131,7 +131,7 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 	switch message.Command {
 	case types.TxTransfer:
 		transfer, _ := payload.(*types.Transfer)
-		fromBalance := *app.store.GetBalance(transfer.From)
+		fromBalance := app.store.GetBalance(transfer.From)
 		if fromBalance < transfer.Amount {
 			resCode = TxCodeNotEnoughBalance
 			break
@@ -147,7 +147,7 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 		if err != nil {
 			panic(err)
 		}
-		fromBalance := *app.store.GetBalance(purchase.From)
+		fromBalance := app.store.GetBalance(purchase.From)
 		if fromBalance < metaData.Price {
 			resCode = TxCodeNotEnoughBalance
 			break
