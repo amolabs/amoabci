@@ -10,4 +10,5 @@ const (
 	TxCodeTargetAlreadyExists
 	TxCodeTargetNotExists
 	TxCodeBadSignature
+	TxCodeRequestNotExists
 )

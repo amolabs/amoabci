@@ -23,6 +23,9 @@ func (o Grant) Check(store *db.Store, signer crypto.Address) uint32 {
 	if !bytes.Equal(parcel.Owner, signer) {
 		return code.TxCodePermissionDenied
 	}
+	if store.GetRequest(o.Grantee, o.Target) == nil {
+		return code.TxCodeRequestNotExists
+	}
 	usage := store.GetUsage(o.Grantee, o.Target)
 	if usage != nil {
 		return code.TxCodeTargetAlreadyExists
@@ -31,6 +34,9 @@ func (o Grant) Check(store *db.Store, signer crypto.Address) uint32 {
 }
 
 func (o Grant) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
+		return resCode, nil
+	}
 	request := store.GetRequest(o.Grantee, o.Target)
 	store.DeleteRequest(o.Grantee, o.Target)
 	balance := store.GetBalance(signer)
