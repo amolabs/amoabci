@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/amolabs/tendermint-amo/types"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -86,10 +87,10 @@ func txTransferFunc(cmd *cobra.Command, args []string) error {
 	}
 	amount = atypes.Currency(tmp)
 
-	fromAddr := atypes.NewAddress([]byte(from))
-	toAddr := atypes.NewAddress([]byte(to))
+	fromAddr := types.Address([]byte(from))
+	toAddr := types.Address([]byte(to))
 
-	result, err := tx.Transfer(*fromAddr, *toAddr, &amount)
+	result, err := tx.Transfer(fromAddr, toAddr, &amount)
 	if err != nil {
 		return err
 	}
@@ -119,10 +120,10 @@ func txPurchaseFunc(cmd *cobra.Command, args []string) error {
 
 	fileHashString = strings.TrimLeft(fileHashString, "0x")
 
-	fromAddr := atypes.NewAddress([]byte(from))
+	fromAddr := types.Address([]byte(from))
 	fileHash := atypes.NewHashFromHexString(fileHashString)
 
-	result, err := tx.Purchase(*fromAddr, *fileHash)
+	result, err := tx.Purchase(fromAddr, *fileHash)
 	if err != nil {
 		return err
 	}

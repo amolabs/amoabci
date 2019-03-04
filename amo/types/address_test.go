@@ -1,22 +1,12 @@
 package types
 
 import (
-	"github.com/amolabs/tendermint-amo/crypto/ed25519"
+	"github.com/amolabs/tendermint-amo/crypto/p256"
 	"testing"
 )
 
-var (
-	testAddr  = GenAddress(priKey.PubKey()) // B2F18D445ADD140711B64E7370C8AD44DA083EEB
-	testAddr2 = GenAddress(priKey2.PubKey())
-)
-
-func TestGenAddress(t *testing.T) {
-	key := priKey.PubKey()
-	t.Log(GenAddress(key))
-}
-
 func TestGenRandomAddress(t *testing.T) {
-	pri := ed25519.GenPrivKey()
+	pri := p256.GenPrivKey()
 	pub := pri.PubKey()
 	t.Log(GenAddress(pub))
 }
