@@ -69,6 +69,9 @@ First, we need to build tendermint node image, and use it as a base image when
 building an amod image.
 ```bash
 cd $GOPATH/src/github.com/amolabs/tendermint-amo
+# If not the first build, get_tools and get_vendor_deps targets are optional.
+make get_tools
+make get_vendor_deps
 make build-linux
 make build-docker
 ```
@@ -77,9 +80,12 @@ This will put an image with the tag amolabs/tendermint-amo:latest in the local i
 Next, build an amod image
 ```bash
 cd $GOPATH/src/github.com/amolabs/amoabci
+# If not the first build, get_tools and get_vendor_deps targets are optional.
+make get_tools
+make get_vendor_deps
 make docker
 ```
-This will put an image with the tag amod:latest in the local image pool.
+This will put an image with the tag amolabs/amod:latest in the local image pool.
 
 ### Run
 To run test containers using docker-compose, run:

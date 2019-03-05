@@ -64,9 +64,9 @@ update_vendor_deps:
 
 build:
 	@echo "--> Building amo daemon (amod)"
-	go build ./cmd/amod
+	$(BUILDENV) go build ./cmd/amod
 	@echo "--> Building amo console (amocli)"
-	go build ./cmd/amocli
+	$(BUILDENV) go build ./cmd/amocli
 
 install:
 	@echo "--> Installing amo daemon (amod)"
@@ -78,8 +78,8 @@ test:
 	go test ./...
 
 docker:
-	go build -o amod ./cmd/amod
-	docker build -t amod .
+	$(MAKE) TARGET=linux build
+	docker build -t amolabs/amod .
 
 run-cluster: docker
 	docker-compose -p $(USER) up -d
