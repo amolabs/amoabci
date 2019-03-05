@@ -2,14 +2,12 @@ package util
 
 import (
 	"encoding/json"
-
-	atypes "github.com/amolabs/amoabci/amo/types"
+	"github.com/amolabs/amoabci/amo/operation"
 
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
 	"github.com/amolabs/tendermint-amo/rpc/client"
 	ctypes "github.com/amolabs/tendermint-amo/rpc/core/types"
 	"github.com/amolabs/tendermint-amo/types"
-	tmtime "github.com/amolabs/tendermint-amo/types/time"
 )
 
 var (
@@ -23,10 +21,9 @@ func MakeMessage(t string, payload interface{}) types.Tx {
 	if err != nil {
 		panic(err)
 	}
-	msg := atypes.Message{
-		Command:   t,
-		Timestamp: tmtime.Now().Unix(),
-		Payload:   raw,
+	msg := operation.Message{
+		Command: t,
+		Payload: raw,
 	}
 	tx, err := json.Marshal(msg)
 	if err != nil {

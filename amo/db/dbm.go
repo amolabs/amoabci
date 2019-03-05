@@ -33,6 +33,10 @@ func NewStore(root string) *Store {
 	return &Store{getGoLevelDB("store", path.Join(root, "store"))}
 }
 
+func NewMemStore() *Store {
+	return &Store{db.NewMemDB()}
+}
+
 // Balance store
 func getBalanceKey(addr types.Address) []byte {
 	return append(prefixBalance, addr.Bytes()...)
