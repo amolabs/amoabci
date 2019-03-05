@@ -26,6 +26,9 @@ func (o Discard) Check(store *db.Store, signer crypto.Address) uint32 {
 }
 
 func (o Discard) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
+		return resCode, nil
+	}
 	store.DeleteParcel(o.Target)
 	tags := []cmn.KVPair{
 		{Key: []byte("target"), Value: []byte(o.Target.String())},

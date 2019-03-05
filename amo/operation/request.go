@@ -1,6 +1,7 @@
 package operation
 
 import (
+	"bytes"
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/db"
 	"github.com/amolabs/amoabci/amo/db/types"
@@ -19,8 +20,12 @@ type Request struct {
 }
 
 func (o Request) Check(store *db.Store, signer crypto.Address) uint32 {
-	if store.GetParcel(o.Target) == nil {
+	parcel := store.GetParcel(o.Target)
+	if parcel == nil {
 		return code.TxCodeTargetNotExists
+	}
+	if bytes.Equal(parcel.Owner, signer) {
+		return code.TxCodeSelfTransaction
 	}
 	if store.GetUsage(signer, o.Target) != nil {
 		return code.TxCodeTargetAlreadyBought
@@ -29,6 +34,9 @@ func (o Request) Check(store *db.Store, signer crypto.Address) uint32 {
 }
 
 func (o Request) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
+		return resCode, nil
+	}
 	balance := store.GetBalance(signer)
 	balance -= o.Payment
 	store.SetBalance(signer, balance)

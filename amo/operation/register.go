@@ -25,6 +25,9 @@ func (o Register) Check(store *db.Store, signer crypto.Address) uint32 {
 }
 
 func (o Register) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
+		return resCode, nil
+	}
 	parcel := types.ParcelValue{
 		Owner:   signer,
 		Custody: o.Custody,

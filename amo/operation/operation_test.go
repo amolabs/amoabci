@@ -189,8 +189,13 @@ func TestNonValidRequest(t *testing.T) {
 		Target:  parcelID[0],
 		Payment: 100,
 	}
+	STop := Request{
+		Target:  parcelID[1],
+		Payment: 100,
+	}
 	assert.Equal(t, code.TxCodeTargetNotExists, TNop.Check(store, eve.addr))
 	assert.Equal(t, code.TxCodeTargetAlreadyBought, TAop.Check(store, bob.addr))
+	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(store, bob.addr))
 }
 
 func TestValidRevoke(t *testing.T) {
@@ -206,11 +211,16 @@ func TestValidRevoke(t *testing.T) {
 
 func TestNonValidRevoke(t *testing.T) {
 	store := getTestStore()
-	op := Revoke{
+	PDop := Revoke{
 		Grantee: eve.addr,
 		Target:  parcelID[0],
 	}
-	assert.Equal(t, code.TxCodePermissionDenied, op.Check(store, eve.addr))
+	TNop := Revoke{
+		Grantee: bob.addr,
+		Target:  parcelID[2],
+	}
+	assert.Equal(t, code.TxCodePermissionDenied, PDop.Check(store, eve.addr))
+	assert.Equal(t, code.TxCodeTargetNotExists, TNop.Check(store, alice.addr))
 }
 
 func TestValidTransfer(t *testing.T) {

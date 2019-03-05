@@ -23,6 +23,9 @@ func (o Cancel) Check(store *db.Store, signer crypto.Address) uint32 {
 }
 
 func (o Cancel) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
+		return resCode, nil
+	}
 	request := store.GetRequest(signer, o.Target)
 	store.DeleteRequest(signer, o.Target)
 	balance := store.GetBalance(signer)

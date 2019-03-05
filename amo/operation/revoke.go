@@ -17,6 +17,9 @@ type Revoke struct {
 
 func (o Revoke) Check(store *db.Store, signer crypto.Address) uint32 {
 	parcel := store.GetParcel(o.Target)
+	if parcel == nil {
+		return code.TxCodeTargetNotExists
+	}
 	if !bytes.Equal(parcel.Owner, signer) {
 		return code.TxCodePermissionDenied
 	}
@@ -24,6 +27,9 @@ func (o Revoke) Check(store *db.Store, signer crypto.Address) uint32 {
 }
 
 func (o Revoke) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
+		return resCode, nil
+	}
 	store.DeleteUsage(o.Grantee, o.Target)
 	tags := []cmn.KVPair{
 		{Key: []byte("grantee"), Value: []byte(o.Grantee.String())},

@@ -33,6 +33,9 @@ func (o Transfer) Check(store *db.Store, signer crypto.Address) uint32 {
 }
 
 func (o Transfer) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
+		return resCode, nil
+	}
 	fromBalance := store.GetBalance(signer)
 	toBalance := store.GetBalance(o.To)
 	fromBalance -= o.Amount
