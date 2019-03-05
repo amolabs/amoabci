@@ -1,11 +1,18 @@
 package keys
 
 import (
+	"errors"
+
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric"
 )
 
 func Remove(nickname string, passphrase []byte, path string) error {
+	keyStatus := Check(nickname, path)
+	if keyStatus < Exists {
+		return errors.New("The key doesn't exist")
+	}
+
 	keyList, err := LoadKeyList(path)
 	if err != nil {
 		return err

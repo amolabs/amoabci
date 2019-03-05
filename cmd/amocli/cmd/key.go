@@ -73,13 +73,12 @@ var keyGenCmd = &cobra.Command{
 func keyGenFunc(cmd *cobra.Command, args []string) error {
 	nickname := args[0]
 	keyFile := util.DefaultKeyFilePath()
+	flags := cmd.Flags()
 
 	keyStatus := keys.Check(nickname, keyFile)
 	if keyStatus > keys.NoExists {
 		return errors.New("The key already exists")
 	}
-
-	flags := cmd.Flags()
 
 	encrypt, err := flags.GetBool("encrypt")
 	if err != nil {

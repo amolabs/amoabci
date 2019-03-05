@@ -1,12 +1,19 @@
 package keys
 
 import (
+	"errors"
+
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/crypto/p256"
 	"github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric"
 )
 
 func Generate(nickname string, passphrase []byte, encrypt bool, path string) error {
+	keyStatus := Check(nickname, path)
+	if keyStatus > NoExists {
+		return errors.New("The key already exists")
+	}
+
 	var privKeyBytes []byte
 
 	privKey := p256.GenPrivKey()
