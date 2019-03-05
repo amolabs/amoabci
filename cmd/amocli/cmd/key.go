@@ -93,7 +93,7 @@ func keyGenFunc(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err = keys.GenerateKey(nickname, passphrase, encrypt)
+	err = keys.Generate(nickname, passphrase, encrypt)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func keyRemoveFunc(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err = keys.RemoveKey(nickname, passphrase)
+	err = keys.Remove(nickname, passphrase)
 	if err != nil {
 		return err
 	}
