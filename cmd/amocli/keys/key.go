@@ -1,11 +1,5 @@
 package keys
 
-import (
-	"errors"
-
-	"github.com/amolabs/amoabci/cmd/amocli/util"
-)
-
 type Key struct {
 	Type      string `json:"type"`
 	Address   string `json:"address"`
@@ -23,22 +17,20 @@ const (
 	Encrypted
 )
 
-func CheckKey(nickname string) (KeyStatus, error) {
-	keyFile := util.DefaultKeyFilePath()
-
-	keyList, err := LoadKeyList(keyFile)
+func Check(nickname string, path string) KeyStatus {
+	keyList, err := LoadKeyList(path)
 	if err != nil {
-		return Unknown, err
+		return Unknown
 	}
 
 	key, exists := keyList[nickname]
 	if !exists {
-		return NoExists, errors.New("The key doesn't exist")
+		return NoExists
 	}
 
 	if !key.Encrypted {
-		return Exists, errors.New("The key already exists")
+		return Exists
 	}
 
-	return Encrypted, errors.New("The key already exists (encrypted)")
+	return Encrypted
 }

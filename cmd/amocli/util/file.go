@@ -1,9 +1,10 @@
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	cmn "github.com/amolabs/tendermint-amo/libs/common"
 )
 
 var (
@@ -24,15 +25,18 @@ func DefaultKeyFilePath() string {
 	return filepath.Join(DefaultKeyPath(), defaultKeyListFile)
 }
 
-func CreateFile(dirPath, filePath string) {
-	os.MkdirAll(dirPath, os.ModePerm)
-	os.OpenFile(filePath, os.O_RDONLY|os.O_CREATE, 0600)
-}
+func EnsureFile(path string) error {
+	dirPath, _ := filepath.Split(path)
 
-func LoadFile(filePath string) ([]byte, error) {
-	return ioutil.ReadFile(filePath)
-}
+	err := cmn.EnsureDir(dirPath, 0775)
+	if err != nil {
+		return err
+	}
 
-func SaveFile(data []byte, filePath string) error {
-	return ioutil.WriteFile(filePath, data, 0600)
+	_, err = os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+
+	return err
 }

@@ -3,14 +3,10 @@ package keys
 import (
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric"
-
-	"github.com/amolabs/amoabci/cmd/amocli/util"
 )
 
-func Remove(nickname string, passphrase []byte) error {
-	keyFile := util.DefaultKeyFilePath()
-
-	keyList, err := LoadKeyList(keyFile)
+func Remove(nickname string, passphrase []byte, path string) error {
+	keyList, err := LoadKeyList(path)
 	if err != nil {
 		return err
 	}
@@ -26,7 +22,7 @@ func Remove(nickname string, passphrase []byte) error {
 
 	delete(keyList, nickname)
 
-	err = SaveKeyList(keyFile, keyList)
+	err = SaveKeyList(path, keyList)
 	if err != nil {
 		return err
 	}

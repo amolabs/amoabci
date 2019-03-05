@@ -4,11 +4,9 @@ import (
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/crypto/p256"
 	"github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric"
-
-	"github.com/amolabs/amoabci/cmd/amocli/util"
 )
 
-func Generate(nickname string, passphrase []byte, encrypt bool) error {
+func Generate(nickname string, passphrase []byte, encrypt bool, path string) error {
 	var privKeyBytes []byte
 
 	privKey := p256.GenPrivKey()
@@ -30,16 +28,14 @@ func Generate(nickname string, passphrase []byte, encrypt bool) error {
 	newKey.PrivKey = privKeyBytes
 	newKey.Encrypted = encrypt
 
-	keyFile := util.DefaultKeyFilePath()
-
-	keyList, err := LoadKeyList(keyFile)
+	keyList, err := LoadKeyList(path)
 	if err != nil {
 		return err
 	}
 
 	keyList[nickname] = newKey
 
-	err = SaveKeyList(keyFile, keyList)
+	err = SaveKeyList(path, keyList)
 	if err != nil {
 		return err
 	}
