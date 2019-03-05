@@ -174,8 +174,8 @@ func TestValidRequest(t *testing.T) {
 		Target:  parcelID[1],
 		Payment: 200,
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(store, bob.addr))
-	resCode, _ := op.Execute(store, bob.addr)
+	assert.Equal(t, code.TxCodeOK, op.Check(store, alice.addr))
+	resCode, _ := op.Execute(store, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
