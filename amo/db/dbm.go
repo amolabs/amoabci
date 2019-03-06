@@ -1,13 +1,14 @@
 package db
 
 import (
+	"path"
+
 	dtypes "github.com/amolabs/amoabci/amo/db/types"
 	"github.com/amolabs/amoabci/amo/encoding/binary"
 	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/amolabs/tendermint-amo/types"
-	"path"
 )
 
 var (
@@ -40,6 +41,24 @@ func NewMemStore() *Store {
 // Balance store
 func getBalanceKey(addr types.Address) []byte {
 	return append(prefixBalance, addr.Bytes()...)
+}
+
+func (s Store) Purge() error {
+	var itr db.Iterator = s.store.Iterator([]byte{}, []byte(nil))
+	defer itr.Close()
+
+	// TODO: cannot guarantee in multi-thread environment
+	// need some sync mechanism
+	for ; itr.Valid(); itr.Next() {
+		k := itr.Key()
+		// XXX: not sure if this will confuse the iterator
+		s.store.Delete(k)
+	}
+
+	// TODO: need some method like s.store.Size() to check if the DB has been
+	// really emptied.
+
+	return nil
 }
 
 func (s Store) SetBalance(addr types.Address, balance atypes.Currency) {
