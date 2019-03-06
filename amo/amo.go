@@ -2,7 +2,6 @@ package amo
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/amolabs/amoabci/amo/code"
@@ -60,8 +59,6 @@ func NewAMOApplication(db dbm.DB) *AMOApplication {
 		state: state,
 		store: adb.NewStore("blockchain"),
 	}
-	b, _ := hex.DecodeString("E5DB787809EC89BBF972B0E6193D552A7D973AD7")
-	app.store.SetBalance(b, 3000)
 	return app
 }
 
@@ -119,4 +116,17 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 		}
 		return
 	}
+}
+
+func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
+	genAppState, err := ParseGenesisStateBytes(req.AppStateBytes)
+	// TODO: use proper methods to inform error
+	if err != nil {
+		return abci.ResponseInitChain{}
+	}
+	if FillGenesisState(app.store, genAppState) != nil {
+		return abci.ResponseInitChain{}
+	}
+
+	return abci.ResponseInitChain{}
 }
