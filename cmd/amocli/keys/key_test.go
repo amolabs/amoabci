@@ -21,18 +21,22 @@ var passphrase = map[string]string{
 	tester2: "this is my passprhase",
 }
 
-func testInit(t *testing.T) {
+func setUp(t *testing.T) {
 	err := util.EnsureFile(testKeyFile)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
-func testEnd(t *testing.T) {
+func tearDown(t *testing.T) {
 	err := os.RemoveAll(testKeyFile)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestKey(t *testing.T) {
-	testInit(t)
+	setUp(t)
 
 	// tester1(alice), encryption=true
 	err := Generate(tester1, []byte(passphrase[tester1]), true, testKeyFile)
@@ -72,11 +76,11 @@ func TestKey(t *testing.T) {
 	keyStatus = Check(tester2, testKeyFile)
 	assert.Equal(t, NoExists, keyStatus)
 
-	testEnd(t)
+	tearDown(t)
 }
 
 func TestKeyGenerateWithEncryption(t *testing.T) {
-	testInit(t)
+	setUp(t)
 
 	err := Generate(tester1, []byte(passphrase[tester1]), true, testKeyFile)
 	assert.NoError(t, err)
@@ -84,11 +88,11 @@ func TestKeyGenerateWithEncryption(t *testing.T) {
 	keyStatus := Check(tester1, testKeyFile)
 	assert.Equal(t, Encrypted, keyStatus)
 
-	testEnd(t)
+	tearDown(t)
 }
 
 func TestKeyGenerate(t *testing.T) {
-	testInit(t)
+	setUp(t)
 
 	err := Generate(tester1, nil, false, testKeyFile)
 	assert.NoError(t, err)
@@ -96,11 +100,11 @@ func TestKeyGenerate(t *testing.T) {
 	KeyStatus := Check(tester1, testKeyFile)
 	assert.Equal(t, Exists, KeyStatus)
 
-	testEnd(t)
+	tearDown(t)
 }
 
 func TestKeyRemoveWithEncryption(t *testing.T) {
-	testInit(t)
+	setUp(t)
 
 	err := Generate(tester1, []byte(passphrase[tester1]), true, testKeyFile)
 	assert.NoError(t, err)
@@ -117,11 +121,11 @@ func TestKeyRemoveWithEncryption(t *testing.T) {
 	keyStatus = Check(tester1, testKeyFile)
 	assert.Equal(t, NoExists, keyStatus)
 
-	testEnd(t)
+	tearDown(t)
 }
 
 func TestKeyRemove(t *testing.T) {
-	testInit(t)
+	setUp(t)
 
 	err := Generate(tester1, nil, false, testKeyFile)
 	assert.NoError(t, err)
@@ -135,5 +139,5 @@ func TestKeyRemove(t *testing.T) {
 	keyStatus = Check(tester1, testKeyFile)
 	assert.Equal(t, NoExists, keyStatus)
 
-	testEnd(t)
+	tearDown(t)
 }
