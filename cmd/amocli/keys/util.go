@@ -3,18 +3,20 @@ package keys
 import (
 	"encoding/json"
 
+	cmn "github.com/amolabs/tendermint-amo/libs/common"
+
 	"github.com/amolabs/amoabci/cmd/amocli/util"
 )
 
-func LoadKeyList() (map[string]KeyInfo, error) {
-	keyList := make(map[string]KeyInfo)
+func LoadKeyList(path string) (map[string]Key, error) {
+	keyList := make(map[string]Key)
 
-	keyDir := util.DefaultKeyPath()
-	keyFile := util.DefaultKeyFilePath()
+	err := util.EnsureFile(path)
+	if err != nil {
+		return nil, err
+	}
 
-	util.CreateFile(keyDir, keyFile)
-
-	rawKeyList, err := util.LoadFile(keyFile)
+	rawKeyList, err := cmn.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -31,18 +33,18 @@ func LoadKeyList() (map[string]KeyInfo, error) {
 	return keyList, nil
 }
 
-func SaveKeyList(keyList map[string]KeyInfo) error {
+func SaveKeyList(path string, keyList map[string]Key) error {
 	rawKeyList, err := json.Marshal(keyList)
 	if err != nil {
 		return err
 	}
 
-	keyDir := util.DefaultKeyPath()
-	keyFile := util.DefaultKeyFilePath()
+	err = util.EnsureFile(path)
+	if err != nil {
+		return err
+	}
 
-	util.CreateFile(keyDir, keyFile)
-
-	err = util.SaveFile(rawKeyList, keyFile)
+	err = cmn.WriteFile(path, rawKeyList, 0600)
 	if err != nil {
 		return err
 	}

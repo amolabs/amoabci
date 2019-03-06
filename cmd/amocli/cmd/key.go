@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"syscall"
+
+	"github.com/amolabs/amoabci/cmd/amocli/util"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
@@ -69,13 +72,13 @@ var keyGenCmd = &cobra.Command{
 
 func keyGenFunc(cmd *cobra.Command, args []string) error {
 	nickname := args[0]
-
-	keyStatus, err := keys.CheckKey(nickname)
-	if keyStatus > keys.NoExists {
-		return err
-	}
-
+	keyFile := util.DefaultKeyFilePath()
 	flags := cmd.Flags()
+
+	keyStatus := keys.Check(nickname, keyFile)
+	if keyStatus > keys.NoExists {
+		return errors.New("The key already exists")
+	}
 
 	encrypt, err := flags.GetBool("encrypt")
 	if err != nil {
@@ -93,7 +96,7 @@ func keyGenFunc(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err = keys.GenerateKey(nickname, passphrase, encrypt)
+	err = keys.Generate(nickname, passphrase, encrypt, keyFile)
 	if err != nil {
 		return err
 	}
@@ -111,13 +114,17 @@ var keyRemoveCmd = &cobra.Command{
 
 func keyRemoveFunc(cmd *cobra.Command, args []string) error {
 	nickname := args[0]
+	keyFile := util.DefaultKeyFilePath()
 
-	keyStatus, err := keys.CheckKey(nickname)
+	keyStatus := keys.Check(nickname, keyFile)
 	if keyStatus < keys.Exists {
-		return err
+		return errors.New("The key doesn't exist")
 	}
 
-	var passphrase []byte
+	var (
+		passphrase []byte
+		err        error
+	)
 
 	if keyStatus == keys.Encrypted {
 		fmt.Printf("Type passphrase: ")
@@ -128,7 +135,7 @@ func keyRemoveFunc(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err = keys.RemoveKey(nickname, passphrase)
+	err = keys.Remove(nickname, passphrase, keyFile)
 	if err != nil {
 		return err
 	}
