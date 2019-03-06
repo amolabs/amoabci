@@ -45,9 +45,13 @@ func (m *Message) GetSigningBytes() []byte {
 
 func (m *Message) Sign(privKey crypto.PrivKey) error {
 	pubKey := privKey.PubKey()
+	p256PubKey, ok := pubKey.(p256.PubKeyP256)
+	if !ok {
+		return cmn.NewError("Fail to convert public key to p256 public key")
+	}
 	m.Nonce = cmn.RandUint32()
 	m.Signer = pubKey.Address()
-	copy(m.SigningPubKey[:], pubKey.Bytes())
+	copy(m.SigningPubKey[:], p256PubKey.RawBytes())
 	sb := m.GetSigningBytes()
 	sig, err := privKey.Sign(sb)
 	if err != nil {
