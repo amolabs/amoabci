@@ -30,6 +30,9 @@ func (o Request) Check(store *db.Store, signer crypto.Address) uint32 {
 	if store.GetUsage(signer, o.Target) != nil {
 		return code.TxCodeTargetAlreadyBought
 	}
+	if store.GetBalance(signer) < o.Payment {
+		return code.TxCodeNotEnoughBalance
+	}
 	return code.TxCodeOK
 }
 

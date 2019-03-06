@@ -193,9 +193,14 @@ func TestNonValidRequest(t *testing.T) {
 		Target:  parcelID[1],
 		Payment: 100,
 	}
+	NBop := Request{
+		Target: parcelID[1],
+		Payment: 100,
+	}
 	assert.Equal(t, code.TxCodeTargetNotExists, TNop.Check(store, eve.addr))
 	assert.Equal(t, code.TxCodeTargetAlreadyBought, TAop.Check(store, bob.addr))
 	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(store, bob.addr))
+	assert.Equal(t, code.TxCodeNotEnoughBalance, NBop.Check(store, eve.addr))
 }
 
 func TestValidRevoke(t *testing.T) {
