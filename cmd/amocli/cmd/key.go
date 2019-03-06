@@ -55,7 +55,9 @@ var keyListCmd = &cobra.Command{
 }
 
 func keyListFunc(cmd *cobra.Command, args []string) error {
-	err := keys.List()
+	keyFile := util.DefaultKeyFilePath()
+
+	err := keys.List(keyFile)
 	if err != nil {
 		return err
 	}

@@ -3,14 +3,10 @@ package keys
 import (
 	"fmt"
 	"sort"
-
-	"github.com/amolabs/amoabci/cmd/amocli/util"
 )
 
-func List() error {
-	keyFile := util.DefaultKeyFilePath()
-
-	keyList, err := LoadKeyList(keyFile)
+func List(path string) error {
+	keyList, err := LoadKeyList(path)
 	if err != nil {
 		return err
 	}
