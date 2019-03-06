@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "release/v0.29.2a"
-  digest = "1:46daaf4cdb086bb2cc08ce7dc34a55cf926bbd944044b33f11805b2d98a201cf"
+  digest = "1:351f42736574eba80a21bf4686e2468e110803da7b66c29bb12237db9a8f8a30"
   name = "github.com/amolabs/tendermint-amo"
   packages = [
     "abci/client",
@@ -60,7 +60,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "a90bb406b7faa9b8fb3d3b78b16240e346ef53c7"
+  revision = "43d3b6a06beb2c6677518edd6cdbddaaea2005f4"
 
 [[projects]]
   branch = "master"
@@ -296,12 +296,9 @@
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:5da8ce674952566deae4dbc23d07c85caafc6cfa815b0b3e03e41979cedb8750"
+  digest = "1:972c2427413d41a1e06ca4897e8528e5a1622894050e2f527b38ddf0f343f759"
   name = "github.com/stretchr/testify"
-  packages = [
-    "assert",
-    "require",
-  ]
+  packages = ["assert"]
   pruneopts = "UT"
   revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
   version = "v1.3.0"
@@ -470,11 +467,9 @@
     "github.com/amolabs/tendermint-amo/rpc/client",
     "github.com/amolabs/tendermint-amo/rpc/core/types",
     "github.com/amolabs/tendermint-amo/types",
-    "github.com/amolabs/tendermint-amo/types/time",
     "github.com/amolabs/tendermint-amo/version",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/require",
     "github.com/tendermint/go-amino",
     "golang.org/x/crypto/ssh/terminal",
   ]
