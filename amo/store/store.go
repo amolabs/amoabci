@@ -3,12 +3,12 @@ package store
 import (
 	"path"
 
-	"github.com/amolabs/amoabci/amo/encoding/binary"
-	dtypes "github.com/amolabs/amoabci/amo/store/types"
-	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/amolabs/tendermint-amo/types"
+
+	"github.com/amolabs/amoabci/amo/encoding/binary"
+	atypes "github.com/amolabs/amoabci/amo/types"
 )
 
 var (
@@ -84,7 +84,7 @@ func getParcelKey(parcelID []byte) []byte {
 	return append(prefixParcel, parcelID...)
 }
 
-func (s Store) SetParcel(parcelID []byte, value *dtypes.ParcelValue) {
+func (s Store) SetParcel(parcelID []byte, value *atypes.ParcelValue) {
 	b, err := value.Serialize()
 	if err != nil {
 		panic(err)
@@ -92,12 +92,12 @@ func (s Store) SetParcel(parcelID []byte, value *dtypes.ParcelValue) {
 	s.dbm.Set(getParcelKey(parcelID), b)
 }
 
-func (s Store) GetParcel(parcelID []byte) *dtypes.ParcelValue {
+func (s Store) GetParcel(parcelID []byte) *atypes.ParcelValue {
 	b := s.dbm.Get(getParcelKey(parcelID))
 	if len(b) == 0 {
 		return nil
 	}
-	var parcel dtypes.ParcelValue
+	var parcel atypes.ParcelValue
 	err := binary.Deserialize(b, &parcel)
 	if err != nil {
 		panic(err)
@@ -114,7 +114,7 @@ func getRequestKey(buyer crypto.Address, parcelID []byte) []byte {
 	return append(prefixRequest, append(append(buyer, ':'), parcelID...)...)
 }
 
-func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *dtypes.RequestValue) {
+func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *atypes.RequestValue) {
 	b, err := value.Serialize()
 	if err != nil {
 		panic(err)
@@ -122,12 +122,12 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *dtypes.R
 	s.dbm.Set(getRequestKey(buyer, parcelID), b)
 }
 
-func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *dtypes.RequestValue {
+func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *atypes.RequestValue {
 	b := s.dbm.Get(getRequestKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
-	var request dtypes.RequestValue
+	var request atypes.RequestValue
 	err := binary.Deserialize(b, &request)
 	if err != nil {
 		panic(err)
@@ -144,7 +144,7 @@ func getUsageKey(buyer crypto.Address, parcelID []byte) []byte {
 	return append(prefixUsage, append(append(buyer, ':'), parcelID...)...)
 }
 
-func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *dtypes.UsageValue) {
+func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *atypes.UsageValue) {
 	b, err := value.Serialize()
 	if err != nil {
 		panic(err)
@@ -152,12 +152,12 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *dtypes.Usa
 	s.dbm.Set(getUsageKey(buyer, parcelID), b)
 }
 
-func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *dtypes.UsageValue {
+func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *atypes.UsageValue {
 	b := s.dbm.Get(getUsageKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
-	var usage dtypes.UsageValue
+	var usage atypes.UsageValue
 	err := binary.Deserialize(b, &usage)
 	if err != nil {
 		panic(err)

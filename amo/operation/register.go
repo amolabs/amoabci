@@ -1,11 +1,12 @@
 package operation
 
 import (
-	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/store"
-	"github.com/amolabs/amoabci/amo/store/types"
 	"github.com/amolabs/tendermint-amo/crypto"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
+
+	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 var _ Operation = Register{}

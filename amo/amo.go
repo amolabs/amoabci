@@ -4,12 +4,14 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/operation"
-	"github.com/amolabs/amoabci/amo/store"
+
 	abci "github.com/amolabs/tendermint-amo/abci/types"
 	dbm "github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/amolabs/tendermint-amo/version"
+
+	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/operation"
+	"github.com/amolabs/amoabci/amo/store"
 )
 
 var (

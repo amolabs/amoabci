@@ -1,7 +1,6 @@
 package store
 
 import (
-	dtypes "github.com/amolabs/amoabci/amo/store/types"
 	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/tendermint-amo/crypto/p256"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
@@ -42,7 +41,7 @@ func TestParcel(t *testing.T) {
 	s := NewStore(testRoot)
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	custody := cmn.RandBytes(32)
-	parcelInput := dtypes.ParcelValue{
+	parcelInput := types.ParcelValue{
 		Owner:   testAddr,
 		Custody: custody,
 		Info:    []byte("test"),
@@ -63,7 +62,7 @@ func TestRequest(t *testing.T) {
 	parcelID := cmn.RandBytes(32)
 	exp := time.Now().UTC()
 	exp = exp.Add(100 * time.Minute)
-	requestInput := dtypes.RequestValue{
+	requestInput := types.RequestValue{
 		Payment: types.Currency(100),
 		Exp:     exp,
 	}
@@ -85,7 +84,7 @@ func TestUsage(t *testing.T) {
 	custody := cmn.RandBytes(32)
 	exp := time.Now().UTC()
 	exp = exp.Add(100 * time.Minute)
-	usageInput := dtypes.UsageValue{
+	usageInput := types.UsageValue{
 		Custody: custody,
 		Exp:     exp,
 	}

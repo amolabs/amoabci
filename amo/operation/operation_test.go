@@ -1,15 +1,17 @@
 package operation
 
 import (
-	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/store"
-	dtypes "github.com/amolabs/amoabci/amo/store/types"
+	"testing"
+	"time"
+
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/crypto/p256"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
+
+	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 type user struct {
@@ -59,21 +61,21 @@ func getTestStore() *store.Store {
 	store.SetBalance(alice.addr, 3000)
 	store.SetBalance(bob.addr, 1000)
 	store.SetBalance(eve.addr, 50)
-	store.SetParcel(parcelID[0], &dtypes.ParcelValue{
+	store.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:   alice.addr,
 		Custody: custody[0],
 	})
-	store.SetParcel(parcelID[1], &dtypes.ParcelValue{
+	store.SetParcel(parcelID[1], &types.ParcelValue{
 		Owner:   bob.addr,
 		Custody: custody[1],
 	})
-	store.SetRequest(bob.addr, parcelID[0], &dtypes.RequestValue{
+	store.SetRequest(bob.addr, parcelID[0], &types.RequestValue{
 		Payment: 100,
 	})
-	store.SetRequest(alice.addr, parcelID[1], &dtypes.RequestValue{
+	store.SetRequest(alice.addr, parcelID[1], &types.RequestValue{
 		Payment: 100,
 	})
-	store.SetUsage(bob.addr, parcelID[0], &dtypes.UsageValue{
+	store.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
 		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
@@ -194,7 +196,7 @@ func TestNonValidRequest(t *testing.T) {
 		Payment: 100,
 	}
 	NBop := Request{
-		Target: parcelID[1],
+		Target:  parcelID[1],
 		Payment: 100,
 	}
 	assert.Equal(t, code.TxCodeTargetNotExists, TNop.Check(store, eve.addr))

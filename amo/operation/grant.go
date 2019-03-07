@@ -2,12 +2,14 @@ package operation
 
 import (
 	"bytes"
-	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/store"
-	dtypes "github.com/amolabs/amoabci/amo/store/types"
+	"strconv"
+
 	"github.com/amolabs/tendermint-amo/crypto"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
-	"strconv"
+
+	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 var _ Operation = Grant{}
@@ -42,7 +44,7 @@ func (o Grant) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn
 	balance := store.GetBalance(signer)
 	balance += request.Payment
 	store.SetBalance(signer, balance)
-	usage := dtypes.UsageValue{
+	usage := types.UsageValue{
 		Custody: o.Custody,
 	}
 	store.SetUsage(o.Grantee, o.Target, &usage)

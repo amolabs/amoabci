@@ -2,20 +2,21 @@ package operation
 
 import (
 	"bytes"
-	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/store"
-	"github.com/amolabs/amoabci/amo/store/types"
-	atypes "github.com/amolabs/amoabci/amo/types"
+	"strconv"
+
 	"github.com/amolabs/tendermint-amo/crypto"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
-	"strconv"
+
+	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 var _ Operation = Request{}
 
 type Request struct {
-	Target  cmn.HexBytes    `json:"target"`
-	Payment atypes.Currency `json:"payment"`
+	Target  cmn.HexBytes   `json:"target"`
+	Payment types.Currency `json:"payment"`
 	// TODO: Extra info
 }
 
