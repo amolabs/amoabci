@@ -1,11 +1,12 @@
 package operation
 
 import (
-	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/db"
-	"github.com/amolabs/amoabci/amo/db/types"
 	"github.com/amolabs/tendermint-amo/crypto"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
+
+	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 var _ Operation = Register{}
@@ -16,7 +17,7 @@ type Register struct {
 	// TODO: extra info
 }
 
-func (o Register) Check(store *db.Store, signer crypto.Address) uint32 {
+func (o Register) Check(store *store.Store, signer crypto.Address) uint32 {
 	// TODO: permission check from PDSN
 	if store.GetParcel(o.Target) != nil {
 		return code.TxCodeTargetAlreadyExists
@@ -24,7 +25,7 @@ func (o Register) Check(store *db.Store, signer crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Register) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+func (o Register) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
 	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
 		return resCode, nil
 	}

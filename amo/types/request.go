@@ -1,15 +1,15 @@
 package types
 
 import (
-	"github.com/amolabs/amoabci/amo/encoding/binary"
-	atypes "github.com/amolabs/amoabci/amo/types"
 	"time"
+
+	"github.com/amolabs/amoabci/amo/encoding/binary"
 )
 
 const RequestAminoName = "amo/RequestValue"
 
 type RequestValue struct {
-	Payment atypes.Currency
+	Payment Currency
 	Exp     time.Time
 }
 

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	"github.com/amolabs/amoabci/amo/db"
+	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/crypto/p256"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
@@ -67,8 +67,8 @@ func (m *Message) Verify() bool {
 }
 
 type Operation interface {
-	Check(store *db.Store, signer crypto.Address) uint32
-	Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair)
+	Check(store *store.Store, signer crypto.Address) uint32
+	Execute(store *store.Store, signer crypto.Address) (uint32, []cmn.KVPair)
 }
 
 func ParseTx(tx []byte) (Message, Operation) {

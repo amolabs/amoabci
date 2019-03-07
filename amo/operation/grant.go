@@ -2,12 +2,14 @@ package operation
 
 import (
 	"bytes"
-	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/db"
-	dtypes "github.com/amolabs/amoabci/amo/db/types"
+	"strconv"
+
 	"github.com/amolabs/tendermint-amo/crypto"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
-	"strconv"
+
+	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 var _ Operation = Grant{}
@@ -18,7 +20,7 @@ type Grant struct {
 	Custody cmn.HexBytes
 }
 
-func (o Grant) Check(store *db.Store, signer crypto.Address) uint32 {
+func (o Grant) Check(store *store.Store, signer crypto.Address) uint32 {
 	parcel := store.GetParcel(o.Target)
 	if !bytes.Equal(parcel.Owner, signer) {
 		return code.TxCodePermissionDenied
@@ -33,7 +35,7 @@ func (o Grant) Check(store *db.Store, signer crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Grant) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+func (o Grant) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
 	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
 		return resCode, nil
 	}
@@ -42,7 +44,7 @@ func (o Grant) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KV
 	balance := store.GetBalance(signer)
 	balance += request.Payment
 	store.SetBalance(signer, balance)
-	usage := dtypes.UsageValue{
+	usage := types.UsageValue{
 		Custody: o.Custody,
 	}
 	store.SetUsage(o.Grantee, o.Target, &usage)

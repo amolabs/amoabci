@@ -1,15 +1,18 @@
 package operation
 
 import (
-	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/db"
-	dtypes "github.com/amolabs/amoabci/amo/db/types"
+	"testing"
+	"time"
+
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/crypto/p256"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
+	"github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
+
+	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 type user struct {
@@ -54,30 +57,30 @@ var custody = []cmn.HexBytes{
 	[]byte{0x2, 0x2, 0x2, 0x2},
 }
 
-func getTestStore() *db.Store {
-	store := db.NewMemStore()
-	store.SetBalance(alice.addr, 3000)
-	store.SetBalance(bob.addr, 1000)
-	store.SetBalance(eve.addr, 50)
-	store.SetParcel(parcelID[0], &dtypes.ParcelValue{
+func getTestStore() *store.Store {
+	s := store.NewStore(db.NewMemDB())
+	s.SetBalance(alice.addr, 3000)
+	s.SetBalance(bob.addr, 1000)
+	s.SetBalance(eve.addr, 50)
+	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:   alice.addr,
 		Custody: custody[0],
 	})
-	store.SetParcel(parcelID[1], &dtypes.ParcelValue{
+	s.SetParcel(parcelID[1], &types.ParcelValue{
 		Owner:   bob.addr,
 		Custody: custody[1],
 	})
-	store.SetRequest(bob.addr, parcelID[0], &dtypes.RequestValue{
+	s.SetRequest(bob.addr, parcelID[0], &types.RequestValue{
 		Payment: 100,
 	})
-	store.SetRequest(alice.addr, parcelID[1], &dtypes.RequestValue{
+	s.SetRequest(alice.addr, parcelID[1], &types.RequestValue{
 		Payment: 100,
 	})
-	store.SetUsage(bob.addr, parcelID[0], &dtypes.UsageValue{
+	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
 		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
-	return store
+	return s
 }
 
 func TestValidCancel(t *testing.T) {
@@ -194,7 +197,7 @@ func TestNonValidRequest(t *testing.T) {
 		Payment: 100,
 	}
 	NBop := Request{
-		Target: parcelID[1],
+		Target:  parcelID[1],
 		Payment: 100,
 	}
 	assert.Equal(t, code.TxCodeTargetNotExists, TNop.Check(store, eve.addr))

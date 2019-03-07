@@ -2,24 +2,25 @@ package operation
 
 import (
 	"bytes"
-	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/db"
-	"github.com/amolabs/amoabci/amo/db/types"
-	atypes "github.com/amolabs/amoabci/amo/types"
+	"strconv"
+
 	"github.com/amolabs/tendermint-amo/crypto"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
-	"strconv"
+
+	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 var _ Operation = Request{}
 
 type Request struct {
-	Target  cmn.HexBytes    `json:"target"`
-	Payment atypes.Currency `json:"payment"`
+	Target  cmn.HexBytes   `json:"target"`
+	Payment types.Currency `json:"payment"`
 	// TODO: Extra info
 }
 
-func (o Request) Check(store *db.Store, signer crypto.Address) uint32 {
+func (o Request) Check(store *store.Store, signer crypto.Address) uint32 {
 	parcel := store.GetParcel(o.Target)
 	if parcel == nil {
 		return code.TxCodeTargetNotExists
@@ -36,7 +37,7 @@ func (o Request) Check(store *db.Store, signer crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Request) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+func (o Request) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
 	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
 		return resCode, nil
 	}

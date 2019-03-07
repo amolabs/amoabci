@@ -4,12 +4,14 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/amolabs/amoabci/amo/code"
-	adb "github.com/amolabs/amoabci/amo/db"
-	"github.com/amolabs/amoabci/amo/operation"
+
 	abci "github.com/amolabs/tendermint-amo/abci/types"
 	dbm "github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/amolabs/tendermint-amo/version"
+
+	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/operation"
+	astore "github.com/amolabs/amoabci/amo/store"
 )
 
 var (
@@ -48,7 +50,7 @@ func saveState(state State) {
 type AMOApplication struct {
 	abci.BaseApplication
 	state State
-	store *adb.Store
+	store *astore.Store
 }
 
 var _ abci.Application = (*AMOApplication)(nil)
@@ -57,7 +59,7 @@ func NewAMOApplication(db dbm.DB) *AMOApplication {
 	state := loadState(db)
 	app := &AMOApplication{
 		state: state,
-		store: adb.NewStore("blockchain"),
+		store: astore.NewStore(db),
 	}
 	return app
 }
