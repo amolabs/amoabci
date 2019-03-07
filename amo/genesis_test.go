@@ -10,7 +10,7 @@ import (
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/amolabs/amoabci/amo/db"
+	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/types"
 )
 
@@ -94,7 +94,7 @@ func TestParseGenesisStateBytes(t *testing.T) {
 func TestFillGenesisState(t *testing.T) {
 	setupDB()
 
-	s := db.NewStore(testRoot)
+	s := store.NewStore(testRoot)
 
 	// first fill the test store with some values
 	addr1 := p256.GenPrivKey().PubKey().Address()

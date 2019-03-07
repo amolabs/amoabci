@@ -1,7 +1,7 @@
-package db
+package store
 
 import (
-	dtypes "github.com/amolabs/amoabci/amo/db/types"
+	dtypes "github.com/amolabs/amoabci/amo/store/types"
 	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/tendermint-amo/crypto/p256"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"

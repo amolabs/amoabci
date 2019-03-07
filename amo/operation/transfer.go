@@ -3,7 +3,7 @@ package operation
 import (
 	"bytes"
 	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/db"
+	"github.com/amolabs/amoabci/amo/store"
 	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/tendermint-amo/crypto"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
@@ -17,7 +17,7 @@ type Transfer struct {
 	Amount atypes.Currency `json:"amount"`
 }
 
-func (o Transfer) Check(store *db.Store, signer crypto.Address) uint32 {
+func (o Transfer) Check(store *store.Store, signer crypto.Address) uint32 {
 	// TODO: make util for checking address size
 	if len(o.To) != crypto.AddressSize {
 		return code.TxCodeBadParam
@@ -32,7 +32,7 @@ func (o Transfer) Check(store *db.Store, signer crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Transfer) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+func (o Transfer) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
 	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
 		return resCode, nil
 	}

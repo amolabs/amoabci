@@ -3,8 +3,8 @@ package operation
 import (
 	"bytes"
 	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/db"
-	dtypes "github.com/amolabs/amoabci/amo/db/types"
+	"github.com/amolabs/amoabci/amo/store"
+	dtypes "github.com/amolabs/amoabci/amo/store/types"
 	"github.com/amolabs/tendermint-amo/crypto"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
 	"strconv"
@@ -18,7 +18,7 @@ type Grant struct {
 	Custody cmn.HexBytes
 }
 
-func (o Grant) Check(store *db.Store, signer crypto.Address) uint32 {
+func (o Grant) Check(store *store.Store, signer crypto.Address) uint32 {
 	parcel := store.GetParcel(o.Target)
 	if !bytes.Equal(parcel.Owner, signer) {
 		return code.TxCodePermissionDenied
@@ -33,7 +33,7 @@ func (o Grant) Check(store *db.Store, signer crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Grant) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+func (o Grant) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
 	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
 		return resCode, nil
 	}

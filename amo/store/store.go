@@ -1,10 +1,10 @@
-package db
+package store
 
 import (
 	"path"
 
-	dtypes "github.com/amolabs/amoabci/amo/db/types"
 	"github.com/amolabs/amoabci/amo/encoding/binary"
+	dtypes "github.com/amolabs/amoabci/amo/store/types"
 	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/libs/db"
@@ -19,7 +19,7 @@ var (
 )
 
 type Store struct {
-	store db.DB
+	dbm db.DB
 }
 
 func getGoLevelDB(name, dir string) *db.GoLevelDB {
@@ -44,7 +44,7 @@ func getBalanceKey(addr types.Address) []byte {
 }
 
 func (s Store) Purge() error {
-	var itr db.Iterator = s.store.Iterator([]byte{}, []byte(nil))
+	var itr db.Iterator = s.dbm.Iterator([]byte{}, []byte(nil))
 	defer itr.Close()
 
 	// TODO: cannot guarantee in multi-thread environment
@@ -52,10 +52,10 @@ func (s Store) Purge() error {
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
 		// XXX: not sure if this will confuse the iterator
-		s.store.Delete(k)
+		s.dbm.Delete(k)
 	}
 
-	// TODO: need some method like s.store.Size() to check if the DB has been
+	// TODO: need some method like s.dbm.Size() to check if the DB has been
 	// really emptied.
 
 	return nil
@@ -63,12 +63,12 @@ func (s Store) Purge() error {
 
 func (s Store) SetBalance(addr types.Address, balance atypes.Currency) {
 	b, _ := balance.Serialize()
-	s.store.Set(getBalanceKey(addr), b)
+	s.dbm.Set(getBalanceKey(addr), b)
 }
 
 func (s Store) GetBalance(addr types.Address) atypes.Currency {
 	var c atypes.Currency
-	balance := s.store.Get(getBalanceKey(addr))
+	balance := s.dbm.Get(getBalanceKey(addr))
 	if len(balance) == 0 {
 		return 0
 	}
@@ -89,11 +89,11 @@ func (s Store) SetParcel(parcelID []byte, value *dtypes.ParcelValue) {
 	if err != nil {
 		panic(err)
 	}
-	s.store.Set(getParcelKey(parcelID), b)
+	s.dbm.Set(getParcelKey(parcelID), b)
 }
 
 func (s Store) GetParcel(parcelID []byte) *dtypes.ParcelValue {
-	b := s.store.Get(getParcelKey(parcelID))
+	b := s.dbm.Get(getParcelKey(parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -106,7 +106,7 @@ func (s Store) GetParcel(parcelID []byte) *dtypes.ParcelValue {
 }
 
 func (s Store) DeleteParcel(parcelID []byte) {
-	s.store.DeleteSync(getParcelKey(parcelID))
+	s.dbm.DeleteSync(getParcelKey(parcelID))
 }
 
 // Request store
@@ -119,11 +119,11 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *dtypes.R
 	if err != nil {
 		panic(err)
 	}
-	s.store.Set(getRequestKey(buyer, parcelID), b)
+	s.dbm.Set(getRequestKey(buyer, parcelID), b)
 }
 
 func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *dtypes.RequestValue {
-	b := s.store.Get(getRequestKey(buyer, parcelID))
+	b := s.dbm.Get(getRequestKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -136,7 +136,7 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *dtypes.Request
 }
 
 func (s Store) DeleteRequest(buyer crypto.Address, parcelID []byte) {
-	s.store.DeleteSync(getRequestKey(buyer, parcelID))
+	s.dbm.DeleteSync(getRequestKey(buyer, parcelID))
 }
 
 // Usage store
@@ -149,11 +149,11 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *dtypes.Usa
 	if err != nil {
 		panic(err)
 	}
-	s.store.Set(getUsageKey(buyer, parcelID), b)
+	s.dbm.Set(getUsageKey(buyer, parcelID), b)
 }
 
 func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *dtypes.UsageValue {
-	b := s.store.Get(getUsageKey(buyer, parcelID))
+	b := s.dbm.Get(getUsageKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -166,5 +166,5 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *dtypes.UsageValu
 }
 
 func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
-	s.store.DeleteSync(getUsageKey(buyer, parcelID))
+	s.dbm.DeleteSync(getUsageKey(buyer, parcelID))
 }

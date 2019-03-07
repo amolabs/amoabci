@@ -3,7 +3,7 @@ package operation
 import (
 	"bytes"
 	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/db"
+	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/tendermint-amo/crypto"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
 )
@@ -14,7 +14,7 @@ type Discard struct {
 	Target cmn.HexBytes `json:"target"`
 }
 
-func (o Discard) Check(store *db.Store, signer crypto.Address) uint32 {
+func (o Discard) Check(store *store.Store, signer crypto.Address) uint32 {
 	parcel := store.GetParcel(o.Target)
 	if parcel == nil {
 		return code.TxCodeTargetNotExists
@@ -25,7 +25,7 @@ func (o Discard) Check(store *db.Store, signer crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Discard) Execute(store *db.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
+func (o Discard) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
 	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
 		return resCode, nil
 	}

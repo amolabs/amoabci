@@ -2,8 +2,8 @@ package operation
 
 import (
 	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/db"
-	dtypes "github.com/amolabs/amoabci/amo/db/types"
+	"github.com/amolabs/amoabci/amo/store"
+	dtypes "github.com/amolabs/amoabci/amo/store/types"
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/crypto/p256"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
@@ -54,8 +54,8 @@ var custody = []cmn.HexBytes{
 	[]byte{0x2, 0x2, 0x2, 0x2},
 }
 
-func getTestStore() *db.Store {
-	store := db.NewMemStore()
+func getTestStore() *store.Store {
+	store := store.NewMemStore()
 	store.SetBalance(alice.addr, 3000)
 	store.SetBalance(bob.addr, 1000)
 	store.SetBalance(eve.addr, 50)

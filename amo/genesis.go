@@ -5,7 +5,7 @@ import (
 
 	"github.com/amolabs/tendermint-amo/crypto"
 
-	"github.com/amolabs/amoabci/amo/db"
+	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/types"
 )
 
@@ -27,7 +27,7 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	return &genState, nil
 }
 
-func FillGenesisState(s *db.Store, genState *GenAmoAppState) error {
+func FillGenesisState(s *store.Store, genState *GenAmoAppState) error {
 	err := s.Purge()
 	if err != nil {
 		return err
