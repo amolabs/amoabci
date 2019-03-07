@@ -7,6 +7,7 @@ import (
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/crypto/p256"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
+	"github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -57,29 +58,29 @@ var custody = []cmn.HexBytes{
 }
 
 func getTestStore() *store.Store {
-	store := store.NewMemStore()
-	store.SetBalance(alice.addr, 3000)
-	store.SetBalance(bob.addr, 1000)
-	store.SetBalance(eve.addr, 50)
-	store.SetParcel(parcelID[0], &types.ParcelValue{
+	s := store.NewStore(db.NewMemDB())
+	s.SetBalance(alice.addr, 3000)
+	s.SetBalance(bob.addr, 1000)
+	s.SetBalance(eve.addr, 50)
+	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:   alice.addr,
 		Custody: custody[0],
 	})
-	store.SetParcel(parcelID[1], &types.ParcelValue{
+	s.SetParcel(parcelID[1], &types.ParcelValue{
 		Owner:   bob.addr,
 		Custody: custody[1],
 	})
-	store.SetRequest(bob.addr, parcelID[0], &types.RequestValue{
+	s.SetRequest(bob.addr, parcelID[0], &types.RequestValue{
 		Payment: 100,
 	})
-	store.SetRequest(alice.addr, parcelID[1], &types.RequestValue{
+	s.SetRequest(alice.addr, parcelID[1], &types.RequestValue{
 		Payment: 100,
 	})
-	store.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
 		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
-	return store
+	return s
 }
 
 func TestValidCancel(t *testing.T) {

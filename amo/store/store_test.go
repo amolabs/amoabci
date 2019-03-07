@@ -1,13 +1,16 @@
 package store
 
 import (
-	"github.com/amolabs/amoabci/amo/types"
-	"github.com/amolabs/tendermint-amo/crypto/p256"
-	cmn "github.com/amolabs/tendermint-amo/libs/common"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/amolabs/tendermint-amo/crypto/p256"
+	cmn "github.com/amolabs/tendermint-amo/libs/common"
+	"github.com/amolabs/tendermint-amo/libs/db"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 const testRoot = "store_test"
@@ -28,7 +31,7 @@ func tearDown(t *testing.T) {
 
 func TestBalance(t *testing.T) {
 	setUp(t)
-	s := NewStore(testRoot)
+	s := NewStore(db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	balance := types.Currency(100)
 	s.SetBalance(testAddr, balance)
@@ -38,7 +41,7 @@ func TestBalance(t *testing.T) {
 
 func TestParcel(t *testing.T) {
 	setUp(t)
-	s := NewStore(testRoot)
+	s := NewStore(db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	custody := cmn.RandBytes(32)
 	parcelInput := types.ParcelValue{
@@ -57,7 +60,7 @@ func TestParcel(t *testing.T) {
 
 func TestRequest(t *testing.T) {
 	setUp(t)
-	s := NewStore(testRoot)
+	s := NewStore(db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := cmn.RandBytes(32)
 	exp := time.Now().UTC()
@@ -78,7 +81,7 @@ func TestRequest(t *testing.T) {
 
 func TestUsage(t *testing.T) {
 	setUp(t)
-	s := NewStore(testRoot)
+	s := NewStore(db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := cmn.RandBytes(32)
 	custody := cmn.RandBytes(32)

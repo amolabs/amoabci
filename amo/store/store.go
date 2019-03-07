@@ -1,8 +1,6 @@
 package store
 
 import (
-	"path"
-
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/amolabs/tendermint-amo/types"
@@ -30,12 +28,8 @@ func getGoLevelDB(name, dir string) *db.GoLevelDB {
 	return leveldb
 }
 
-func NewStore(root string) *Store {
-	return &Store{getGoLevelDB("store", path.Join(root, "store"))}
-}
-
-func NewMemStore() *Store {
-	return &Store{db.NewMemDB()}
+func NewStore(bDB db.DB) *Store {
+	return &Store{dbm: bDB}
 }
 
 // Balance store

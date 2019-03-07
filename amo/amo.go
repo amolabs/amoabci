@@ -11,7 +11,7 @@ import (
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/operation"
-	"github.com/amolabs/amoabci/amo/store"
+	astore "github.com/amolabs/amoabci/amo/store"
 )
 
 var (
@@ -50,7 +50,7 @@ func saveState(state State) {
 type AMOApplication struct {
 	abci.BaseApplication
 	state State
-	store *store.Store
+	store *astore.Store
 }
 
 var _ abci.Application = (*AMOApplication)(nil)
@@ -59,7 +59,7 @@ func NewAMOApplication(db dbm.DB) *AMOApplication {
 	state := loadState(db)
 	app := &AMOApplication{
 		state: state,
-		store: store.NewStore("blockchain"),
+		store: astore.NewStore(db),
 	}
 	return app
 }
