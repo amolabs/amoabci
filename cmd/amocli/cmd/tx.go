@@ -3,11 +3,12 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/amolabs/tendermint-amo/types"
 	"github.com/spf13/cobra"
 
 	atypes "github.com/amolabs/amoabci/amo/types"
-	"github.com/amolabs/amoabci/cmd/amocli/tx"
+	"github.com/amolabs/amoabci/client/tx"
 )
 
 /* Commands (expected hierarchy)

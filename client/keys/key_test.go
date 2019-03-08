@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/amolabs/amoabci/cmd/amocli/util"
+	"github.com/amolabs/amoabci/client/util"
 )
 
 const (

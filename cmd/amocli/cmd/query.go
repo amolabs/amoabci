@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/amolabs/amoabci/cmd/amocli/tx"
+	"github.com/amolabs/amoabci/client/tx"
 )
 
 /* Commands (expected hierarchy)

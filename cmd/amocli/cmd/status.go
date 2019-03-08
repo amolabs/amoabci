@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/amolabs/amoabci/cmd/amocli/util"
 	"github.com/spf13/cobra"
+
+	"github.com/amolabs/amoabci/client/util"
 )
 
 var statusCmd = &cobra.Command{

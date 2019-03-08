@@ -1,8 +1,9 @@
 package tx
 
 import (
-	"github.com/amolabs/amoabci/cmd/amocli/util"
 	"github.com/amolabs/tendermint-amo/crypto"
+
+	"github.com/amolabs/amoabci/client/util"
 )
 
 // QueryAddressInfo is ..

@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"syscall"
 
-	"github.com/amolabs/amoabci/cmd/amocli/util"
-
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 
-	"github.com/amolabs/amoabci/cmd/amocli/keys"
+	"github.com/amolabs/amoabci/client/keys"
+	"github.com/amolabs/amoabci/client/util"
 )
 
 /* Commands (expected hierarchy)
