@@ -3,11 +3,12 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/amolabs/tendermint-amo/types"
 	"github.com/spf13/cobra"
 
 	atypes "github.com/amolabs/amoabci/amo/types"
-	"github.com/amolabs/amoabci/cmd/amocli/tx"
+	"github.com/amolabs/amoabci/client/rpc"
 )
 
 /* Commands (expected hierarchy)
@@ -88,7 +89,7 @@ func txTransferFunc(cmd *cobra.Command, args []string) error {
 
 	toAddr := types.Address([]byte(to))
 
-	result, err := tx.Transfer(toAddr, &amount)
+	result, err := rpc.Transfer(toAddr, &amount)
 	if err != nil {
 		return err
 	}

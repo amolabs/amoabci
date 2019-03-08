@@ -5,7 +5,7 @@ import (
 
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
 
-	"github.com/amolabs/amoabci/cmd/amocli/util"
+	"github.com/amolabs/amoabci/client/util"
 )
 
 func LoadKeyList(path string) (map[string]Key, error) {
