@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"fmt"
 
+	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/spf13/cobra"
 
 	"github.com/amolabs/amoabci/client/rpc"
@@ -10,7 +12,7 @@ import (
 
 /* Commands (expected hierarchy)
  *
- * amocli |- query |- address
+ * amocli |- query |- balance
  */
 
 var queryCmd = &cobra.Command{
@@ -26,18 +28,21 @@ var queryCmd = &cobra.Command{
 	},
 }
 
-var queryAddressCmd = &cobra.Command{
-	Use:   "address [address]",
-	Short: "Show general information of specified address",
+var queryBalanceCmd = &cobra.Command{
+	Use:   "balance [address]",
+	Short: "Show balance of an address",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		target := []byte(args[0])
-		targetInfo, err := rpc.QueryAddressInfo(target)
+		address, err := hex.DecodeString(args[0])
+		if err != nil {
+			return err
+		}
+		balance, err := rpc.QueryBalance(crypto.Address(address))
 		if err != nil {
 			return err
 		}
 
-		fmt.Println(string(targetInfo))
+		fmt.Println(balance)
 
 		return nil
 	},
@@ -45,7 +50,7 @@ var queryAddressCmd = &cobra.Command{
 
 func init() {
 	// init here if needed
-	addressCmd := queryAddressCmd
+	addressCmd := queryBalanceCmd
 	cmd := queryCmd
 	cmd.AddCommand(addressCmd)
 }

@@ -1,15 +1,22 @@
 package rpc
 
 import (
+	"encoding/json"
+
 	"github.com/amolabs/tendermint-amo/crypto"
+	tm "github.com/amolabs/tendermint-amo/libs/common"
+
+	"github.com/amolabs/amoabci/amo/types"
 )
 
-// QueryAddressInfo is ..
-func QueryAddressInfo(target crypto.Address) ([]byte, error) {
-	result, err := RPCABCIQuery("", target[:])
+func QueryBalance(address crypto.Address) (types.Currency, error) {
+	bytes, err := json.Marshal(address)
+	result, err := RPCABCIQuery("/balance", tm.HexBytes(bytes))
 	if err != nil {
-		return nil, err
+		return types.Currency(0), err
 	}
 
-	return result.Response.Value, nil
+	var balance types.Currency
+	json.Unmarshal(result.Response.Value, &balance)
+	return balance, nil
 }
