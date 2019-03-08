@@ -8,11 +8,27 @@ import (
 )
 
 func TestCurrencyJSON(t *testing.T) {
-	testJson := "100"
-	var amount Currency
-	err := json.Unmarshal([]byte(testJson), &amount)
+	amount := Currency(100)
+	d, err := json.Marshal(amount)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("\"100\""), d)
+
+	err = json.Unmarshal([]byte("1f"), &amount)
+	assert.Error(t, err)
+	err = json.Unmarshal([]byte("11"), &amount)
+	assert.Error(t, err)
+	err = json.Unmarshal([]byte(""), &amount)
+	assert.Error(t, err)
+	err = json.Unmarshal([]byte("\""), &amount)
+	assert.Error(t, err)
+	err = json.Unmarshal([]byte("\"1f\""), &amount)
+	assert.Error(t, err)
+
+	err = json.Unmarshal([]byte("\"\""), &amount)
+	assert.NoError(t, err)
+	assert.Equal(t, Currency(0), amount)
+
+	err = json.Unmarshal([]byte("\"100\""), &amount)
 	assert.NoError(t, err)
 	assert.Equal(t, Currency(100), amount)
-
-	// TODO: test for UnmarshalJSON
 }

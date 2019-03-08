@@ -12,3 +12,11 @@ const (
 	TxCodeBadSignature
 	TxCodeRequestNotExists
 )
+
+const (
+	QueryCodeOK uint32 = iota
+	QueryCodeBadPath
+	QueryCodeNoKey
+	QueryCodeBadKey
+	QueryCodeNoMatch
+)

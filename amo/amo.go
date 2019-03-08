@@ -6,12 +6,14 @@ import (
 	"fmt"
 
 	abci "github.com/amolabs/tendermint-amo/abci/types"
+	"github.com/amolabs/tendermint-amo/crypto"
 	dbm "github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/amolabs/tendermint-amo/version"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/operation"
 	astore "github.com/amolabs/amoabci/amo/store"
+	//"github.com/amolabs/amoabci/amo/types"
 )
 
 var (
@@ -104,20 +106,33 @@ func (app *AMOApplication) Commit() abci.ResponseCommit {
 }
 
 func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuery) {
-	if reqQuery.Prove {
-		return
-	} else {
-		resQuery.Key = reqQuery.Data
-		var value []byte
-		switch len(resQuery.Key) {
+	resQuery.Key = reqQuery.Data
+
+	switch reqQuery.Path {
+	case "/balance":
+		if len(reqQuery.Data) == 0 {
+			resQuery.Code = code.QueryCodeNoKey
+			break
 		}
-		if value != nil {
-			resQuery.Log = "exists"
-		} else {
-			resQuery.Log = "does not exist"
+
+		var addr crypto.Address
+		err := json.Unmarshal(reqQuery.Data, &addr)
+		if err != nil {
+			resQuery.Code = code.QueryCodeBadKey
+			break
 		}
-		return
+
+		bal := app.store.GetBalance(addr)
+		jsonstr, _ := json.Marshal(bal)
+		resQuery.Log = string(jsonstr)
+		// XXX: tendermint will convert this using base64 encoding
+		resQuery.Value = []byte(jsonstr)
+		resQuery.Code = code.QueryCodeOK
+	default:
+		resQuery.Code = code.QueryCodeBadPath
 	}
+
+	return resQuery
 }
 
 func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
