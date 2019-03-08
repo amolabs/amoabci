@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/amolabs/amoabci/client/tx"
+	"github.com/amolabs/amoabci/client/rpc"
 )
 
 /* Commands (expected hierarchy)
@@ -32,7 +32,7 @@ var queryAddressCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		target := []byte(args[0])
-		targetInfo, err := tx.QueryAddressInfo(target)
+		targetInfo, err := rpc.QueryAddressInfo(target)
 		if err != nil {
 			return err
 		}

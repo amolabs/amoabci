@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/amolabs/amoabci/client/util"
+	"github.com/amolabs/amoabci/client/rpc"
 )
 
 var statusCmd = &cobra.Command{
@@ -14,7 +14,7 @@ var statusCmd = &cobra.Command{
 	Short: "Show status of AMO node",
 	Long:  "Show status of AMO node including node info, pubkey, latest block hash, app hash, block height and time",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		result, err := util.RPCStatus()
+		result, err := rpc.RPCStatus()
 		if err != nil {
 			return err
 		}
