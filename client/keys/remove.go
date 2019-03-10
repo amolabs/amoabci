@@ -2,9 +2,6 @@ package keys
 
 import (
 	"errors"
-
-	"github.com/amolabs/tendermint-amo/crypto"
-	"github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric"
 )
 
 func Remove(nickname string, passphrase []byte, path string) error {
@@ -21,7 +18,7 @@ func Remove(nickname string, passphrase []byte, path string) error {
 	key := keyList[nickname]
 
 	if key.Encrypted {
-		_, err = xsalsa20symmetric.DecryptSymmetric(key.PrivKey, crypto.Sha256(passphrase))
+		err = GetDecryptedKey(&key)
 		if err != nil {
 			return err
 		}
