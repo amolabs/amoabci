@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var defaultCLIHome = os.ExpandEnv("$HOME/.amocli")
+var LineBreak = &cobra.Command{Run: func(*cobra.Command, []string) {}}
 
 var rootCmd = &cobra.Command{
 	Use:               "amocli",
@@ -29,9 +29,12 @@ func Execute() {
 	rootCmd.AddCommand(
 		versionCmd,
 		statusCmd,
+		LineBreak,
 		keyCmd,
+		LineBreak,
 		txCmd,
-		queryCmd)
+		queryCmd,
+		LineBreak)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

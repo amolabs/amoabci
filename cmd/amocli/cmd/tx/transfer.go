@@ -5,12 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/amolabs/amoabci/client/util"
-
 	"github.com/spf13/cobra"
 
 	atypes "github.com/amolabs/amoabci/amo/types"
-	"github.com/amolabs/amoabci/client/keys"
 	"github.com/amolabs/amoabci/client/rpc"
 )
 
@@ -23,7 +20,6 @@ var TransferCmd = &cobra.Command{
 
 func transferFunc(cmd *cobra.Command, args []string) error {
 	var (
-		key    keys.Key
 		to     string
 		tmp    uint64
 		amount atypes.Currency
@@ -40,25 +36,12 @@ func transferFunc(cmd *cobra.Command, args []string) error {
 	}
 	amount = atypes.Currency(tmp)
 
-	// get the key to sign this tx
-	key, err = keys.GetKeyToSign(util.DefaultKeyFilePath())
-	if err != nil {
-		return err
-	}
-
-	if key.Encrypted {
-		err = keys.GetDecryptedKey(&key)
-		if err != nil {
-			return err
-		}
-	}
-
 	toAddr, err := hex.DecodeString(to)
 	if err != nil {
 		return err
 	}
 
-	result, err := rpc.Transfer(toAddr, &amount, key)
+	result, err := rpc.Transfer(toAddr, &amount, true)
 	if err != nil {
 		return err
 	}

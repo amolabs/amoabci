@@ -7,8 +7,15 @@ import (
 
 /* Commands (expected hierarchy)
  *
- * amocli |- tx |- transfer --from <address> --to <address> --amount <number>
- *		    	|- purchase --from <address> --file <hash>
+ * amocli |- tx |- transfer --to <address> --amount <uint64>
+ *				|
+ *		    	|- register --target <file> --custody <key>
+ *				|- request --target <file> --payment <uint64>
+ *				|- cancel --target <file>
+ *				|
+ *				|- grant --target <file> --grantee <address> --custody <key>
+ *				|- revoke --target <file> --grantee <address>
+ *				|- discard --target <file>
  */
 
 var txCmd = &cobra.Command{
@@ -25,5 +32,15 @@ var txCmd = &cobra.Command{
 }
 
 func init() {
-	txCmd.AddCommand(tx.TransferCmd)
+	txCmd.AddCommand(
+		tx.TransferCmd,
+		LineBreak,
+		tx.RegisterCmd,
+		tx.RequestCmd,
+		tx.CancelCmd,
+		LineBreak,
+		tx.GrantCmd,
+		tx.RevokeCmd,
+		tx.DiscardCmd,
+	)
 }

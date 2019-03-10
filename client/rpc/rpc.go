@@ -13,6 +13,7 @@ import (
 
 	"github.com/amolabs/amoabci/amo/operation"
 	"github.com/amolabs/amoabci/client/keys"
+	"github.com/amolabs/amoabci/client/util"
 )
 
 var (
@@ -21,8 +22,9 @@ var (
 )
 
 // MakeMessage handles making tx message
-func MakeMessage(t string, key keys.Key, nonce uint32, payload interface{}, sign bool) types.Tx {
+func MakeMessage(t string, nonce uint32, payload interface{}, sign bool) (types.Tx, error) {
 	var (
+		key           keys.Key
 		signer        = crypto.Address{}
 		signingPubKey = p256.PubKeyP256{}
 		signature     = cmn.HexBytes{}
@@ -30,21 +32,34 @@ func MakeMessage(t string, key keys.Key, nonce uint32, payload interface{}, sign
 
 	raw, err := json.Marshal(payload)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if sign {
+		// get the key to sign this tx
+		key, err = keys.GetKeyToSign(util.DefaultKeyFilePath())
+		if err != nil {
+			return nil, err
+		}
+
+		if key.Encrypted {
+			err = keys.GetDecryptedKey(&key)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		privKey := p256.GenPrivKeyFromSecret(key.PrivKey)
 		signerAddr, err := hex.DecodeString(key.Address)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		signer = crypto.Address(signerAddr)
 		copy(signingPubKey[:], key.PubKey)
 		signature, err = privKey.Sign(raw)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 
@@ -59,10 +74,10 @@ func MakeMessage(t string, key keys.Key, nonce uint32, payload interface{}, sign
 
 	tx, err := json.Marshal(msg)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return tx
+	return tx, nil
 }
 
 // RPCBroadcastTxCommit handles sending transactions

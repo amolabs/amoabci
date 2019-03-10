@@ -12,10 +12,17 @@ import (
  *		  		 |- generate <nickname>
  *				 |- remove <nickname>
  *
- *		  |- tx |- transfer --from <address> --to <address> --amount <number>
- *		  		|- purchase --from <address> --file <hash>
+ *		  |- tx |- transfer --to <address> --amount <uint64>
+ *				|
+ *		    	|- register --target <file> --custody <key>
+ *				|- request --target <file> --payment <uint64>
+ *				|- cancel --target <file>
+ *				|
+ *				|- grant --target <file> --grantee <address> --custody <key>
+ *				|- revoke --target <file> --grantee <address>
+ *				|- discard --target <file>
  *
- *		  |- query |- address <address>
+ *		  |- query |- balance <address>
  */
 
 func main() {
