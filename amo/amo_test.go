@@ -101,9 +101,9 @@ func TestQueryParcel(t *testing.T) {
 	parcelID[31] = 0xFF
 
 	parcel := types.ParcelValue{
-		Owner:addr,
+		Owner:   addr,
 		Custody: cmn.RandBytes(32),
-		Info: []byte("This is test parcel value"),
+		Info:    []byte("This is test parcel value"),
 	}
 
 	app.store.SetParcel(parcelID, &parcel)
@@ -122,9 +122,9 @@ func TestQueryParcel(t *testing.T) {
 
 	// TODO: check this after parcel type implemented
 	/*
-	req = abci.RequestQuery{Path: "/parcel", Data: []byte("f8das")}
-	res = app.Query(req)
-	assert.Equal(t, code.QueryCodeBadKey, res.Code)
+		req = abci.RequestQuery{Path: "/parcel", Data: []byte("f8das")}
+		res = app.Query(req)
+		assert.Equal(t, code.QueryCodeBadKey, res.Code)
 	*/
 
 	req = abci.RequestQuery{Path: "/parcel", Data: wrongParcelID}
@@ -175,9 +175,9 @@ func TestQueryRequest(t *testing.T) {
 
 	// TODO: check this after parcel type implemented
 	/*
-	req = abci.RequestQuery{Path: "/parcel", Data: []byte("f8das")}
-	res = app.Query(req)
-	assert.Equal(t, code.QueryCodeBadKey, res.Code)
+		req = abci.RequestQuery{Path: "/parcel", Data: []byte("f8das")}
+		res = app.Query(req)
+		assert.Equal(t, code.QueryCodeBadKey, res.Code)
 	*/
 
 	jsonstr, _ = json.Marshal(addr)
@@ -195,7 +195,7 @@ func TestQueryRequest(t *testing.T) {
 	assert.Len(t, res.Log, 0)
 
 	var keyMap = map[string]cmn.HexBytes{
-		"buyer": addr,
+		"buyer":  addr,
 		"target": parcelID,
 	}
 
@@ -254,9 +254,9 @@ func TestQueryUsage(t *testing.T) {
 
 	// TODO: check this after parcel type implemented
 	/*
-	req = abci.RequestQuery{Path: "/parcel", Data: []byte("f8das")}
-	res = app.Query(req)
-	assert.Equal(t, code.QueryCodeBadKey, res.Code)
+		req = abci.RequestQuery{Path: "/parcel", Data: []byte("f8das")}
+		res = app.Query(req)
+		assert.Equal(t, code.QueryCodeBadKey, res.Code)
 	*/
 
 	jsonstr, _ = json.Marshal(addr)
@@ -274,7 +274,7 @@ func TestQueryUsage(t *testing.T) {
 	assert.Len(t, res.Log, 0)
 
 	var keyMap = map[string]cmn.HexBytes{
-		"buyer": addr,
+		"buyer":  addr,
 		"target": parcelID,
 	}
 

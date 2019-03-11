@@ -15,7 +15,6 @@ import (
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/operation"
 	astore "github.com/amolabs/amoabci/amo/store"
-	//"github.com/amolabs/amoabci/amo/types"
 )
 
 var (
@@ -149,7 +148,7 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 		}
 
 		jsonstr, _ := json.Marshal(parcel)
-		resQuery.Log  = string(jsonstr)
+		resQuery.Log = string(jsonstr)
 		resQuery.Value = []byte(jsonstr)
 		resQuery.Code = code.QueryCodeOK
 	case "/request":
@@ -187,7 +186,7 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 			break
 		}
 		jsonstr, _ := json.Marshal(request)
-		resQuery.Log  = string(jsonstr)
+		resQuery.Log = string(jsonstr)
 		resQuery.Value = []byte(jsonstr)
 		resQuery.Code = code.QueryCodeOK
 	case "/usage":
@@ -225,7 +224,7 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 			break
 		}
 		jsonstr, _ := json.Marshal(request)
-		resQuery.Log  = string(jsonstr)
+		resQuery.Log = string(jsonstr)
 		resQuery.Value = []byte(jsonstr)
 		resQuery.Code = code.QueryCodeOK
 	default:
