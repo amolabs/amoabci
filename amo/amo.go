@@ -9,6 +9,7 @@ import (
 	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/amolabs/tendermint-amo/libs/common"
 	dbm "github.com/amolabs/tendermint-amo/libs/db"
+	"github.com/amolabs/tendermint-amo/libs/log"
 	"github.com/amolabs/tendermint-amo/version"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -52,17 +53,22 @@ func saveState(state State) {
 
 type AMOApplication struct {
 	abci.BaseApplication
-	state State
-	store *astore.Store
+	state  State
+	store  *astore.Store
+	logger log.Logger
 }
 
 var _ abci.Application = (*AMOApplication)(nil)
 
-func NewAMOApplication(db dbm.DB) *AMOApplication {
+func NewAMOApplication(db dbm.DB, l log.Logger) *AMOApplication {
 	state := loadState(db)
+	if l == nil {
+		l = log.NewNopLogger()
+	}
 	app := &AMOApplication{
-		state: state,
-		store: astore.NewStore(db),
+		state:  state,
+		store:  astore.NewStore(db),
+		logger: l,
 	}
 	return app
 }
@@ -226,6 +232,8 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 		resQuery.Code = code.QueryCodeBadPath
 	}
 
+	app.logger.Debug("Query: "+reqQuery.Path, "query_data", reqQuery.Data) // debug
+
 	return resQuery
 }
 
@@ -238,6 +246,7 @@ func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseIni
 	if FillGenesisState(app.store, genAppState) != nil {
 		return abci.ResponseInitChain{}
 	}
+	app.logger.Info("InitChain: new genesis app state applied.")
 
 	return abci.ResponseInitChain{}
 }

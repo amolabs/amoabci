@@ -18,7 +18,7 @@ import (
 
 func TestInitChain(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db)
+	app := NewAMOApplication(db, nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
 	res := app.InitChain(req)
@@ -35,7 +35,7 @@ func TestInitChain(t *testing.T) {
 
 func TestQueryDefault(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db)
+	app := NewAMOApplication(db, nil)
 
 	// query
 	req := abci.RequestQuery{}
@@ -46,7 +46,7 @@ func TestQueryDefault(t *testing.T) {
 
 func TestQueryBalance(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db)
+	app := NewAMOApplication(db, nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -92,7 +92,7 @@ func TestQueryBalance(t *testing.T) {
 
 func TestQueryParcel(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db)
+	app := NewAMOApplication(db, nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -145,7 +145,7 @@ func TestQueryParcel(t *testing.T) {
 
 func TestQueryRequest(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db)
+	app := NewAMOApplication(db, nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -224,7 +224,7 @@ func TestQueryRequest(t *testing.T) {
 
 func TestQueryUsage(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db)
+	app := NewAMOApplication(db, nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
