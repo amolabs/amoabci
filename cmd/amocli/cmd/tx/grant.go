@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/amolabs/amoabci/client/rpc"
+	"github.com/amolabs/amoabci/client/util"
 )
 
 var GrantCmd = &cobra.Command{
@@ -51,7 +52,12 @@ func grantFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Grant(targetHex, granteeAddr, custodyHex, true)
+	key, err := GetRawKey(util.DefaultKeyFilePath())
+	if err != nil {
+		return err
+	}
+
+	result, err := rpc.Grant(targetHex, granteeAddr, custodyHex, key)
 	if err != nil {
 		return err
 	}

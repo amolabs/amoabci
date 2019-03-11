@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/amolabs/amoabci/client/rpc"
+	"github.com/amolabs/amoabci/client/util"
 )
 
 var RevokeCmd = &cobra.Command{
@@ -43,7 +44,12 @@ func revokeFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Revoke(targetHex, granteeAddr, true)
+	key, err := GetRawKey(util.DefaultKeyFilePath())
+	if err != nil {
+		return err
+	}
+
+	result, err := rpc.Revoke(targetHex, granteeAddr, key)
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 
 	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/client/rpc"
+	"github.com/amolabs/amoabci/client/util"
 )
 
 var RequestCmd = &cobra.Command{
@@ -43,7 +44,12 @@ func requestFunc(cmd *cobra.Command, args []string) error {
 
 	payment = atypes.Currency(tmp)
 
-	result, err := rpc.Request(targetHex, &payment, true)
+	key, err := GetRawKey(util.DefaultKeyFilePath())
+	if err != nil {
+		return err
+	}
+
+	result, err := rpc.Request(targetHex, &payment, key)
 	if err != nil {
 		return err
 	}

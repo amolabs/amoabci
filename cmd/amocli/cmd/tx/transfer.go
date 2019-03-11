@@ -9,6 +9,7 @@ import (
 
 	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/client/rpc"
+	"github.com/amolabs/amoabci/client/util"
 )
 
 var TransferCmd = &cobra.Command{
@@ -41,7 +42,12 @@ func transferFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Transfer(toAddr, &amount, true)
+	key, err := GetRawKey(util.DefaultKeyFilePath())
+	if err != nil {
+		return err
+	}
+
+	result, err := rpc.Transfer(toAddr, &amount, key)
 	if err != nil {
 		return err
 	}

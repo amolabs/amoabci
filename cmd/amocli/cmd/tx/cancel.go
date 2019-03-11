@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/amolabs/amoabci/client/util"
+
 	"github.com/spf13/cobra"
 
 	"github.com/amolabs/amoabci/client/rpc"
@@ -34,7 +36,12 @@ func cancelFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Cancel(targetHex, true)
+	key, err := GetRawKey(util.DefaultKeyFilePath())
+	if err != nil {
+		return err
+	}
+
+	result, err := rpc.Cancel(targetHex, key)
 	if err != nil {
 		return err
 	}
