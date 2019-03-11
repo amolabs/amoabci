@@ -34,24 +34,23 @@ make TARGET=linux install
 ```
 
 ### Gather network information
-* mainnet or testnet node address
-* chain ID
-* ...
+* mainnet or testnet node address &rarr; $HOME/config/config.toml
+* genesis.json &rarr; $HOME/config/genesis.json
 
-### Run ABCI app
-* run commands:
-```bash
-amod run
-```
-
-### Prepare keys
+### Prepare node
 * run commands:
 ```bash
 tendermint init
 ```
 
-### Run Tendermint node
-* run commands:
+### Run daemons
+* First, run ABCI app via the following command:
+```bash
+amod run
+```
+**NOTE:** To run the daemon in background mode, run `amod run &`.
+
+* Run Tendermint node via the following command:
 ```bash
 tendermint node
 ```
@@ -88,16 +87,16 @@ make docker
 This will put an image with the tag amolabs/amod:latest in the local image pool.
 
 ### Run
-To run test containers using docker-compose, run:
+Run test containers with docker-compose via the following command:
 ```bash
 make run-cluster
 ```
-This will run one seed node and two non-seed validator nodes in *detatched mode*. To run nodes with `stdout` logging, run:
+This will run one seed node and two non-seed validator nodes in *detatched mode*. To run nodes with `stdout` logging, run instead:
 ```bash
 docker-compose up
 ```
 
-To send a test transaction, run:
+To send a test transaction, run (TODO: fix it):
 ```bash
 docker exec val2 amocli tx transfer --from MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkw --to YTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkw --amount 0
 ```

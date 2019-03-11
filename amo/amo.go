@@ -7,13 +7,14 @@ import (
 
 	abci "github.com/amolabs/tendermint-amo/abci/types"
 	"github.com/amolabs/tendermint-amo/crypto"
+	"github.com/amolabs/tendermint-amo/libs/common"
 	dbm "github.com/amolabs/tendermint-amo/libs/db"
+	"github.com/amolabs/tendermint-amo/libs/log"
 	"github.com/amolabs/tendermint-amo/version"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/operation"
 	astore "github.com/amolabs/amoabci/amo/store"
-	//"github.com/amolabs/amoabci/amo/types"
 )
 
 var (
@@ -51,17 +52,22 @@ func saveState(state State) {
 
 type AMOApplication struct {
 	abci.BaseApplication
-	state State
-	store *astore.Store
+	state  State
+	store  *astore.Store
+	logger log.Logger
 }
 
 var _ abci.Application = (*AMOApplication)(nil)
 
-func NewAMOApplication(db dbm.DB) *AMOApplication {
+func NewAMOApplication(db dbm.DB, l log.Logger) *AMOApplication {
 	state := loadState(db)
+	if l == nil {
+		l = log.NewNopLogger()
+	}
 	app := &AMOApplication{
-		state: state,
-		store: astore.NewStore(db),
+		state:  state,
+		store:  astore.NewStore(db),
+		logger: l,
 	}
 	return app
 }
@@ -128,9 +134,104 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 		// XXX: tendermint will convert this using base64 encoding
 		resQuery.Value = []byte(jsonstr)
 		resQuery.Code = code.QueryCodeOK
+	case "/parcel":
+		if len(reqQuery.Data) == 0 {
+			resQuery.Code = code.QueryCodeNoKey
+			break
+		}
+
+		// TODO: check parcel id
+		parcel := app.store.GetParcel(reqQuery.Data)
+		if parcel == nil {
+			resQuery.Code = code.QueryCodeNoMatch
+			break
+		}
+
+		jsonstr, _ := json.Marshal(parcel)
+		resQuery.Log = string(jsonstr)
+		resQuery.Value = []byte(jsonstr)
+		resQuery.Code = code.QueryCodeOK
+	case "/request":
+		if len(reqQuery.Data) == 0 {
+			resQuery.Code = code.QueryCodeNoKey
+			break
+		}
+
+		keyMap := make(map[string]common.HexBytes)
+		err := json.Unmarshal(reqQuery.Data, &keyMap)
+		if err != nil {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		if _, ok := keyMap["buyer"]; !ok {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		if _, ok := keyMap["target"]; !ok {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		addr := crypto.Address(keyMap["buyer"])
+		if len(addr) != crypto.AddressSize {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+
+		// TODO: check parcel id
+		parcelID := keyMap["target"]
+
+		request := app.store.GetRequest(addr, parcelID)
+		if request == nil {
+			resQuery.Code = code.QueryCodeNoMatch
+			break
+		}
+		jsonstr, _ := json.Marshal(request)
+		resQuery.Log = string(jsonstr)
+		resQuery.Value = []byte(jsonstr)
+		resQuery.Code = code.QueryCodeOK
+	case "/usage":
+		if len(reqQuery.Data) == 0 {
+			resQuery.Code = code.QueryCodeNoKey
+			break
+		}
+
+		keyMap := make(map[string]common.HexBytes)
+		err := json.Unmarshal(reqQuery.Data, &keyMap)
+		if err != nil {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		if _, ok := keyMap["buyer"]; !ok {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		if _, ok := keyMap["target"]; !ok {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		addr := crypto.Address(keyMap["buyer"])
+		if len(addr) != crypto.AddressSize {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+
+		// TODO: check parcel id
+		parcelID := keyMap["target"]
+
+		request := app.store.GetUsage(addr, parcelID)
+		if request == nil {
+			resQuery.Code = code.QueryCodeNoMatch
+			break
+		}
+		jsonstr, _ := json.Marshal(request)
+		resQuery.Log = string(jsonstr)
+		resQuery.Value = []byte(jsonstr)
+		resQuery.Code = code.QueryCodeOK
 	default:
 		resQuery.Code = code.QueryCodeBadPath
 	}
+
+	app.logger.Debug("Query: "+reqQuery.Path, "query_data", reqQuery.Data) // debug
 
 	return resQuery
 }
@@ -144,6 +245,7 @@ func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseIni
 	if FillGenesisState(app.store, genAppState) != nil {
 		return abci.ResponseInitChain{}
 	}
+	app.logger.Info("InitChain: new genesis app state applied.")
 
 	return abci.ResponseInitChain{}
 }

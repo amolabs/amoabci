@@ -32,13 +32,14 @@ var runCmd = &cobra.Command{
 
 func initApp() error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
+	appLogger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	var app types.Application
 	// TODO: do not use hard-coded value. use value from configuration.
 	db, err := dbm.NewGoLevelDB("store", "blockchain/store")
 	if err != nil {
 		return err
 	}
-	app = amo.NewAMOApplication(db)
+	app = amo.NewAMOApplication(db, appLogger.With("module", "abci-app"))
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
 	if err != nil {
 		return err

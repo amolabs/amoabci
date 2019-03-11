@@ -8,6 +8,7 @@ WORKDIR /tendermint
 
 COPY amod amocli /usr/bin/
 COPY run.sh config/* ./
+COPY --chown=tmuser:tmuser config/keys.json ./.amocli/keys/
 
 EXPOSE 26656 26657
 
