@@ -79,7 +79,8 @@ test:
 
 docker:
 	$(MAKE) TARGET=linux build
-	docker build -t amolabs/amod .
+	cp -f amod amocli DOCKER/
+	docker build -t amolabs/amod DOCKER
 
 run-cluster: docker
 	docker-compose -p $(USER) up -d
