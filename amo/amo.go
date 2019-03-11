@@ -7,6 +7,7 @@ import (
 
 	abci "github.com/amolabs/tendermint-amo/abci/types"
 	"github.com/amolabs/tendermint-amo/crypto"
+	"github.com/amolabs/tendermint-amo/libs/common"
 	dbm "github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/amolabs/tendermint-amo/version"
 
@@ -126,6 +127,99 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 		jsonstr, _ := json.Marshal(bal)
 		resQuery.Log = string(jsonstr)
 		// XXX: tendermint will convert this using base64 encoding
+		resQuery.Value = []byte(jsonstr)
+		resQuery.Code = code.QueryCodeOK
+	case "/parcel":
+		if len(reqQuery.Data) == 0 {
+			resQuery.Code = code.QueryCodeNoKey
+			break
+		}
+
+		// TODO: check parcel id
+		parcel := app.store.GetParcel(reqQuery.Data)
+		if parcel == nil {
+			resQuery.Code = code.QueryCodeNoMatch
+			break
+		}
+
+		jsonstr, _ := json.Marshal(parcel)
+		resQuery.Log  = string(jsonstr)
+		resQuery.Value = []byte(jsonstr)
+		resQuery.Code = code.QueryCodeOK
+	case "/request":
+		if len(reqQuery.Data) == 0 {
+			resQuery.Code = code.QueryCodeNoKey
+			break
+		}
+
+		keyMap := make(map[string]common.HexBytes)
+		err := json.Unmarshal(reqQuery.Data, &keyMap)
+		if err != nil {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		if _, ok := keyMap["buyer"]; !ok {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		if _, ok := keyMap["target"]; !ok {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		addr := crypto.Address(keyMap["buyer"])
+		if len(addr) != crypto.AddressSize {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+
+		// TODO: check parcel id
+		parcelID := keyMap["target"]
+
+		request := app.store.GetRequest(addr, parcelID)
+		if request == nil {
+			resQuery.Code = code.QueryCodeNoMatch
+			break
+		}
+		jsonstr, _ := json.Marshal(request)
+		resQuery.Log  = string(jsonstr)
+		resQuery.Value = []byte(jsonstr)
+		resQuery.Code = code.QueryCodeOK
+	case "/usage":
+		if len(reqQuery.Data) == 0 {
+			resQuery.Code = code.QueryCodeNoKey
+			break
+		}
+
+		keyMap := make(map[string]common.HexBytes)
+		err := json.Unmarshal(reqQuery.Data, &keyMap)
+		if err != nil {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		if _, ok := keyMap["buyer"]; !ok {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		if _, ok := keyMap["target"]; !ok {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+		addr := crypto.Address(keyMap["buyer"])
+		if len(addr) != crypto.AddressSize {
+			resQuery.Code = code.QueryCodeBadKey
+			break
+		}
+
+		// TODO: check parcel id
+		parcelID := keyMap["target"]
+
+		request := app.store.GetUsage(addr, parcelID)
+		if request == nil {
+			resQuery.Code = code.QueryCodeNoMatch
+			break
+		}
+		jsonstr, _ := json.Marshal(request)
+		resQuery.Log  = string(jsonstr)
 		resQuery.Value = []byte(jsonstr)
 		resQuery.Code = code.QueryCodeOK
 	default:
