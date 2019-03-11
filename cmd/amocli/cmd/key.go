@@ -127,15 +127,6 @@ func keyRemoveFunc(cmd *cobra.Command, args []string) error {
 		err        error
 	)
 
-	if keyStatus == keys.Encrypted {
-		fmt.Printf("Type passphrase: ")
-		passphrase, err = terminal.ReadPassword(int(syscall.Stdin))
-		fmt.Println()
-		if err != nil {
-			return err
-		}
-	}
-
 	err = keys.Remove(nickname, passphrase, keyFile)
 	if err != nil {
 		return err

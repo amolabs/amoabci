@@ -96,8 +96,8 @@ This will run one seed node and two non-seed validator nodes in *detatched mode*
 docker-compose up
 ```
 
-To send a test transaction, run (TODO: fix it):
+To send a test transaction, run:
 ```bash
-docker exec val2 amocli tx transfer --from MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkw --to YTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkw --amount 0
+docker exec val2 amocli tx transfer --to 63A972C247D1DEBCEF2DDCF5D4E0848A42AFA529 --amount 10
 ```
 And make sure that you see series of logs as the transaction propagate across the nodes and commited in the blockchain.

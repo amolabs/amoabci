@@ -2,7 +2,10 @@ package keys
 
 import (
 	"encoding/json"
+	"errors"
 
+	"github.com/amolabs/tendermint-amo/crypto"
+	"github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric"
 	cmn "github.com/amolabs/tendermint-amo/libs/common"
 
 	"github.com/amolabs/amoabci/client/util"
@@ -48,6 +51,22 @@ func SaveKeyList(path string, keyList map[string]Key) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func Decrypt(key *Key, passphrase []byte) error {
+	if !key.Encrypted {
+		return errors.New("The key is not encrypted")
+	}
+
+	tmp, err := xsalsa20symmetric.DecryptSymmetric(key.PrivKey, crypto.Sha256(passphrase))
+	if err != nil {
+		return err
+	}
+
+	key.Encrypted = false
+	key.PrivKey = tmp
 
 	return nil
 }
