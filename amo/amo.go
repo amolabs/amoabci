@@ -82,20 +82,36 @@ func (app *AMOApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo
 
 func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 	message, op := operation.ParseTx(tx)
+	if !message.Verify() {
+		return abci.ResponseDeliverTx{
+			Code: code.TxCodeBadSignature,
+			Tags: nil,
+		}
+	}
 	resCode, tags := op.Execute(app.store, message.Signer)
 	if resCode != code.TxCodeOK {
-		return abci.ResponseDeliverTx{Code: resCode}
+		return abci.ResponseDeliverTx{
+			Code: resCode,
+		}
 	}
 	// TODO: change state
 	switch message.Command {
 	case operation.TxTransfer:
 		app.state.Size += 1
 	}
-	return abci.ResponseDeliverTx{Code: resCode, Tags: tags}
+	return abci.ResponseDeliverTx{
+		Code: resCode,
+		Tags: tags,
+	}
 }
 
 func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 	message, op := operation.ParseTx(tx)
+	if !message.Verify() {
+		return abci.ResponseCheckTx{
+			Code: code.TxCodeBadSignature,
+		}
+	}
 	// TODO: implement signature verify logic
 	return abci.ResponseCheckTx{
 		Code: op.Check(app.store, message.Signer),
