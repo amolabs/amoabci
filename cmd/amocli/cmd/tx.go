@@ -37,10 +37,10 @@ func init() {
 		LineBreak,
 		tx.RegisterCmd,
 		tx.RequestCmd,
-		tx.CancelCmd,
-		LineBreak,
 		tx.GrantCmd,
-		tx.RevokeCmd,
+		LineBreak,
 		tx.DiscardCmd,
+		tx.CancelCmd,
+		tx.RevokeCmd,
 	)
 }
