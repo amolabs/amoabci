@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	"github.com/amolabs/amoabci/amo/store"
-	"github.com/amolabs/tendermint-amo/crypto"
-	"github.com/amolabs/tendermint-amo/crypto/p256"
-	cmn "github.com/amolabs/tendermint-amo/libs/common"
 	"strings"
+
+	"github.com/tendermint/tendermint/crypto"
+	cmn "github.com/tendermint/tendermint/libs/common"
+
+	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/crypto/p256"
 )
 
 const (

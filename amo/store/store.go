@@ -1,9 +1,9 @@
 package store
 
 import (
-	"github.com/amolabs/tendermint-amo/crypto"
-	"github.com/amolabs/tendermint-amo/libs/db"
-	"github.com/amolabs/tendermint-amo/types"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/types"
 
 	"github.com/amolabs/amoabci/amo/encoding/binary"
 	atypes "github.com/amolabs/amoabci/amo/types"

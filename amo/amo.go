@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	abci "github.com/amolabs/tendermint-amo/abci/types"
-	"github.com/amolabs/tendermint-amo/crypto"
-	"github.com/amolabs/tendermint-amo/libs/common"
-	dbm "github.com/amolabs/tendermint-amo/libs/db"
-	"github.com/amolabs/tendermint-amo/libs/log"
-	"github.com/amolabs/tendermint-amo/version"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/version"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/operation"

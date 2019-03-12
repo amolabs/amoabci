@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	cmn "github.com/amolabs/tendermint-amo/libs/common"
+	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 var (

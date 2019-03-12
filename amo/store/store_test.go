@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/amolabs/tendermint-amo/crypto/p256"
-	cmn "github.com/amolabs/tendermint-amo/libs/common"
-	"github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/stretchr/testify/assert"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/db"
 
 	"github.com/amolabs/amoabci/amo/types"
+	"github.com/amolabs/amoabci/crypto/p256"
 )
 
 const testRoot = "store_test"

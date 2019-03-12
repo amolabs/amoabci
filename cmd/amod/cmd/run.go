@@ -3,12 +3,12 @@ package cmd
 import (
 	"os"
 
-	"github.com/amolabs/tendermint-amo/abci/server"
-	"github.com/amolabs/tendermint-amo/abci/types"
-	cmn "github.com/amolabs/tendermint-amo/libs/common"
-	dbm "github.com/amolabs/tendermint-amo/libs/db"
-	"github.com/amolabs/tendermint-amo/libs/log"
 	"github.com/spf13/cobra"
+	"github.com/tendermint/tendermint/abci/server"
+	"github.com/tendermint/tendermint/abci/types"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/amolabs/amoabci/amo"
 )

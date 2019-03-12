@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/amolabs/tendermint-amo/crypto"
 	"github.com/spf13/cobra"
+	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/amolabs/amoabci/client/rpc"
 )

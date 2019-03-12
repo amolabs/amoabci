@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
-	"github.com/amolabs/tendermint-amo/crypto"
-	cmn "github.com/amolabs/tendermint-amo/libs/common"
+	"github.com/tendermint/tendermint/crypto"
+	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 var _ Operation = Discard{}
