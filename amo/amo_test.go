@@ -3,6 +3,7 @@ package amo
 import (
 	"encoding/hex"
 	"encoding/json"
+	"github.com/amolabs/amoabci/amo/operation"
 	"testing"
 
 	abci "github.com/amolabs/tendermint-amo/abci/types"
@@ -299,4 +300,36 @@ func TestQueryUsage(t *testing.T) {
 	req = abci.RequestQuery{Path: "/usage", Data: key}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeBadKey, res.Code)
+}
+
+func TestSignedTransactionTest(t *testing.T) {
+	from := p256.GenPrivKeyFromSecret([]byte("alice"))
+
+	db := tdb.NewMemDB()
+	app := NewAMOApplication(db, nil)
+	app.store.SetBalance(from.PubKey().Address(), types.Currency(5000))
+
+	tx := operation.Transfer{
+		To: p256.GenPrivKeyFromSecret([]byte("bob")).PubKey().Address(),
+		Amount: types.Currency(500),
+	}
+	payload, err := json.Marshal(tx)
+	assert.NoError(t, err)
+	msg := operation.Message{
+		Command: operation.TxTransfer,
+		Payload: payload,
+	}
+
+	// not signed transaction
+	rawMsg, err := json.Marshal(msg)
+	assert.NoError(t, err)
+	assert.Equal(t, code.TxCodeBadSignature, app.CheckTx(rawMsg).Code)
+
+	// signed transaction
+	err = msg.Sign(from)
+	assert.NoError(t, err)
+	rawMsg, err = json.Marshal(msg)
+	assert.NoError(t, err)
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(rawMsg).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(rawMsg).Code)
 }

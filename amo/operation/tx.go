@@ -62,6 +62,9 @@ func (m *Message) Sign(privKey crypto.PrivKey) error {
 }
 
 func (m *Message) Verify() bool {
+	if len(m.Signature) == 0 {
+		return false
+	}
 	sb := m.GetSigningBytes()
 	return m.SigningPubKey.VerifyBytes(sb, m.Signature)
 }
