@@ -93,23 +93,11 @@ func (privKey PrivKeyP256) Sign(msg []byte) ([]byte, error) {
 	}
 	rb := r.Bytes()
 	sb := s.Bytes()
-
-	// ASN. 1 format: 0x30|length of remaining data|0x02|length of r|r|0x02|length of s|s
-	var sig bytes.Buffer
-
-	sig.WriteByte(0x30)
-
-	sig.WriteByte(byte(2 + 2 + len(rb) + len(sb)))
-
-	sig.WriteByte(0x02)
-	sig.WriteByte(byte(len(rb)))
-	sig.Write(rb)
-
-	sig.WriteByte(0x02)
-	sig.WriteByte(byte(len(sb)))
-	sig.Write(sb)
-
-	return sig.Bytes(), nil
+	sig := make([]byte, 0, len(rb)+len(sb))
+	sig = append(sig, rb...)
+	sig = append(sig, sb...)
+	// concat r, s
+	return sig, nil
 }
 
 func (privKey PrivKeyP256) PubKey() tmc.PubKey {
@@ -172,36 +160,10 @@ func (pubKey PubKeyP256) ToECDSA() *ecdsa.PublicKey {
 }
 
 func (pubKey PubKeyP256) VerifyBytes(msg []byte, sig []byte) bool {
-	if sig[0] != 0x30 {
+	if len(sig) != 64 {
 		return false
 	}
-
-	remainLength := sig[1]
-	if int(remainLength) != len(sig)-2 {
-		return false
-	}
-
-	// parse r
-	if sig[2] != 0x02 {
-		return false
-	}
-	rLen := int(sig[3])
-	ind := 4 + rLen
-	r := sig[4:ind]
-
-	// parse s
-	if sig[ind] != 0x02 {
-		return false
-	}
-	ind += 1
-	sLen := int(sig[ind])
-	s := sig[ind+1:]
-
-	if len(r) != rLen || len(s) != sLen {
-		return false
-	}
-
-	return ecdsa.Verify(pubKey.ToECDSA(), h(msg), new(big.Int).SetBytes(r), new(big.Int).SetBytes(s))
+	return ecdsa.Verify(pubKey.ToECDSA(), h(msg), new(big.Int).SetBytes(sig[:32]), new(big.Int).SetBytes(sig[32:]))
 }
 
 func (pubKey PubKeyP256) Equals(other tmc.PubKey) bool {
