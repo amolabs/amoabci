@@ -1,5 +1,5 @@
 # vim: set expandtab:
-FROM amolabs/tendermint-amo:latest
+FROM tendermint/tendermint:latest
 
 # tendermint base image uses /tendermint as a home directory
 WORKDIR /tendermint
