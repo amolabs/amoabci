@@ -6,15 +6,15 @@ import (
 	"github.com/amolabs/amoabci/amo/operation"
 	"testing"
 
-	abci "github.com/amolabs/tendermint-amo/abci/types"
-	"github.com/amolabs/tendermint-amo/crypto"
-	"github.com/amolabs/tendermint-amo/crypto/p256"
-	cmn "github.com/amolabs/tendermint-amo/libs/common"
-	tdb "github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/stretchr/testify/assert"
+	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	tdb "github.com/tendermint/tendermint/libs/db"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/types"
+	"github.com/amolabs/amoabci/crypto/p256"
 )
 
 func TestInitChain(t *testing.T) {

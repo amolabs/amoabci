@@ -4,15 +4,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/amolabs/tendermint-amo/crypto"
-	"github.com/amolabs/tendermint-amo/crypto/p256"
-	cmn "github.com/amolabs/tendermint-amo/libs/common"
-	"github.com/amolabs/tendermint-amo/libs/db"
 	"github.com/stretchr/testify/assert"
+	"github.com/tendermint/tendermint/crypto"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/db"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/types"
+	"github.com/amolabs/amoabci/crypto/p256"
 )
 
 type user struct {

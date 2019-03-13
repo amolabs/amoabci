@@ -2,67 +2,6 @@
 
 
 [[projects]]
-  branch = "release/v0.29.2a"
-  digest = "1:351f42736574eba80a21bf4686e2468e110803da7b66c29bb12237db9a8f8a30"
-  name = "github.com/amolabs/tendermint-amo"
-  packages = [
-    "abci/client",
-    "abci/example/code",
-    "abci/example/counter",
-    "abci/example/kvstore",
-    "abci/server",
-    "abci/types",
-    "blockchain",
-    "config",
-    "consensus",
-    "consensus/types",
-    "crypto",
-    "crypto/ed25519",
-    "crypto/encoding/amino",
-    "crypto/merkle",
-    "crypto/multisig",
-    "crypto/multisig/bitarray",
-    "crypto/p256",
-    "crypto/secp256k1",
-    "crypto/tmhash",
-    "crypto/xsalsa20symmetric",
-    "evidence",
-    "libs/autofile",
-    "libs/clist",
-    "libs/common",
-    "libs/db",
-    "libs/events",
-    "libs/fail",
-    "libs/flowrate",
-    "libs/log",
-    "libs/pubsub",
-    "libs/pubsub/query",
-    "mempool",
-    "node",
-    "p2p",
-    "p2p/conn",
-    "p2p/pex",
-    "privval",
-    "proxy",
-    "rpc/client",
-    "rpc/core",
-    "rpc/core/types",
-    "rpc/grpc",
-    "rpc/lib/client",
-    "rpc/lib/server",
-    "rpc/lib/types",
-    "state",
-    "state/txindex",
-    "state/txindex/kv",
-    "state/txindex/null",
-    "types",
-    "types/time",
-    "version",
-  ]
-  pruneopts = "UT"
-  revision = "43d3b6a06beb2c6677518edd6cdbddaaea2005f4"
-
-[[projects]]
   branch = "master"
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
@@ -296,9 +235,12 @@
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:972c2427413d41a1e06ca4897e8528e5a1622894050e2f527b38ddf0f343f759"
+  digest = "1:5da8ce674952566deae4dbc23d07c85caafc6cfa815b0b3e03e41979cedb8750"
   name = "github.com/stretchr/testify"
-  packages = ["assert"]
+  packages = [
+    "assert",
+    "require",
+  ]
   pruneopts = "UT"
   revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
   version = "v1.3.0"
@@ -331,6 +273,66 @@
   pruneopts = "UT"
   revision = "dc14acf9ef15f85828bfbc561ed9dd9d2a284885"
   version = "v0.14.1"
+
+[[projects]]
+  digest = "1:603eb14fd55654d5bc855bded73b2a5957c32ca067ab232800c0cc39d465f415"
+  name = "github.com/tendermint/tendermint"
+  packages = [
+    "abci/client",
+    "abci/example/code",
+    "abci/example/counter",
+    "abci/example/kvstore",
+    "abci/server",
+    "abci/types",
+    "blockchain",
+    "config",
+    "consensus",
+    "consensus/types",
+    "crypto",
+    "crypto/ed25519",
+    "crypto/encoding/amino",
+    "crypto/merkle",
+    "crypto/multisig",
+    "crypto/multisig/bitarray",
+    "crypto/secp256k1",
+    "crypto/tmhash",
+    "crypto/xsalsa20symmetric",
+    "evidence",
+    "libs/autofile",
+    "libs/clist",
+    "libs/common",
+    "libs/db",
+    "libs/events",
+    "libs/fail",
+    "libs/flowrate",
+    "libs/log",
+    "libs/pubsub",
+    "libs/pubsub/query",
+    "mempool",
+    "node",
+    "p2p",
+    "p2p/conn",
+    "p2p/pex",
+    "privval",
+    "proxy",
+    "rpc/client",
+    "rpc/core",
+    "rpc/core/types",
+    "rpc/grpc",
+    "rpc/lib/client",
+    "rpc/lib/server",
+    "rpc/lib/types",
+    "state",
+    "state/txindex",
+    "state/txindex/kv",
+    "state/txindex/null",
+    "types",
+    "types/time",
+    "version",
+  ]
+  pruneopts = "UT"
+  revision = "a8dbc64319ae0db3fc2621b36d4ef96ce9d62d15"
+  version = "v0.29.2"
 
 [[projects]]
   digest = "1:7167a54e830f17b9e1795cdcacd30dada3cfd6ff6f9c2548f7b7141c7fd66527"
@@ -456,21 +458,22 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/amolabs/tendermint-amo/abci/server",
-    "github.com/amolabs/tendermint-amo/abci/types",
-    "github.com/amolabs/tendermint-amo/crypto",
-    "github.com/amolabs/tendermint-amo/crypto/p256",
-    "github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric",
-    "github.com/amolabs/tendermint-amo/libs/common",
-    "github.com/amolabs/tendermint-amo/libs/db",
-    "github.com/amolabs/tendermint-amo/libs/log",
-    "github.com/amolabs/tendermint-amo/rpc/client",
-    "github.com/amolabs/tendermint-amo/rpc/core/types",
-    "github.com/amolabs/tendermint-amo/types",
-    "github.com/amolabs/tendermint-amo/version",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
     "github.com/tendermint/go-amino",
+    "github.com/tendermint/tendermint/abci/server",
+    "github.com/tendermint/tendermint/abci/types",
+    "github.com/tendermint/tendermint/crypto",
+    "github.com/tendermint/tendermint/crypto/tmhash",
+    "github.com/tendermint/tendermint/crypto/xsalsa20symmetric",
+    "github.com/tendermint/tendermint/libs/common",
+    "github.com/tendermint/tendermint/libs/db",
+    "github.com/tendermint/tendermint/libs/log",
+    "github.com/tendermint/tendermint/rpc/client",
+    "github.com/tendermint/tendermint/rpc/core/types",
+    "github.com/tendermint/tendermint/types",
+    "github.com/tendermint/tendermint/version",
     "golang.org/x/crypto/ssh/terminal",
   ]
   solver-name = "gps-cdcl"

@@ -3,8 +3,8 @@ package keys
 import (
 	"errors"
 
-	"github.com/amolabs/tendermint-amo/crypto"
-	"github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/xsalsa20symmetric"
 )
 
 func Remove(nickname string, passphrase []byte, path string) error {

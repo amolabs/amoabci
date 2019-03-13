@@ -25,15 +25,8 @@
 #   unused-packages = true
 
 [[constraint]]
-  name = "github.com/amolabs/tendermint-amo"
-  branch = "release/v0.29.2a"
-
-[[constraint]]
-  name = "github.com/spf13/cobra"
-  version = "~0.0.1"
-
-[[constraint]]
-  name = "golang.org/x/crypto"
+  name = "github.com/tendermint/tendermint"
+  version = "=0.29.2"
 
 [prune]
   go-tests = true

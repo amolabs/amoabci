@@ -2,9 +2,11 @@ package operation
 
 import (
 	"encoding/json"
-	"github.com/amolabs/tendermint-amo/crypto/p256"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/amolabs/amoabci/crypto/p256"
 )
 
 func TestParseTx(t *testing.T) {

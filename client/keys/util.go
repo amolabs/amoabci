@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/amolabs/tendermint-amo/crypto"
-	"github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric"
-	cmn "github.com/amolabs/tendermint-amo/libs/common"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/xsalsa20symmetric"
+	cmn "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/client/util"
 )

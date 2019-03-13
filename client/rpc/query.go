@@ -3,8 +3,8 @@ package rpc
 import (
 	"encoding/json"
 
-	"github.com/amolabs/tendermint-amo/crypto"
-	tm "github.com/amolabs/tendermint-amo/libs/common"
+	"github.com/tendermint/tendermint/crypto"
+	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/types"
 )

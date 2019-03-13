@@ -3,9 +3,10 @@ package keys
 import (
 	"errors"
 
-	"github.com/amolabs/tendermint-amo/crypto"
-	"github.com/amolabs/tendermint-amo/crypto/p256"
-	"github.com/amolabs/tendermint-amo/crypto/xsalsa20symmetric"
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/xsalsa20symmetric"
+
+	"github.com/amolabs/amoabci/crypto/p256"
 )
 
 func Generate(nickname string, passphrase []byte, encrypt bool, path string) error {

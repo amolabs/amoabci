@@ -3,7 +3,7 @@ package amo
 import (
 	"encoding/json"
 
-	"github.com/amolabs/tendermint-amo/crypto"
+	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/types"

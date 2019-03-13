@@ -4,15 +4,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"github.com/amolabs/tendermint-amo/crypto"
-	"github.com/amolabs/tendermint-amo/crypto/p256"
-	cmn "github.com/amolabs/tendermint-amo/libs/common"
-	"github.com/amolabs/tendermint-amo/rpc/client"
-	ctypes "github.com/amolabs/tendermint-amo/rpc/core/types"
-	"github.com/amolabs/tendermint-amo/types"
+	"github.com/tendermint/tendermint/crypto"
+	cmn "github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/rpc/client"
+	ctypes "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/tendermint/tendermint/types"
 
 	"github.com/amolabs/amoabci/amo/operation"
 	"github.com/amolabs/amoabci/client/keys"
+	"github.com/amolabs/amoabci/crypto/p256"
 )
 
 var (
