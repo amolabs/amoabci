@@ -20,3 +20,39 @@ func QueryBalance(address crypto.Address) (types.Currency, error) {
 	json.Unmarshal(result.Response.Value, &balance)
 	return balance, nil
 }
+
+func QueryParcel(parcelID []byte) (types.ParcelValue, error) {
+	var parcelValue = types.ParcelValue{}
+
+	result, err := RPCABCIQuery("/parcel", parcelID)
+	if err != nil {
+		return parcelValue, err
+	}
+
+	json.Unmarshal(result.Response.Value, &parcelValue)
+	return parcelValue, nil
+}
+
+func QueryRequest(keyMap []byte) (types.RequestValue, error) {
+	var requestValue = types.RequestValue{}
+
+	result, err := RPCABCIQuery("/request", keyMap)
+	if err != nil {
+		return requestValue, err
+	}
+
+	json.Unmarshal(result.Response.Value, requestValue)
+	return requestValue, err
+}
+
+func QueryUsage(keyMap []byte) (types.UsageValue, error) {
+	var usageValue = types.UsageValue{}
+
+	result, err := RPCABCIQuery("/usage", keyMap)
+	if err != nil {
+		return usageValue, err
+	}
+
+	json.Unmarshal(result.Response.Value, usageValue)
+	return usageValue, err
+}
