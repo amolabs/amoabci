@@ -8,13 +8,13 @@
 ### Pre-requisites
 * [golang](https://golang.org/dl/)
 * [golang/dep](https://golang.github.io/dep/docs/installation.html)
-* [tendermint-amo](https://github.com/amolabs/tendermint-amo)
+* [tendermint](https://github.com/tendermint/tendermint)
 
 ### Build from source
-* run commands to build Tendermint-amo node:
+* run commands to build Tendermint node:
 ```bash
-git clone https://github.com/amolabs/tendermint-amo
-cd tendermint-amo
+git clone https://github.com/tendermint/tendermint
+cd tendermint
 make get_tools
 make get_vendor_deps
 make install
@@ -59,7 +59,7 @@ tendermint node
 For test setup details, see [test-env.md](https://github.com/amolabs/docs/blob/master/test-env.md).
 
 ### Pre-requisites
-* [tendermint-amo](https://github.com/amolabs/tendermint-amo)
+* [tendermint](https://github.com/amolabs/tendermint)
 * [docker](https://www.docker.com)
 * [docker-compose](https://www.docker.com)
 
@@ -67,14 +67,14 @@ For test setup details, see [test-env.md](https://github.com/amolabs/docs/blob/m
 First, we need to build tendermint node image, and use it as a base image when
 building an amod image.
 ```bash
-cd $GOPATH/src/github.com/amolabs/tendermint-amo
+cd $GOPATH/src/github.com/tendermint/tendermint
 # If not the first build, get_tools and get_vendor_deps targets are optional.
 make get_tools
 make get_vendor_deps
 make build-linux
 make build-docker
 ```
-This will put an image with the tag amolabs/tendermint-amo:latest in the local image pool.
+This will put an image with the tag tendermint/tendermint:latest in the local image pool.
 
 Next, build an amod image
 ```bash
