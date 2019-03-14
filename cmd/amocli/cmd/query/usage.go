@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/client/rpc"
 )
@@ -44,12 +43,7 @@ func usageFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	keyMap := make(map[string]common.HexBytes)
-
-	keyMap["buyer"] = buyerAddr
-	keyMap["target"] = targetHex
-
-	usageValue, err := rpc.QueryUsage(keyMap)
+	usageValue, err := rpc.QueryUsage(buyerAddr, targetHex)
 	if err != nil {
 		return err
 	}

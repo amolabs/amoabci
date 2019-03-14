@@ -33,8 +33,13 @@ func QueryParcel(parcelID []byte) (types.ParcelValue, error) {
 	return parcelValue, nil
 }
 
-func QueryRequest(keyMap map[string]tm.HexBytes) (types.RequestValue, error) {
+func QueryRequest(buyer tm.HexBytes, target tm.HexBytes) (types.RequestValue, error) {
 	var requestValue = types.RequestValue{}
+
+	keyMap := make(map[string]tm.HexBytes)
+
+	keyMap["buyer"] = buyer
+	keyMap["target"] = target
 
 	keyMapJSON, err := json.Marshal(keyMap)
 	if err != nil {
@@ -50,8 +55,13 @@ func QueryRequest(keyMap map[string]tm.HexBytes) (types.RequestValue, error) {
 	return requestValue, err
 }
 
-func QueryUsage(keyMap map[string]tm.HexBytes) (types.UsageValue, error) {
+func QueryUsage(buyer tm.HexBytes, target tm.HexBytes) (types.UsageValue, error) {
 	var usageValue = types.UsageValue{}
+
+	keyMap := make(map[string]tm.HexBytes)
+
+	keyMap["buyer"] = buyer
+	keyMap["target"] = target
 
 	keyMapJSON, err := json.Marshal(keyMap)
 	if err != nil {

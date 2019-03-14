@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/client/rpc"
 )
@@ -44,12 +43,7 @@ func requestFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	keyMap := make(map[string]common.HexBytes)
-
-	keyMap["buyer"] = buyerAddr
-	keyMap["target"] = targetHex
-
-	requestValue, err := rpc.QueryRequest(keyMap)
+	requestValue, err := rpc.QueryRequest(buyerAddr, targetHex)
 	if err != nil {
 		return err
 	}
