@@ -2,7 +2,6 @@ package query
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -50,12 +49,7 @@ func requestFunc(cmd *cobra.Command, args []string) error {
 	keyMap["buyer"] = buyerAddr
 	keyMap["target"] = targetHex
 
-	keyMapJSON, err := json.Marshal(keyMap)
-	if err != nil {
-		return err
-	}
-
-	requestValue, err := rpc.QueryRequest(keyMapJSON)
+	requestValue, err := rpc.QueryRequest(keyMap)
 	if err != nil {
 		return err
 	}

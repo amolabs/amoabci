@@ -33,10 +33,15 @@ func QueryParcel(parcelID []byte) (types.ParcelValue, error) {
 	return parcelValue, nil
 }
 
-func QueryRequest(keyMap []byte) (types.RequestValue, error) {
+func QueryRequest(keyMap map[string]tm.HexBytes) (types.RequestValue, error) {
 	var requestValue = types.RequestValue{}
 
-	result, err := RPCABCIQuery("/request", keyMap)
+	keyMapJSON, err := json.Marshal(keyMap)
+	if err != nil {
+		return requestValue, err
+	}
+
+	result, err := RPCABCIQuery("/request", keyMapJSON)
 	if err != nil {
 		return requestValue, err
 	}
@@ -45,10 +50,15 @@ func QueryRequest(keyMap []byte) (types.RequestValue, error) {
 	return requestValue, err
 }
 
-func QueryUsage(keyMap []byte) (types.UsageValue, error) {
+func QueryUsage(keyMap map[string]tm.HexBytes) (types.UsageValue, error) {
 	var usageValue = types.UsageValue{}
 
-	result, err := RPCABCIQuery("/usage", keyMap)
+	keyMapJSON, err := json.Marshal(keyMap)
+	if err != nil {
+		return usageValue, err
+	}
+
+	result, err := RPCABCIQuery("/usage", keyMapJSON)
 	if err != nil {
 		return usageValue, err
 	}

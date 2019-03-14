@@ -3,7 +3,6 @@ package query
 import (
 	"encoding/hex"
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -18,8 +17,7 @@ var ParcelCmd = &cobra.Command{
 }
 
 func parcelFunc(cmd *cobra.Command, args []string) error {
-	tmp := strings.TrimLeft(args[0], "0x")
-	parcelID, err := hex.DecodeString(tmp)
+	parcelID, err := hex.DecodeString(args[0])
 	if err != nil {
 		return err
 	}
