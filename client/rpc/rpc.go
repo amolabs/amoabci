@@ -1,10 +1,8 @@
 package rpc
 
 import (
-	"encoding/hex"
 	"encoding/json"
 
-	"github.com/tendermint/tendermint/crypto"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/rpc/client"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
@@ -22,37 +20,24 @@ var (
 
 // MakeMessage handles making tx message
 func MakeMessage(t string, nonce uint32, payload interface{}, key keys.Key) (types.Tx, error) {
-	var (
-		signer        = crypto.Address{}
-		signingPubKey = p256.PubKeyP256{}
-		signature     = cmn.HexBytes{}
-	)
-
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	privKey := p256.GenPrivKeyFromSecret(key.PrivKey)
-	signerHex, err := hex.DecodeString(key.Address)
-	if err != nil {
-		return nil, err
-	}
+	//privKey := p256.GenPrivKeyFromSecret(key.PrivKey)
 
-	signer = crypto.Address(signerHex)
-	copy(signingPubKey[:], key.PubKey)
-	signature, err = privKey.Sign(raw)
-	if err != nil {
-		return nil, err
-	}
+	var privKey p256.PrivKeyP256
+	copy(privKey[:], key.PrivKey)
 
 	msg := operation.Message{
-		Command:       t,
-		Signer:        signer,
-		SigningPubKey: signingPubKey,
-		Signature:     signature,
-		Payload:       raw,
-		Nonce:         nonce,
+		Command: t,
+		Payload: raw,
+	}
+
+	err = msg.Sign(privKey)
+	if err != nil {
+		return nil, err
 	}
 
 	tx, err := json.Marshal(msg)

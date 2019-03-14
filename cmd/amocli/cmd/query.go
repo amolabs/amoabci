@@ -1,19 +1,18 @@
 package cmd
 
 import (
-	"encoding/hex"
-	"fmt"
-
+	"github.com/amolabs/amoabci/cmd/amocli/cmd/query"
 	"github.com/spf13/cobra"
-	"github.com/tendermint/tendermint/crypto"
-
-	"github.com/amolabs/amoabci/client/rpc"
 )
 
 /* Commands (expected hierarchy)
  *
- * amocli |- query |- balance
- */
+ * amocli |- query |- balance <address>
+ *				   |
+*				   |- parcel <parcelID>
+*				   |- request --buyer <address> --target <parcelID>
+*				   |- usage --buyer <address> --target <parcelID>
+*/
 
 var queryCmd = &cobra.Command{
 	Use:     "query",
@@ -28,29 +27,12 @@ var queryCmd = &cobra.Command{
 	},
 }
 
-var queryBalanceCmd = &cobra.Command{
-	Use:   "balance [address]",
-	Short: "Show balance of an address",
-	Args:  cobra.MinimumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		address, err := hex.DecodeString(args[0])
-		if err != nil {
-			return err
-		}
-		balance, err := rpc.QueryBalance(crypto.Address(address))
-		if err != nil {
-			return err
-		}
-
-		fmt.Println(balance)
-
-		return nil
-	},
-}
-
 func init() {
-	// init here if needed
-	addressCmd := queryBalanceCmd
-	cmd := queryCmd
-	cmd.AddCommand(addressCmd)
+	queryCmd.AddCommand(
+		query.BalanceCmd,
+		LineBreak,
+		query.ParcelCmd,
+		query.RequestCmd,
+		query.UsageCmd,
+	)
 }
