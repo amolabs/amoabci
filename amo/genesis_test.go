@@ -72,12 +72,12 @@ func TestParseGenesisStateBytes(t *testing.T) {
 
 	bytes, _ = hex.DecodeString(addr0Json)
 	assert.Equal(t, crypto.Address(bytes), genState.Balances[0].Owner)
-	assert.Equal(t, types.Currency(100), genState.Balances[0].Amount)
+	assert.Equal(t, new(types.Currency).Set(100), &genState.Balances[0].Amount)
 
 	// TODO: need to raise an error for this case
 	bytes, _ = hex.DecodeString("012F")
 	assert.Equal(t, crypto.Address(bytes), genState.Balances[1].Owner)
-	assert.Equal(t, types.Currency(10), genState.Balances[1].Amount)
+	assert.Equal(t, new(types.Currency).Set(10), &genState.Balances[1].Amount)
 
 	// proper balances + garbage data
 	stateBytes = []byte(t2json)
@@ -88,7 +88,7 @@ func TestParseGenesisStateBytes(t *testing.T) {
 
 	bytes, _ = hex.DecodeString(addr0Json)
 	assert.Equal(t, crypto.Address(bytes), genState.Balances[0].Owner)
-	assert.Equal(t, types.Currency(100), genState.Balances[0].Amount)
+	assert.Equal(t, new(types.Currency).Set(100), &genState.Balances[0].Amount)
 
 }
 
@@ -100,10 +100,10 @@ func TestFillGenesisState(t *testing.T) {
 	// first fill the test store with some values
 	addr1 := p256.GenPrivKey().PubKey().Address()
 	addr2 := p256.GenPrivKey().PubKey().Address()
-	s.SetBalance(addr1, types.Currency(10))
-	s.SetBalance(addr2, types.Currency(20))
+	s.SetBalance(addr1, new(types.Currency).Set(10))
+	s.SetBalance(addr2, new(types.Currency).Set(20))
 
-	assert.Equal(t, types.Currency(10), s.GetBalance(addr1))
+	assert.Equal(t, new(types.Currency).Set(10), s.GetBalance(addr1))
 
 	genState, err := ParseGenesisStateBytes([]byte(t0json))
 	// this will purge previous data and fill with newly provided genesis state
@@ -111,12 +111,12 @@ func TestFillGenesisState(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check if the store has been purged prior to fill with genesis state
-	assert.Equal(t, types.Currency(0), s.GetBalance(addr1))
-	assert.Equal(t, types.Currency(0), s.GetBalance(addr2))
+	assert.Equal(t, new(types.Currency).Set(0), s.GetBalance(addr1))
+	assert.Equal(t, new(types.Currency).Set(0), s.GetBalance(addr2))
 
 	// check if the genesis state is filled correctly
 	addr0, _ := hex.DecodeString(addr0Json)
-	assert.Equal(t, types.Currency(100), s.GetBalance(addr0))
+	assert.Equal(t, new(types.Currency).Set(100), s.GetBalance(addr0))
 
 	tearDownDB()
 }

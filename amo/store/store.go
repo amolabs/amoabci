@@ -55,22 +55,27 @@ func (s Store) Purge() error {
 	return nil
 }
 
-func (s Store) SetBalance(addr types.Address, balance atypes.Currency) {
+func (s Store) SetBalance(addr types.Address, balance *atypes.Currency) {
 	b, _ := balance.Serialize()
 	s.dbm.Set(getBalanceKey(addr), b)
 }
 
-func (s Store) GetBalance(addr types.Address) atypes.Currency {
-	var c atypes.Currency
+func (s Store) SetBalanceUint64(addr types.Address, balance uint64) {
+	b, _ := new(atypes.Currency).Set(balance).Serialize()
+	s.dbm.Set(getBalanceKey(addr), b)
+}
+
+func (s Store) GetBalance(addr types.Address) *atypes.Currency {
+	c := atypes.Currency{}
 	balance := s.dbm.Get(getBalanceKey(addr))
 	if len(balance) == 0 {
-		return 0
+		return &c
 	}
 	err := binary.Deserialize(balance, &c)
 	if err != nil {
 		panic(err)
 	}
-	return c
+	return &c
 }
 
 // Parcel store
