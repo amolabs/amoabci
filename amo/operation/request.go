@@ -2,7 +2,6 @@ package operation
 
 import (
 	"bytes"
-	"strconv"
 
 	"github.com/tendermint/tendermint/crypto"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -31,7 +30,7 @@ func (o Request) Check(store *store.Store, signer crypto.Address) uint32 {
 	if store.GetUsage(signer, o.Target) != nil {
 		return code.TxCodeTargetAlreadyBought
 	}
-	if store.GetBalance(signer) < o.Payment {
+	if store.GetBalance(signer).LessThan(&o.Payment) {
 		return code.TxCodeNotEnoughBalance
 	}
 	return code.TxCodeOK
@@ -42,14 +41,14 @@ func (o Request) Execute(store *store.Store, signer crypto.Address) (uint32, []c
 		return resCode, nil
 	}
 	balance := store.GetBalance(signer)
-	balance -= o.Payment
+	balance.Sub(&o.Payment)
 	store.SetBalance(signer, balance)
 	request := types.RequestValue{
 		Payment: o.Payment,
 	}
 	store.SetRequest(signer, o.Target, &request)
 	tags := []cmn.KVPair{
-		{Key: []byte(signer.String()), Value: []byte(strconv.FormatUint(uint64(balance), 10))},
+		{Key: []byte(signer.String()), Value: []byte(balance.String())},
 		{Key: []byte("target"), Value: []byte(o.Target.String())},
 	}
 	return code.TxCodeOK, tags
