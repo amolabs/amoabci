@@ -13,7 +13,7 @@ func QueryBalance(address crypto.Address) (types.Currency, error) {
 	bytes, err := json.Marshal(address)
 	result, err := RPCABCIQuery("/balance", tm.HexBytes(bytes))
 	if err != nil {
-		return types.Currency(0), err
+		return *new(types.Currency).Set(0), err
 	}
 
 	var balance types.Currency

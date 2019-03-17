@@ -21,10 +21,10 @@ var TransferCmd = &cobra.Command{
 
 func transferFunc(cmd *cobra.Command, args []string) error {
 	var (
-		to     string
-		tmp    uint64
-		amount atypes.Currency
-		err    error
+		to      string
+		balance string
+		amount  *atypes.Currency
+		err     error
 	)
 
 	flags := cmd.Flags()
@@ -32,10 +32,14 @@ func transferFunc(cmd *cobra.Command, args []string) error {
 	if to, err = flags.GetString("to"); err != nil {
 		return err
 	}
-	if tmp, err = flags.GetUint64("amount"); err != nil {
+	if balance, err = flags.GetString("amount"); err != nil {
 		return err
 	}
-	amount = atypes.Currency(tmp)
+
+	amount, err = new(atypes.Currency).SetString(balance, 10)
+	if err != nil {
+		return err
+	}
 
 	toAddr, err := hex.DecodeString(to)
 	if err != nil {
@@ -47,7 +51,7 @@ func transferFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Transfer(toAddr, &amount, key)
+	result, err := rpc.Transfer(toAddr, amount, key)
 	if err != nil {
 		return err
 	}
@@ -67,7 +71,7 @@ func init() {
 	cmd.Flags().SortFlags = false
 
 	cmd.Flags().StringP("to", "t", "", "ex) 63A972C247D1DEBCEF2DDCF5D4E0848A42AFA529")
-	cmd.Flags().Uint64P("amount", "a", 0, "actual amount of coin to transfer")
+	cmd.Flags().StringP("amount", "a", "", "actual amount of coin to transfer; base 10")
 
 	cmd.MarkFlagRequired("to")
 	cmd.MarkFlagRequired("amount")
