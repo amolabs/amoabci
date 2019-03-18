@@ -27,3 +27,5 @@ blockchain/
 
 /amocli
 /amod
+DOCKER/amocli
+DOCKER/amod
