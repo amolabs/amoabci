@@ -1,8 +1,6 @@
 package types
 
 import (
-	"bytes"
-	"encoding/binary"
 	"errors"
 	"math/big"
 
@@ -15,7 +13,9 @@ const (
 )
 
 // Currency uses big endian for compatibility to big.Int
-type Currency [currencyLen]byte
+type Currency struct {
+	big.Int
+}
 
 var (
 	maxCurrency big.Int
@@ -30,48 +30,26 @@ func isExceed(i *big.Int) bool {
 }
 
 func (c *Currency) Set(x uint64) *Currency {
-	binary.BigEndian.PutUint64(c[currencyLen-8:], x)
+	c.SetUint64(x)
 	return c
 }
 
 func (c *Currency) SetString(x string, base int) (*Currency, error) {
-	i, ok := new(big.Int).SetString(x, base)
+	i, ok := c.Int.SetString(x, base)
 	if !ok {
 		return nil, cmn.NewError("Fail to convert hex string(%v)", x)
 	}
 	if isExceed(i) {
 		return nil, cmn.NewError("Currency supports up to 32 bytes;%v", x)
 	}
-	b := i.Bytes()
-	*c = Currency{}
-	for i := 0; i < len(b); i++ {
-		c[currencyLen-i-1] = b[len(b)-i-1]
+	*c = Currency{
+		Int: *i,
 	}
 	return c, nil
 }
 
 func (c Currency) String() string {
-	return new(big.Int).SetBytes(c[:]).Text(10)
-}
-
-func (c Currency) Serialize() ([]byte, error) {
-	var buf bytes.Buffer
-	i := 0
-	for ; i < len(c); i++ {
-		if c[i] != 0 {
-			break
-		}
-	}
-	buf.WriteByte(byte(currencyLen-i))
-	buf.Write(c[i:])
-	return buf.Bytes(), nil
-}
-
-func (c *Currency) Deserialize(data []byte) error {
-	for i := 0; i < len(data[1:]); i++ {
-		c[currencyLen-data[0]+byte(i)] = data[i+1]
-	}
-	return nil
+	return c.Text(10)
 }
 
 func (c Currency) MarshalJSON() ([]byte, error) {
@@ -97,41 +75,27 @@ func (c *Currency) UnmarshalJSON(data []byte) error {
 }
 
 func (c *Currency) Add(a *Currency) *Currency {
-	x, y := new(big.Int).SetBytes(c[:]), new(big.Int).SetBytes(a[:])
-	if isExceed(x.Add(x, y)) {
+	if isExceed(c.Int.Add(&c.Int, &a.Int)) {
 		panic(cmn.NewError("Cannot add"))
-	}
-	c.Set(0)
-	b := x.Bytes()
-	for i := 0; i < len(b); i++ {
-		c[currencyLen-i-1] = b[len(b)-i-1]
 	}
 	return c
 }
 
 func (c *Currency) Sub(a *Currency) *Currency {
-	x, y := new(big.Int).SetBytes(c[:]), new(big.Int).SetBytes(a[:])
-	if x.Sub(x, y).Sign() == -1 {
+	if c.Int.Sub(&c.Int, &a.Int).Sign() == -1 {
 		panic(cmn.NewError("Cannot subtract"))
-	}
-	c.Set(0)
-	b := x.Bytes()
-	for i := 0; i < len(b); i++ {
-		c[currencyLen-i-1] = b[len(b)-i-1]
 	}
 	return c
 }
 
 func (c Currency) Equals(a *Currency) bool {
-	return bytes.Equal(c[:], a[:])
+	return c.Cmp(&a.Int) == 0
 }
 
 func (c Currency) GreaterThan(a *Currency) bool {
-	x, y := new(big.Int).SetBytes(c[:]), new(big.Int).SetBytes(a[:])
-	return x.Cmp(y) == 1
+	return c.Cmp(&a.Int) == 1
 }
 
 func (c Currency) LessThan(a *Currency) bool {
-	x, y := new(big.Int).SetBytes(c[:]), new(big.Int).SetBytes(a[:])
-	return x.Cmp(y) == -1
+	return c.Cmp(&a.Int) == -1
 }
