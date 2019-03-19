@@ -24,3 +24,8 @@ vendor
 
 # blockchain data
 blockchain/
+
+/amocli
+/amod
+DOCKER/amocli
+DOCKER/amod

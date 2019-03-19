@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/crypto/p256"
 )
 
@@ -14,7 +15,7 @@ func TestParseTx(t *testing.T) {
 	to := p256.GenPrivKey().PubKey().Address()
 	transfer := Transfer{
 		To:     to,
-		Amount: 100,
+		Amount: *new(types.Currency).Set(1000),
 	}
 	b, _ := json.Marshal(transfer)
 	message := Message{

@@ -33,7 +33,7 @@ func TestBalance(t *testing.T) {
 	setUp(t)
 	s := NewStore(db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
-	balance := types.Currency(100)
+	balance := new(types.Currency).Set(1000)
 	s.SetBalance(testAddr, balance)
 	assert.Equal(t, balance, s.GetBalance(testAddr))
 	tearDown(t)
@@ -66,7 +66,7 @@ func TestRequest(t *testing.T) {
 	exp := time.Now().UTC()
 	exp = exp.Add(100 * time.Minute)
 	requestInput := types.RequestValue{
-		Payment: types.Currency(100),
+		Payment: *new(types.Currency).Set(100),
 		Exp:     exp,
 	}
 	s.SetRequest(testAddr, parcelID, &requestInput)

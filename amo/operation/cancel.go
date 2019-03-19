@@ -1,12 +1,11 @@
 package operation
 
 import (
-	"strconv"
+	"github.com/tendermint/tendermint/crypto"
+	cmn "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
-	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 var _ Operation = Cancel{}
@@ -30,11 +29,11 @@ func (o Cancel) Execute(store *store.Store, signer crypto.Address) (uint32, []cm
 	request := store.GetRequest(signer, o.Target)
 	store.DeleteRequest(signer, o.Target)
 	balance := store.GetBalance(signer)
-	balance += request.Payment
+	balance.Add(&request.Payment)
 	store.SetBalance(signer, balance)
 	tags := []cmn.KVPair{
 		{Key: []byte("target"), Value: []byte(o.Target.String())},
-		{Key: []byte(signer.String()), Value: []byte(strconv.FormatUint(uint64(balance), 10))},
+		{Key: []byte(signer.String()), Value: []byte(balance.String())},
 	}
 	return code.TxCodeOK, tags
 }

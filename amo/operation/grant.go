@@ -2,7 +2,6 @@ package operation
 
 import (
 	"bytes"
-	"strconv"
 
 	"github.com/tendermint/tendermint/crypto"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -42,7 +41,7 @@ func (o Grant) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn
 	request := store.GetRequest(o.Grantee, o.Target)
 	store.DeleteRequest(o.Grantee, o.Target)
 	balance := store.GetBalance(signer)
-	balance += request.Payment
+	balance.Add(&request.Payment)
 	store.SetBalance(signer, balance)
 	usage := types.UsageValue{
 		Custody: o.Custody,
@@ -50,7 +49,7 @@ func (o Grant) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn
 	store.SetUsage(o.Grantee, o.Target, &usage)
 	tags := []cmn.KVPair{
 		{Key: []byte("target"), Value: []byte(o.Target.String())},
-		{Key: []byte(signer.String()), Value: []byte(strconv.FormatUint(uint64(balance), 10))},
+		{Key: []byte(signer.String()), Value: []byte(balance.String())},
 	}
 	return code.TxCodeOK, tags
 }

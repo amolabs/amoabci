@@ -22,9 +22,9 @@ var RequestCmd = &cobra.Command{
 func requestFunc(cmd *cobra.Command, args []string) error {
 	var (
 		target    string
-		payment   atypes.Currency
+		payment   *atypes.Currency
 		targetHex []byte
-		tmp       uint64
+		balance   string
 		err       error
 	)
 
@@ -38,18 +38,21 @@ func requestFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if tmp, err = flags.GetUint64("payment"); err != nil {
+	if balance, err = flags.GetString("payment"); err != nil {
 		return err
 	}
 
-	payment = atypes.Currency(tmp)
+	payment, err = new(atypes.Currency).SetString(balance, 10)
+	if err != nil {
+		return err
+	}
 
 	key, err := GetRawKey(util.DefaultKeyFilePath())
 	if err != nil {
 		return err
 	}
 
-	result, err := rpc.Request(targetHex, &payment, key)
+	result, err := rpc.Request(targetHex, payment, key)
 	if err != nil {
 		return err
 	}
@@ -69,7 +72,7 @@ func init() {
 	cmd.Flags().SortFlags = false
 
 	cmd.Flags().StringP("target", "t", "", "")
-	cmd.Flags().Uint64P("payment", "p", 0, "")
+	cmd.Flags().StringP("payment", "p", "", "")
 
 	cmd.MarkFlagRequired("target")
 	cmd.MarkFlagRequired("payment")

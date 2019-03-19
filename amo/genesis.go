@@ -34,7 +34,7 @@ func FillGenesisState(s *store.Store, genState *GenAmoAppState) error {
 	}
 
 	for _, accBal := range genState.Balances {
-		s.SetBalance(accBal.Owner, accBal.Amount)
+		s.SetBalance(accBal.Owner, &accBal.Amount)
 	}
 
 	return nil

@@ -2,13 +2,13 @@ package operation
 
 import (
 	"bytes"
-	"strconv"
+
+	"github.com/tendermint/tendermint/crypto"
+	cmn "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
 	atypes "github.com/amolabs/amoabci/amo/types"
-	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 var _ Operation = Transfer{}
@@ -24,7 +24,7 @@ func (o Transfer) Check(store *store.Store, signer crypto.Address) uint32 {
 		return code.TxCodeBadParam
 	}
 	fromBalance := store.GetBalance(signer)
-	if fromBalance < o.Amount {
+	if fromBalance.LessThan(&o.Amount) {
 		return code.TxCodeNotEnoughBalance
 	}
 	if bytes.Equal(signer, o.To) {
@@ -39,13 +39,13 @@ func (o Transfer) Execute(store *store.Store, signer crypto.Address) (uint32, []
 	}
 	fromBalance := store.GetBalance(signer)
 	toBalance := store.GetBalance(o.To)
-	fromBalance -= o.Amount
-	toBalance += o.Amount
+	fromBalance.Sub(&o.Amount)
+	toBalance.Add(&o.Amount)
 	store.SetBalance(signer, fromBalance)
 	store.SetBalance(o.To, toBalance)
 	tags := []cmn.KVPair{
-		{Key: []byte(signer.String()), Value: []byte(strconv.FormatUint(uint64(fromBalance), 10))},
-		{Key: []byte(o.To.String()), Value: []byte(strconv.FormatUint(uint64(toBalance), 10))},
+		{Key: []byte(signer.String()), Value: []byte(fromBalance.String())},
+		{Key: []byte(o.To.String()), Value: []byte(toBalance.String())},
 	}
 	return code.TxCodeOK, tags
 }

@@ -1,11 +1,11 @@
 package store
 
 import (
+	"encoding/json"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/types"
 
-	"github.com/amolabs/amoabci/amo/encoding/binary"
 	atypes "github.com/amolabs/amoabci/amo/types"
 )
 
@@ -55,22 +55,33 @@ func (s Store) Purge() error {
 	return nil
 }
 
-func (s Store) SetBalance(addr types.Address, balance atypes.Currency) {
-	b, _ := balance.Serialize()
-	s.dbm.Set(getBalanceKey(addr), b)
-}
-
-func (s Store) GetBalance(addr types.Address) atypes.Currency {
-	var c atypes.Currency
-	balance := s.dbm.Get(getBalanceKey(addr))
-	if len(balance) == 0 {
-		return 0
-	}
-	err := binary.Deserialize(balance, &c)
+func (s Store) SetBalance(addr types.Address, balance *atypes.Currency) {
+	b, err := json.Marshal(balance)
 	if err != nil {
 		panic(err)
 	}
-	return c
+	s.dbm.Set(getBalanceKey(addr), b)
+}
+
+func (s Store) SetBalanceUint64(addr types.Address, balance uint64) {
+	b, err := json.Marshal(new(atypes.Currency).Set(balance))
+	if err != nil {
+		panic(err)
+	}
+	s.dbm.Set(getBalanceKey(addr), b)
+}
+
+func (s Store) GetBalance(addr types.Address) *atypes.Currency {
+	c := atypes.Currency{}
+	balance := s.dbm.Get(getBalanceKey(addr))
+	if len(balance) == 0 {
+		return &c
+	}
+	err := json.Unmarshal(balance, &c)
+	if err != nil {
+		panic(err)
+	}
+	return &c
 }
 
 // Parcel store
@@ -79,7 +90,7 @@ func getParcelKey(parcelID []byte) []byte {
 }
 
 func (s Store) SetParcel(parcelID []byte, value *atypes.ParcelValue) {
-	b, err := value.Serialize()
+	b, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
 	}
@@ -92,7 +103,7 @@ func (s Store) GetParcel(parcelID []byte) *atypes.ParcelValue {
 		return nil
 	}
 	var parcel atypes.ParcelValue
-	err := binary.Deserialize(b, &parcel)
+	err := json.Unmarshal(b, &parcel)
 	if err != nil {
 		panic(err)
 	}
@@ -109,7 +120,7 @@ func getRequestKey(buyer crypto.Address, parcelID []byte) []byte {
 }
 
 func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *atypes.RequestValue) {
-	b, err := value.Serialize()
+	b, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
 	}
@@ -122,7 +133,7 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *atypes.Request
 		return nil
 	}
 	var request atypes.RequestValue
-	err := binary.Deserialize(b, &request)
+	err := json.Unmarshal(b, &request)
 	if err != nil {
 		panic(err)
 	}
@@ -139,7 +150,7 @@ func getUsageKey(buyer crypto.Address, parcelID []byte) []byte {
 }
 
 func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *atypes.UsageValue) {
-	b, err := value.Serialize()
+	b, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
 	}
@@ -152,7 +163,7 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *atypes.UsageValu
 		return nil
 	}
 	var usage atypes.UsageValue
-	err := binary.Deserialize(b, &usage)
+	err := json.Unmarshal(b, &usage)
 	if err != nil {
 		panic(err)
 	}

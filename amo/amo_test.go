@@ -29,7 +29,7 @@ func TestInitChain(t *testing.T) {
 	// TODO: run series of app.Query() to check the genesis state
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
 	addr := crypto.Address(addrbin)
-	assert.Equal(t, types.Currency(100), app.store.GetBalance(addr))
+	assert.Equal(t, new(types.Currency).Set(100), app.store.GetBalance(addr))
 	//queryReq := abci.RequestQuery{}
 	//queryRes := app.Query(queryReq)
 }
@@ -53,7 +53,7 @@ func TestQueryBalance(t *testing.T) {
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
 	addr := crypto.Address(addrbin)
 	queryjson, _ := json.Marshal(addr)
-	app.store.SetBalance(addr, types.Currency(100))
+	app.store.SetBalanceUint64(addr, 100)
 
 	_addrbin, _ := hex.DecodeString("FFECB223B976F27D77B0E03E95602DABCC28D876")
 	_addr := crypto.Address(_addrbin)
@@ -76,7 +76,7 @@ func TestQueryBalance(t *testing.T) {
 	req = abci.RequestQuery{Path: "/balance", Data: []byte(_queryjson)}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeOK, res.Code)
-	jsonstr, _ = json.Marshal(types.Currency(0))
+	jsonstr, _ = json.Marshal(new(types.Currency).Set(0))
 	assert.Equal(t, []byte(jsonstr), res.Value)
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
@@ -85,7 +85,7 @@ func TestQueryBalance(t *testing.T) {
 	req = abci.RequestQuery{Path: "/balance", Data: []byte(queryjson)}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeOK, res.Code)
-	jsonstr, _ = json.Marshal(types.Currency(100))
+	jsonstr, _ = json.Marshal(new(types.Currency).Set(100))
 	assert.Equal(t, []byte(jsonstr), res.Value)
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
@@ -155,7 +155,7 @@ func TestQueryRequest(t *testing.T) {
 	parcelID[31] = 0xFF
 
 	request := types.RequestValue{
-		Payment: 400,
+		Payment: *new(types.Currency).Set(400),
 	}
 
 	app.store.SetRequest(addr, parcelID, &request)
@@ -307,11 +307,11 @@ func TestSignedTransactionTest(t *testing.T) {
 
 	db := tdb.NewMemDB()
 	app := NewAMOApplication(db, nil)
-	app.store.SetBalance(from.PubKey().Address(), types.Currency(5000))
+	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
 	tx := operation.Transfer{
 		To: p256.GenPrivKeyFromSecret([]byte("bob")).PubKey().Address(),
-		Amount: types.Currency(500),
+		Amount: *new(types.Currency).Set(500),
 	}
 	payload, err := json.Marshal(tx)
 	assert.NoError(t, err)
