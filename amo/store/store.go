@@ -84,6 +84,18 @@ func (s Store) GetBalance(addr types.Address) *atypes.Currency {
 	return &c
 }
 
+// TODO
+func (s Store) GetStake(holder crypto.Address) *atypes.Currency {
+	c := atypes.Currency{}
+	return &c
+}
+
+// TODO
+func (s Store) GetDelegate(holder crypto.Address, delegator crypto.Address) *atypes.Currency {
+	c := atypes.Currency{}
+	return &c
+}
+
 // Parcel store
 func getParcelKey(parcelID []byte) []byte {
 	return append(prefixParcel, parcelID...)

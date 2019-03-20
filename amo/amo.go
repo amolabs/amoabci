@@ -129,6 +129,10 @@ func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.Resp
 	switch reqQuery.Path {
 	case "/balance":
 		resQuery = queryBalance(app.store, reqQuery.Data)
+	case "/stake":
+		resQuery = queryStake(app.store, reqQuery.Data)
+	case "/delegate":
+		resQuery = queryDelegate(app.store, reqQuery.Data)
 	case "/parcel":
 		resQuery = queryParcel(app.store, reqQuery.Data)
 	case "/request":
