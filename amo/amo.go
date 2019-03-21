@@ -86,14 +86,14 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 			Tags: nil,
 		}
 	}
-	resCode, tags := op.Execute(app.store, message.Signer)
+	resCode, tags := op.Execute(app.store, message.Sender)
 	if resCode != code.TxCodeOK {
 		return abci.ResponseDeliverTx{
 			Code: resCode,
 		}
 	}
 	// TODO: change state
-	switch message.Command {
+	switch message.Type {
 	case operation.TxTransfer:
 		app.state.Size += 1
 	}
@@ -112,7 +112,7 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 	}
 	// TODO: implement signature verify logic
 	return abci.ResponseCheckTx{
-		Code: op.Check(app.store, message.Signer),
+		Code: op.Check(app.store, message.Sender),
 	}
 }
 

@@ -17,7 +17,7 @@ type Register struct {
 	// TODO: extra info
 }
 
-func (o Register) Check(store *store.Store, signer crypto.Address) uint32 {
+func (o Register) Check(store *store.Store, sender crypto.Address) uint32 {
 	// TODO: permission check from PDSN
 	if store.GetParcel(o.Target) != nil {
 		return code.TxCodeTargetAlreadyExists
@@ -25,17 +25,17 @@ func (o Register) Check(store *store.Store, signer crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Register) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
-	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
+func (o Register) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
 		return resCode, nil
 	}
 	parcel := types.ParcelValue{
-		Owner:   signer,
+		Owner:   sender,
 		Custody: o.Custody,
 	}
 	store.SetParcel(o.Target, &parcel)
 	tags := []cmn.KVPair{
-		{Key: []byte("owner"), Value: []byte(signer.String())},
+		{Key: []byte("owner"), Value: []byte(sender.String())},
 		{Key: []byte("target"), Value: []byte(o.Target.String())},
 	}
 	return code.TxCodeOK, tags

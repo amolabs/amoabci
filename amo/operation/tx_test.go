@@ -19,8 +19,8 @@ func TestParseTx(t *testing.T) {
 	}
 	b, _ := json.Marshal(transfer)
 	message := Message{
-		Command: TxTransfer,
-		Payload: b,
+		Type: TxTransfer,
+		Params: b,
 	}
 	err := message.Sign(from)
 	if err != nil {

@@ -1,9 +1,9 @@
 package operation
 
 import (
-	"bytes"
-	"encoding/binary"
+	"crypto/elliptic"
 	"encoding/json"
+	"math/big"
 	"strings"
 
 	"github.com/tendermint/tendermint/crypto"
@@ -23,26 +23,39 @@ const (
 	TxDiscard  = "discard"
 )
 
-type Message struct {
-	Command       string          `json:"command"`
-	Signer        crypto.Address  `json:"signer"`
-	SigningPubKey p256.PubKeyP256 `json:"singingPubKey"`
-	Signature     cmn.HexBytes    `json:"signature"`
-	Payload       json.RawMessage `json:"payload"`
-	Nonce         uint32          `json:"nonce"`
+const (
+	nonceSize = 4
+)
+
+var (
+	c = elliptic.P256()
+)
+
+type Signature struct {
+	PubKey   p256.PubKeyP256 `json:"pubkey"`
+	SigBytes cmn.HexBytes    `json:"sig_bytes"`
 }
 
-func (m *Message) GetSigningBytes() []byte {
-	var buf bytes.Buffer
-	// Command|Signer|SigningPubKey|Payload|Nonce
-	buf.Write([]byte(m.Command))
-	buf.Write(m.Signer)
-	buf.Write(m.SigningPubKey[:])
-	buf.Write(m.Payload)
-	nonce := make([]byte, 32/8)
-	binary.LittleEndian.PutUint32(nonce, m.Nonce)
-	buf.Write(nonce)
-	return buf.Bytes()
+func (s Signature) IsValid() bool {
+	return len(s.SigBytes) == p256.SignatureSize &&
+		c.IsOnCurve(new(big.Int).SetBytes(s.PubKey[1:33]), new(big.Int).SetBytes(s.PubKey[33:]))
+}
+
+type Message struct {
+	Type   string          `json:"type"`
+	Sender crypto.Address  `json:"sender"`
+	Nonce  cmn.HexBytes    `json:"nonce"`
+	Params json.RawMessage `json:"param"`
+	Sig    Signature `json:"signature"`
+}
+
+func (m Message) GetSigningBytes() []byte {
+	m.Sig.SigBytes = nil
+	b, err := json.Marshal(m)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 func (m *Message) Sign(privKey crypto.PrivKey) error {
@@ -51,29 +64,44 @@ func (m *Message) Sign(privKey crypto.PrivKey) error {
 	if !ok {
 		return cmn.NewError("Fail to convert public key to p256 public key")
 	}
-	m.Nonce = cmn.RandUint32()
-	m.Signer = pubKey.Address()
-	copy(m.SigningPubKey[:], p256PubKey.RawBytes())
+	m.Nonce = cmn.RandBytes(nonceSize)
+	m.Sender = pubKey.Address()
+	sigJson := Signature {
+		PubKey: p256PubKey,
+	}
+	m.Sig = sigJson
 	sb := m.GetSigningBytes()
 	sig, err := privKey.Sign(sb)
 	if err != nil {
 		return err
 	}
-	m.Signature = sig
+	sigJson.SigBytes = make([]byte, p256.SignatureSize)
+	sigLen := copy(sigJson.SigBytes, sig)
+	if sigLen != p256.SignatureSize {
+		return cmn.NewError("Fail to sign")
+	}
+	m.Sig = sigJson
 	return nil
 }
 
 func (m *Message) Verify() bool {
-	if len(m.Signature) == 0 {
+	if len(m.Sig.SigBytes) != p256.SignatureSize {
 		return false
 	}
 	sb := m.GetSigningBytes()
-	return m.SigningPubKey.VerifyBytes(sb, m.Signature)
+	return m.Sig.PubKey.VerifyBytes(sb, m.Sig.SigBytes)
+}
+
+func (m Message) IsValid() bool {
+	if len(m.Nonce) != nonceSize {
+		return false
+	}
+	return true
 }
 
 type Operation interface {
-	Check(store *store.Store, signer crypto.Address) uint32
-	Execute(store *store.Store, signer crypto.Address) (uint32, []cmn.KVPair)
+	Check(store *store.Store, sender crypto.Address) uint32
+	Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair)
 }
 
 func ParseTx(tx []byte) (Message, Operation) {
@@ -84,9 +112,9 @@ func ParseTx(tx []byte) (Message, Operation) {
 		panic(err)
 	}
 
-	message.Command = strings.ToLower(message.Command)
+	message.Type = strings.ToLower(message.Type)
 	var payload interface{}
-	switch message.Command {
+	switch message.Type {
 	case TxTransfer:
 		payload = new(Transfer)
 	case TxRegister:
@@ -102,10 +130,10 @@ func ParseTx(tx []byte) (Message, Operation) {
 	case TxDiscard:
 		payload = new(Discard)
 	default:
-		panic(cmn.NewError("Invalid operation command: %v", message.Command))
+		panic(cmn.NewError("Invalid operation type: %v", message.Type))
 	}
 
-	err = json.Unmarshal(message.Payload, &payload)
+	err = json.Unmarshal(message.Params, &payload)
 	if err != nil {
 		panic(err)
 	}

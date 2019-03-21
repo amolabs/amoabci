@@ -18,33 +18,33 @@ type Transfer struct {
 	Amount atypes.Currency `json:"amount"`
 }
 
-func (o Transfer) Check(store *store.Store, signer crypto.Address) uint32 {
+func (o Transfer) Check(store *store.Store, sender crypto.Address) uint32 {
 	// TODO: make util for checking address size
 	if len(o.To) != crypto.AddressSize {
 		return code.TxCodeBadParam
 	}
-	fromBalance := store.GetBalance(signer)
+	fromBalance := store.GetBalance(sender)
 	if fromBalance.LessThan(&o.Amount) {
 		return code.TxCodeNotEnoughBalance
 	}
-	if bytes.Equal(signer, o.To) {
+	if bytes.Equal(sender, o.To) {
 		return code.TxCodeSelfTransaction
 	}
 	return code.TxCodeOK
 }
 
-func (o Transfer) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
-	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
+func (o Transfer) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
 		return resCode, nil
 	}
-	fromBalance := store.GetBalance(signer)
+	fromBalance := store.GetBalance(sender)
 	toBalance := store.GetBalance(o.To)
 	fromBalance.Sub(&o.Amount)
 	toBalance.Add(&o.Amount)
-	store.SetBalance(signer, fromBalance)
+	store.SetBalance(sender, fromBalance)
 	store.SetBalance(o.To, toBalance)
 	tags := []cmn.KVPair{
-		{Key: []byte(signer.String()), Value: []byte(fromBalance.String())},
+		{Key: []byte(sender.String()), Value: []byte(fromBalance.String())},
 		{Key: []byte(o.To.String()), Value: []byte(toBalance.String())},
 	}
 	return code.TxCodeOK, tags

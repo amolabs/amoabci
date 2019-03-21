@@ -19,9 +19,9 @@ type Grant struct {
 	Custody cmn.HexBytes
 }
 
-func (o Grant) Check(store *store.Store, signer crypto.Address) uint32 {
+func (o Grant) Check(store *store.Store, sender crypto.Address) uint32 {
 	parcel := store.GetParcel(o.Target)
-	if !bytes.Equal(parcel.Owner, signer) {
+	if !bytes.Equal(parcel.Owner, sender) {
 		return code.TxCodePermissionDenied
 	}
 	if store.GetRequest(o.Grantee, o.Target) == nil {
@@ -34,22 +34,22 @@ func (o Grant) Check(store *store.Store, signer crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Grant) Execute(store *store.Store, signer crypto.Address) (uint32, []cmn.KVPair) {
-	if resCode := o.Check(store, signer); resCode != code.TxCodeOK {
+func (o Grant) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
 		return resCode, nil
 	}
 	request := store.GetRequest(o.Grantee, o.Target)
 	store.DeleteRequest(o.Grantee, o.Target)
-	balance := store.GetBalance(signer)
+	balance := store.GetBalance(sender)
 	balance.Add(&request.Payment)
-	store.SetBalance(signer, balance)
+	store.SetBalance(sender, balance)
 	usage := types.UsageValue{
 		Custody: o.Custody,
 	}
 	store.SetUsage(o.Grantee, o.Target, &usage)
 	tags := []cmn.KVPair{
 		{Key: []byte("target"), Value: []byte(o.Target.String())},
-		{Key: []byte(signer.String()), Value: []byte(balance.String())},
+		{Key: []byte(sender.String()), Value: []byte(balance.String())},
 	}
 	return code.TxCodeOK, tags
 }

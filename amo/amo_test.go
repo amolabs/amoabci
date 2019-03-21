@@ -316,8 +316,8 @@ func TestSignedTransactionTest(t *testing.T) {
 	payload, err := json.Marshal(tx)
 	assert.NoError(t, err)
 	msg := operation.Message{
-		Command: operation.TxTransfer,
-		Payload: payload,
+		Type: operation.TxTransfer,
+		Params: payload,
 	}
 
 	// not signed transaction
