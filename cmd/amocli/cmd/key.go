@@ -23,13 +23,6 @@ var keyCmd = &cobra.Command{
 	Use:     "key",
 	Aliases: []string{"k"},
 	Short:   "Manage the key(wallet)-related features",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := cmd.Help(); err != nil {
-			return err
-		}
-
-		return nil
-	},
 }
 
 func init() {
@@ -65,7 +58,7 @@ func keyListFunc(cmd *cobra.Command, args []string) error {
 }
 
 var keyGenCmd = &cobra.Command{
-	Use:   "generate [nickname]",
+	Use:   "generate <nickname>",
 	Short: "Generate a key with a specified nickname",
 	Args:  cobra.MinimumNArgs(1),
 	RunE:  keyGenFunc,
@@ -107,25 +100,32 @@ func keyGenFunc(cmd *cobra.Command, args []string) error {
 }
 
 var keyRemoveCmd = &cobra.Command{
-	Use:   "remove [nickname]",
+	Use:   "remove <nickname>",
 	Short: "Remove the specified key",
 	Args:  cobra.MinimumNArgs(1),
 	RunE:  keyRemoveFunc,
 }
 
 func keyRemoveFunc(cmd *cobra.Command, args []string) error {
+	var (
+		passphrase []byte
+		err        error
+	)
+
 	nickname := args[0]
 	keyFile := util.DefaultKeyFilePath()
 
 	keyStatus := keys.Check(nickname, keyFile)
 	if keyStatus < keys.Exists {
 		return errors.New("The key doesn't exist")
+	} else if keyStatus == keys.Encrypted {
+		fmt.Printf("Type passphrase: ")
+		passphrase, err = terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println()
+		if err != nil {
+			return err
+		}
 	}
-
-	var (
-		passphrase []byte
-		err        error
-	)
 
 	err = keys.Remove(nickname, passphrase, keyFile)
 	if err != nil {
