@@ -103,6 +103,27 @@ func TestKeyGenerate(t *testing.T) {
 	tearDown(t)
 }
 
+func TestKeyImport(t *testing.T) {
+	setUp(t)
+
+	err := Generate(tester1, nil, false, testKeyFile)
+	assert.NoError(t, err)
+
+	tester1Key := Get(tester1, testKeyFile)
+
+	err = Remove(tester1, nil, testKeyFile)
+	assert.NoError(t, err)
+
+	err = Import(tester1Key.PrivKey, tester1, nil, false, testKeyFile)
+	assert.NoError(t, err)
+
+	importedKey := Get(tester1, testKeyFile)
+
+	assert.Equal(t, importedKey, tester1Key)
+
+	tearDown(t)
+}
+
 func TestKeyRemoveWithEncryption(t *testing.T) {
 	setUp(t)
 
