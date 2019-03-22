@@ -13,13 +13,6 @@ var rootCmd = &cobra.Command{
 	Use:               "amocli",
 	Short:             "Console app for a user to interact with AMO daemon",
 	PersistentPreRunE: loadConfig,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := cmd.Help(); err != nil {
-			return err
-		}
-
-		return nil
-	},
 }
 
 // Execute function is the main gate to this app
