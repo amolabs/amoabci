@@ -27,7 +27,9 @@ func Execute() {
 		LineBreak,
 		txCmd,
 		queryCmd,
-		LineBreak)
+		dbCmd,
+		LineBreak,
+	)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

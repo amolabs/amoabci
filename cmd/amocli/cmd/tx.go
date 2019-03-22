@@ -21,7 +21,7 @@ import (
 var txCmd = &cobra.Command{
 	Use:     "tx",
 	Aliases: []string{"t"},
-	Short:   "Perform a transaction",
+	Short:   "Perform transactions",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := cmd.Help(); err != nil {
 			return err

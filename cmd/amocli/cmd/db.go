@@ -1,28 +1,26 @@
 package cmd
 
 import (
+	"github.com/amolabs/amoabci/cmd/amocli/cmd/db"
 	"github.com/spf13/cobra"
 )
 
 /* Commands (expected hierarchy)
  *
- * amocli |- db |- upload
- *              |- retrieve
- *              |- query
+ * amocli |- db |- upload <hex> --owner <address> --qualifier <json>
+ *              |- retrieve <parcelID>
+ *              |- query --start <timestamp> --end <timestamp> --owner <address> --qualifier <json>
  */
 
-var pdbCmd = &cobra.Command{
+var dbCmd = &cobra.Command{
 	Use:   "db",
 	Short: "Perform database-related operations",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := cmd.Help(); err != nil {
-			return err
-		}
-
-		return nil
-	},
 }
 
 func init() {
-	pdbCmd.AddCommand()
+	dbCmd.AddCommand(
+		db.UploadCmd,
+		db.RetrieveCmd,
+		db.QueryCmd,
+	)
 }
