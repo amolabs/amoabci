@@ -25,13 +25,11 @@ func MakeMessage(t string, nonce uint32, payload interface{}, key keys.Key) (typ
 		return nil, err
 	}
 
-	//privKey := p256.GenPrivKeyFromSecret(key.PrivKey)
-
 	var privKey p256.PrivKeyP256
 	copy(privKey[:], key.PrivKey)
 
 	msg := operation.Message{
-		Type: t,
+		Type:   t,
 		Params: raw,
 	}
 

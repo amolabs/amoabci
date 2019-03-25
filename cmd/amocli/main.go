@@ -7,8 +7,8 @@ import (
 /* Commands (expected hierarchy)
  *
  * amocli |- version
- *		  |- status
- * 		  |- key |- list
+ *        |- status
+ *        |- key |- list
  *               |- generate <nickname>
  *               |- import <private key> --nickname <nickname>
  *               |- remove <nickname>
@@ -24,10 +24,14 @@ import (
  *              |- discard --target <parcelID>
  *
  *        |- query |- balance <address>
- *				   |
- *				   |- parcel <parcelID>
- *				   |- request --buyer <address> --target <parcelID>
+ *                 |
+ *                 |- parcel <parcelID>
+ *                 |- request --buyer <address> --target <parcelID>
  *                 |- usage --buyer <address> --target <parcelID>
+ *
+ *        |- db |- upload <hex> --owner <address> --qualifier <json>
+ *              |- retrieve <parcelID>
+ *              |- query --start <timestamp> --end <timestamp> --owner <address> --qualifier <json>
  */
 
 func main() {
