@@ -10,6 +10,7 @@ import (
  *        |- status
  *        |- key |- list
  *               |- generate <nickname>
+ *               |- import <private key> --nickname <nickname>
  *               |- remove <nickname>
  *
  *        |- tx |- transfer --to <address> --amount <uint64>
