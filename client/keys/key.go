@@ -34,3 +34,17 @@ func Check(nickname string, path string) KeyStatus {
 
 	return Encrypted
 }
+
+func Get(nickname string, path string) Key {
+	keyList, err := LoadKeyList(path)
+	if err != nil {
+		return Key{}
+	}
+
+	key, exists := keyList[nickname]
+	if !exists {
+		return Key{}
+	}
+
+	return key
+}
