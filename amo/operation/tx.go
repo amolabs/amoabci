@@ -21,6 +21,10 @@ const (
 	TxGrant    = "grant"
 	TxRevoke   = "revoke"
 	TxDiscard  = "discard"
+	TxStake    = "stake"
+	TxWithdraw = "withdraw"
+	TxDelegate = "delegate"
+	TxRetract  = "retract"
 )
 
 const (
@@ -46,7 +50,7 @@ type Message struct {
 	Sender crypto.Address  `json:"sender"`
 	Nonce  cmn.HexBytes    `json:"nonce"`
 	Params json.RawMessage `json:"param"`
-	Sig    Signature `json:"signature"`
+	Sig    Signature       `json:"signature"`
 }
 
 func (m Message) GetSigningBytes() []byte {
@@ -66,7 +70,7 @@ func (m *Message) Sign(privKey crypto.PrivKey) error {
 	}
 	m.Nonce = cmn.RandBytes(nonceSize)
 	m.Sender = pubKey.Address()
-	sigJson := Signature {
+	sigJson := Signature{
 		PubKey: p256PubKey,
 	}
 	m.Sig = sigJson
@@ -129,6 +133,14 @@ func ParseTx(tx []byte) (Message, Operation) {
 		payload = new(Revoke)
 	case TxDiscard:
 		payload = new(Discard)
+	case TxStake:
+		payload = new(Stake)
+	case TxWithdraw:
+		payload = new(Withdraw)
+	case TxDelegate:
+		payload = new(Delegate)
+	case TxRetract:
+		payload = new(Retract)
 	default:
 		panic(cmn.NewError("Invalid operation type: %v", message.Type))
 	}
