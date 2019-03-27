@@ -1,4 +1,4 @@
-# vim: set expandtab:
+# vim: set expandtab sw=2:
 version: '3.3'
 services:
   seed:
@@ -34,6 +34,17 @@ services:
     environment:
       - MONIKER=val2
       - SEEDS=bdc37be128bdcdb11d2b8a9ea0c7b16f9876481d@seed:26656
+
+  pdb0:
+    container_name: pdb0
+    image: paust-db
+    networks:
+      amonet:
+        ipv4_address: 192.167.10.10
+    environment:
+      - ID=0
+    volumes:
+      - /tmp/pdb0:/tendermint:Z
 
   #rep1:
   #  container_name: rep1

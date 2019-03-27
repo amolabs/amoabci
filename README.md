@@ -59,9 +59,10 @@ tendermint node
 For test setup details, see [test-env.md](https://github.com/amolabs/docs/blob/master/test-env.md).
 
 ### Pre-requisites
-* [tendermint](https://github.com/amolabs/tendermint)
 * [docker](https://www.docker.com)
 * [docker-compose](https://www.docker.com)
+* [tendermint](https://github.com/amolabs/tendermint)
+* [paust-db](https://github.com/paust-team/paust-db)
 
 ### Build
 First, we need to build tendermint node image, and use it as a base image when
@@ -86,7 +87,21 @@ make docker
 ```
 This will put an image with the tag amolabs/amod:latest in the local image pool.
 
+We need PAUST-DB as a storage layer. Build paust-db image with the following commands:
+```bash
+cd $GOPATH/src/github.com/paust-team/paust-db
+cd docker
+make build-image
+```
+This will put an image with the tag paust-db:latest in the local image pool.
+
 ### Run
+Init paust-db storage with the following command:
+```bash
+rm -rf /tmp/pdb0
+docker run --rm -v /tmp/pdb0:/tendermint:Z paust-db init
+```
+
 Run test containers with docker-compose via the following command:
 ```bash
 make run-cluster
