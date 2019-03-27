@@ -21,29 +21,17 @@ type user struct {
 	addr    crypto.Address
 }
 
-var privKeys = []p256.PrivKeyP256{
-	p256.GenPrivKeyFromSecret([]byte("alice")),
-	p256.GenPrivKeyFromSecret([]byte("bob")),
-	p256.GenPrivKeyFromSecret([]byte("eve")),
+func newUser (privKey p256.PrivKeyP256) user {
+	return user {
+		privKey: privKey,
+		pubKey:  privKey.PubKey(),
+		addr:    privKey.PubKey().Address(),
+	}
 }
 
-var alice = user{
-	privKey: privKeys[0],
-	pubKey:  privKeys[0].PubKey(),
-	addr:    privKeys[0].PubKey().Address(),
-}
-
-var bob = user{
-	privKey: privKeys[1],
-	pubKey:  privKeys[1].PubKey(),
-	addr:    privKeys[1].PubKey().Address(),
-}
-
-var eve = user{
-	privKey: privKeys[2],
-	pubKey:  privKeys[2].PubKey(),
-	addr:    privKeys[2].PubKey().Address(),
-}
+var alice = newUser(p256.GenPrivKeyFromSecret([]byte("alice")))
+var bob = newUser(p256.GenPrivKeyFromSecret([]byte("bob")))
+var eve = newUser(p256.GenPrivKeyFromSecret([]byte("eve")))
 
 var parcelID = []cmn.HexBytes{
 	[]byte{0xA, 0xA, 0xA, 0xA},
@@ -80,11 +68,16 @@ func getTestStore() *store.Store {
 		Custody: custody[0],
 		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
+	s.SetStake(alice.addr, new(types.Currency).Set(2000))
+	s.SetDelegate(bob.addr, &types.DelegateValue{
+		Amount: *new(types.Currency).Set(500),
+		Delegator: alice.addr,
+	})
 	return s
 }
 
 func TestValidCancel(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	op := Cancel{
 		parcelID[0],
 	}
@@ -94,7 +87,7 @@ func TestValidCancel(t *testing.T) {
 }
 
 func TestNonValidCancel(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	op := Cancel{
 		parcelID[0],
 	}
@@ -102,7 +95,7 @@ func TestNonValidCancel(t *testing.T) {
 }
 
 func TestValidDiscard(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	op := Discard{
 		parcelID[0],
 	}
@@ -112,7 +105,7 @@ func TestValidDiscard(t *testing.T) {
 }
 
 func TestNonValidDiscard(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	NEOp := Discard{
 		[]byte{0xFF, 0xFF, 0xFF, 0xEE},
 	}
@@ -124,7 +117,7 @@ func TestNonValidDiscard(t *testing.T) {
 }
 
 func TestValidGrant(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	op := Grant{
 		Target:  parcelID[1],
 		Grantee: alice.addr,
@@ -136,7 +129,7 @@ func TestValidGrant(t *testing.T) {
 }
 
 func TestNonValidGrant(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	PDop := Grant{
 		Target:  parcelID[0],
 		Grantee: eve.addr,
@@ -152,7 +145,7 @@ func TestNonValidGrant(t *testing.T) {
 }
 
 func TestValidRegister(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	op := Register{
 		Target:  parcelID[2],
 		Custody: custody[2],
@@ -163,7 +156,7 @@ func TestValidRegister(t *testing.T) {
 }
 
 func TestNonValidRegister(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	op := Register{
 		Target:  parcelID[0],
 		Custody: custody[0],
@@ -172,7 +165,7 @@ func TestNonValidRegister(t *testing.T) {
 }
 
 func TestValidRequest(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	op := Request{
 		Target:  parcelID[1],
 		Payment: *new(types.Currency).Set(200),
@@ -183,7 +176,7 @@ func TestValidRequest(t *testing.T) {
 }
 
 func TestNonValidRequest(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	TNop := Request{
 		Target:  []byte{0x0, 0x0, 0x0, 0x0},
 		Payment: *new(types.Currency).Set(100),
@@ -207,7 +200,7 @@ func TestNonValidRequest(t *testing.T) {
 }
 
 func TestValidRevoke(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	op := Revoke{
 		Grantee: bob.addr,
 		Target:  parcelID[0],
@@ -218,7 +211,7 @@ func TestValidRevoke(t *testing.T) {
 }
 
 func TestNonValidRevoke(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	PDop := Revoke{
 		Grantee: eve.addr,
 		Target:  parcelID[0],
@@ -232,7 +225,7 @@ func TestNonValidRevoke(t *testing.T) {
 }
 
 func TestValidTransfer(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	op := Transfer{
 		To:     bob.addr,
 		Amount: *new(types.Currency).Set(1230),
@@ -243,7 +236,7 @@ func TestValidTransfer(t *testing.T) {
 }
 
 func TestNonValidTransfer(t *testing.T) {
-	s  := getTestStore()
+	s := getTestStore()
 	BPop := Transfer{
 		To:     []byte("bob"),
 		Amount: *new(types.Currency).Set(1230),
@@ -259,4 +252,99 @@ func TestNonValidTransfer(t *testing.T) {
 	assert.Equal(t, code.TxCodeBadParam, BPop.Check(s , alice.addr))
 	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s , eve.addr))
 	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s , eve.addr))
+}
+
+func TestValidStake(t *testing.T) {
+	s := getTestStore()
+	op := Stake{
+		Amount: *new(types.Currency).Set(2000),
+	}
+	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
+	resCode, _ := op.Execute(s, alice.addr)
+	assert.Equal(t, code.TxCodeOK, resCode)
+}
+
+func TestNonValidStake(t *testing.T) {
+	s := getTestStore()
+	NEop := Stake{
+		Amount: *new(types.Currency).Set(2000),
+	}
+	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
+}
+
+func TestValidWithdraw(t *testing.T) {
+	s := getTestStore()
+	op := Withdraw{
+		Amount: *new(types.Currency).Set(2000),
+	}
+	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
+	resCode, _ := op.Execute(s, alice.addr)
+	assert.Equal(t, code.TxCodeOK, resCode)
+	assert.Equal(t, zero, s.GetStake(alice.addr))
+}
+
+func TestNonValidWithdraw(t *testing.T) {
+	s := getTestStore()
+	op := Withdraw{
+		Amount: *new(types.Currency).Set(2000),
+	}
+	assert.Equal(t, code.TxCodeNotEnoughBalance, op.Check(s, eve.addr))
+}
+
+func TestValidDelegate(t *testing.T) {
+	s := getTestStore()
+	op := Delegate{
+		Amount: *new(types.Currency).Set(500),
+		To:     alice.addr,
+	}
+	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
+	resCode, _ := op.Execute(s, bob.addr)
+	assert.Equal(t, code.TxCodeOK, resCode)
+	assert.Equal(t, new(types.Currency).Set(1000), &s.GetDelegate(bob.addr).Amount)
+}
+
+func TestNonValidDelegate(t *testing.T) {
+	s := getTestStore()
+	STop := Delegate{
+		Amount: *new(types.Currency).Set(500),
+		To:     eve.addr,
+	}
+	NEop := Delegate{
+		Amount: *new(types.Currency).Set(500),
+		To:     alice.addr,
+	}
+	ADop := Delegate{
+		Amount: *new(types.Currency).Set(500),
+		To:     eve.addr,
+	}
+	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, eve.addr))
+	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
+	assert.Equal(t, code.TxCodeMultipleDelegates, ADop.Check(s, bob.addr))
+}
+
+func TestValidRetract(t *testing.T) {
+	s := getTestStore()
+	op := Retract{
+		From: alice.addr,
+		Amount: *new(types.Currency).Set(400),
+	}
+	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
+	resCode, _ := op.Execute(s, bob.addr)
+	assert.Equal(t, code.TxCodeOK, resCode)
+	assert.Equal(t, new(types.Currency).Set(100), &s.GetDelegate(bob.addr).Amount)
+}
+
+func TestNonValidRetract(t *testing.T) {
+	s := getTestStore()
+	op := Retract{
+		From: eve.addr,
+		Amount: *new(types.Currency).Set(500),
+	}
+	NEop := Retract{
+		From: alice.addr,
+		Amount: *new(types.Currency).Set(1000),
+	}
+	assert.Equal(t, code.TxCodeDelegationNotExists, op.Check(s, eve.addr))
+	assert.Equal(t, code.TxCodeBadParam, op.Check(s, bob.addr))
+	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, bob.addr))
 }

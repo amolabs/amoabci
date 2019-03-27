@@ -63,3 +63,8 @@ func RPCStatus() (*ctypes.ResultStatus, error) {
 	cli := client.NewHTTP(rpcRemote, rpcWsEndpoint)
 	return cli.Status()
 }
+
+func RPCBlock(height int64) (*ctypes.ResultBlock, error) {
+	cli := client.NewHTTP(rpcRemote, rpcWsEndpoint)
+	return cli.Block(&height)
+}

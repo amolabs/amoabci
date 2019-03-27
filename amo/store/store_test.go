@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tendermint/tendermint/crypto"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/db"
 
@@ -30,17 +31,14 @@ func tearDown(t *testing.T) {
 }
 
 func TestBalance(t *testing.T) {
-	setUp(t)
 	s := NewStore(db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	balance := new(types.Currency).Set(1000)
 	s.SetBalance(testAddr, balance)
 	assert.Equal(t, balance, s.GetBalance(testAddr))
-	tearDown(t)
 }
 
 func TestParcel(t *testing.T) {
-	setUp(t)
 	s := NewStore(db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	custody := cmn.RandBytes(32)
@@ -55,11 +53,9 @@ func TestParcel(t *testing.T) {
 	assert.Equal(t, parcelInput, *parcelOutput)
 	t.Log(parcelInput)
 	t.Log(*parcelOutput)
-	tearDown(t)
 }
 
 func TestRequest(t *testing.T) {
-	setUp(t)
 	s := NewStore(db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := cmn.RandBytes(32)
@@ -76,11 +72,9 @@ func TestRequest(t *testing.T) {
 	assert.False(t, requestOutput.IsExpired())
 	t.Log(requestInput)
 	t.Log(*requestOutput)
-	tearDown(t)
 }
 
 func TestUsage(t *testing.T) {
-	setUp(t)
 	s := NewStore(db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := cmn.RandBytes(32)
@@ -98,5 +92,32 @@ func TestUsage(t *testing.T) {
 	assert.False(t, usageOutput.IsExpired())
 	t.Log(usageInput)
 	t.Log(*usageOutput)
-	tearDown(t)
+}
+
+func TestStake(t *testing.T) {
+	s := NewStore(db.NewMemDB())
+	addrs := make([]crypto.Address, 10)
+	for i := range addrs {
+		addrs[i] = p256.GenPrivKeyFromSecret([]byte("xxx" + string(i))).PubKey().Address()
+		c := new(types.Currency).Set(100 * uint64((i)+1))
+		s.SetStake(addrs[i], c)
+		assert.Equal(t, c, s.GetStake(addrs[i]))
+	}
+}
+
+func TestDelegate(t *testing.T) {
+	s := NewStore(db.NewMemDB())
+	holders := make([]crypto.Address, 10)
+	delegator := make([]crypto.Address, 10)
+	for i := range holders {
+		holders[i] = p256.GenPrivKeyFromSecret([]byte("xxx" + string(i))).PubKey().Address()
+		delegator[i] = p256.GenPrivKeyFromSecret([]byte("yyy" + string(i))).PubKey().Address()
+		c := new(types.Currency).Set(100 * uint64((i)+1))
+		d := types.DelegateValue{
+			Amount:    *c,
+			Delegator: delegator[i],
+		}
+		s.SetDelegate(holders[i], &d)
+		assert.Equal(t, &d, s.GetDelegate(holders[i]))
+	}
 }
