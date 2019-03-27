@@ -10,10 +10,12 @@ import (
 )
 
 var (
-	prefixBalance = []byte("balance:")
-	prefixParcel  = []byte("parcel:")
-	prefixRequest = []byte("request:")
-	prefixUsage   = []byte("usage:")
+	prefixBalance  = []byte("balance:")
+	prefixParcel   = []byte("parcel:")
+	prefixRequest  = []byte("request:")
+	prefixUsage    = []byte("usage:")
+	prefixStake    = []byte("stake:")
+	prefixDelegate = []byte("delegate:")
 )
 
 type Store struct {
@@ -84,16 +86,56 @@ func (s Store) GetBalance(addr types.Address) *atypes.Currency {
 	return &c
 }
 
-// TODO
+// Stake store
+func getStakeKey(holder []byte) []byte {
+	return append(prefixStake, holder...)
+}
+
+func (s Store) SetStake(holder crypto.Address, amount *atypes.Currency ) {
+	b, err := json.Marshal(amount)
+	if err != nil {
+		panic(err)
+	}
+	s.dbm.Set(getStakeKey(holder), b)
+}
+
 func (s Store) GetStake(holder crypto.Address) *atypes.Currency {
 	c := atypes.Currency{}
+	balance := s.dbm.Get(getStakeKey(holder))
+	if len(balance) == 0 {
+		return &c
+	}
+	err := json.Unmarshal(balance, &c)
+	if err != nil {
+		panic(err)
+	}
 	return &c
 }
 
-// TODO
-func (s Store) GetDelegate(holder crypto.Address, delegator crypto.Address) *atypes.Currency {
-	c := atypes.Currency{}
-	return &c
+// Delegate store
+func getDelegateKey(holder []byte) []byte {
+	return append(prefixDelegate, holder...)
+}
+
+func (s Store) SetDelegate(holder crypto.Address, value *atypes.DelegateValue) {
+	b, err := json.Marshal(value)
+	if err != nil {
+		panic(err)
+	}
+	s.dbm.Set(getDelegateKey(holder), b)
+}
+
+func (s Store) GetDelegate(holder crypto.Address) *atypes.DelegateValue {
+	b := s.dbm.Get(getDelegateKey(holder))
+	if len(b) == 0 {
+		return nil
+	}
+	var delegate atypes.DelegateValue
+	err := json.Unmarshal(b, &delegate)
+	if err != nil {
+		panic(err)
+	}
+	return &delegate
 }
 
 // Parcel store

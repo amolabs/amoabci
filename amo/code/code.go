@@ -11,6 +11,8 @@ const (
 	TxCodeTargetNotExists
 	TxCodeBadSignature
 	TxCodeRequestNotExists
+	TxCodeAlreadyDelegated
+	TxCodeDelegationNotExists
 )
 
 const (

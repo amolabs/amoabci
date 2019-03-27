@@ -90,7 +90,7 @@ func queryDelegate(store *store.Store, queryData []byte) (res abci.ResponseQuery
 		return
 	}
 
-	delegate := store.GetDelegate(holder, delegator)
+	delegate := store.GetDelegate(holder)
 	if delegate == nil {
 		res.Code = code.QueryCodeNoMatch
 		return
