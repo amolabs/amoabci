@@ -25,6 +25,9 @@ import (
  *
  *        |- query |- balance <address>
  *                 |
+ *                 |- stake <address>
+ *                 |- delegate --holder <address> --delegator <address>
+ *                 |
  *                 |- parcel <parcelID>
  *                 |- request --buyer <address> --target <parcelID>
  *                 |- usage --buyer <address> --target <parcelID>
@@ -32,6 +35,7 @@ import (
  *        |- db |- upload <hex> --owner <address> --qualifier <json>
  *              |- retrieve <parcelID>
  *              |- query --start <timestamp> --end <timestamp> --owner <address> --qualifier <json>
+ *
  */
 
 func main() {

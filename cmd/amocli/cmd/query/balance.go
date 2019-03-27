@@ -11,7 +11,7 @@ import (
 )
 
 var BalanceCmd = &cobra.Command{
-	Use:   "balance [address]",
+	Use:   "balance <address>",
 	Short: "Show balance of an address",
 	Args:  cobra.MinimumNArgs(1),
 	RunE:  balanceFunc,
