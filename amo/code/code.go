@@ -13,6 +13,7 @@ const (
 	TxCodeRequestNotExists
 	TxCodeMultipleDelegates
 	TxCodeDelegationNotExists
+	TxCodeNoStake
 )
 
 const (
