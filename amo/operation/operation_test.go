@@ -70,7 +70,7 @@ func getTestStore() *store.Store {
 	})
 	s.SetStake(alice.addr, new(types.Currency).Set(2000))
 	s.SetDelegate(bob.addr, &types.DelegateValue{
-		To:        *new(types.Currency).Set(500),
+		Amount: *new(types.Currency).Set(500),
 		Delegator: alice.addr,
 	})
 	return s
@@ -295,27 +295,27 @@ func TestValidDelegate(t *testing.T) {
 	s := getTestStore()
 	op := Delegate{
 		Amount: *new(types.Currency).Set(500),
-		Delegator: alice.addr,
+		To:     alice.addr,
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
 	resCode, _ := op.Execute(s, bob.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
-	assert.Equal(t, new(types.Currency).Set(1000), &s.GetDelegate(bob.addr).To)
+	assert.Equal(t, new(types.Currency).Set(1000), &s.GetDelegate(bob.addr).Amount)
 }
 
 func TestNonValidDelegate(t *testing.T) {
 	s := getTestStore()
 	STop := Delegate{
 		Amount: *new(types.Currency).Set(500),
-		Delegator: eve.addr,
+		To:     eve.addr,
 	}
 	NEop := Delegate{
 		Amount: *new(types.Currency).Set(500),
-		Delegator: alice.addr,
+		To:     alice.addr,
 	}
 	ADop := Delegate{
 		Amount: *new(types.Currency).Set(500),
-		Delegator: eve.addr,
+		To:     eve.addr,
 	}
 	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, eve.addr))
 	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
@@ -331,7 +331,7 @@ func TestValidRetract(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
 	resCode, _ := op.Execute(s, bob.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
-	assert.Equal(t, new(types.Currency).Set(100), &s.GetDelegate(bob.addr).To)
+	assert.Equal(t, new(types.Currency).Set(100), &s.GetDelegate(bob.addr).Amount)
 }
 
 func TestNonValidRetract(t *testing.T) {

@@ -114,7 +114,7 @@ func TestDelegate(t *testing.T) {
 		delegator[i] = p256.GenPrivKeyFromSecret([]byte("yyy" + string(i))).PubKey().Address()
 		c := new(types.Currency).Set(100 * uint64((i)+1))
 		d := types.DelegateValue{
-			To:        *c,
+			Amount:    *c,
 			Delegator: delegator[i],
 		}
 		s.SetDelegate(holders[i], &d)
