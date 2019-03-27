@@ -27,6 +27,10 @@ func (o Delegate) Check(store *store.Store, sender crypto.Address) uint32 {
 	if delegate != nil && !bytes.Equal(delegate.Delegator, o.To) {
 		return code.TxCodeMultipleDelegates
 	}
+	stake := store.GetStake(o.To)
+	if stake.Equals(zero) {
+		return code.TxCodeNoStake
+	}
 	return code.TxCodeOK
 }
 

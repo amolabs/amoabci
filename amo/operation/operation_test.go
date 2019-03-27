@@ -21,8 +21,8 @@ type user struct {
 	addr    crypto.Address
 }
 
-func newUser (privKey p256.PrivKeyP256) user {
-	return user {
+func newUser(privKey p256.PrivKeyP256) user {
+	return user{
 		privKey: privKey,
 		pubKey:  privKey.PubKey(),
 		addr:    privKey.PubKey().Address(),
@@ -70,7 +70,7 @@ func getTestStore() *store.Store {
 	})
 	s.SetStake(alice.addr, new(types.Currency).Set(2000))
 	s.SetDelegate(bob.addr, &types.DelegateValue{
-		Amount: *new(types.Currency).Set(500),
+		Amount:    *new(types.Currency).Set(500),
 		Delegator: alice.addr,
 	})
 	return s
@@ -81,8 +81,8 @@ func TestValidCancel(t *testing.T) {
 	op := Cancel{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s , bob.addr))
-	resCode, _ := op.Execute(s , bob.addr)
+	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
+	resCode, _ := op.Execute(s, bob.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -91,7 +91,7 @@ func TestNonValidCancel(t *testing.T) {
 	op := Cancel{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeTargetNotExists, op.Check(s , eve.addr))
+	assert.Equal(t, code.TxCodeTargetNotExists, op.Check(s, eve.addr))
 }
 
 func TestValidDiscard(t *testing.T) {
@@ -99,8 +99,8 @@ func TestValidDiscard(t *testing.T) {
 	op := Discard{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s , alice.addr))
-	resCode, _ := op.Execute(s , alice.addr)
+	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
+	resCode, _ := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -112,8 +112,8 @@ func TestNonValidDiscard(t *testing.T) {
 	PDOp := Discard{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeTargetNotExists, NEOp.Check(s , alice.addr))
-	assert.Equal(t, code.TxCodePermissionDenied, PDOp.Check(s , eve.addr))
+	assert.Equal(t, code.TxCodeTargetNotExists, NEOp.Check(s, alice.addr))
+	assert.Equal(t, code.TxCodePermissionDenied, PDOp.Check(s, eve.addr))
 }
 
 func TestValidGrant(t *testing.T) {
@@ -123,8 +123,8 @@ func TestValidGrant(t *testing.T) {
 		Grantee: alice.addr,
 		Custody: custody[1],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s , bob.addr))
-	resCode, _ := op.Execute(s , bob.addr)
+	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
+	resCode, _ := op.Execute(s, bob.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -140,8 +140,8 @@ func TestNonValidGrant(t *testing.T) {
 		Grantee: bob.addr,
 		Custody: custody[0],
 	}
-	assert.Equal(t, code.TxCodePermissionDenied, PDop.Check(s , eve.addr))
-	assert.Equal(t, code.TxCodeTargetAlreadyExists, AEop.Check(s , alice.addr))
+	assert.Equal(t, code.TxCodePermissionDenied, PDop.Check(s, eve.addr))
+	assert.Equal(t, code.TxCodeTargetAlreadyExists, AEop.Check(s, alice.addr))
 }
 
 func TestValidRegister(t *testing.T) {
@@ -150,8 +150,8 @@ func TestValidRegister(t *testing.T) {
 		Target:  parcelID[2],
 		Custody: custody[2],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s , alice.addr))
-	resCode, _ := op.Execute(s , alice.addr)
+	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
+	resCode, _ := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -161,7 +161,7 @@ func TestNonValidRegister(t *testing.T) {
 		Target:  parcelID[0],
 		Custody: custody[0],
 	}
-	assert.Equal(t, code.TxCodeTargetAlreadyExists, op.Check(s , alice.addr))
+	assert.Equal(t, code.TxCodeTargetAlreadyExists, op.Check(s, alice.addr))
 }
 
 func TestValidRequest(t *testing.T) {
@@ -170,8 +170,8 @@ func TestValidRequest(t *testing.T) {
 		Target:  parcelID[1],
 		Payment: *new(types.Currency).Set(200),
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s , alice.addr))
-	resCode, _ := op.Execute(s , alice.addr)
+	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
+	resCode, _ := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -193,10 +193,10 @@ func TestNonValidRequest(t *testing.T) {
 		Target:  parcelID[1],
 		Payment: *new(types.Currency).Set(100),
 	}
-	assert.Equal(t, code.TxCodeTargetNotExists, TNop.Check(s , eve.addr))
-	assert.Equal(t, code.TxCodeTargetAlreadyBought, TAop.Check(s , bob.addr))
-	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s , bob.addr))
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NBop.Check(s , eve.addr))
+	assert.Equal(t, code.TxCodeTargetNotExists, TNop.Check(s, eve.addr))
+	assert.Equal(t, code.TxCodeTargetAlreadyBought, TAop.Check(s, bob.addr))
+	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, bob.addr))
+	assert.Equal(t, code.TxCodeNotEnoughBalance, NBop.Check(s, eve.addr))
 }
 
 func TestValidRevoke(t *testing.T) {
@@ -205,8 +205,8 @@ func TestValidRevoke(t *testing.T) {
 		Grantee: bob.addr,
 		Target:  parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s , alice.addr))
-	resCode, _ := op.Execute(s , alice.addr)
+	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
+	resCode, _ := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -220,8 +220,8 @@ func TestNonValidRevoke(t *testing.T) {
 		Grantee: bob.addr,
 		Target:  parcelID[2],
 	}
-	assert.Equal(t, code.TxCodePermissionDenied, PDop.Check(s , eve.addr))
-	assert.Equal(t, code.TxCodeTargetNotExists, TNop.Check(s , alice.addr))
+	assert.Equal(t, code.TxCodePermissionDenied, PDop.Check(s, eve.addr))
+	assert.Equal(t, code.TxCodeTargetNotExists, TNop.Check(s, alice.addr))
 }
 
 func TestValidTransfer(t *testing.T) {
@@ -230,8 +230,8 @@ func TestValidTransfer(t *testing.T) {
 		To:     bob.addr,
 		Amount: *new(types.Currency).Set(1230),
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s , alice.addr))
-	resCode, _ := op.Execute(s , alice.addr)
+	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
+	resCode, _ := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -249,9 +249,9 @@ func TestNonValidTransfer(t *testing.T) {
 		To:     eve.addr,
 		Amount: *new(types.Currency).Set(10),
 	}
-	assert.Equal(t, code.TxCodeBadParam, BPop.Check(s , alice.addr))
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s , eve.addr))
-	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s , eve.addr))
+	assert.Equal(t, code.TxCodeBadParam, BPop.Check(s, alice.addr))
+	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
+	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, eve.addr))
 }
 
 func TestValidStake(t *testing.T) {
@@ -317,15 +317,20 @@ func TestNonValidDelegate(t *testing.T) {
 		Amount: *new(types.Currency).Set(500),
 		To:     eve.addr,
 	}
+	NSop := Delegate{
+		Amount: *new(types.Currency).Set(500),
+		To:     eve.addr,
+	}
 	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, eve.addr))
 	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
 	assert.Equal(t, code.TxCodeMultipleDelegates, ADop.Check(s, bob.addr))
+	assert.Equal(t, code.TxCodeNoStake, NSop.Check(s, alice.addr))
 }
 
 func TestValidRetract(t *testing.T) {
 	s := getTestStore()
 	op := Retract{
-		From: alice.addr,
+		From:   alice.addr,
 		Amount: *new(types.Currency).Set(400),
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
@@ -337,11 +342,11 @@ func TestValidRetract(t *testing.T) {
 func TestNonValidRetract(t *testing.T) {
 	s := getTestStore()
 	op := Retract{
-		From: eve.addr,
+		From:   eve.addr,
 		Amount: *new(types.Currency).Set(500),
 	}
 	NEop := Retract{
-		From: alice.addr,
+		From:   alice.addr,
 		Amount: *new(types.Currency).Set(1000),
 	}
 	assert.Equal(t, code.TxCodeDelegationNotExists, op.Check(s, eve.addr))
