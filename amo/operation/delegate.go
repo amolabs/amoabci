@@ -25,7 +25,7 @@ func (o Delegate) Check(store *store.Store, sender crypto.Address) uint32 {
 	}
 	delegate := store.GetDelegate(sender)
 	if delegate != nil && !bytes.Equal(delegate.Delegator, o.Delegator) {
-		return code.TxCodeAlreadyDelegated
+		return code.TxCodeMultipleDelegates
 	}
 	return code.TxCodeOK
 }
@@ -39,11 +39,11 @@ func (o Delegate) Execute(store *store.Store, sender crypto.Address) (uint32, []
 	delegate := store.GetDelegate(sender)
 	if delegate == nil {
 		delegate = &types.DelegateValue{
-			Amount:    o.Amount,
+			To:        o.Amount,
 			Delegator: o.Delegator,
 		}
 	} else {
-		delegate.Amount.Add(&o.Amount)
+		delegate.To.Add(&o.Amount)
 	}
 	store.SetBalance(sender, balance)
 	store.SetDelegate(sender, delegate)

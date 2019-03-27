@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/types"

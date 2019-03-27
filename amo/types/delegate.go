@@ -3,6 +3,6 @@ package types
 import "github.com/tendermint/tendermint/crypto"
 
 type DelegateValue struct {
-	Amount    Currency       `json:"amount"`
+	To        Currency       `json:"to"`
 	Delegator crypto.Address `json:"delegator"`
 }

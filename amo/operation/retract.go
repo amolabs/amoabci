@@ -25,7 +25,7 @@ func (o Retract) Check(store *store.Store, sender crypto.Address) uint32 {
 	if !bytes.Equal(delegate.Delegator, o.From) {
 		return code.TxCodeBadParam
 	}
-	if delegate.Amount.LessThan(&o.Amount) {
+	if delegate.To.LessThan(&o.Amount) {
 		return code.TxCodeNotEnoughBalance
 	}
 	return code.TxCodeOK
@@ -36,8 +36,8 @@ func (o Retract) Execute(store *store.Store, sender crypto.Address) (uint32, []c
 		return resCode, nil
 	}
 	delegate := store.GetDelegate(sender)
-	delegate.Amount.Sub(&o.Amount)
-	if delegate.Amount.Equals(zero) {
+	delegate.To.Sub(&o.Amount)
+	if delegate.To.Equals(zero) {
 		store.SetDelegate(sender, nil)
 	} else {
 		store.SetDelegate(sender, delegate)
