@@ -14,7 +14,7 @@ import (
 
 var RequestCmd = &cobra.Command{
 	Use:   "request",
-	Short: "Request ...",
+	Short: "Request parcel to purchase with payment as offer amount and extra info",
 	Args:  cobra.NoArgs,
 	RunE:  requestFunc,
 }

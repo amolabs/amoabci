@@ -24,6 +24,56 @@ func Transfer(to crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes
 	return RPCBroadcastTxCommit(msg)
 }
 
+func Stake(amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
+	msg, err := MakeMessage(operation.TxStake, 0, operation.Stake{
+		Amount: *amount,
+	}, key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return RPCBroadcastTxCommit(msg)
+}
+
+func Withdraw(amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
+	msg, err := MakeMessage(operation.TxWithdraw, 0, operation.Withdraw{
+		Amount: *amount,
+	}, key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return RPCBroadcastTxCommit(msg)
+}
+
+func Delegate(to crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
+	msg, err := MakeMessage(operation.TxDelegate, 0, operation.Delegate{
+		To:     to,
+		Amount: *amount,
+	}, key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return RPCBroadcastTxCommit(msg)
+}
+
+func Retract(from crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
+	msg, err := MakeMessage(operation.TxRetract, 0, operation.Retract{
+		From:   from,
+		Amount: *amount,
+	}, key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return RPCBroadcastTxCommit(msg)
+}
+
 func Register(target cmn.HexBytes, custody cmn.HexBytes, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
 	msg, err := MakeMessage(operation.TxRegister, 0, operation.Register{
 		Target:  target,

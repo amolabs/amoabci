@@ -13,7 +13,7 @@ import (
 
 var RegisterCmd = &cobra.Command{
 	Use:   "register",
-	Short: "Register ...",
+	Short: "Register parcel with extra information",
 	Args:  cobra.NoArgs,
 	RunE:  registerFunc,
 }

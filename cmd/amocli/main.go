@@ -13,10 +13,15 @@ import (
  *               |- import <private key> --nickname <nickname>
  *               |- remove <nickname>
  *
- *        |- tx |- transfer --to <address> --amount <uint64>
+ *        |- tx |- transfer --to <address> --amount <currency>
+ *              |
+ *              |- stake <currency>
+ *              |- withdraw <currency>
+ *              |- delegate --to <address> --amount <currency>
+ *              |- retract --from <address> --amount <currecncy>
  *              |
  *              |- register --target <parcelID> --custody <key>
- *              |- request --target <parcelID> --payment <uint64>
+ *              |- request --target <parcelID> --payment <currency>
  *              |- cancel --target <parcelID>
  *              |
  *              |- grant --target <parcelID> --grantee <address> --custody <key>

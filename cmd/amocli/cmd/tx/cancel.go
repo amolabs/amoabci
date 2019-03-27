@@ -14,7 +14,7 @@ import (
 
 var CancelCmd = &cobra.Command{
 	Use:   "cancel",
-	Short: "Cancel ...",
+	Short: "Cancel the request of parcel in store/request",
 	Args:  cobra.NoArgs,
 	RunE:  cancelFunc,
 }

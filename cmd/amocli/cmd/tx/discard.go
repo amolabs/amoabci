@@ -13,7 +13,7 @@ import (
 
 var DiscardCmd = &cobra.Command{
 	Use:   "discard",
-	Short: "Discard ...",
+	Short: "Discard the registered data in store/parcel",
 	Args:  cobra.NoArgs,
 	RunE:  discardFunc,
 }
