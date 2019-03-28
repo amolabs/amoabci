@@ -92,25 +92,25 @@ func getStakeKey(holder []byte) []byte {
 	return append(prefixStake, holder...)
 }
 
-func (s Store) SetStake(holder crypto.Address, amount *atypes.Currency ) {
-	b, err := json.Marshal(amount)
+func (s Store) SetStake(holder crypto.Address, stake *atypes.Stake ) {
+	b, err := json.Marshal(stake)
 	if err != nil {
 		panic(err)
 	}
 	s.dbm.Set(getStakeKey(holder), b)
 }
 
-func (s Store) GetStake(holder crypto.Address) *atypes.Currency {
-	c := atypes.Currency{}
-	balance := s.dbm.Get(getStakeKey(holder))
-	if len(balance) == 0 {
-		return &c
+func (s Store) GetStake(holder crypto.Address) *atypes.Stake {
+	b := s.dbm.Get(getStakeKey(holder))
+	if len(b) == 0 {
+		return nil
 	}
-	err := json.Unmarshal(balance, &c)
+	var stake atypes.Stake
+	err := json.Unmarshal(b, &stake)
 	if err != nil {
 		panic(err)
 	}
-	return &c
+	return &stake
 }
 
 // Delegate store

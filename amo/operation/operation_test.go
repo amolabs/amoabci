@@ -1,6 +1,7 @@
 package operation
 
 import (
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	"testing"
 	"time"
 
@@ -68,7 +69,12 @@ func getTestStore() *store.Store {
 		Custody: custody[0],
 		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
-	s.SetStake(alice.addr, new(types.Currency).Set(2000))
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(alice.addr, &types.Stake{
+		Amount: *new(types.Currency).Set(2000),
+		Validator: k,
+	})
 	s.SetDelegate(bob.addr, &types.DelegateValue{
 		Amount:    *new(types.Currency).Set(500),
 		Delegator: alice.addr,
@@ -258,6 +264,7 @@ func TestValidStake(t *testing.T) {
 	s := getTestStore()
 	op := Stake{
 		Amount: *new(types.Currency).Set(2000),
+		Validator: cmn.RandBytes(32),
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
 	resCode, _ := op.Execute(s, alice.addr)
@@ -268,8 +275,14 @@ func TestNonValidStake(t *testing.T) {
 	s := getTestStore()
 	NEop := Stake{
 		Amount: *new(types.Currency).Set(2000),
+		Validator: cmn.RandBytes(32),
+	}
+	BVop := Stake{
+		Amount: *new(types.Currency).Set(500),
+		Validator: cmn.RandBytes(33),
 	}
 	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
+	assert.Equal(t, code.TxCodeBadValidator, BVop.Check(s, alice.addr))
 }
 
 func TestValidWithdraw(t *testing.T) {
@@ -280,7 +293,7 @@ func TestValidWithdraw(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
 	resCode, _ := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
-	assert.Equal(t, zero, s.GetStake(alice.addr))
+	assert.Equal(t, zero, &s.GetStake(alice.addr).Amount)
 }
 
 func TestNonValidWithdraw(t *testing.T) {

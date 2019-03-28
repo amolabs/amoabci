@@ -1,6 +1,7 @@
 package store
 
 import (
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	"os"
 	"testing"
 	"time"
@@ -99,9 +100,14 @@ func TestStake(t *testing.T) {
 	addrs := make([]crypto.Address, 10)
 	for i := range addrs {
 		addrs[i] = p256.GenPrivKeyFromSecret([]byte("xxx" + string(i))).PubKey().Address()
-		c := new(types.Currency).Set(100 * uint64((i)+1))
-		s.SetStake(addrs[i], c)
-		assert.Equal(t, c, s.GetStake(addrs[i]))
+		var k ed25519.PubKeyEd25519
+		copy(k[:], cmn.RandBytes(32) )
+		stake := types.Stake{
+			Amount: *new(types.Currency).Set(100 * uint64((i)+1)),
+			Validator: k,
+		}
+		s.SetStake(addrs[i], &stake)
+		assert.Equal(t, &stake, s.GetStake(addrs[i]))
 	}
 }
 

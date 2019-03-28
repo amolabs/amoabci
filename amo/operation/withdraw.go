@@ -16,7 +16,7 @@ type Withdraw struct {
 
 func (o Withdraw) Check(store *store.Store, sender crypto.Address) uint32 {
 	stake := store.GetStake(sender)
-	if stake.LessThan(&o.Amount) {
+	if stake == nil || stake.Amount.LessThan(&o.Amount) {
 		return code.TxCodeNotEnoughBalance
 	}
 	return code.TxCodeOK
@@ -28,7 +28,7 @@ func (o Withdraw) Execute(store *store.Store, sender crypto.Address) (uint32, []
 	}
 	stake := store.GetStake(sender)
 	balance := store.GetBalance(sender)
-	stake.Sub(&o.Amount)
+	stake.Amount.Sub(&o.Amount)
 	balance.Add(&o.Amount)
 	store.SetStake(sender, stake)
 	store.SetBalance(sender, balance)

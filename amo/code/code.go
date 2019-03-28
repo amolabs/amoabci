@@ -14,6 +14,7 @@ const (
 	TxCodeMultipleDelegates
 	TxCodeDelegationNotExists
 	TxCodeNoStake
+	TxCodeBadValidator
 )
 
 const (
