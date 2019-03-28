@@ -9,6 +9,11 @@ import (
  *
  * amocli |- tx |- transfer --to <address> --amount <uint64>
  *				|
+ *              |- stake <currency>
+ *              |- withdraw <currency>
+ *              |- delegate --to <address> --amount <currency>
+ *              |- retract --from <address> --amount <currecncy>
+ *				|
  *		    	|- register --target <file> --custody <key>
  *				|- request --target <file> --payment <uint64>
  *				|- cancel --target <file>
@@ -34,6 +39,11 @@ var txCmd = &cobra.Command{
 func init() {
 	txCmd.AddCommand(
 		tx.TransferCmd,
+		LineBreak,
+		tx.StakeCmd,
+		tx.WithdrawCmd,
+		tx.DelegateCmd,
+		tx.RetractCmd,
 		LineBreak,
 		tx.RegisterCmd,
 		tx.RequestCmd,

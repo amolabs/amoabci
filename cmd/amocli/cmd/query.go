@@ -1,18 +1,22 @@
 package cmd
 
 import (
-	"github.com/amolabs/amoabci/cmd/amocli/cmd/query"
 	"github.com/spf13/cobra"
+
+	"github.com/amolabs/amoabci/cmd/amocli/cmd/query"
 )
 
 /* Commands (expected hierarchy)
  *
  * amocli |- query |- balance <address>
- *				   |
-*				   |- parcel <parcelID>
-*				   |- request --buyer <address> --target <parcelID>
-*				   |- usage --buyer <address> --target <parcelID>
-*/
+ *                 |
+ *                 |- stake <address>
+ *                 |- delegate --holder <address> --delegator <address>
+ *                 |
+ *                 |- parcel <parcelID>
+ *                 |- request --buyer <address> --target <parcelID>
+ *                 |- usage --buyer <address> --target <parcelID>
+ */
 
 var queryCmd = &cobra.Command{
 	Use:     "query",
@@ -30,6 +34,9 @@ var queryCmd = &cobra.Command{
 func init() {
 	queryCmd.AddCommand(
 		query.BalanceCmd,
+		LineBreak,
+		query.StakeCmd,
+		query.DelegateCmd,
 		LineBreak,
 		query.ParcelCmd,
 		query.RequestCmd,

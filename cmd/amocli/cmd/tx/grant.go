@@ -13,7 +13,7 @@ import (
 
 var GrantCmd = &cobra.Command{
 	Use:   "grant",
-	Short: "Grant ...",
+	Short: "Grant the request of parcel in store/request by data owner",
 	Args:  cobra.NoArgs,
 	RunE:  grantFunc,
 }
