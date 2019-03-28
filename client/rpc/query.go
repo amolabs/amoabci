@@ -30,22 +30,22 @@ func QueryBalance(address crypto.Address) (types.Currency, error) {
 	return balance, nil
 }
 
-func QueryStake(address crypto.Address) (types.Currency, error) {
-	var stake types.Currency
+func QueryStake(address crypto.Address) (types.Stake, error) {
+	var stake types.Stake
 
 	bytes, err := json.Marshal(address)
 	if err != nil {
-		return *new(types.Currency).Set(0), err
+		return *new(types.Stake), err
 	}
 
 	result, err := RPCABCIQuery("/stake", tm.HexBytes(bytes))
 	if err != nil {
-		return *new(types.Currency).Set(0), err
+		return *new(types.Stake), err
 	}
 
 	err = json.Unmarshal(result.Response.Value, &stake)
 	if err != nil {
-		return *new(types.Currency).Set(0), err
+		return *new(types.Stake), err
 	}
 
 	return stake, nil

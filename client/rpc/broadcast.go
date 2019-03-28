@@ -26,7 +26,8 @@ func Transfer(to crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes
 
 func Stake(amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
 	msg, err := MakeMessage(operation.TxStake, 0, operation.Stake{
-		Amount: *amount,
+		Amount:    *amount,
+		Validator: key.PubKey,
 	}, key)
 
 	if err != nil {

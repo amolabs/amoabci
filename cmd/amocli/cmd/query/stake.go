@@ -27,7 +27,7 @@ func stakeFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(stake)
+	fmt.Printf("amount: %s, validator: %s\n", stake.Amount, stake.Validator)
 
 	return nil
 }
