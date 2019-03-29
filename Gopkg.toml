@@ -31,9 +31,6 @@
 [[constraint]]
   name = "github.com/paust-team/paust-db"
 
-[[constraint]]
-  name = "github.com/mattn/go-sqlite3"
-
 [prune]
   go-tests = true
   unused-packages = true

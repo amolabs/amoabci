@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -53,11 +54,12 @@ type AMOApplication struct {
 	state  State
 	store  *astore.Store
 	logger log.Logger
+	vm     *ValidatorManager
 }
 
 var _ abci.Application = (*AMOApplication)(nil)
 
-func NewAMOApplication(db dbm.DB, l log.Logger) *AMOApplication {
+func NewAMOApplication(db dbm.DB, index dbm.DB,l log.Logger) *AMOApplication {
 	state := loadState(db)
 	if l == nil {
 		l = log.NewNopLogger()
@@ -66,6 +68,7 @@ func NewAMOApplication(db dbm.DB, l log.Logger) *AMOApplication {
 		state:  state,
 		store:  astore.NewStore(db),
 		logger: l,
+		vm:     NewValidatorManager(index),
 	}
 	return app
 }
@@ -79,7 +82,7 @@ func (app *AMOApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo
 }
 
 func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
-	message, op := operation.ParseTx(tx)
+	message, op, isStake := operation.ParseTx(tx)
 	if !message.Verify() {
 		return abci.ResponseDeliverTx{
 			Code: code.TxCodeBadSignature,
@@ -97,6 +100,21 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 	case operation.TxTransfer:
 		app.state.Size += 1
 	}
+	if isStake {
+		var pub ed25519.PubKeyEd25519
+		switch message.Type {
+		case operation.TxStake:
+			stake := op.(*operation.Stake)
+			copy(pub[:], stake.Validator)
+		case operation.TxWithdraw:
+			pub = app.store.GetStake(message.Sig.PubKey.Address()).Validator
+		case operation.TxDelegate:
+			pub = app.store.GetStake(op.(*operation.Delegate).To).Validator
+		case operation.TxRetract:
+			pub = app.store.GetStake(op.(*operation.Retract).From).Validator
+		}
+		app.vm.AddStakeInfo(message.Type, pub, op)
+	}
 	return abci.ResponseDeliverTx{
 		Code: resCode,
 		Tags: tags,
@@ -104,7 +122,7 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 }
 
 func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
-	message, op := operation.ParseTx(tx)
+	message, op, _ := operation.ParseTx(tx)
 	if !message.Verify() {
 		return abci.ResponseCheckTx{
 			Code: code.TxCodeBadSignature,
@@ -160,4 +178,12 @@ func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseIni
 	app.logger.Info("InitChain: new genesis app state applied.")
 
 	return abci.ResponseInitChain{}
+}
+
+func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
+	if len(app.vm.info) != 0 {
+		app.vm.Index()
+		res.ValidatorUpdates = app.vm.UpdateValidator()
+	}
+	return res
 }

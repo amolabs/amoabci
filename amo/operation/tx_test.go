@@ -27,7 +27,7 @@ func TestParseTx(t *testing.T) {
 		panic(err)
 	}
 	bMsg, _ := json.Marshal(message)
-	msg, op := ParseTx(bMsg)
+	msg, op, _ := ParseTx(bMsg)
 	assert.Equal(t, message, msg)
 	assert.Equal(t, &transfer, op)
 	assert.True(t, message.Verify())
