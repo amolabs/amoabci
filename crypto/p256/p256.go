@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"strings"
 
-	amino "github.com/tendermint/go-amino"
+	"github.com/tendermint/go-amino"
 	tmc "github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -93,9 +93,9 @@ func (privKey PrivKeyP256) Sign(msg []byte) ([]byte, error) {
 	}
 	rb := r.Bytes()
 	sb := s.Bytes()
-	sig := make([]byte, 0, len(rb)+len(sb))
-	sig = append(sig, rb...)
-	sig = append(sig, sb...)
+	sig := make([]byte, 64)
+	copy(sig[32-len(rb):], rb)
+	copy(sig[64-len(sb):], sb)
 	// concat r, s
 	return sig, nil
 }
@@ -103,8 +103,10 @@ func (privKey PrivKeyP256) Sign(msg []byte) ([]byte, error) {
 func (privKey PrivKeyP256) PubKey() tmc.PubKey {
 	priv := privKey.ToECDSA()
 	pubKey := PubKeyP256{0x04}
-	copy(pubKey[1:], priv.X.Bytes())
-	copy(pubKey[33:], priv.Y.Bytes())
+	x := priv.X.Bytes()
+	y := priv.Y.Bytes()
+	copy(pubKey[33-len(x):], x)
+	copy(pubKey[65-len(y):], y)
 	return pubKey
 }
 
@@ -159,7 +161,7 @@ func (pubKey PubKeyP256) ToECDSA() *ecdsa.PublicKey {
 	}
 }
 
-func (pubKey PubKeyP256) VerifyBytes(msg []byte, sig []byte) bool {
+func (pubKey PubKeyP256) VerifyBytes(msg []byte, sig []byte) (res bool) {
 	if len(sig) != 64 {
 		return false
 	}
