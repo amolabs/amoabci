@@ -1,13 +1,12 @@
 package store
 
 import (
-	"github.com/tendermint/tendermint/crypto/ed25519"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/db"
 
@@ -97,18 +96,19 @@ func TestUsage(t *testing.T) {
 
 func TestStake(t *testing.T) {
 	s := NewStore(db.NewMemDB(), db.NewMemDB())
-	addrs := make([]crypto.Address, 10)
-	for i := range addrs {
-		addrs[i] = p256.GenPrivKeyFromSecret([]byte("xxx" + string(i))).PubKey().Address()
-		var k ed25519.PubKeyEd25519
-		copy(k[:], cmn.RandBytes(32))
-		stake := types.Stake{
-			Amount:    *new(types.Currency).Set(100 * uint64((i)+1)),
-			Validator: k,
-		}
-		s.SetStake(addrs[i], &stake)
-		assert.Equal(t, &stake, s.GetStake(addrs[i]))
+	holder := p256.GenPrivKeyFromSecret([]byte("holder")).PubKey().Address()
+	valKey := ed25519.GenPrivKeyFromSecret([]byte("holder")).PubKey().(ed25519.PubKeyEd25519)
+	validator := valKey.Address()
+	stake := types.Stake{
+		Amount:    *new(types.Currency).Set(100),
+		Validator: valKey,
 	}
+	s.SetStake(holder, &stake)
+
+	assert.NotNil(t, s.GetStake(holder))
+	assert.Equal(t, stake, *s.GetStake(holder))
+	assert.NotNil(t, s.GetStakeByValidator(validator))
+	assert.Equal(t, stake, *s.GetStakeByValidator(validator))
 }
 
 func TestDelegate(t *testing.T) {
@@ -123,10 +123,12 @@ func TestDelegate(t *testing.T) {
 		Validator: valkey,
 	}
 	delegate1 := &types.Delegate{
+		Holder:    holder1,
 		Amount:    *new(types.Currency).Set(101),
 		Delegator: staker,
 	}
 	delegate2 := &types.Delegate{
+		Holder:    holder2,
 		Amount:    *new(types.Currency).Set(102),
 		Delegator: staker,
 	}

@@ -362,7 +362,7 @@ func TestValidatorUpdates(t *testing.T) {
 
 	// begin block
 	blkRequest := abci.RequestBeginBlock{}
-	app.BeginBlock(blkRequest) // TODO: does nothing yet
+	app.BeginBlock(blkRequest) // does nothing here
 
 	// deliver stake tx
 	rawTx := makeTxStake(priv, 100)
@@ -374,6 +374,61 @@ func TestValidatorUpdates(t *testing.T) {
 	validators := app.EndBlock(endRequest).ValidatorUpdates
 	assert.Equal(t, 1, len(validators))
 
-	// test voting power calculcation
+	// TODO: test voting power calculcation
 	assert.Equal(t, int64(100), validators[0].Power)
+}
+
+func TestBlockReward(t *testing.T) {
+	// setup
+	app := NewAMOApplication(tdb.NewMemDB(), tdb.NewMemDB(), nil)
+
+	// stake holder
+	priv := ed25519.GenPrivKey()
+	validator, _ := priv.PubKey().(ed25519.PubKeyEd25519)
+	addrbin, _ := hex.DecodeString("BCECB223B976F27D77B0E03E95602DABCC28D876")
+	holder := crypto.Address(addrbin)
+	stake := types.Stake{
+		Amount:    *new(types.Currency).Set(150),
+		Validator: validator,
+	}
+	app.store.SetStake(holder, &stake)
+
+	// delegated stake holders
+	daddr1 := p256.GenPrivKeyFromSecret([]byte("d1")).PubKey().Address()
+	daddr2 := p256.GenPrivKeyFromSecret([]byte("d2")).PubKey().Address()
+	delegate1 := types.Delegate{
+		Holder:    daddr1,
+		Amount:    *new(types.Currency).Set(100),
+		Delegator: holder,
+	}
+	delegate2 := types.Delegate{
+		Holder:    daddr2,
+		Amount:    *new(types.Currency).Set(200),
+		Delegator: holder,
+	}
+	app.store.SetDelegate(daddr1, &delegate1)
+	app.store.SetDelegate(daddr2, &delegate2)
+
+	// execute
+	req := abci.RequestBeginBlock{
+		Header: abci.Header{
+			NumTxs:          2,
+			ProposerAddress: validator.Address(),
+		},
+	}
+	_ = app.BeginBlock(req)
+
+	// check distributed rewards
+	bal := app.store.GetBalance(holder)
+	assert.Equal(t,
+		new(types.Currency).Set(uint64(types.OneAMOUint64*1.2/2)),
+		bal)
+	bal = app.store.GetBalance(daddr1)
+	assert.Equal(t,
+		new(types.Currency).Set(uint64(types.OneAMOUint64*1.2/6)),
+		bal)
+	bal = app.store.GetBalance(daddr2)
+	assert.Equal(t,
+		new(types.Currency).Set(uint64(types.OneAMOUint64*1.2/3)),
+		bal)
 }

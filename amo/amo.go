@@ -2,6 +2,7 @@ package amo
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -26,6 +27,10 @@ var (
 
 const (
 	maxValidators = 100
+	wValidator    = 2
+	wDelegate     = 1
+	blkRewardAMO  = types.OneAMOUint64
+	txRewardAMO   = uint64(types.OneAMOUint64 / 10)
 )
 
 type State struct {
@@ -227,4 +232,66 @@ func calcAdjustFactor(stakes []*types.Stake) uint {
 		}
 	}
 	return shifts
+}
+
+func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+	proposer := req.Header.GetProposerAddress()
+	app.logger.Debug("BeginBlock()", "proposer", hex.EncodeToString(proposer))
+	fmt.Println("proposer =", hex.EncodeToString(proposer)) //
+	staker := app.store.GetHolderByValidator(proposer)
+	stake := app.store.GetStake(staker)
+	if stake == nil {
+		return abci.ResponseBeginBlock{}
+	}
+	fmt.Println("staker =", hex.EncodeToString(staker)) //
+	ds := app.store.GetDelegatesByDelegator(staker)
+	app.logger.Debug("BeginBlock()", "delegators", len(ds))
+
+	var tmp, tmp2 types.Currency
+
+	// total reward
+	numTxs := req.Header.GetNumTxs()
+	var rTotal, rTx types.Currency
+	rTotal.Set(blkRewardAMO)
+	rTx.Set(txRewardAMO)
+	tmp.SetInt64(numTxs)
+	tmp.Mul(&tmp.Int, &rTx.Int)
+	rTotal.Add(&tmp)
+
+	// weighted sum
+	var wsum, w big.Int
+	w.SetInt64(wValidator)
+	wsum.Mul(&w, &stake.Amount.Int)
+	w.SetInt64(wDelegate)
+	for _, d := range ds {
+		tmp.Mul(&w, &d.Amount.Int)
+		wsum.Add(&wsum, &tmp.Int)
+	}
+	// individual rewards
+	tmp.Set(0)
+	for _, d := range ds {
+		tmp2 = *partialReward(wDelegate, &d.Amount.Int, &wsum, &rTotal)
+		tmp.Add(&tmp2)
+		app.store.SetBalance(d.Holder, &tmp2)
+	}
+	tmp2.Int.Sub(&rTotal.Int, &tmp.Int)
+	app.store.SetBalance(staker, &tmp2)
+
+	return abci.ResponseBeginBlock{}
+}
+
+// r = (weight * stake / total) * base
+// TODO: eliminate ambiguity in float computation
+func partialReward(weight int64, stake, total *big.Int, base *types.Currency) *types.Currency {
+	var wf, t1f, t2f big.Float
+	wf.SetInt64(weight)
+	t1f.SetInt(stake)
+	t1f.Mul(&wf, &t1f)
+	t2f.SetInt(total)
+	t1f.Quo(&t1f, &t2f)
+	t2f.SetInt(&base.Int)
+	t1f.Mul(&t1f, &t2f)
+	r := types.Currency{}
+	t1f.Int(&r.Int)
+	return &r
 }
