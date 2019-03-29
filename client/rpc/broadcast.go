@@ -24,10 +24,10 @@ func Transfer(to crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes
 	return RPCBroadcastTxCommit(msg)
 }
 
-func Stake(amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
+func Stake(amount *atypes.Currency, vKey cmn.HexBytes ,key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
 	msg, err := MakeMessage(operation.TxStake, 0, operation.Stake{
 		Amount:    *amount,
-		Validator: key.PubKey,
+		Validator: vKey,
 	}, key)
 
 	if err != nil {

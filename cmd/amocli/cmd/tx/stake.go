@@ -1,6 +1,7 @@
 package tx
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -12,9 +13,9 @@ import (
 )
 
 var StakeCmd = &cobra.Command{
-	Use:   "stake <currency>",
+	Use:   "stake --amount <currency> --validator <ed25519>",
 	Short: "Lock AMO coin as a stake of the coin holder",
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cobra.MinimumNArgs(2),
 	RunE:  stakeFunc,
 }
 
@@ -24,12 +25,17 @@ func stakeFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	p, err := hex.DecodeString(args[1])
+	if err != nil {
+		return err
+	}
+
 	key, err := GetRawKey(util.DefaultKeyFilePath())
 	if err != nil {
 		return err
 	}
 
-	result, err := rpc.Stake(amount, key)
+	result, err := rpc.Stake(amount, p, key)
 	if err != nil {
 		return err
 	}

@@ -9,7 +9,7 @@ import (
  *
  * amocli |- tx |- transfer --to <address> --amount <uint64>
  *				|
- *              |- stake <currency>
+ *              |- stake --amount <currency> --validator <ed25519>
  *              |- withdraw <currency>
  *              |- delegate --to <address> --amount <currency>
  *              |- retract --from <address> --amount <currecncy>
