@@ -3,9 +3,11 @@ package amo
 import (
 	"bytes"
 	"encoding/json"
+
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	tm "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/common"
 	tdb "github.com/tendermint/tendermint/libs/db"
 
@@ -72,8 +74,10 @@ func TestIndex(t *testing.T) {
 			j--
 		}
 	}
-	app.vm.Index()
-	for i, v := range app.vm.UpdateValidator() {
+	res := app.EndBlock(tm.RequestEndBlock{
+		Height: 1,
+	})
+	for i, v := range res.ValidatorUpdates {
 		assert.True(t, bytes.Equal(v.PubKey.Data, u[i].nodeKey))
 	}
 }
