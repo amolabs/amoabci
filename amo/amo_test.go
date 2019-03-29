@@ -19,7 +19,7 @@ import (
 
 func TestInitChain(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, nil)
+	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
 	res := app.InitChain(req)
@@ -36,7 +36,7 @@ func TestInitChain(t *testing.T) {
 
 func TestQueryDefault(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, nil)
+	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
 
 	// query
 	req := abci.RequestQuery{}
@@ -47,7 +47,7 @@ func TestQueryDefault(t *testing.T) {
 
 func TestQueryBalance(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, nil)
+	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -93,7 +93,7 @@ func TestQueryBalance(t *testing.T) {
 
 func TestQueryParcel(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, nil)
+	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -146,7 +146,7 @@ func TestQueryParcel(t *testing.T) {
 
 func TestQueryRequest(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, nil)
+	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -225,7 +225,7 @@ func TestQueryRequest(t *testing.T) {
 
 func TestQueryUsage(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, nil)
+	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -306,17 +306,17 @@ func TestSignedTransactionTest(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, nil)
+	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
 	tx := operation.Transfer{
-		To: p256.GenPrivKeyFromSecret([]byte("bob")).PubKey().Address(),
+		To:     p256.GenPrivKeyFromSecret([]byte("bob")).PubKey().Address(),
 		Amount: *new(types.Currency).Set(500),
 	}
 	payload, err := json.Marshal(tx)
 	assert.NoError(t, err)
 	msg := operation.Message{
-		Type: operation.TxTransfer,
+		Type:   operation.TxTransfer,
 		Params: payload,
 	}
 

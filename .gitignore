@@ -29,3 +29,5 @@ blockchain/
 /amod
 DOCKER/amocli
 DOCKER/amod
+
+.DS_Storeg

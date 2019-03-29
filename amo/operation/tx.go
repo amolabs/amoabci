@@ -108,7 +108,7 @@ type Operation interface {
 	Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair)
 }
 
-func ParseTx(tx []byte) (Message, Operation) {
+func ParseTx(tx []byte) (Message, Operation, bool) {
 	var message Message
 
 	err := json.Unmarshal(tx, &message)
@@ -116,6 +116,7 @@ func ParseTx(tx []byte) (Message, Operation) {
 		panic(err)
 	}
 
+	isStake := false
 	message.Type = strings.ToLower(message.Type)
 	var payload interface{}
 	switch message.Type {
@@ -135,12 +136,16 @@ func ParseTx(tx []byte) (Message, Operation) {
 		payload = new(Discard)
 	case TxStake:
 		payload = new(Stake)
+		isStake = true
 	case TxWithdraw:
 		payload = new(Withdraw)
+		isStake = true
 	case TxDelegate:
 		payload = new(Delegate)
+		isStake = true
 	case TxRetract:
 		payload = new(Retract)
+		isStake = true
 	default:
 		panic(cmn.NewError("Invalid operation type: %v", message.Type))
 	}
@@ -150,5 +155,5 @@ func ParseTx(tx []byte) (Message, Operation) {
 		panic(err)
 	}
 
-	return message, payload.(Operation)
+	return message, payload.(Operation), isStake
 }
