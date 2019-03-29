@@ -64,13 +64,13 @@ func (c *Currency) UnmarshalJSON(data []byte) error {
 	}
 	*c = Currency{}
 	s = s[1 : len(s)-1]
-	if len(s) > currencyLen*2 {
-		return cmn.NewError("Currency supports up to 32 bytes(%v)", s)
-	}
 	if len(s) == 0 {
 		return nil
 	}
 	_, err := c.SetString(s, 10)
+	if c.Int.Cmp(&maxCurrency) == 1 {
+		return cmn.NewError("Currency supports up to 32 bytes(%v)", s)
+	}
 	return err
 }
 

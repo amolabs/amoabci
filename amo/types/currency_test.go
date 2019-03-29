@@ -54,3 +54,10 @@ func TestCurrencyAdd(t *testing.T) {
 	// x > z
 	assert.False(t, x.GreaterThan(y))
 }
+
+func TestCurrencyMax(t *testing.T) {
+	_, err := new(Currency).SetString("7" + maxCurrencyHex[1:] , 16)
+	assert.NoError(t, err)
+	_, err = new(Currency).SetString(maxCurrencyHex + "FF" , 16)
+	assert.Error(t, err)
+}
