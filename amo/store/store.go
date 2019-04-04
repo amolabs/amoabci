@@ -3,6 +3,7 @@ package store
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/db"
@@ -142,24 +143,28 @@ func getDelegateKey(holder []byte) []byte {
 	return append(prefixDelegate, holder...)
 }
 
-func (s Store) SetDelegate(holder crypto.Address, value *atypes.Delegate) {
+func (s Store) SetDelegate(holder crypto.Address, value *atypes.Delegate) error {
 	b, err := json.Marshal(value)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	// before state update
 	es := s.GetEffStake(value.Delegator)
-	if es != nil {
-		before := makeEffStakeKey(s.GetEffStake(value.Delegator).Amount, value.Delegator)
+	if es == nil {
+		return errors.New("No stake for a delegator")
+	} else {
+		before := makeEffStakeKey(es.Amount, value.Delegator)
 		if s.indexEffStake.Has(before) {
 			s.indexEffStake.Delete(before)
 		}
 	}
+	// state update
 	s.stateDB.Set(getDelegateKey(holder), b)
-	s.indexDelegator.Set(append(value.Delegator, holder...), nil)
 	// after state update
+	s.indexDelegator.Set(append(value.Delegator, holder...), nil)
 	after := makeEffStakeKey(s.GetEffStake(value.Delegator).Amount, value.Delegator)
 	s.indexEffStake.Set(after, nil)
+	return nil
 }
 
 func (s Store) GetDelegate(holder crypto.Address) *atypes.Delegate {

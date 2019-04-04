@@ -118,31 +118,28 @@ func TestDelegate(t *testing.T) {
 	valkey, _ := ed25519.GenPrivKeyFromSecret([]byte("val")).PubKey().(ed25519.PubKeyEd25519)
 	holder1 := p256.GenPrivKeyFromSecret([]byte("holder1")).PubKey().Address()
 	holder2 := p256.GenPrivKeyFromSecret([]byte("holder2")).PubKey().Address()
-
-	// TODO: test error handling
-
-	// staker must have his own stake in order to be a delegator.
 	stake := types.Stake{
 		Amount:    *new(types.Currency).Set(100),
 		Validator: valkey,
 	}
-	s.SetStake(staker, &stake)
 	delegate1 := &types.Delegate{
 		Amount:    *new(types.Currency).Set(101),
 		Delegator: staker,
 	}
-	s.SetDelegate(holder1, delegate1)
 	delegate2 := &types.Delegate{
 		Amount:    *new(types.Currency).Set(102),
 		Delegator: staker,
 	}
+
+	// staker must have his own stake in order to be a delegator.
+	assert.Error(t, s.SetDelegate(holder1, delegate1))
+
+	s.SetStake(staker, &stake)
+	s.SetDelegate(holder1, delegate1)
 	s.SetDelegate(holder2, delegate2)
 
-	var d *types.Delegate
-	d = s.GetDelegate(holder1)
-	assert.Equal(t, delegate1, d)
-	d = s.GetDelegate(holder2)
-	assert.Equal(t, delegate2, d)
+	assert.Equal(t, delegate1, s.GetDelegate(holder1))
+	assert.Equal(t, delegate2, s.GetDelegate(holder2))
 
 	// test delegator search index
 	ds := s.GetDelegatesByDelegator(staker)
