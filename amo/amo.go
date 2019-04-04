@@ -4,21 +4,28 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+	tm "github.com/tendermint/tendermint/types"
 	"github.com/tendermint/tendermint/version"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/operation"
 	astore "github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 var (
 	stateKey                         = []byte("stateKey")
 	ProtocolVersion version.Protocol = 0x1
+)
+
+const (
+	maxValidators = 100
 )
 
 type State struct {
@@ -54,21 +61,19 @@ type AMOApplication struct {
 	state  State
 	store  *astore.Store
 	logger log.Logger
-	vm     *ValidatorManager
 }
 
 var _ abci.Application = (*AMOApplication)(nil)
 
-func NewAMOApplication(db dbm.DB, index dbm.DB,l log.Logger) *AMOApplication {
+func NewAMOApplication(db dbm.DB, index dbm.DB, l log.Logger) *AMOApplication {
 	state := loadState(db)
 	if l == nil {
 		l = log.NewNopLogger()
 	}
 	app := &AMOApplication{
 		state:  state,
-		store:  astore.NewStore(db),
+		store:  astore.NewStore(db, index),
 		logger: l,
-		vm:     NewValidatorManager(index),
 	}
 	return app
 }
@@ -113,7 +118,6 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 		case operation.TxRetract:
 			pub = app.store.GetStake(op.(*operation.Retract).From).Validator
 		}
-		app.vm.AddStakeInfo(message.Type, pub, op)
 	}
 	return abci.ResponseDeliverTx{
 		Code: resCode,
@@ -181,9 +185,46 @@ func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseIni
 }
 
 func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
-	if len(app.vm.info) != 0 {
-		app.vm.Index()
-		res.ValidatorUpdates = app.vm.UpdateValidator()
+	var vals abci.ValidatorUpdates
+	stakes := app.store.GetTopStakes(maxValidators)
+	adjFactor := calcAdjustFactor(stakes)
+	for _, stake := range stakes {
+		key := abci.PubKey{ // TODO
+			Type: "ed25519",
+			Data: stake.Validator[:],
+		}
+		var power big.Int
+		power.Rsh(&stake.Amount.Int, adjFactor)
+		val := abci.ValidatorUpdate{
+			PubKey: key,
+			Power:  power.Int64(),
+		}
+		vals = append(vals, val)
 	}
+	res.ValidatorUpdates = vals
 	return res
+}
+
+func calcAdjustFactor(stakes []*types.Stake) uint {
+	var vp big.Int
+	max := (tm.MaxTotalVotingPower)
+	var vps int64 = 0
+	var shifts uint = 0
+	for _, stake := range stakes {
+		vp = stake.Amount.Int
+		vp.Rsh(&vp, shifts)
+		for !vp.IsInt64() {
+			vp.Rsh(&vp, 1)
+			shifts++
+		}
+		vpi := vp.Int64()
+		tmp := vps + vpi
+		if tmp < vps || tmp > max {
+			vps >>= 1
+			vpi >>= 1
+			shifts++
+			tmp = vps + vpi
+		}
+	}
+	return shifts
 }

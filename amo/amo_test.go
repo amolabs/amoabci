@@ -3,16 +3,17 @@ package amo
 import (
 	"encoding/hex"
 	"encoding/json"
-	"github.com/amolabs/amoabci/amo/operation"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	tdb "github.com/tendermint/tendermint/libs/db"
 
 	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/operation"
 	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/crypto/p256"
 )
@@ -332,4 +333,47 @@ func TestSignedTransactionTest(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, code.TxCodeOK, app.CheckTx(rawMsg).Code)
 	assert.Equal(t, code.TxCodeOK, app.DeliverTx(rawMsg).Code)
+}
+
+func makeTxStake(priv p256.PrivKeyP256, amount uint64) []byte {
+	//staker := priv.PubKey().Address()
+	validator, _ := ed25519.GenPrivKey().PubKey().(ed25519.PubKeyEd25519)
+	op := operation.Stake{
+		Amount:    *new(types.Currency).Set(amount),
+		Validator: validator[:],
+	}
+	payload, _ := json.Marshal(op)
+	tx := operation.Message{
+		Type:   operation.TxStake,
+		Params: payload,
+	}
+	tx.Sign(priv)
+	rawTx, _ := json.Marshal(tx)
+	return rawTx
+}
+
+func TestValidatorUpdates(t *testing.T) {
+	db := tdb.NewMemDB()
+	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
+
+	// setup
+	priv := p256.GenPrivKeyFromSecret([]byte("staker"))
+	app.store.SetBalance(priv.PubKey().Address(), new(types.Currency).Set(200))
+
+	// begin block
+	blkRequest := abci.RequestBeginBlock{}
+	app.BeginBlock(blkRequest) // TODO: does nothing yet
+
+	// deliver stake tx
+	rawTx := makeTxStake(priv, 100)
+	resDeliver := app.DeliverTx(rawTx)
+	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
+
+	// end block
+	endRequest := abci.RequestEndBlock{Height: 1}
+	validators := app.EndBlock(endRequest).ValidatorUpdates
+	assert.Equal(t, 1, len(validators))
+
+	// test voting power calculcation
+	assert.Equal(t, int64(100), validators[0].Power)
 }

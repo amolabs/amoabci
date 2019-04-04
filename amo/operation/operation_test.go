@@ -47,7 +47,7 @@ var custody = []cmn.HexBytes{
 }
 
 func getTestStore() *store.Store {
-	s := store.NewStore(db.NewMemDB())
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 3000)
 	s.SetBalanceUint64(bob.addr, 1000)
 	s.SetBalanceUint64(eve.addr, 50)
@@ -72,10 +72,10 @@ func getTestStore() *store.Store {
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
 	s.SetStake(alice.addr, &types.Stake{
-		Amount: *new(types.Currency).Set(2000),
+		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
-	s.SetDelegate(bob.addr, &types.DelegateValue{
+	s.SetDelegate(bob.addr, &types.Delegate{
 		Amount:    *new(types.Currency).Set(500),
 		Delegator: alice.addr,
 	})
@@ -263,7 +263,7 @@ func TestNonValidTransfer(t *testing.T) {
 func TestValidStake(t *testing.T) {
 	s := getTestStore()
 	op := Stake{
-		Amount: *new(types.Currency).Set(2000),
+		Amount:    *new(types.Currency).Set(2000),
 		Validator: cmn.RandBytes(32),
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
@@ -274,11 +274,11 @@ func TestValidStake(t *testing.T) {
 func TestNonValidStake(t *testing.T) {
 	s := getTestStore()
 	NEop := Stake{
-		Amount: *new(types.Currency).Set(2000),
+		Amount:    *new(types.Currency).Set(2000),
 		Validator: cmn.RandBytes(32),
 	}
 	BVop := Stake{
-		Amount: *new(types.Currency).Set(500),
+		Amount:    *new(types.Currency).Set(500),
 		Validator: cmn.RandBytes(33),
 	}
 	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))

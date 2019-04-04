@@ -42,7 +42,7 @@ func (o Delegate) Execute(store *store.Store, sender crypto.Address) (uint32, []
 	balance.Sub(&o.Amount)
 	delegate := store.GetDelegate(sender)
 	if delegate == nil {
-		delegate = &types.DelegateValue{
+		delegate = &types.Delegate{
 			Amount:    o.Amount,
 			Delegator: o.To,
 		}

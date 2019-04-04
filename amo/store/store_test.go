@@ -32,7 +32,7 @@ func tearDown(t *testing.T) {
 }
 
 func TestBalance(t *testing.T) {
-	s := NewStore(db.NewMemDB())
+	s := NewStore(db.NewMemDB(), db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	balance := new(types.Currency).Set(1000)
 	s.SetBalance(testAddr, balance)
@@ -40,7 +40,7 @@ func TestBalance(t *testing.T) {
 }
 
 func TestParcel(t *testing.T) {
-	s := NewStore(db.NewMemDB())
+	s := NewStore(db.NewMemDB(), db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	custody := cmn.RandBytes(32)
 	parcelInput := types.ParcelValue{
@@ -57,7 +57,7 @@ func TestParcel(t *testing.T) {
 }
 
 func TestRequest(t *testing.T) {
-	s := NewStore(db.NewMemDB())
+	s := NewStore(db.NewMemDB(), db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := cmn.RandBytes(32)
 	exp := time.Now().UTC()
@@ -76,7 +76,7 @@ func TestRequest(t *testing.T) {
 }
 
 func TestUsage(t *testing.T) {
-	s := NewStore(db.NewMemDB())
+	s := NewStore(db.NewMemDB(), db.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := cmn.RandBytes(32)
 	custody := cmn.RandBytes(32)
@@ -96,14 +96,14 @@ func TestUsage(t *testing.T) {
 }
 
 func TestStake(t *testing.T) {
-	s := NewStore(db.NewMemDB())
+	s := NewStore(db.NewMemDB(), db.NewMemDB())
 	addrs := make([]crypto.Address, 10)
 	for i := range addrs {
 		addrs[i] = p256.GenPrivKeyFromSecret([]byte("xxx" + string(i))).PubKey().Address()
 		var k ed25519.PubKeyEd25519
-		copy(k[:], cmn.RandBytes(32) )
+		copy(k[:], cmn.RandBytes(32))
 		stake := types.Stake{
-			Amount: *new(types.Currency).Set(100 * uint64((i)+1)),
+			Amount:    *new(types.Currency).Set(100 * uint64((i)+1)),
 			Validator: k,
 		}
 		s.SetStake(addrs[i], &stake)
@@ -112,18 +112,54 @@ func TestStake(t *testing.T) {
 }
 
 func TestDelegate(t *testing.T) {
-	s := NewStore(db.NewMemDB())
-	holders := make([]crypto.Address, 10)
-	delegator := make([]crypto.Address, 10)
-	for i := range holders {
-		holders[i] = p256.GenPrivKeyFromSecret([]byte("xxx" + string(i))).PubKey().Address()
-		delegator[i] = p256.GenPrivKeyFromSecret([]byte("yyy" + string(i))).PubKey().Address()
-		c := new(types.Currency).Set(100 * uint64((i)+1))
-		d := types.DelegateValue{
-			Amount:    *c,
-			Delegator: delegator[i],
-		}
-		s.SetDelegate(holders[i], &d)
-		assert.Equal(t, &d, s.GetDelegate(holders[i]))
+	s := NewStore(db.NewMemDB(), db.NewMemDB())
+	// staker will be the delegator of holders
+	staker := p256.GenPrivKeyFromSecret([]byte("staker")).PubKey().Address()
+	valkey, _ := ed25519.GenPrivKeyFromSecret([]byte("val")).PubKey().(ed25519.PubKeyEd25519)
+	holder1 := p256.GenPrivKeyFromSecret([]byte("holder1")).PubKey().Address()
+	holder2 := p256.GenPrivKeyFromSecret([]byte("holder2")).PubKey().Address()
+
+	// TODO: test error handling
+
+	// staker must have his own stake in order to be a delegator.
+	stake := types.Stake{
+		Amount:    *new(types.Currency).Set(100),
+		Validator: valkey,
 	}
+	s.SetStake(staker, &stake)
+	delegate1 := &types.Delegate{
+		Amount:    *new(types.Currency).Set(101),
+		Delegator: staker,
+	}
+	s.SetDelegate(holder1, delegate1)
+	delegate2 := &types.Delegate{
+		Amount:    *new(types.Currency).Set(102),
+		Delegator: staker,
+	}
+	s.SetDelegate(holder2, delegate2)
+
+	var d *types.Delegate
+	d = s.GetDelegate(holder1)
+	assert.Equal(t, delegate1, d)
+	d = s.GetDelegate(holder2)
+	assert.Equal(t, delegate2, d)
+
+	// test delegator search index
+	ds := s.GetDelegatesByDelegator(staker)
+	assert.Equal(t, 2, len(ds))
+	assert.Equal(t, delegate1, ds[0])
+	assert.Equal(t, delegate2, ds[1])
+
+	es := *new(types.Currency)
+	es.Add(&stake.Amount)
+	es.Add(&delegate1.Amount)
+	es.Add(&delegate2.Amount)
+	assert.Equal(t, *new(types.Currency).Set(303), es)
+	es = s.GetEffStake(staker).Amount
+	assert.Equal(t, *new(types.Currency).Set(303), es)
+
+	// test effective stake cache
+	ts := s.GetTopStakes(10)
+	assert.Equal(t, 1, len(ts))
+	assert.Equal(t, s.GetEffStake(staker), ts[0])
 }

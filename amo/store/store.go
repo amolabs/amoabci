@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"encoding/json"
 
 	"github.com/tendermint/tendermint/crypto"
@@ -12,27 +13,31 @@ import (
 
 var (
 	prefixBalance  = []byte("balance:")
+	prefixStake    = []byte("stake:")
+	prefixDelegate = []byte("delegate:")
 	prefixParcel   = []byte("parcel:")
 	prefixRequest  = []byte("request:")
 	prefixUsage    = []byte("usage:")
-	prefixStake    = []byte("stake:")
-	prefixDelegate = []byte("delegate:")
 )
 
 type Store struct {
-	dbm db.DB
+	stateDB db.DB // DB for blockchain state: see protocol.md
+	// search index for delegators:
+	// key: delegator address || holder address
+	// value: nil
+	indexDelegator db.DB
+	// ordered cache of effective stakes:
+	// key: effective stake (32 bytes) || stake holder address
+	// value: nil
+	indexEffStake db.DB
 }
 
-func getGoLevelDB(name, dir string) *db.GoLevelDB {
-	leveldb, err := db.NewGoLevelDB(name, dir)
-	if err != nil {
-		panic(err)
+func NewStore(stateDB db.DB, indexDB db.DB) *Store {
+	return &Store{
+		stateDB:        stateDB,
+		indexDelegator: db.NewPrefixDB(indexDB, []byte("delegator")),
+		indexEffStake:  db.NewPrefixDB(indexDB, []byte("effstake")),
 	}
-	return leveldb
-}
-
-func NewStore(bDB db.DB) *Store {
-	return &Store{dbm: bDB}
 }
 
 // Balance store
@@ -41,7 +46,7 @@ func getBalanceKey(addr types.Address) []byte {
 }
 
 func (s Store) Purge() error {
-	var itr db.Iterator = s.dbm.Iterator([]byte{}, []byte(nil))
+	var itr db.Iterator = s.stateDB.Iterator([]byte{}, []byte(nil))
 	defer itr.Close()
 
 	// TODO: cannot guarantee in multi-thread environment
@@ -49,10 +54,10 @@ func (s Store) Purge() error {
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
 		// XXX: not sure if this will confuse the iterator
-		s.dbm.Delete(k)
+		s.stateDB.Delete(k)
 	}
 
-	// TODO: need some method like s.dbm.Size() to check if the DB has been
+	// TODO: need some method like s.stateDB.Size() to check if the DB has been
 	// really emptied.
 
 	return nil
@@ -63,7 +68,7 @@ func (s Store) SetBalance(addr types.Address, balance *atypes.Currency) {
 	if err != nil {
 		panic(err)
 	}
-	s.dbm.Set(getBalanceKey(addr), b)
+	s.stateDB.Set(getBalanceKey(addr), b)
 }
 
 func (s Store) SetBalanceUint64(addr types.Address, balance uint64) {
@@ -71,12 +76,12 @@ func (s Store) SetBalanceUint64(addr types.Address, balance uint64) {
 	if err != nil {
 		panic(err)
 	}
-	s.dbm.Set(getBalanceKey(addr), b)
+	s.stateDB.Set(getBalanceKey(addr), b)
 }
 
 func (s Store) GetBalance(addr types.Address) *atypes.Currency {
 	c := atypes.Currency{}
-	balance := s.dbm.Get(getBalanceKey(addr))
+	balance := s.stateDB.Get(getBalanceKey(addr))
 	if len(balance) == 0 {
 		return &c
 	}
@@ -92,16 +97,35 @@ func getStakeKey(holder []byte) []byte {
 	return append(prefixStake, holder...)
 }
 
-func (s Store) SetStake(holder crypto.Address, stake *atypes.Stake ) {
+func (s Store) SetStake(holder crypto.Address, stake *atypes.Stake) {
 	b, err := json.Marshal(stake)
 	if err != nil {
 		panic(err)
 	}
-	s.dbm.Set(getStakeKey(holder), b)
+	// before state update
+	es := s.GetEffStake(holder)
+	if es != nil {
+		before := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
+		if s.indexEffStake.Has(before) {
+			s.indexEffStake.Delete(before)
+		}
+	}
+	s.stateDB.Set(getStakeKey(holder), b)
+	// after state update
+	after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
+	s.indexEffStake.Set(after, nil)
+}
+
+func makeEffStakeKey(amount atypes.Currency, holder crypto.Address) []byte {
+	key := make([]byte, 32+20) // 256-bit integer + 20-byte address
+	b := amount.Bytes()
+	copy(key[32-len(b):], b)
+	copy(key[32:], holder)
+	return key
 }
 
 func (s Store) GetStake(holder crypto.Address) *atypes.Stake {
-	b := s.dbm.Get(getStakeKey(holder))
+	b := s.stateDB.Get(getStakeKey(holder))
 	if len(b) == 0 {
 		return nil
 	}
@@ -118,25 +142,81 @@ func getDelegateKey(holder []byte) []byte {
 	return append(prefixDelegate, holder...)
 }
 
-func (s Store) SetDelegate(holder crypto.Address, value *atypes.DelegateValue) {
+func (s Store) SetDelegate(holder crypto.Address, value *atypes.Delegate) {
 	b, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
 	}
-	s.dbm.Set(getDelegateKey(holder), b)
+	// before state update
+	es := s.GetEffStake(value.Delegator)
+	if es != nil {
+		before := makeEffStakeKey(s.GetEffStake(value.Delegator).Amount, value.Delegator)
+		if s.indexEffStake.Has(before) {
+			s.indexEffStake.Delete(before)
+		}
+	}
+	s.stateDB.Set(getDelegateKey(holder), b)
+	s.indexDelegator.Set(append(value.Delegator, holder...), nil)
+	// after state update
+	after := makeEffStakeKey(s.GetEffStake(value.Delegator).Amount, value.Delegator)
+	s.indexEffStake.Set(after, nil)
 }
 
-func (s Store) GetDelegate(holder crypto.Address) *atypes.DelegateValue {
-	b := s.dbm.Get(getDelegateKey(holder))
+func (s Store) GetDelegate(holder crypto.Address) *atypes.Delegate {
+	b := s.stateDB.Get(getDelegateKey(holder))
 	if len(b) == 0 {
 		return nil
 	}
-	var delegate atypes.DelegateValue
+	var delegate atypes.Delegate
 	err := json.Unmarshal(b, &delegate)
 	if err != nil {
 		panic(err)
 	}
 	return &delegate
+}
+
+func (s Store) GetDelegatesByDelegator(delegator crypto.Address) []*atypes.Delegate {
+	var itr db.Iterator = s.indexDelegator.Iterator(delegator, nil)
+	defer itr.Close()
+
+	var delegates []*atypes.Delegate
+	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), delegator); itr.Next() {
+		holder := itr.Key()[len(delegator):]
+		delegates = append(delegates, s.GetDelegate(holder))
+	}
+	return delegates
+}
+
+func (s Store) GetEffStake(delegator crypto.Address) *atypes.Stake {
+	stake := s.GetStake(delegator)
+	if stake == nil {
+		return nil
+	}
+	for _, d := range s.GetDelegatesByDelegator(delegator) {
+		stake.Amount.Add(&d.Amount)
+	}
+	return stake
+}
+
+func (s Store) GetTopStakes(max uint64) []*atypes.Stake {
+	var stakes []*atypes.Stake
+	var itr db.Iterator = s.indexEffStake.ReverseIterator(nil, nil)
+	var cnt uint64 = 0
+	for ; itr.Valid(); itr.Next() {
+		if cnt >= max {
+			break
+		}
+		key := itr.Key()
+		var amount atypes.Currency
+		amount.SetBytes(key[:32])
+		holder := key[32:]
+		stake := s.GetStake(holder)
+		stake.Amount = amount
+		stakes = append(stakes, stake)
+		cnt++
+		// TODO: assert GetEffStake() gives the same result
+	}
+	return stakes
 }
 
 // Parcel store
@@ -149,11 +229,11 @@ func (s Store) SetParcel(parcelID []byte, value *atypes.ParcelValue) {
 	if err != nil {
 		panic(err)
 	}
-	s.dbm.Set(getParcelKey(parcelID), b)
+	s.stateDB.Set(getParcelKey(parcelID), b)
 }
 
 func (s Store) GetParcel(parcelID []byte) *atypes.ParcelValue {
-	b := s.dbm.Get(getParcelKey(parcelID))
+	b := s.stateDB.Get(getParcelKey(parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -166,7 +246,7 @@ func (s Store) GetParcel(parcelID []byte) *atypes.ParcelValue {
 }
 
 func (s Store) DeleteParcel(parcelID []byte) {
-	s.dbm.DeleteSync(getParcelKey(parcelID))
+	s.stateDB.DeleteSync(getParcelKey(parcelID))
 }
 
 // Request store
@@ -179,11 +259,11 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *atypes.R
 	if err != nil {
 		panic(err)
 	}
-	s.dbm.Set(getRequestKey(buyer, parcelID), b)
+	s.stateDB.Set(getRequestKey(buyer, parcelID), b)
 }
 
 func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *atypes.RequestValue {
-	b := s.dbm.Get(getRequestKey(buyer, parcelID))
+	b := s.stateDB.Get(getRequestKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -196,7 +276,7 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *atypes.Request
 }
 
 func (s Store) DeleteRequest(buyer crypto.Address, parcelID []byte) {
-	s.dbm.DeleteSync(getRequestKey(buyer, parcelID))
+	s.stateDB.DeleteSync(getRequestKey(buyer, parcelID))
 }
 
 // Usage store
@@ -209,11 +289,11 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *atypes.Usa
 	if err != nil {
 		panic(err)
 	}
-	s.dbm.Set(getUsageKey(buyer, parcelID), b)
+	s.stateDB.Set(getUsageKey(buyer, parcelID), b)
 }
 
 func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *atypes.UsageValue {
-	b := s.dbm.Get(getUsageKey(buyer, parcelID))
+	b := s.stateDB.Get(getUsageKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -226,5 +306,5 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *atypes.UsageValu
 }
 
 func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
-	s.dbm.DeleteSync(getUsageKey(buyer, parcelID))
+	s.stateDB.DeleteSync(getUsageKey(buyer, parcelID))
 }

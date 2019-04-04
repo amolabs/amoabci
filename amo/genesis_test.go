@@ -95,7 +95,7 @@ func TestParseGenesisStateBytes(t *testing.T) {
 func TestFillGenesisState(t *testing.T) {
 	setupDB()
 
-	s := store.NewStore(db.NewMemDB())
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 
 	// first fill the test store with some values
 	addr1 := p256.GenPrivKey().PubKey().Address()
