@@ -189,61 +189,14 @@ func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseIni
 	return abci.ResponseInitChain{}
 }
 
-func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
-	var vals abci.ValidatorUpdates
-	stakes := app.store.GetTopStakes(maxValidators)
-	adjFactor := calcAdjustFactor(stakes)
-	for _, stake := range stakes {
-		key := abci.PubKey{ // TODO
-			Type: "ed25519",
-			Data: stake.Validator[:],
-		}
-		var power big.Int
-		power.Rsh(&stake.Amount.Int, adjFactor)
-		val := abci.ValidatorUpdate{
-			PubKey: key,
-			Power:  power.Int64(),
-		}
-		vals = append(vals, val)
-	}
-	res.ValidatorUpdates = vals
-	return res
-}
-
-func calcAdjustFactor(stakes []*types.Stake) uint {
-	var vp big.Int
-	max := (tm.MaxTotalVotingPower)
-	var vps int64 = 0
-	var shifts uint = 0
-	for _, stake := range stakes {
-		vp = stake.Amount.Int
-		vp.Rsh(&vp, shifts)
-		for !vp.IsInt64() {
-			vp.Rsh(&vp, 1)
-			shifts++
-		}
-		vpi := vp.Int64()
-		tmp := vps + vpi
-		if tmp < vps || tmp > max {
-			vps >>= 1
-			vpi >>= 1
-			shifts++
-			tmp = vps + vpi
-		}
-	}
-	return shifts
-}
-
 func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	proposer := req.Header.GetProposerAddress()
 	app.logger.Debug("BeginBlock()", "proposer", hex.EncodeToString(proposer))
-	fmt.Println("proposer =", hex.EncodeToString(proposer)) //
 	staker := app.store.GetHolderByValidator(proposer)
 	stake := app.store.GetStake(staker)
 	if stake == nil {
 		return abci.ResponseBeginBlock{}
 	}
-	fmt.Println("staker =", hex.EncodeToString(staker)) //
 	ds := app.store.GetDelegatesByDelegator(staker)
 	app.logger.Debug("BeginBlock()", "delegators", len(ds))
 
@@ -298,4 +251,50 @@ func partialReward(weight int64, stake, total *big.Int, base *types.Currency) *t
 	r := types.Currency{}
 	t1f.Int(&r.Int)
 	return &r
+}
+
+func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
+	// TODO: update validators only when necessary
+	var vals abci.ValidatorUpdates
+	stakes := app.store.GetTopStakes(maxValidators)
+	adjFactor := calcAdjustFactor(stakes)
+	for _, stake := range stakes {
+		key := abci.PubKey{ // TODO
+			Type: "ed25519",
+			Data: stake.Validator[:],
+		}
+		var power big.Int
+		power.Rsh(&stake.Amount.Int, adjFactor)
+		val := abci.ValidatorUpdate{
+			PubKey: key,
+			Power:  power.Int64(),
+		}
+		vals = append(vals, val)
+	}
+	res.ValidatorUpdates = vals
+	return res
+}
+
+func calcAdjustFactor(stakes []*types.Stake) uint {
+	var vp big.Int
+	max := (tm.MaxTotalVotingPower)
+	var vps int64 = 0
+	var shifts uint = 0
+	for _, stake := range stakes {
+		vp = stake.Amount.Int
+		vp.Rsh(&vp, shifts)
+		for !vp.IsInt64() {
+			vp.Rsh(&vp, 1)
+			shifts++
+		}
+		vpi := vp.Int64()
+		tmp := vps + vpi
+		if tmp < vps || tmp > max {
+			vps >>= 1
+			vpi >>= 1
+			shifts++
+			tmp = vps + vpi
+		}
+	}
+	return shifts
 }
