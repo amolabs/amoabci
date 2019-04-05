@@ -30,9 +30,16 @@
     "balances": [
       {
         "owner": "BC4BAF38355C6CCF8422DD3D273B3DBB83B2370B",
-        "amount": "100"
+        "amount": "1000000000000000000"
       }
-    ]
+    ],
+	"stakes": [
+	  {
+        "holder": "BC4BAF38355C6CCF8422DD3D273B3DBB83B2370B",
+        "amount": "1000000000000000000",
+		"validator": "0cOwFQkn9/DTDo1BuqfargBy+1CAPdlQqZpWodbU2F8="
+	  }
+	]
   },
   "app_hash": ""
 }

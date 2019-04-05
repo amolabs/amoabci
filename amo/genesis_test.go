@@ -2,12 +2,10 @@ package amo
 
 import (
 	"encoding/hex"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/db"
 
 	"github.com/amolabs/amoabci/amo/store"
@@ -18,11 +16,11 @@ import (
 const testRoot = "genesis_test"
 
 const (
-	addr0Json = "7CECB223B976F27D77B0E03E95602DABCC28D876"
+	addr0Json = "BC4BAF38355C6CCF8422DD3D273B3DBB83B2370B"
 	t0json    = `{
 	  "balances": [
 		{
-		  "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876",
+		  "owner": "BC4BAF38355C6CCF8422DD3D273B3DBB83B2370B",
 		  "amount": "100"
 		}
 	  ]
@@ -30,7 +28,7 @@ const (
 	t1json = `{
 	  "balances": [
 		{
-		  "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876",
+		  "owner": "BC4BAF38355C6CCF8422DD3D273B3DBB83B2370B",
 		  "amount": "100"
 		},
 		{
@@ -42,7 +40,7 @@ const (
 	t2json = `{
 	  "balances": [
 		{
-		  "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876",
+		  "owner": "BC4BAF38355C6CCF8422DD3D273B3DBB83B2370B",
 		  "amount": "100"
 		},
 		{
@@ -52,15 +50,18 @@ const (
 	  ],
 	  "parcels": []
 	}`
+	s0json = `{
+	  "stakes": [
+		{
+		  "holder": "BC4BAF38355C6CCF8422DD3D273B3DBB83B2370B",
+		  "amount": "100",
+		  "validator": "0cOwFQkn9/DTDo1BuqfargBy+1CAPdlQqZpWodbU2F8="
+		}
+	  ]
+	}`
+	valAddrJson = "7CECB223B976F27D77B0E03E95602DABCC28D876"
+	valBytesHex = "D1C3B0150927F7F0D30E8D41BAA7DAAE0072FB50803DD950A99A56A1D6D4D85F"
 )
-
-func setupDB() {
-	cmn.EnsureDir(testRoot, 0700)
-}
-
-func tearDownDB() {
-	os.RemoveAll(testRoot)
-}
 
 func TestParseGenesisStateBytes(t *testing.T) {
 	var bytes []byte
@@ -90,11 +91,14 @@ func TestParseGenesisStateBytes(t *testing.T) {
 	assert.Equal(t, crypto.Address(bytes), genState.Balances[0].Owner)
 	assert.Equal(t, new(types.Currency).Set(100), &genState.Balances[0].Amount)
 
+	// stakes
+	stateBytes = []byte(s0json)
+	genState, err = ParseGenesisStateBytes(stateBytes)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(genState.Stakes))
 }
 
 func TestFillGenesisState(t *testing.T) {
-	setupDB()
-
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 
 	// first fill the test store with some values
@@ -118,5 +122,17 @@ func TestFillGenesisState(t *testing.T) {
 	addr0, _ := hex.DecodeString(addr0Json)
 	assert.Equal(t, new(types.Currency).Set(100), s.GetBalance(addr0))
 
-	tearDownDB()
+	///////////////////////////////
+	// genesis with stakes
+	genState, err = ParseGenesisStateBytes([]byte(s0json))
+	assert.NoError(t, err)
+	err = FillGenesisState(s, genState)
+	assert.NoError(t, err)
+	stake := s.GetStake(addr0)
+	assert.NotNil(t, stake)
+	assert.Equal(t, new(types.Currency).Set(100), &stake.Amount)
+	valBytes, _ := hex.DecodeString(valBytesHex)
+	assert.Equal(t, valBytes, []byte(stake.Validator[:]))
+	valAddr, _ := hex.DecodeString(valAddrJson)
+	assert.Equal(t, addr0, s.GetHolderByValidator(valAddr))
 }
