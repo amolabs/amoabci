@@ -27,6 +27,10 @@ type Store struct {
 	// key: delegator address || holder address
 	// value: nil
 	indexDelegator db.DB
+	// search index for validator:
+	// key: validator address
+	// value: holder address
+	indexValidator db.DB
 	// ordered cache of effective stakes:
 	// key: effective stake (32 bytes) || stake holder address
 	// value: nil
@@ -37,6 +41,7 @@ func NewStore(stateDB db.DB, indexDB db.DB) *Store {
 	return &Store{
 		stateDB:        stateDB,
 		indexDelegator: db.NewPrefixDB(indexDB, []byte("delegator")),
+		indexValidator: db.NewPrefixDB(indexDB, []byte("validator")),
 		indexEffStake:  db.NewPrefixDB(indexDB, []byte("effstake")),
 	}
 }
@@ -113,6 +118,7 @@ func (s Store) SetStake(holder crypto.Address, stake *atypes.Stake) {
 	}
 	s.stateDB.Set(getStakeKey(holder), b)
 	// after state update
+	s.indexValidator.Set(stake.Validator.Address(), holder)
 	after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
 	s.indexEffStake.Set(after, nil)
 }
@@ -136,6 +142,18 @@ func (s Store) GetStake(holder crypto.Address) *atypes.Stake {
 		panic(err)
 	}
 	return &stake
+}
+
+func (s Store) GetStakeByValidator(addr crypto.Address) *atypes.Stake {
+	holder := s.GetHolderByValidator(addr)
+	if holder == nil {
+		return nil
+	}
+	return s.GetStake(holder)
+}
+
+func (s Store) GetHolderByValidator(addr crypto.Address) []byte {
+	return s.indexValidator.Get(addr)
 }
 
 // Delegate store
@@ -177,6 +195,7 @@ func (s Store) GetDelegate(holder crypto.Address) *atypes.Delegate {
 	if err != nil {
 		panic(err)
 	}
+	delegate.Holder = holder
 	return &delegate
 }
 

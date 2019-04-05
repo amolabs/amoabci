@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/hex"
 	"errors"
 	"math/big"
 
@@ -8,8 +9,10 @@ import (
 )
 
 const (
-	maxCurrencyHex    = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-	currencyLen       = 256 / 8
+	maxCurrencyHex = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+	currencyLen    = 256 / 8
+	OneAMOUint64   = 1000000000000000000 // in decimal
+	//oneAMO         = 0xDE0B6B3A7640000
 )
 
 // Currency uses big endian for compatibility to big.Int
@@ -31,6 +34,16 @@ func isExceed(i *big.Int) bool {
 
 func (c *Currency) Set(x uint64) *Currency {
 	c.SetUint64(x)
+	return c
+}
+
+func (c *Currency) SetAMO(x float64) *Currency {
+	c.SetUint64(OneAMOUint64)
+	var f1, f2 big.Float
+	f1.SetInt(&c.Int)
+	f2.SetFloat64(x)
+	f1.Mul(&f1, &f2)
+	f1.Int(&c.Int)
 	return c
 }
 
@@ -60,7 +73,11 @@ func (c *Currency) UnmarshalJSON(data []byte) error {
 	s := string(data)
 	if len(s) < 2 || s[0] != '"' || s[len(s)-1] != '"' {
 		return errors.New(
-			"Currency should be represented as double-quoted string.")
+			"Currency should be represented as double-quoted string(hex:" +
+				hex.EncodeToString(data) +
+				",str:" +
+				s +
+				").")
 	}
 	*c = Currency{}
 	s = s[1 : len(s)-1]
