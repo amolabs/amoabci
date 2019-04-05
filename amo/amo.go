@@ -272,10 +272,14 @@ func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) abci.ResponseB
 	for _, d := range ds {
 		tmp2 = *partialReward(wDelegate, &d.Amount.Int, &wsum, &rTotal)
 		tmp.Add(&tmp2)
-		app.store.SetBalance(d.Holder, &tmp2)
+		b := app.store.GetBalance(d.Holder).Add(&tmp2)
+		app.store.SetBalance(d.Holder, b)
+		app.logger.Debug("Block reward", "delegate", d.Holder, "reward", tmp2.Int64())
 	}
 	tmp2.Int.Sub(&rTotal.Int, &tmp.Int)
-	app.store.SetBalance(staker, &tmp2)
+	b := app.store.GetBalance(staker).Add(&tmp2)
+	app.store.SetBalance(staker, b)
+	app.logger.Debug("Block reward", "proposer", staker, "reward", tmp2.Int64())
 
 	return abci.ResponseBeginBlock{}
 }
