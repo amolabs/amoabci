@@ -63,9 +63,11 @@ func saveState(state State) {
 
 type AMOApplication struct {
 	abci.BaseApplication
-	state  State
-	store  *astore.Store
-	logger log.Logger
+
+	state         State
+	store         *astore.Store
+	logger        log.Logger
+	flagValUpdate bool
 }
 
 var _ abci.Application = (*AMOApplication)(nil)
@@ -111,6 +113,7 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 		app.state.Size += 1
 	}
 	if isStake {
+		app.flagValUpdate = true
 		var pub ed25519.PubKeyEd25519
 		switch message.Type {
 		case operation.TxStake:
@@ -190,15 +193,15 @@ func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseIni
 }
 
 func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+	app.flagValUpdate = false
+
 	proposer := req.Header.GetProposerAddress()
-	app.logger.Debug("BeginBlock()", "proposer", hex.EncodeToString(proposer))
 	staker := app.store.GetHolderByValidator(proposer)
 	stake := app.store.GetStake(staker)
 	if stake == nil {
 		return abci.ResponseBeginBlock{}
 	}
 	ds := app.store.GetDelegatesByDelegator(staker)
-	app.logger.Debug("BeginBlock()", "delegators", len(ds))
 
 	var tmp, tmp2 types.Currency
 
@@ -227,12 +230,14 @@ func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) abci.ResponseB
 		tmp.Add(&tmp2)
 		b := app.store.GetBalance(d.Holder).Add(&tmp2)
 		app.store.SetBalance(d.Holder, b)
-		app.logger.Debug("Block reward", "delegate", d.Holder, "reward", tmp2.Int64())
+		app.logger.Debug("Block reward",
+			"delegate", hex.EncodeToString(d.Holder), "reward", tmp2.Int64())
 	}
 	tmp2.Int.Sub(&rTotal.Int, &tmp.Int)
 	b := app.store.GetBalance(staker).Add(&tmp2)
 	app.store.SetBalance(staker, b)
-	app.logger.Debug("Block reward", "proposer", staker, "reward", tmp2.Int64())
+	app.logger.Debug("Block reward",
+		"proposer", hex.EncodeToString(staker), "reward", tmp2.Int64())
 
 	return abci.ResponseBeginBlock{}
 }
@@ -254,24 +259,27 @@ func partialReward(weight int64, stake, total *big.Int, base *types.Currency) *t
 }
 
 func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
-	// TODO: update validators only when necessary
-	var vals abci.ValidatorUpdates
-	stakes := app.store.GetTopStakes(maxValidators)
-	adjFactor := calcAdjustFactor(stakes)
-	for _, stake := range stakes {
-		key := abci.PubKey{ // TODO
-			Type: "ed25519",
-			Data: stake.Validator[:],
+	if app.flagValUpdate {
+		app.flagValUpdate = false
+
+		var vals abci.ValidatorUpdates
+		stakes := app.store.GetTopStakes(maxValidators)
+		adjFactor := calcAdjustFactor(stakes)
+		for _, stake := range stakes {
+			key := abci.PubKey{ // TODO
+				Type: "ed25519",
+				Data: stake.Validator[:],
+			}
+			var power big.Int
+			power.Rsh(&stake.Amount.Int, adjFactor)
+			val := abci.ValidatorUpdate{
+				PubKey: key,
+				Power:  power.Int64(),
+			}
+			vals = append(vals, val)
 		}
-		var power big.Int
-		power.Rsh(&stake.Amount.Int, adjFactor)
-		val := abci.ValidatorUpdate{
-			PubKey: key,
-			Power:  power.Int64(),
-		}
-		vals = append(vals, val)
+		res.ValidatorUpdates = vals
 	}
-	res.ValidatorUpdates = vals
 	return res
 }
 
