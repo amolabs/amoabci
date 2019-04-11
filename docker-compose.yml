@@ -3,9 +3,9 @@ version: '3.3'
 services:
   seed:
     container_name: seed
-    image: amolabs/amod
+    image: amolabs/amotest
     networks:
-      amonet:
+      amolocal:
         ipv4_address: 192.167.10.2
     environment:
       - MONIKER=seed
@@ -17,9 +17,9 @@ services:
     depends_on:
       - seed
     container_name: val1
-    image: amolabs/amod
+    image: amolabs/amotest
     networks:
-      - amonet
+      - amolocal
     environment:
       - MONIKER=val1
       - SEEDS=bdc37be128bdcdb11d2b8a9ea0c7b16f9876481d@seed:26656
@@ -28,9 +28,9 @@ services:
     depends_on:
       - seed
     container_name: val2
-    image: amolabs/amod
+    image: amolabs/amotest
     networks:
-      - amonet
+      - amolocal
     environment:
       - MONIKER=val2
       - SEEDS=bdc37be128bdcdb11d2b8a9ea0c7b16f9876481d@seed:26656
@@ -39,7 +39,7 @@ services:
     container_name: pdb0
     image: paust-db
     networks:
-      amonet:
+      amolocal:
         ipv4_address: 192.167.10.10
     environment:
       - ID=0
@@ -55,7 +55,7 @@ services:
   #  build: .
 
 networks:
-  amonet:
+  amolocal:
     driver: bridge
     ipam:
       driver: default

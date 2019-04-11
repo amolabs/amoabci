@@ -15,7 +15,7 @@ if [ "$MONIKER" == "seed" ]; then
 	mv priv_validator_state.json data/
 fi
 mv genesis.json config/
-amod run &
+/usr/bin/amod run &
 if [ "$MONIKER" == "seed" ]; then
 	/usr/bin/tendermint init
 fi
