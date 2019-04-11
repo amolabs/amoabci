@@ -1,7 +1,7 @@
 package tx
 
 import (
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -15,17 +15,29 @@ import (
 var StakeCmd = &cobra.Command{
 	Use:   "stake --amount <currency> --validator <ed25519>",
 	Short: "Lock AMO coin as a stake of the coin holder",
-	Args:  cobra.MinimumNArgs(2),
+	Args:  cobra.NoArgs,
 	RunE:  stakeFunc,
 }
 
 func stakeFunc(cmd *cobra.Command, args []string) error {
-	amount, err := new(atypes.Currency).SetString(args[0], 10)
+	var argAmount, argValidator string
+	var err error
+
+	flags := cmd.Flags()
+
+	if argAmount, err = flags.GetString("amount"); err != nil {
+		return err
+	}
+	if argValidator, err = flags.GetString("validator"); err != nil {
+		return err
+	}
+
+	amount, err := new(atypes.Currency).SetString(argAmount, 10)
 	if err != nil {
 		return err
 	}
 
-	p, err := hex.DecodeString(args[1])
+	validator, err := base64.StdEncoding.DecodeString(argValidator)
 	if err != nil {
 		return err
 	}
@@ -35,7 +47,7 @@ func stakeFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Stake(amount, p, key)
+	result, err := rpc.Stake(amount, validator, key)
 	if err != nil {
 		return err
 	}
@@ -48,4 +60,14 @@ func stakeFunc(cmd *cobra.Command, args []string) error {
 	fmt.Println(string(resultJSON))
 
 	return nil
+}
+
+func init() {
+	cmd := StakeCmd
+	cmd.Flags().SortFlags = false
+	cmd.Flags().StringP("amount", "a", "", "decimal number")
+	cmd.Flags().StringP("validator", "v", "", "base64 encoding of validagtor publie key")
+
+	cmd.MarkFlagRequired("amount")
+	cmd.MarkFlagRequired("validator")
 }
