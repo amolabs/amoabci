@@ -13,8 +13,8 @@ import (
 )
 
 var StakeCmd = &cobra.Command{
-	Use:   "stake --amount <currency> --validator <ed25519>",
-	Short: "Lock AMO coin as a stake of the coin holder",
+	Use:   "stake",
+	Short: "Lock AMO coin and acquire a stake with a validator key",
 	Args:  cobra.NoArgs,
 	RunE:  stakeFunc,
 }
@@ -28,7 +28,7 @@ func stakeFunc(cmd *cobra.Command, args []string) error {
 	if argAmount, err = flags.GetString("amount"); err != nil {
 		return err
 	}
-	if argValidator, err = flags.GetString("validator"); err != nil {
+	if argValidator, err = flags.GetString("val"); err != nil {
 		return err
 	}
 
@@ -37,7 +37,7 @@ func stakeFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	validator, err := base64.StdEncoding.DecodeString(argValidator)
+	val, err := base64.StdEncoding.DecodeString(argValidator)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func stakeFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Stake(amount, validator, key)
+	result, err := rpc.Stake(amount, val, key)
 	if err != nil {
 		return err
 	}
@@ -65,9 +65,9 @@ func stakeFunc(cmd *cobra.Command, args []string) error {
 func init() {
 	cmd := StakeCmd
 	cmd.Flags().SortFlags = false
-	cmd.Flags().StringP("amount", "a", "", "decimal number")
-	cmd.Flags().StringP("validator", "v", "", "base64 encoding of validagtor publie key")
+	cmd.Flags().String("amount", "", "decimal number")
+	cmd.Flags().String("val", "", "base64-encoded ed25519 public key\n(recommend duoble-quote)")
 
 	cmd.MarkFlagRequired("amount")
-	cmd.MarkFlagRequired("validator")
+	cmd.MarkFlagRequired("val")
 }
