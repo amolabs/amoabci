@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/amolabs/amoabci/client/rpc"
 )
 
 var LineBreak = &cobra.Command{Run: func(*cobra.Command, []string) {}}
@@ -30,6 +32,7 @@ func Execute() {
 		dbCmd,
 		LineBreak,
 	)
+	rootCmd.PersistentFlags().String("rpc", "0.0.0.0:26657", "node_ip:port")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -38,5 +41,9 @@ func Execute() {
 }
 
 func loadConfig(cmd *cobra.Command, args []string) error {
+	rpcArg, err := cmd.Flags().GetString("rpc")
+	if err == nil {
+		rpc.RpcRemote = "tcp://" + rpcArg
+	}
 	return nil
 }

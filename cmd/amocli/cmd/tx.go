@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"github.com/amolabs/amoabci/cmd/amocli/cmd/tx"
 	"github.com/spf13/cobra"
+
+	"github.com/amolabs/amoabci/cmd/amocli/cmd/tx"
 )
 
 /* Commands (expected hierarchy)

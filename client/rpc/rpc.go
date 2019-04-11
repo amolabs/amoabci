@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	rpcRemote     = "tcp://0.0.0.0:26657"
+	RpcRemote     = "tcp://0.0.0.0:26657"
 	rpcWsEndpoint = "/websocket"
 )
 
@@ -48,23 +48,23 @@ func MakeMessage(t string, nonce uint32, payload interface{}, key keys.Key) (typ
 
 // RPCBroadcastTxCommit handles sending transactions
 func RPCBroadcastTxCommit(tx types.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
-	cli := client.NewHTTP(rpcRemote, rpcWsEndpoint)
+	cli := client.NewHTTP(RpcRemote, rpcWsEndpoint)
 	return cli.BroadcastTxCommit(tx)
 }
 
 // RPCABCIQuery handles querying
 func RPCABCIQuery(path string, data cmn.HexBytes) (*ctypes.ResultABCIQuery, error) {
-	cli := client.NewHTTP(rpcRemote, rpcWsEndpoint)
+	cli := client.NewHTTP(RpcRemote, rpcWsEndpoint)
 	return cli.ABCIQuery(path, data)
 }
 
 // RPCStatus handle querying the status
 func RPCStatus() (*ctypes.ResultStatus, error) {
-	cli := client.NewHTTP(rpcRemote, rpcWsEndpoint)
+	cli := client.NewHTTP(RpcRemote, rpcWsEndpoint)
 	return cli.Status()
 }
 
 func RPCBlock(height int64) (*ctypes.ResultBlock, error) {
-	cli := client.NewHTTP(rpcRemote, rpcWsEndpoint)
+	cli := client.NewHTTP(RpcRemote, rpcWsEndpoint)
 	return cli.Block(&height)
 }
