@@ -35,11 +35,11 @@ func initApp() error {
 	appLogger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	var app types.Application
 	// TODO: do not use hard-coded value. use value from configuration.
-	db, err := dbm.NewGoLevelDB("store", "blockchain/store")
+	db, err := dbm.NewGoLevelDB("store", "data/state")
 	if err != nil {
 		return err
 	}
-	index, err := dbm.NewGoLevelDB("index", "blockchain/index")
+	index, err := dbm.NewGoLevelDB("index", "data/index")
 	if err != nil {
 		return err
 	}
