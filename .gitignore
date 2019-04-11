@@ -11,23 +11,20 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# GoLand
-.idea/
-
-# vim
-.*.sw*
-tags
-TAGS
-
 # dep
 vendor
 
-# blockchain data
-blockchain/
-
+# output binary files
 /amocli
 /amod
 DOCKER/amocli
 DOCKER/amod
 
+# IDE- or OS-related garbages
 .DS_Storeg
+# vim
+.*.sw*
+tags
+TAGS
+# GoLand
+.idea/
