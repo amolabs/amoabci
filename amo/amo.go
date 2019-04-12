@@ -8,7 +8,6 @@ import (
 	"math/big"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto/ed25519"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tm "github.com/tendermint/tendermint/types"
@@ -114,18 +113,6 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 	}
 	if isStake {
 		app.flagValUpdate = true
-		var pub ed25519.PubKeyEd25519
-		switch message.Type {
-		case operation.TxStake:
-			stake := op.(*operation.Stake)
-			copy(pub[:], stake.Validator)
-		case operation.TxWithdraw:
-			pub = app.store.GetStake(message.Sig.PubKey.Address()).Validator
-		case operation.TxDelegate:
-			pub = app.store.GetStake(op.(*operation.Delegate).To).Validator
-		case operation.TxRetract:
-			pub = app.store.GetStake(op.(*operation.Retract).From).Validator
-		}
 	}
 	return abci.ResponseDeliverTx{
 		Code: resCode,
