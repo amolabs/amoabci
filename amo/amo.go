@@ -34,7 +34,6 @@ const (
 
 type State struct {
 	db      dbm.DB
-	Size    int64  `json:"size"`
 	Height  int64  `json:"height"`
 	AppHash []byte `json:"app_hash"`
 }
@@ -72,12 +71,11 @@ type AMOApplication struct {
 var _ abci.Application = (*AMOApplication)(nil)
 
 func NewAMOApplication(db dbm.DB, index dbm.DB, l log.Logger) *AMOApplication {
-	state := loadState(db)
 	if l == nil {
 		l = log.NewNopLogger()
 	}
 	app := &AMOApplication{
-		state:  state,
+		state:  loadState(db),
 		store:  astore.NewStore(db, index),
 		logger: l,
 	}
@@ -86,7 +84,7 @@ func NewAMOApplication(db dbm.DB, index dbm.DB, l log.Logger) *AMOApplication {
 
 func (app *AMOApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
 	return abci.ResponseInfo{
-		Data:       fmt.Sprintf("{\"size\":%v}", app.state.Size),
+		Data:       fmt.Sprintf("{\"height\":%v}", app.state.Height),
 		Version:    version.ABCIVersion,
 		AppVersion: ProtocolVersion.Uint64(),
 	}
@@ -105,11 +103,6 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 		return abci.ResponseDeliverTx{
 			Code: resCode,
 		}
-	}
-	// TODO: change state
-	switch message.Type {
-	case operation.TxTransfer:
-		app.state.Size += 1
 	}
 	if isStake {
 		app.flagValUpdate = true
@@ -134,12 +127,14 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 }
 
 func (app *AMOApplication) Commit() abci.ResponseCommit {
-	appHash := make([]byte, 8)
-	binary.PutVarint(appHash, app.state.Size)
-	app.state.AppHash = appHash
 	app.state.Height += 1
+
+	b := make([]byte, 8)
+	binary.PutVarint(b, app.state.Height)
+	app.state.AppHash = b
+
 	saveState(app.state)
-	return abci.ResponseCommit{Data: appHash}
+	return abci.ResponseCommit{Data: app.state.AppHash}
 }
 
 func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuery) {
