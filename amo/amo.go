@@ -219,7 +219,7 @@ func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) abci.ResponseB
 	b := app.store.GetBalance(staker).Add(&tmp2)
 	app.store.SetBalance(staker, b)
 	app.logger.Debug("Block reward",
-		"proposer", hex.EncodeToString(staker), "reward", tmp2.Int64())
+		"proposer", hex.EncodeToString(staker)[:20], "reward", tmp2.Int64())
 
 	return abci.ResponseBeginBlock{}
 }
