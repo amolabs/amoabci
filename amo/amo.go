@@ -28,13 +28,13 @@ const (
 	maxValidators = 100
 	wValidator    = 2
 	wDelegate     = 1
-	blkRewardAMO  = types.OneAMOUint64
+	blkRewardAMO  = uint64(0)
 	txRewardAMO   = uint64(types.OneAMOUint64 / 10)
 )
 
 type State struct {
 	db      dbm.DB
-	Height  int64  `json:"height"`
+	Walk    int64  `json:"walk"`
 	AppHash []byte `json:"app_hash"`
 }
 
@@ -84,7 +84,7 @@ func NewAMOApplication(db dbm.DB, index dbm.DB, l log.Logger) *AMOApplication {
 
 func (app *AMOApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
 	return abci.ResponseInfo{
-		Data:       fmt.Sprintf("{\"height\":%v}", app.state.Height),
+		Data:       fmt.Sprintf("{\"walk\":%v}", app.state.Walk),
 		Version:    version.ABCIVersion,
 		AppVersion: ProtocolVersion.Uint64(),
 	}
@@ -107,6 +107,7 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 	if isStake {
 		app.flagValUpdate = true
 	}
+	app.state.Walk++
 	return abci.ResponseDeliverTx{
 		Code: resCode,
 		Tags: tags,
@@ -127,10 +128,8 @@ func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
 }
 
 func (app *AMOApplication) Commit() abci.ResponseCommit {
-	app.state.Height += 1
-
 	b := make([]byte, 8)
-	binary.PutVarint(b, app.state.Height)
+	binary.PutVarint(b, app.state.Walk)
 	app.state.AppHash = b
 
 	saveState(app.state)
@@ -206,9 +205,12 @@ func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) abci.ResponseB
 		wsum.Add(&wsum, &tmp.Int)
 	}
 	// individual rewards
-	tmp.Set(0)
+	tmp.Set(0) // subtotal for delegate holders
 	for _, d := range ds {
 		tmp2 = *partialReward(wDelegate, &d.Amount.Int, &wsum, &rTotal)
+		if !tmp2.Equals(new(types.Currency).Set(0)) {
+			app.state.Walk++
+		}
 		tmp.Add(&tmp2)
 		b := app.store.GetBalance(d.Holder).Add(&tmp2)
 		app.store.SetBalance(d.Holder, b)
@@ -216,6 +218,9 @@ func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) abci.ResponseB
 			"delegate", hex.EncodeToString(d.Holder), "reward", tmp2.Int64())
 	}
 	tmp2.Int.Sub(&rTotal.Int, &tmp.Int)
+	if !tmp2.Equals(new(types.Currency).Set(0)) {
+		app.state.Walk++
+	}
 	b := app.store.GetBalance(staker).Add(&tmp2)
 	app.store.SetBalance(staker, b)
 	app.logger.Debug("Block reward",

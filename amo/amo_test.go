@@ -419,16 +419,21 @@ func TestBlockReward(t *testing.T) {
 	_ = app.BeginBlock(req)
 
 	// check distributed rewards
-	bal := app.store.GetBalance(holder)
-	assert.Equal(t,
-		new(types.Currency).Set(uint64(types.OneAMOUint64*1.2/2)),
-		bal)
+	var delta int64
+	var bal, ass *types.Currency
+
+	bal = app.store.GetBalance(holder)
+	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/2)))
+	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
+	assert.True(t, delta < 10 && delta > -10)
+
 	bal = app.store.GetBalance(daddr1)
-	assert.Equal(t,
-		new(types.Currency).Set(uint64(types.OneAMOUint64*1.2/6)),
-		bal)
+	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/6)))
+	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
+	assert.True(t, delta < 10 && delta > -10)
+
 	bal = app.store.GetBalance(daddr2)
-	assert.Equal(t,
-		new(types.Currency).Set(uint64(types.OneAMOUint64*1.2/3)),
-		bal)
+	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/3)))
+	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
+	assert.True(t, delta < 10 && delta > -10)
 }
