@@ -1,74 +1,59 @@
 package tx
 
 import (
-	"bufio"
 	"errors"
-	"fmt"
-	"os"
-	"strings"
-	"syscall"
-
-	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/amolabs/amoabci/client/keys"
+	"github.com/amolabs/amoabci/cmd/amocli/util"
+)
+
+var (
+	Username   string
+	Passphrase string
+	UserKey    keys.Key
 )
 
 func GetRawKey(path string) (keys.Key, error) {
-	var key = keys.Key{}
-
-	keyList, err := keys.LoadKeyList(path)
+	empty := keys.Key{}
+	kr, err := keys.GetKeyRing(path)
 	if err != nil {
-		return key, err
+		return empty, err
 	}
 
-	switch len(keyList) {
+	switch kr.GetNumKeys() {
 	case 0:
-		return key, errors.New("Keys are not found on local storage")
+		return empty, errors.New("Empty key ring.")
 	case 1:
-		// safe to use for loop to find the first value of map
-		for _, value := range keyList {
-			key = value
+		return *kr.GetFirstKey(), nil
+	}
+
+	if len(Username) == 0 {
+		kr.PrintKeyList()
+		Username, err = util.PromptUsername()
+		if err != nil {
+			return empty, err
 		}
-		return key, nil
 	}
 
-	err = keys.List(path)
-	if err != nil {
-		return key, nil
+	key := kr.GetKey(Username)
+	if key == nil {
+		return empty, errors.New("Key not found")
 	}
-
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Printf("\nType the nickname corresponding to the key for signing this tx: ")
-	nickname, err := reader.ReadString('\n')
-	if err != nil {
-		return key, err
-	}
-
-	nickname = strings.Trim(nickname, "\r\n")
-
-	// check the status of key(NoExists, Exists, Encrypted)
-	keyStatus := keys.Check(nickname, path)
-	if keyStatus == keys.NoExists {
-		return key, errors.New("The key doesn't exist")
-	}
-
-	key = keyList[nickname]
 
 	// if key is encrypted, request passphrase to decrpyt it
 	if key.Encrypted {
-		fmt.Printf("Type passphrase: ")
-		passphrase, err := terminal.ReadPassword(int(syscall.Stdin))
-		fmt.Println()
-		if err != nil {
-			return key, err
+		if len(Passphrase) == 0 {
+			Passphrase, err = util.PromptPassphrase()
+			if err != nil {
+				return *key, err
+			}
 		}
 
-		err = keys.Decrypt(&key, passphrase)
+		err = key.Decrypt([]byte(Passphrase))
 		if err != nil {
-			return key, err
+			return *key, err
 		}
 	}
 
-	return key, nil
+	return *key, nil
 }

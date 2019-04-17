@@ -9,9 +9,9 @@ import (
 /* Commands (expected hierarchy)
  *
  * amocli |- key |- list
- *               |- generate <nickname>
- *               |- import <private key> --nickname <nickname>
- *               |- remove <nickname>
+ *               |- generate <username>
+ *               |- import <private key> --username <username>
+ *               |- remove <username>
  */
 
 var keyCmd = &cobra.Command{

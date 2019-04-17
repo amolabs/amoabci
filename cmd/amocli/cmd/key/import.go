@@ -13,7 +13,7 @@ import (
 )
 
 var ImportCmd = &cobra.Command{
-	Use:   "import <private key> --nickname <nickname>",
+	Use:   "import <private key> --username <username>",
 	Short: "Import a raw private key from base64-formatted string",
 	Args:  cobra.MinimumNArgs(1),
 	RunE:  importFunc,
@@ -23,15 +23,15 @@ func init() {
 	cmd := ImportCmd
 	cmd.Flags().SortFlags = false
 	cmd.Flags().BoolP("encrypt", "e", true, "encrypt the private key with passphrase")
-	cmd.Flags().StringP("nickname", "n", "", "specify a nickname for the key")
+	cmd.Flags().StringP("username", "n", "", "specify a username for the key")
 
-	cmd.MarkFlagRequired("nickname")
+	cmd.MarkFlagRequired("username")
 }
 
 func importFunc(cmd *cobra.Command, args []string) error {
 	var (
 		privKey    []byte
-		nickname   string
+		username   string
 		encrypt    bool
 		passphrase []byte
 		err        error
@@ -45,7 +45,7 @@ func importFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	nickname, err = flags.GetString("nickname")
+	username, err = flags.GetString("username")
 	if err != nil {
 		return err
 	}
@@ -64,12 +64,16 @@ func importFunc(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err = keys.Import(privKey, nickname, passphrase, encrypt, keyFile)
+	kr, err := keys.GetKeyRing(keyFile)
+	if err != nil {
+		return err
+	}
+	_, err = kr.ImportPrivKey(privKey, username, passphrase, encrypt)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Successfully imported the key with nickname: %s\n", nickname)
+	fmt.Printf("Successfully imported the key with username: %s\n", username)
 
 	return nil
 }

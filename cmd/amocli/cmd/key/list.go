@@ -16,11 +16,12 @@ var ListCmd = &cobra.Command{
 
 func listFunc(cmd *cobra.Command, args []string) error {
 	keyFile := util.DefaultKeyFilePath()
-
-	err := keys.List(keyFile)
+	kr, err := keys.GetKeyRing(keyFile)
 	if err != nil {
 		return err
 	}
+
+	kr.PrintKeyList()
 
 	return nil
 }

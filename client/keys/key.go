@@ -1,5 +1,12 @@
 package keys
 
+import (
+	"errors"
+
+	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/crypto/xsalsa20symmetric"
+)
+
 type Key struct {
 	Type      string `json:"type"`
 	Address   string `json:"address"`
@@ -8,43 +15,18 @@ type Key struct {
 	Encrypted bool   `json:"encrypted"`
 }
 
-type KeyStatus int
-
-const (
-	Unknown KeyStatus = 1 + iota
-	NoExists
-	Exists
-	Encrypted
-)
-
-func Check(nickname string, path string) KeyStatus {
-	keyList, err := LoadKeyList(path)
-	if err != nil {
-		return Unknown
-	}
-
-	key, exists := keyList[nickname]
-	if !exists {
-		return NoExists
-	}
-
+func (key *Key) Decrypt(passphrase []byte) error {
 	if !key.Encrypted {
-		return Exists
+		return errors.New("The key is not encrypted")
 	}
 
-	return Encrypted
-}
-
-func Get(nickname string, path string) Key {
-	keyList, err := LoadKeyList(path)
+	plainKey, err := xsalsa20symmetric.DecryptSymmetric(key.PrivKey, crypto.Sha256(passphrase))
 	if err != nil {
-		return Key{}
+		return err
 	}
 
-	key, exists := keyList[nickname]
-	if !exists {
-		return Key{}
-	}
+	key.Encrypted = false
+	key.PrivKey = plainKey
 
-	return key
+	return nil
 }

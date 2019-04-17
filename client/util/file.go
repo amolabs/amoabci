@@ -28,12 +28,14 @@ func DefaultKeyFilePath() string {
 func EnsureFile(path string) error {
 	dirPath, _ := filepath.Split(path)
 
-	err := cmn.EnsureDir(dirPath, 0775)
-	if err != nil {
-		return err
+	if len(dirPath) > 0 {
+		err := cmn.EnsureDir(dirPath, 0775)
+		if err != nil {
+			return err
+		}
 	}
 
-	_, err = os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0600)
+	_, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}

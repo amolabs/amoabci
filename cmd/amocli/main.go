@@ -9,9 +9,9 @@ import (
  * amocli |- version
  *        |- status
  *        |- key |- list
- *               |- generate <nickname>
- *               |- import <private key> --nickname <nickname>
- *               |- remove <nickname>
+ *               |- generate <username>
+ *               |- import <private key> --username <username>
+ *               |- remove <username>
  *
  *        |- tx |- transfer --to <address> --amount <currency>
  *              |

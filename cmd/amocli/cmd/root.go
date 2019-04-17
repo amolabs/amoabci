@@ -12,9 +12,9 @@ import (
 var LineBreak = &cobra.Command{Run: func(*cobra.Command, []string) {}}
 
 var rootCmd = &cobra.Command{
-	Use:               "amocli",
-	Short:             "Console app for a user to interact with AMO daemon",
-	PersistentPreRunE: loadConfig,
+	Use:              "amocli",
+	Short:            "Console app for a user to interact with AMO daemon",
+	PersistentPreRun: loadConfig,
 }
 
 // Execute function is the main gate to this app
@@ -23,12 +23,12 @@ func Execute() {
 
 	rootCmd.AddCommand(
 		versionCmd,
-		statusCmd,
-		LineBreak,
 		keyCmd,
 		LineBreak,
-		txCmd,
+		statusCmd,
+		LineBreak,
 		queryCmd,
+		txCmd,
 		dbCmd,
 		LineBreak,
 	)
@@ -40,10 +40,9 @@ func Execute() {
 	}
 }
 
-func loadConfig(cmd *cobra.Command, args []string) error {
+func loadConfig(cmd *cobra.Command, args []string) {
 	rpcArg, err := cmd.Flags().GetString("rpc")
 	if err == nil {
 		rpc.RpcRemote = "tcp://" + rpcArg
 	}
-	return nil
 }

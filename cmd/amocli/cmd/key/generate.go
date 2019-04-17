@@ -1,20 +1,18 @@
 package key
 
 import (
-	"errors"
 	"fmt"
-	"syscall"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/amolabs/amoabci/client/keys"
 	"github.com/amolabs/amoabci/client/util"
+	cliutil "github.com/amolabs/amoabci/cmd/amocli/util"
 )
 
 var GenCmd = &cobra.Command{
-	Use:   "generate <nickname>",
-	Short: "Generate a key with a specified nickname",
+	Use:   "generate <username>",
+	Short: "Generate a key with a specified username",
 	Args:  cobra.MinimumNArgs(1),
 	RunE:  genFunc,
 }
@@ -26,14 +24,9 @@ func init() {
 }
 
 func genFunc(cmd *cobra.Command, args []string) error {
-	nickname := args[0]
+	username := args[0]
 	keyFile := util.DefaultKeyFilePath()
 	flags := cmd.Flags()
-
-	keyStatus := keys.Check(nickname, keyFile)
-	if keyStatus > keys.NoExists {
-		return errors.New("The key already exists")
-	}
 
 	encrypt, err := flags.GetBool("encrypt")
 	if err != nil {
@@ -43,20 +36,23 @@ func genFunc(cmd *cobra.Command, args []string) error {
 	var passphrase []byte
 
 	if encrypt {
-		fmt.Printf("Type passphrase: ")
-		passphrase, err = terminal.ReadPassword(int(syscall.Stdin))
-		fmt.Println()
+		b, err := cliutil.PromptPassphrase()
 		if err != nil {
 			return err
 		}
+		passphrase = []byte(b)
 	}
 
-	err = keys.Generate(nickname, passphrase, encrypt, keyFile)
+	kr, err := keys.GetKeyRing(keyFile)
+	if err != nil {
+		return err
+	}
+	_, err = kr.GenerateNewKey(username, passphrase, encrypt)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Successfully generated the key with nickname: %s\n", nickname)
+	fmt.Printf("Successfully generated the key with username: %s\n", username)
 
 	return nil
 }
