@@ -4,10 +4,12 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tm "github.com/tendermint/tendermint/types"
@@ -173,21 +175,39 @@ func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseIni
 	return abci.ResponseInitChain{}
 }
 
-func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.flagValUpdate = false
 
 	proposer := req.Header.GetProposerAddress()
 	staker := app.store.GetHolderByValidator(proposer)
+	numTxs := req.Header.GetNumTxs()
+
+	// XXX no means to convey error to res
+	app.DistributeReward(staker, numTxs)
+
+	return res
+}
+
+func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
+	if app.flagValUpdate {
+		app.flagValUpdate = false
+		res.ValidatorUpdates = app.GetValidatorUpdates()
+	}
+	return res
+}
+
+/////////////////////////////////////
+
+func (app *AMOApplication) DistributeReward(staker crypto.Address, numTxs int64) error {
 	stake := app.store.GetStake(staker)
 	if stake == nil {
-		return abci.ResponseBeginBlock{}
+		return errors.New("No stake to calculate reward.")
 	}
 	ds := app.store.GetDelegatesByDelegator(staker)
 
 	var tmp, tmp2 types.Currency
 
 	// total reward
-	numTxs := req.Header.GetNumTxs()
 	var rTotal, rTx types.Currency
 	rTotal.Set(blkRewardAMO)
 	rTx.Set(txRewardAMO)
@@ -226,8 +246,30 @@ func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) abci.ResponseB
 	app.logger.Debug("Block reward",
 		"proposer", hex.EncodeToString(staker)[:20], "reward", tmp2.Int64())
 
-	return abci.ResponseBeginBlock{}
+	return nil
 }
+
+func (app *AMOApplication) GetValidatorUpdates() abci.ValidatorUpdates {
+	var vals abci.ValidatorUpdates
+	stakes := app.store.GetTopStakes(maxValidators)
+	adjFactor := calcAdjustFactor(stakes)
+	for _, stake := range stakes {
+		key := abci.PubKey{ // TODO
+			Type: "ed25519",
+			Data: stake.Validator[:],
+		}
+		var power big.Int
+		power.Rsh(&stake.Amount.Int, adjFactor)
+		val := abci.ValidatorUpdate{
+			PubKey: key,
+			Power:  power.Int64(),
+		}
+		vals = append(vals, val)
+	}
+	return vals
+}
+
+/////////////////////////////////////
 
 // r = (weight * stake / total) * base
 // TODO: eliminate ambiguity in float computation
@@ -243,31 +285,6 @@ func partialReward(weight int64, stake, total *big.Int, base *types.Currency) *t
 	r := types.Currency{}
 	t1f.Int(&r.Int)
 	return &r
-}
-
-func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
-	if app.flagValUpdate {
-		app.flagValUpdate = false
-
-		var vals abci.ValidatorUpdates
-		stakes := app.store.GetTopStakes(maxValidators)
-		adjFactor := calcAdjustFactor(stakes)
-		for _, stake := range stakes {
-			key := abci.PubKey{ // TODO
-				Type: "ed25519",
-				Data: stake.Validator[:],
-			}
-			var power big.Int
-			power.Rsh(&stake.Amount.Int, adjFactor)
-			val := abci.ValidatorUpdate{
-				PubKey: key,
-				Power:  power.Int64(),
-			}
-			vals = append(vals, val)
-		}
-		res.ValidatorUpdates = vals
-	}
-	return res
 }
 
 func calcAdjustFactor(stakes []*types.Stake) uint {
