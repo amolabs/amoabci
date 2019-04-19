@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"math/big"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/types"
+	tm "github.com/tendermint/tendermint/types"
 
-	atypes "github.com/amolabs/amoabci/amo/types"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 var (
@@ -23,6 +25,7 @@ var (
 
 type Store struct {
 	stateDB db.DB // DB for blockchain state: see protocol.md
+	indexDB db.DB
 	// search index for delegators:
 	// key: delegator address || holder address
 	// value: nil
@@ -40,6 +43,7 @@ type Store struct {
 func NewStore(stateDB db.DB, indexDB db.DB) *Store {
 	return &Store{
 		stateDB:        stateDB,
+		indexDB:        indexDB,
 		indexDelegator: db.NewPrefixDB(indexDB, []byte("delegator")),
 		indexValidator: db.NewPrefixDB(indexDB, []byte("validator")),
 		indexEffStake:  db.NewPrefixDB(indexDB, []byte("effstake")),
@@ -47,13 +51,15 @@ func NewStore(stateDB db.DB, indexDB db.DB) *Store {
 }
 
 // Balance store
-func getBalanceKey(addr types.Address) []byte {
+func getBalanceKey(addr tm.Address) []byte {
 	return append(prefixBalance, addr.Bytes()...)
 }
 
 func (s Store) Purge() error {
-	var itr db.Iterator = s.stateDB.Iterator([]byte{}, []byte(nil))
-	defer itr.Close()
+	var itr db.Iterator
+
+	// stateDB
+	itr = s.stateDB.Iterator([]byte{}, []byte(nil))
 
 	// TODO: cannot guarantee in multi-thread environment
 	// need some sync mechanism
@@ -65,11 +71,27 @@ func (s Store) Purge() error {
 
 	// TODO: need some method like s.stateDB.Size() to check if the DB has been
 	// really emptied.
+	itr.Close()
+
+	// indexDB
+	itr = s.indexDB.Iterator([]byte{}, []byte(nil))
+
+	// TODO: cannot guarantee in multi-thread environment
+	// need some sync mechanism
+	for ; itr.Valid(); itr.Next() {
+		k := itr.Key()
+		// XXX: not sure if this will confuse the iterator
+		s.indexDB.Delete(k)
+	}
+
+	// TODO: need some method like s.stateDB.Size() to check if the DB has been
+	// really emptied.
+	itr.Close()
 
 	return nil
 }
 
-func (s Store) SetBalance(addr types.Address, balance *atypes.Currency) {
+func (s Store) SetBalance(addr tm.Address, balance *types.Currency) {
 	b, err := json.Marshal(balance)
 	if err != nil {
 		panic(err)
@@ -77,16 +99,16 @@ func (s Store) SetBalance(addr types.Address, balance *atypes.Currency) {
 	s.stateDB.Set(getBalanceKey(addr), b)
 }
 
-func (s Store) SetBalanceUint64(addr types.Address, balance uint64) {
-	b, err := json.Marshal(new(atypes.Currency).Set(balance))
+func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) {
+	b, err := json.Marshal(new(types.Currency).Set(balance))
 	if err != nil {
 		panic(err)
 	}
 	s.stateDB.Set(getBalanceKey(addr), b)
 }
 
-func (s Store) GetBalance(addr types.Address) *atypes.Currency {
-	c := atypes.Currency{}
+func (s Store) GetBalance(addr tm.Address) *types.Currency {
+	c := types.Currency{}
 	balance := s.stateDB.Get(getBalanceKey(addr))
 	if len(balance) == 0 {
 		return &c
@@ -103,7 +125,7 @@ func getStakeKey(holder []byte) []byte {
 	return append(prefixStake, holder...)
 }
 
-func (s Store) SetStake(holder crypto.Address, stake *atypes.Stake) {
+func (s Store) SetStake(holder crypto.Address, stake *types.Stake) {
 	b, err := json.Marshal(stake)
 	if err != nil {
 		panic(err)
@@ -123,7 +145,7 @@ func (s Store) SetStake(holder crypto.Address, stake *atypes.Stake) {
 	s.indexEffStake.Set(after, nil)
 }
 
-func makeEffStakeKey(amount atypes.Currency, holder crypto.Address) []byte {
+func makeEffStakeKey(amount types.Currency, holder crypto.Address) []byte {
 	key := make([]byte, 32+20) // 256-bit integer + 20-byte address
 	b := amount.Bytes()
 	copy(key[32-len(b):], b)
@@ -131,12 +153,12 @@ func makeEffStakeKey(amount atypes.Currency, holder crypto.Address) []byte {
 	return key
 }
 
-func (s Store) GetStake(holder crypto.Address) *atypes.Stake {
+func (s Store) GetStake(holder crypto.Address) *types.Stake {
 	b := s.stateDB.Get(getStakeKey(holder))
 	if len(b) == 0 {
 		return nil
 	}
-	var stake atypes.Stake
+	var stake types.Stake
 	err := json.Unmarshal(b, &stake)
 	if err != nil {
 		panic(err)
@@ -144,7 +166,7 @@ func (s Store) GetStake(holder crypto.Address) *atypes.Stake {
 	return &stake
 }
 
-func (s Store) GetStakeByValidator(addr crypto.Address) *atypes.Stake {
+func (s Store) GetStakeByValidator(addr crypto.Address) *types.Stake {
 	holder := s.GetHolderByValidator(addr)
 	if holder == nil {
 		return nil
@@ -161,7 +183,7 @@ func getDelegateKey(holder []byte) []byte {
 	return append(prefixDelegate, holder...)
 }
 
-func (s Store) SetDelegate(holder crypto.Address, value *atypes.Delegate) error {
+func (s Store) SetDelegate(holder crypto.Address, value *types.Delegate) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -185,12 +207,12 @@ func (s Store) SetDelegate(holder crypto.Address, value *atypes.Delegate) error 
 	return nil
 }
 
-func (s Store) GetDelegate(holder crypto.Address) *atypes.Delegate {
+func (s Store) GetDelegate(holder crypto.Address) *types.Delegate {
 	b := s.stateDB.Get(getDelegateKey(holder))
 	if len(b) == 0 {
 		return nil
 	}
-	var delegate atypes.Delegate
+	var delegate types.Delegate
 	err := json.Unmarshal(b, &delegate)
 	if err != nil {
 		panic(err)
@@ -199,11 +221,11 @@ func (s Store) GetDelegate(holder crypto.Address) *atypes.Delegate {
 	return &delegate
 }
 
-func (s Store) GetDelegatesByDelegator(delegator crypto.Address) []*atypes.Delegate {
+func (s Store) GetDelegatesByDelegator(delegator crypto.Address) []*types.Delegate {
 	var itr db.Iterator = s.indexDelegator.Iterator(delegator, nil)
 	defer itr.Close()
 
-	var delegates []*atypes.Delegate
+	var delegates []*types.Delegate
 	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), delegator); itr.Next() {
 		holder := itr.Key()[len(delegator):]
 		delegates = append(delegates, s.GetDelegate(holder))
@@ -211,7 +233,7 @@ func (s Store) GetDelegatesByDelegator(delegator crypto.Address) []*atypes.Deleg
 	return delegates
 }
 
-func (s Store) GetEffStake(delegator crypto.Address) *atypes.Stake {
+func (s Store) GetEffStake(delegator crypto.Address) *types.Stake {
 	stake := s.GetStake(delegator)
 	if stake == nil {
 		return nil
@@ -222,8 +244,8 @@ func (s Store) GetEffStake(delegator crypto.Address) *atypes.Stake {
 	return stake
 }
 
-func (s Store) GetTopStakes(max uint64) []*atypes.Stake {
-	var stakes []*atypes.Stake
+func (s Store) GetTopStakes(max uint64) []*types.Stake {
+	var stakes []*types.Stake
 	var itr db.Iterator = s.indexEffStake.ReverseIterator(nil, nil)
 	var cnt uint64 = 0
 	for ; itr.Valid(); itr.Next() {
@@ -231,7 +253,7 @@ func (s Store) GetTopStakes(max uint64) []*atypes.Stake {
 			break
 		}
 		key := itr.Key()
-		var amount atypes.Currency
+		var amount types.Currency
 		amount.SetBytes(key[:32])
 		holder := key[32:]
 		stake := s.GetStake(holder)
@@ -248,7 +270,7 @@ func getParcelKey(parcelID []byte) []byte {
 	return append(prefixParcel, parcelID...)
 }
 
-func (s Store) SetParcel(parcelID []byte, value *atypes.ParcelValue) {
+func (s Store) SetParcel(parcelID []byte, value *types.ParcelValue) {
 	b, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
@@ -256,12 +278,12 @@ func (s Store) SetParcel(parcelID []byte, value *atypes.ParcelValue) {
 	s.stateDB.Set(getParcelKey(parcelID), b)
 }
 
-func (s Store) GetParcel(parcelID []byte) *atypes.ParcelValue {
+func (s Store) GetParcel(parcelID []byte) *types.ParcelValue {
 	b := s.stateDB.Get(getParcelKey(parcelID))
 	if len(b) == 0 {
 		return nil
 	}
-	var parcel atypes.ParcelValue
+	var parcel types.ParcelValue
 	err := json.Unmarshal(b, &parcel)
 	if err != nil {
 		panic(err)
@@ -278,7 +300,7 @@ func getRequestKey(buyer crypto.Address, parcelID []byte) []byte {
 	return append(prefixRequest, append(append(buyer, ':'), parcelID...)...)
 }
 
-func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *atypes.RequestValue) {
+func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.RequestValue) {
 	b, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
@@ -286,12 +308,12 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *atypes.R
 	s.stateDB.Set(getRequestKey(buyer, parcelID), b)
 }
 
-func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *atypes.RequestValue {
+func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *types.RequestValue {
 	b := s.stateDB.Get(getRequestKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
-	var request atypes.RequestValue
+	var request types.RequestValue
 	err := json.Unmarshal(b, &request)
 	if err != nil {
 		panic(err)
@@ -308,7 +330,7 @@ func getUsageKey(buyer crypto.Address, parcelID []byte) []byte {
 	return append(prefixUsage, append(append(buyer, ':'), parcelID...)...)
 }
 
-func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *atypes.UsageValue) {
+func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.UsageValue) {
 	b, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
@@ -316,12 +338,12 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *atypes.Usa
 	s.stateDB.Set(getUsageKey(buyer, parcelID), b)
 }
 
-func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *atypes.UsageValue {
+func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *types.UsageValue {
 	b := s.stateDB.Get(getUsageKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
-	var usage atypes.UsageValue
+	var usage types.UsageValue
 	err := json.Unmarshal(b, &usage)
 	if err != nil {
 		panic(err)
@@ -331,4 +353,49 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *atypes.UsageValu
 
 func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
 	s.stateDB.DeleteSync(getUsageKey(buyer, parcelID))
+}
+
+func (s Store) GetValidatorUpdates(max uint64) abci.ValidatorUpdates {
+	var vals abci.ValidatorUpdates
+	stakes := s.GetTopStakes(max)
+	adjFactor := calcAdjustFactor(stakes)
+	for _, stake := range stakes {
+		key := abci.PubKey{ // TODO
+			Type: "ed25519",
+			Data: stake.Validator[:],
+		}
+		var power big.Int
+		power.Rsh(&stake.Amount.Int, adjFactor)
+		val := abci.ValidatorUpdate{
+			PubKey: key,
+			Power:  power.Int64(),
+		}
+		vals = append(vals, val)
+	}
+	return vals
+}
+
+func calcAdjustFactor(stakes []*types.Stake) uint {
+	var vp big.Int
+	max := (tm.MaxTotalVotingPower)
+	var vps int64 = 0
+	var shifts uint = 0
+	for _, stake := range stakes {
+		vp.Rsh(&stake.Amount.Int, shifts)
+		for !vp.IsInt64() {
+			vp.Rsh(&vp, 1)
+			shifts++
+			vps >>= 1
+		}
+		vpi := vp.Int64()
+		tmp := vps + vpi
+		if tmp < vps || tmp > max {
+			vps >>= 1
+			vpi >>= 1
+			shifts++
+			tmp = vps + vpi
+		}
+		vps = tmp
+	}
+	return shifts
 }

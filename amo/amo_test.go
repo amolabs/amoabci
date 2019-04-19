@@ -353,8 +353,7 @@ func makeTxStake(priv p256.PrivKeyP256, amount uint64) []byte {
 }
 
 func TestValidatorUpdates(t *testing.T) {
-	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
+	app := NewAMOApplication(tdb.NewMemDB(), tdb.NewMemDB(), nil)
 
 	// setup
 	priv := p256.GenPrivKeyFromSecret([]byte("staker"))
@@ -374,7 +373,6 @@ func TestValidatorUpdates(t *testing.T) {
 	validators := app.EndBlock(endRequest).ValidatorUpdates
 	assert.Equal(t, 1, len(validators))
 
-	// TODO: test voting power calculcation
 	assert.Equal(t, int64(100), validators[0].Power)
 }
 
