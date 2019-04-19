@@ -12,7 +12,6 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
-	tm "github.com/tendermint/tendermint/types"
 	"github.com/tendermint/tendermint/version"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -75,6 +74,12 @@ var _ abci.Application = (*AMOApplication)(nil)
 func NewAMOApplication(db dbm.DB, index dbm.DB, l log.Logger) *AMOApplication {
 	if l == nil {
 		l = log.NewNopLogger()
+	}
+	if db == nil {
+		db = dbm.NewMemDB()
+	}
+	if index == nil {
+		index = dbm.NewMemDB()
 	}
 	app := &AMOApplication{
 		state:  loadState(db),
@@ -191,7 +196,7 @@ func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) (res abci.Resp
 func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	if app.flagValUpdate {
 		app.flagValUpdate = false
-		res.ValidatorUpdates = app.GetValidatorUpdates()
+		res.ValidatorUpdates = app.store.GetValidatorUpdates(maxValidators)
 	}
 	return res
 }
@@ -249,26 +254,6 @@ func (app *AMOApplication) DistributeReward(staker crypto.Address, numTxs int64)
 	return nil
 }
 
-func (app *AMOApplication) GetValidatorUpdates() abci.ValidatorUpdates {
-	var vals abci.ValidatorUpdates
-	stakes := app.store.GetTopStakes(maxValidators)
-	adjFactor := calcAdjustFactor(stakes)
-	for _, stake := range stakes {
-		key := abci.PubKey{ // TODO
-			Type: "ed25519",
-			Data: stake.Validator[:],
-		}
-		var power big.Int
-		power.Rsh(&stake.Amount.Int, adjFactor)
-		val := abci.ValidatorUpdate{
-			PubKey: key,
-			Power:  power.Int64(),
-		}
-		vals = append(vals, val)
-	}
-	return vals
-}
-
 /////////////////////////////////////
 
 // r = (weight * stake / total) * base
@@ -285,28 +270,4 @@ func partialReward(weight int64, stake, total *big.Int, base *types.Currency) *t
 	r := types.Currency{}
 	t1f.Int(&r.Int)
 	return &r
-}
-
-func calcAdjustFactor(stakes []*types.Stake) uint {
-	var vp big.Int
-	max := (tm.MaxTotalVotingPower)
-	var vps int64 = 0
-	var shifts uint = 0
-	for _, stake := range stakes {
-		vp = stake.Amount.Int
-		vp.Rsh(&vp, shifts)
-		for !vp.IsInt64() {
-			vp.Rsh(&vp, 1)
-			shifts++
-		}
-		vpi := vp.Int64()
-		tmp := vps + vpi
-		if tmp < vps || tmp > max {
-			vps >>= 1
-			vpi >>= 1
-			shifts++
-			tmp = vps + vpi
-		}
-	}
-	return shifts
 }

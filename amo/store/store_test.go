@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/db"
+	tm "github.com/tendermint/tendermint/types"
 
 	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/crypto/p256"
@@ -161,4 +163,62 @@ func TestDelegate(t *testing.T) {
 	ts := s.GetTopStakes(10)
 	assert.Equal(t, 1, len(ts))
 	assert.Equal(t, s.GetEffStake(staker), ts[0])
+}
+
+func newStake(amount string) (crypto.Address, *types.Stake) {
+	priv := ed25519.GenPrivKey()
+	validator, _ := priv.PubKey().(ed25519.PubKeyEd25519)
+	holder := p256.GenPrivKey().PubKey().Address()
+	coins, _ := new(types.Currency).SetString(amount, 10)
+	stake := types.Stake{
+		Amount:    *coins,
+		Validator: validator,
+	}
+	return holder, &stake
+}
+
+func TestVotingPowerCalc(t *testing.T) {
+	s := NewStore(db.NewMemDB(), db.NewMemDB())
+
+	vals := s.GetValidatorUpdates(100)
+	assert.Equal(t, 0, len(vals))
+
+	s.SetStake(newStake("1000000000000000000"))
+	s.SetStake(newStake("10000000000000000"))
+	s.SetStake(newStake("100000000000000000"))
+
+	vals = s.GetValidatorUpdates(1)
+	assert.Equal(t, 1, len(vals))
+	assert.Equal(t, int64(1000000000000000000), vals[0].Power)
+
+	vals = s.GetValidatorUpdates(100)
+	assert.Equal(t, 3, len(vals))
+	assert.Equal(t, int64(1000000000000000000), vals[0].Power)
+	assert.Equal(t, int64(100000000000000000), vals[1].Power)
+	assert.Equal(t, int64(10000000000000000), vals[2].Power)
+
+	// test voting power adjustment
+	s.Purge()
+	s.SetStake(newStake("1152921504606846975")) // 0xfffffffffffffff
+	vals = s.GetValidatorUpdates(100)
+	assert.Equal(t, int64(0xfffffffffffffff), vals[0].Power)
+
+	s.SetStake(newStake("1"))
+	vals = s.GetValidatorUpdates(100)
+	assert.Equal(t, int64(0x7ffffffffffffff), vals[0].Power)
+	assert.Equal(t, int64(0), vals[1].Power)
+
+	s.SetStake(newStake("47389214732891473289147321"))
+	s.SetStake(newStake("98327483195748293743892147"))
+	s.SetStake(newStake("64738214738918483219483177"))
+	s.SetStake(newStake("10239481297483914839120049"))
+	s.SetStake(newStake("10239481297483914839120049"))
+
+	var sum int64
+	vals = s.GetValidatorUpdates(100)
+	for _, val := range vals {
+		sum += val.Power
+	}
+	assert.True(t, sum <= tm.MaxTotalVotingPower)
+	assert.Equal(t, vals[3].Power, vals[4].Power)
 }
