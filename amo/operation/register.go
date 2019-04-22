@@ -25,18 +25,14 @@ func (o Register) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Register) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+func (o Register) Execute(store *store.Store, sender crypto.Address) uint32 {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+		return resCode
 	}
 	parcel := types.ParcelValue{
 		Owner:   sender,
 		Custody: o.Custody,
 	}
 	store.SetParcel(o.Target, &parcel)
-	tags := []cmn.KVPair{
-		{Key: []byte("owner"), Value: []byte(sender.String())},
-		{Key: []byte("target"), Value: []byte(o.Target.String())},
-	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK
 }

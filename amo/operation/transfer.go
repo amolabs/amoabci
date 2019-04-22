@@ -4,7 +4,6 @@ import (
 	"bytes"
 
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -33,9 +32,9 @@ func (o Transfer) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Transfer) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+func (o Transfer) Execute(store *store.Store, sender crypto.Address) uint32 {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+		return resCode
 	}
 	fromBalance := store.GetBalance(sender)
 	toBalance := store.GetBalance(o.To)
@@ -43,9 +42,5 @@ func (o Transfer) Execute(store *store.Store, sender crypto.Address) (uint32, []
 	toBalance.Add(&o.Amount)
 	store.SetBalance(sender, fromBalance)
 	store.SetBalance(o.To, toBalance)
-	tags := []cmn.KVPair{
-		{Key: []byte(sender.String()), Value: []byte(fromBalance.String())},
-		{Key: []byte(o.To.String()), Value: []byte(toBalance.String())},
-	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK
 }

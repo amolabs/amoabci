@@ -10,6 +10,7 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	tm "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/version"
@@ -105,7 +106,7 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 			Tags: nil,
 		}
 	}
-	resCode, tags := op.Execute(app.store, message.Sender)
+	resCode := op.Execute(app.store, message.Sender)
 	if resCode != code.TxCodeOK {
 		return abci.ResponseDeliverTx{
 			Code: resCode,
@@ -117,7 +118,10 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 	app.state.Walk++
 	return abci.ResponseDeliverTx{
 		Code: resCode,
-		Tags: tags,
+		Tags: []tm.KVPair{
+			{Key: []byte("tx.type"), Value: []byte(message.Type)},
+			{Key: []byte("tx.sender"), Value: []byte(message.Sender.String())},
+		},
 	}
 }
 

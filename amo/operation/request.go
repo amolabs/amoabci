@@ -36,9 +36,9 @@ func (o Request) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Request) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+func (o Request) Execute(store *store.Store, sender crypto.Address) uint32 {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+		return resCode
 	}
 	balance := store.GetBalance(sender)
 	balance.Sub(&o.Payment)
@@ -47,9 +47,5 @@ func (o Request) Execute(store *store.Store, sender crypto.Address) (uint32, []c
 		Payment: o.Payment,
 	}
 	store.SetRequest(sender, o.Target, &request)
-	tags := []cmn.KVPair{
-		{Key: []byte(sender.String()), Value: []byte(balance.String())},
-		{Key: []byte("target"), Value: []byte(o.Target.String())},
-	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK
 }

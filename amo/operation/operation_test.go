@@ -88,7 +88,7 @@ func TestValidCancel(t *testing.T) {
 		parcelID[0],
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
+	resCode := op.Execute(s, bob.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -106,7 +106,7 @@ func TestValidDiscard(t *testing.T) {
 		parcelID[0],
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
+	resCode := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -130,7 +130,7 @@ func TestValidGrant(t *testing.T) {
 		Custody: custody[1],
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
+	resCode := op.Execute(s, bob.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -157,7 +157,7 @@ func TestValidRegister(t *testing.T) {
 		Custody: custody[2],
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
+	resCode := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -177,7 +177,7 @@ func TestValidRequest(t *testing.T) {
 		Payment: *new(types.Currency).Set(200),
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
+	resCode := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -212,7 +212,7 @@ func TestValidRevoke(t *testing.T) {
 		Target:  parcelID[0],
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
+	resCode := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -237,7 +237,7 @@ func TestValidTransfer(t *testing.T) {
 		Amount: *new(types.Currency).Set(1230),
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
+	resCode := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -267,7 +267,7 @@ func TestValidStake(t *testing.T) {
 		Validator: cmn.RandBytes(32),
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
+	resCode := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 }
 
@@ -291,7 +291,7 @@ func TestValidWithdraw(t *testing.T) {
 		Amount: *new(types.Currency).Set(2000),
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
+	resCode := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 	assert.Equal(t, zero, &s.GetStake(alice.addr).Amount)
 }
@@ -311,7 +311,7 @@ func TestValidDelegate(t *testing.T) {
 		To:     alice.addr,
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
+	resCode := op.Execute(s, bob.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 	assert.Equal(t, new(types.Currency).Set(1000), &s.GetDelegate(bob.addr).Amount)
 }
@@ -347,7 +347,7 @@ func TestValidRetract(t *testing.T) {
 		Amount: *new(types.Currency).Set(400),
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
+	resCode := op.Execute(s, bob.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 	assert.Equal(t, new(types.Currency).Set(100), &s.GetDelegate(bob.addr).Amount)
 }

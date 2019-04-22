@@ -27,13 +27,10 @@ func (o Discard) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Discard) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+func (o Discard) Execute(store *store.Store, sender crypto.Address) uint32 {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+		return resCode
 	}
 	store.DeleteParcel(o.Target)
-	tags := []cmn.KVPair{
-		{Key: []byte("target"), Value: []byte(o.Target.String())},
-	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK
 }
