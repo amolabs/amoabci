@@ -119,6 +119,7 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 	return abci.ResponseDeliverTx{
 		Code: resCode,
 		Tags: []tm.KVPair{
+			{Key: []byte("all"), Value: []byte("true")},
 			{Key: []byte("tx.type"), Value: []byte(message.Type)},
 			{Key: []byte("tx.sender"), Value: []byte(message.Sender.String())},
 		},
