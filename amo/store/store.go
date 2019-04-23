@@ -359,7 +359,6 @@ func (s Store) GetValidatorUpdates(max uint64) abci.ValidatorUpdates {
 	var vals abci.ValidatorUpdates
 	stakes := s.GetTopStakes(max)
 	adjFactor := calcAdjustFactor(stakes)
-	adjFactor++ // XXX: Hotfix!
 	for _, stake := range stakes {
 		key := abci.PubKey{ // TODO
 			Type: "ed25519",
@@ -390,7 +389,7 @@ func calcAdjustFactor(stakes []*types.Stake) uint {
 		}
 		vpi := vp.Int64()
 		tmp := vps + vpi
-		if tmp < vps || tmp > max {
+		for tmp < vps || tmp > max {
 			vps >>= 1
 			vpi >>= 1
 			shifts++

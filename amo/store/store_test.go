@@ -221,4 +221,16 @@ func TestVotingPowerCalc(t *testing.T) {
 	}
 	assert.True(t, sum <= tm.MaxTotalVotingPower)
 	assert.Equal(t, vals[3].Power, vals[4].Power)
+
+	//
+	s.Purge()
+	s.SetStake(newStake("10000000000000000000"))
+	s.SetStake(newStake("10000000000000000000"))
+	s.SetStake(newStake("10000000000000000000"))
+	sum = 0
+	vals = s.GetValidatorUpdates(100)
+	for _, val := range vals {
+		sum += val.Power
+	}
+	assert.True(t, sum <= tm.MaxTotalVotingPower)
 }
