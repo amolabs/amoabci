@@ -359,6 +359,7 @@ func (s Store) GetValidatorUpdates(max uint64) abci.ValidatorUpdates {
 	var vals abci.ValidatorUpdates
 	stakes := s.GetTopStakes(max)
 	adjFactor := calcAdjustFactor(stakes)
+	adjFactor++ // XXX: Hotfix!
 	for _, stake := range stakes {
 		key := abci.PubKey{ // TODO
 			Type: "ed25519",
