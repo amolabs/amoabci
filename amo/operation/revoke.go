@@ -28,14 +28,10 @@ func (o Revoke) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Revoke) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+func (o Revoke) Execute(store *store.Store, sender crypto.Address) uint32 {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+		return resCode
 	}
 	store.DeleteUsage(o.Grantee, o.Target)
-	tags := []cmn.KVPair{
-		{Key: []byte("grantee"), Value: []byte(o.Grantee.String())},
-		{Key: []byte("target"), Value: []byte(o.Target.String())},
-	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK
 }

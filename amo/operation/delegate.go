@@ -2,13 +2,15 @@ package operation
 
 import (
 	"bytes"
+
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/types"
 )
+
+var _ Operation = Delegate{}
 
 type Delegate struct {
 	To     crypto.Address `json:"to"`
@@ -34,9 +36,9 @@ func (o Delegate) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Delegate) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+func (o Delegate) Execute(store *store.Store, sender crypto.Address) uint32 {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+		return resCode
 	}
 	balance := store.GetBalance(sender)
 	balance.Sub(&o.Amount)
@@ -52,8 +54,5 @@ func (o Delegate) Execute(store *store.Store, sender crypto.Address) (uint32, []
 	store.SetBalance(sender, balance)
 	store.SetDelegate(sender, delegate)
 	// TODO Update delegation state
-	tags := []cmn.KVPair{
-		{Key: []byte(sender.String()), Value: []byte(balance.String())},
-	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK
 }

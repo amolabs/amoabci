@@ -34,9 +34,9 @@ func (o Grant) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Grant) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+func (o Grant) Execute(store *store.Store, sender crypto.Address) uint32 {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+		return resCode
 	}
 	request := store.GetRequest(o.Grantee, o.Target)
 	store.DeleteRequest(o.Grantee, o.Target)
@@ -47,9 +47,5 @@ func (o Grant) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn
 		Custody: o.Custody,
 	}
 	store.SetUsage(o.Grantee, o.Target, &usage)
-	tags := []cmn.KVPair{
-		{Key: []byte("target"), Value: []byte(o.Target.String())},
-		{Key: []byte(sender.String()), Value: []byte(balance.String())},
-	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK
 }

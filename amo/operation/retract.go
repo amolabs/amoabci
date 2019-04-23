@@ -2,13 +2,15 @@ package operation
 
 import (
 	"bytes"
+
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/types"
 )
+
+var _ Operation = Retract{}
 
 type Retract struct {
 	From   crypto.Address `json:"from"`
@@ -31,9 +33,9 @@ func (o Retract) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Retract) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+func (o Retract) Execute(store *store.Store, sender crypto.Address) uint32 {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+		return resCode
 	}
 	delegate := store.GetDelegate(sender)
 	delegate.Amount.Sub(&o.Amount)
@@ -45,9 +47,5 @@ func (o Retract) Execute(store *store.Store, sender crypto.Address) (uint32, []c
 	balance := store.GetBalance(sender)
 	balance.Add(&o.Amount)
 	store.SetBalance(sender, balance)
-	// TODO Update delegation state
-	tags := []cmn.KVPair{
-		{Key: []byte(sender.String()), Value: []byte(balance.String())},
-	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK
 }

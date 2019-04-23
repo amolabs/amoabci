@@ -2,13 +2,13 @@ package operation
 
 import (
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/types"
-
 )
+
+var _ Operation = Withdraw{}
 
 type Withdraw struct {
 	Amount types.Currency `json:"amount"`
@@ -22,9 +22,9 @@ func (o Withdraw) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Withdraw) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+func (o Withdraw) Execute(store *store.Store, sender crypto.Address) uint32 {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+		return resCode
 	}
 	stake := store.GetStake(sender)
 	balance := store.GetBalance(sender)
@@ -32,8 +32,5 @@ func (o Withdraw) Execute(store *store.Store, sender crypto.Address) (uint32, []
 	balance.Add(&o.Amount)
 	store.SetStake(sender, stake)
 	store.SetBalance(sender, balance)
-	tags := []cmn.KVPair{
-		{Key: []byte(sender.String()), Value: []byte(balance.String())},
-	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK
 }

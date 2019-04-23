@@ -10,6 +10,8 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
+var _ Operation = Stake{}
+
 type Stake struct {
 	Amount    types.Currency `json:"amount"`
 	Validator cmn.HexBytes   `json:"validator"`
@@ -26,9 +28,9 @@ func (o Stake) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Stake) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair) {
+func (o Stake) Execute(store *store.Store, sender crypto.Address) uint32 {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+		return resCode
 	}
 	balance := store.GetBalance(sender)
 	balance.Sub(&o.Amount)
@@ -37,7 +39,7 @@ func (o Stake) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn
 		var k ed25519.PubKeyEd25519
 		copy(k[:], o.Validator)
 		stake = &types.Stake{
-			Amount: o.Amount,
+			Amount:    o.Amount,
 			Validator: k,
 		}
 	} else {
@@ -46,8 +48,5 @@ func (o Stake) Execute(store *store.Store, sender crypto.Address) (uint32, []cmn
 	}
 	store.SetBalance(sender, balance)
 	store.SetStake(sender, stake)
-	tags := []cmn.KVPair{
-		{Key: []byte(sender.String()), Value: []byte(balance.String())},
-	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK
 }

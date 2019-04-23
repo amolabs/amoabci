@@ -105,7 +105,7 @@ func (m Message) IsValid() bool {
 
 type Operation interface {
 	Check(store *store.Store, sender crypto.Address) uint32
-	Execute(store *store.Store, sender crypto.Address) (uint32, []cmn.KVPair)
+	Execute(store *store.Store, sender crypto.Address) uint32
 }
 
 func ParseTx(tx []byte) (Message, Operation, bool) {
