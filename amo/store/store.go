@@ -14,6 +14,11 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
+const (
+	// division by 2 is for safeguarding. tendermint code is not so safe.
+	MaxTotalVotingPower = tm.MaxTotalVotingPower / 2
+)
+
 var (
 	prefixBalance  = []byte("balance:")
 	prefixStake    = []byte("stake:")
@@ -377,7 +382,7 @@ func (s Store) GetValidatorUpdates(max uint64) abci.ValidatorUpdates {
 
 func calcAdjustFactor(stakes []*types.Stake) uint {
 	var vp big.Int
-	max := (tm.MaxTotalVotingPower)
+	max := MaxTotalVotingPower
 	var vps int64 = 0
 	var shifts uint = 0
 	for _, stake := range stakes {

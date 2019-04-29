@@ -10,7 +10,6 @@ import (
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/db"
-	tm "github.com/tendermint/tendermint/types"
 
 	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/crypto/p256"
@@ -189,19 +188,19 @@ func TestVotingPowerCalc(t *testing.T) {
 
 	vals = s.GetValidatorUpdates(1)
 	assert.Equal(t, 1, len(vals))
-	assert.Equal(t, int64(1000000000000000000), vals[0].Power)
+	assert.Equal(t, int64(500000000000000000), vals[0].Power)
 
 	vals = s.GetValidatorUpdates(100)
 	assert.Equal(t, 3, len(vals))
-	assert.Equal(t, int64(1000000000000000000), vals[0].Power)
-	assert.Equal(t, int64(100000000000000000), vals[1].Power)
-	assert.Equal(t, int64(10000000000000000), vals[2].Power)
+	assert.Equal(t, int64(500000000000000000), vals[0].Power)
+	assert.Equal(t, int64(50000000000000000), vals[1].Power)
+	assert.Equal(t, int64(5000000000000000), vals[2].Power)
 
 	// test voting power adjustment
 	s.Purge()
 	s.SetStake(newStake("1152921504606846975")) // 0xfffffffffffffff
 	vals = s.GetValidatorUpdates(100)
-	assert.Equal(t, int64(0xfffffffffffffff), vals[0].Power)
+	assert.Equal(t, int64(0x7ffffffffffffff), vals[0].Power)
 
 	s.SetStake(newStake("1"))
 	vals = s.GetValidatorUpdates(100)
@@ -219,7 +218,7 @@ func TestVotingPowerCalc(t *testing.T) {
 	for _, val := range vals {
 		sum += val.Power
 	}
-	assert.True(t, sum <= tm.MaxTotalVotingPower)
+	assert.True(t, sum <= MaxTotalVotingPower)
 	assert.Equal(t, vals[3].Power, vals[4].Power)
 
 	//
@@ -232,5 +231,17 @@ func TestVotingPowerCalc(t *testing.T) {
 	for _, val := range vals {
 		sum += val.Power
 	}
-	assert.True(t, sum <= tm.MaxTotalVotingPower)
+	assert.True(t, sum <= MaxTotalVotingPower)
+
+	//
+	s.Purge()
+	s.SetStake(newStake("1000000000000000000"))
+	s.SetStake(newStake("1000000000000000000"))
+	s.SetStake(newStake("1000000000000000000"))
+	sum = 0
+	vals = s.GetValidatorUpdates(100)
+	for _, val := range vals {
+		sum += val.Power
+	}
+	assert.True(t, sum <= MaxTotalVotingPower)
 }
