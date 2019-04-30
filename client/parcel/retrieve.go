@@ -1,4 +1,4 @@
-package db
+package parcel
 
 import (
 	"github.com/paust-team/paust-db/client"

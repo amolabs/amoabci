@@ -63,42 +63,24 @@ func queryDelegate(store *store.Store, queryData []byte) (res abci.ResponseQuery
 		res.Code = code.QueryCodeNoKey
 		return
 	}
-	res.Key = queryData
 
-	keyMap := make(map[string]tm.HexBytes)
-	err := json.Unmarshal(queryData, &keyMap)
+	var addr crypto.Address
+	err := json.Unmarshal(queryData, &addr)
 	if err != nil {
 		res.Code = code.QueryCodeBadKey
 		return
 	}
-	if _, ok := keyMap["holder"]; !ok {
-		res.Code = code.QueryCodeBadKey
-		return
-	}
-	if _, ok := keyMap["delegator"]; !ok {
-		res.Code = code.QueryCodeBadKey
-		return
-	}
-	holder := crypto.Address(keyMap["holder"])
-	if len(holder) != crypto.AddressSize {
-		res.Code = code.QueryCodeBadKey
-		return
-	}
-	delegator := crypto.Address(keyMap["delegator"])
-	if len(delegator) != crypto.AddressSize {
-		res.Code = code.QueryCodeBadKey
-		return
-	}
 
-	delegate := store.GetDelegate(holder)
+	delegate := store.GetDelegate(addr)
 	if delegate == nil {
 		res.Code = code.QueryCodeNoMatch
-		return
+	} else {
+		res.Code = code.QueryCodeOK
+		jsonstr, _ := json.Marshal(delegate)
+		res.Log = string(jsonstr)
+		res.Value = jsonstr
+		res.Key = queryData
 	}
-	jsonstr, _ := json.Marshal(delegate)
-	res.Value = jsonstr
-	res.Log = string(jsonstr)
-	res.Code = code.QueryCodeOK
 
 	return
 }
@@ -109,18 +91,18 @@ func queryParcel(store *store.Store, queryData []byte) (res abci.ResponseQuery) 
 		return
 	}
 
-	// TODO: check parcel id
+	// TODO: parse parcel id from queryData
+
 	parcel := store.GetParcel(queryData)
 	if parcel == nil {
 		res.Code = code.QueryCodeNoMatch
-		return
+	} else {
+		res.Code = code.QueryCodeOK
+		jsonstr, _ := json.Marshal(parcel)
+		res.Log = string(jsonstr)
+		res.Value = []byte(jsonstr)
+		res.Key = queryData
 	}
-
-	jsonstr, _ := json.Marshal(parcel)
-	res.Log = string(jsonstr)
-	res.Value = []byte(jsonstr)
-	res.Code = code.QueryCodeOK
-	res.Key = queryData
 
 	return
 }
@@ -151,19 +133,19 @@ func queryRequest(store *store.Store, queryData []byte) (res abci.ResponseQuery)
 		return
 	}
 
-	// TODO: check parcel id
+	// TODO: parse parcel id
 	parcelID := keyMap["target"]
 
 	request := store.GetRequest(addr, parcelID)
 	if request == nil {
 		res.Code = code.QueryCodeNoMatch
-		return
+	} else {
+		res.Code = code.QueryCodeOK
+		jsonstr, _ := json.Marshal(request)
+		res.Log = string(jsonstr)
+		res.Value = []byte(jsonstr)
+		res.Key = queryData
 	}
-	jsonstr, _ := json.Marshal(request)
-	res.Log = string(jsonstr)
-	res.Value = []byte(jsonstr)
-	res.Code = code.QueryCodeOK
-	res.Key = queryData
 
 	return
 }
@@ -194,19 +176,19 @@ func queryUsage(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	// TODO: check parcel id
+	// TODO: parse parcel id
 	parcelID := keyMap["target"]
 
-	request := store.GetUsage(addr, parcelID)
-	if request == nil {
+	usage := store.GetUsage(addr, parcelID)
+	if usage == nil {
 		res.Code = code.QueryCodeNoMatch
-		return
+	} else {
+		res.Code = code.QueryCodeOK
+		jsonstr, _ := json.Marshal(usage)
+		res.Log = string(jsonstr)
+		res.Value = []byte(jsonstr)
+		res.Key = queryData
 	}
-	jsonstr, _ := json.Marshal(request)
-	res.Log = string(jsonstr)
-	res.Value = []byte(jsonstr)
-	res.Code = code.QueryCodeOK
-	res.Key = queryData
 
 	return
 }

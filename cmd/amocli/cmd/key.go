@@ -17,7 +17,7 @@ import (
 var keyCmd = &cobra.Command{
 	Use:     "key",
 	Aliases: []string{"k"},
-	Short:   "Manage the key(wallet)-related features",
+	Short:   "Manage local keyring",
 }
 
 func init() {

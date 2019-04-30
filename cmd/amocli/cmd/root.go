@@ -13,7 +13,7 @@ var LineBreak = &cobra.Command{Run: func(*cobra.Command, []string) {}}
 
 var rootCmd = &cobra.Command{
 	Use:              "amocli",
-	Short:            "Console app for a user to interact with AMO daemon",
+	Short:            "AMO blockchain console",
 	PersistentPreRun: loadConfig,
 }
 
@@ -26,13 +26,15 @@ func Execute() {
 		keyCmd,
 		LineBreak,
 		statusCmd,
-		LineBreak,
 		queryCmd,
 		txCmd,
-		dbCmd,
+		parcelCmd,
 		LineBreak,
 	)
-	rootCmd.PersistentFlags().String("rpc", "0.0.0.0:26657", "node_ip:port")
+	rootCmd.PersistentFlags().StringP("rpc", "r", "0.0.0.0:26657",
+		"node_ip:port")
+	rootCmd.PersistentFlags().BoolP("json", "j", false,
+		"output as json")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
