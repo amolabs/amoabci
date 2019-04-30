@@ -54,25 +54,33 @@ func init() {
 		tx.CancelCmd,
 		tx.RevokeCmd,
 	)
-	txCmd.PersistentPreRun = readUserPass
+	txCmd.PersistentPreRun = preRunChain
 	txCmd.PersistentFlags().String("user", "", "username")
 	txCmd.PersistentFlags().String("pass", "", "passphrase of an encrypted key")
 }
 
-func readUserPass(cmd *cobra.Command, args []string) {
+func preRunChain(cmd *cobra.Command, args []string) {
+	// If this function runs, it means that no children commands designated
+	// persistentPreRun. In that case, scan upward and search first occurrence
+	// of persistentPreRun and run it first. This is necessary because cobra
+	// just scans the first occurrence of persistentPreRun from the leaf
+	// command, but we need chain of persistentPreRun.
 	beep := false
 	for c := cmd; c != nil; c = c.Parent() {
 		if c == txCmd {
 			beep = true
 			continue
 		}
-		run := c.PersistentPreRun
-		if beep && run != nil {
+		if run := c.PersistentPreRun; beep && run != nil {
 			run(cmd, args)
 			break
 		}
 	}
 
+	readUserPass(cmd, args)
+}
+
+func readUserPass(cmd *cobra.Command, args []string) {
 	username, err := cmd.Flags().GetString("user")
 	if err == nil {
 		tx.Username = username
