@@ -2,9 +2,10 @@
   "genesis_time": "2019-02-25T11:10:25.475921037Z",
   "chain_id": "amo-test-dev",
   "consensus_params": {
-    "block_size": {
+    "block": {
       "max_bytes": "22020096",
-      "max_gas": "-1"
+      "max_gas": "-1",
+	  "time_iota_ms": "1000"
     },
     "evidence": {
       "max_age": "100000"
@@ -23,7 +24,7 @@
         "value": "0cOwFQkn9/DTDo1BuqfargBy+1CAPdlQqZpWodbU2F8="
       },
       "power": "10",
-      "name": ""
+      "name": "firstman"
     }
   ],
   "app_state": {
