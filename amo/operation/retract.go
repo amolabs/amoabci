@@ -33,11 +33,7 @@ func (o Retract) Execute(store *store.Store, sender crypto.Address) uint32 {
 	}
 	delegate := store.GetDelegate(sender)
 	delegate.Amount.Sub(&o.Amount)
-	if delegate.Amount.Equals(zero) {
-		store.SetDelegate(sender, nil)
-	} else {
-		store.SetDelegate(sender, delegate)
-	}
+	store.SetDelegate(sender, delegate)
 	balance := store.GetBalance(sender)
 	balance.Add(&o.Amount)
 	store.SetBalance(sender, balance)
