@@ -12,43 +12,25 @@ import (
 )
 
 var GrantCmd = &cobra.Command{
-	Use:   "grant",
-	Short: "Grant the request of parcel in store/request by data owner",
-	Args:  cobra.NoArgs,
+	Use:   "grant <parcel_id> <address> <key_custody>",
+	Short: "Grant a parcel permission",
+	Args:  cobra.MinimumNArgs(3),
 	RunE:  grantFunc,
 }
 
 func grantFunc(cmd *cobra.Command, args []string) error {
-	var (
-		target, grantee, custody string
-		targetHex, custodyHex    []byte
-		err                      error
-	)
-
-	flags := cmd.Flags()
-
-	if target, err = flags.GetString("target"); err != nil {
-		return err
-	}
-
-	if targetHex, err = hex.DecodeString(target); err != nil {
-		return err
-	}
-
-	if grantee, err = flags.GetString("grantee"); err != nil {
-		return err
-	}
-
-	granteeAddr, err := hex.DecodeString(grantee)
+	parcel, err := hex.DecodeString(args[0])
 	if err != nil {
 		return err
 	}
 
-	if custody, err = flags.GetString("custody"); err != nil {
+	grantee, err := hex.DecodeString(args[1])
+	if err != nil {
 		return err
 	}
 
-	if custodyHex, err = hex.DecodeString(custody); err != nil {
+	custody, err := hex.DecodeString(args[2])
+	if err != nil {
 		return err
 	}
 
@@ -57,7 +39,7 @@ func grantFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Grant(targetHex, granteeAddr, custodyHex, key)
+	result, err := rpc.Grant(parcel, grantee, custody, key)
 	if err != nil {
 		return err
 	}
@@ -70,17 +52,4 @@ func grantFunc(cmd *cobra.Command, args []string) error {
 	fmt.Println(string(resultJSON))
 
 	return nil
-}
-
-func init() {
-	cmd := GrantCmd
-	cmd.Flags().SortFlags = false
-
-	cmd.Flags().StringP("target", "t", "", "target ...")
-	cmd.Flags().StringP("grantee", "g", "", "grantee ...")
-	cmd.Flags().StringP("custody", "c", "", "custody ...")
-
-	cmd.MarkFlagRequired("target")
-	cmd.MarkFlagRequired("grantee")
-	cmd.MarkFlagRequired("custody")
 }

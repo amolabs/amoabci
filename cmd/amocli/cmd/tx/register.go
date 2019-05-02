@@ -12,34 +12,20 @@ import (
 )
 
 var RegisterCmd = &cobra.Command{
-	Use:   "register",
+	Use:   "register <parcel_id> <key_custody>",
 	Short: "Register parcel with extra information",
-	Args:  cobra.NoArgs,
+	Args:  cobra.MinimumNArgs(2),
 	RunE:  registerFunc,
 }
 
 func registerFunc(cmd *cobra.Command, args []string) error {
-	var (
-		target, custody       string
-		targetHex, custodyHex []byte
-		err                   error
-	)
-
-	flags := cmd.Flags()
-
-	if target, err = flags.GetString("target"); err != nil {
+	parcel, err := hex.DecodeString(args[0])
+	if err != nil {
 		return err
 	}
 
-	if targetHex, err = hex.DecodeString(target); err != nil {
-		return err
-	}
-
-	if custody, err = flags.GetString("custody"); err != nil {
-		return err
-	}
-
-	if custodyHex, err = hex.DecodeString(custody); err != nil {
+	custody, err := hex.DecodeString(args[1])
+	if err != nil {
 		return err
 	}
 
@@ -48,7 +34,7 @@ func registerFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Register(targetHex, custodyHex, key)
+	result, err := rpc.Register(parcel, custody, key)
 	if err != nil {
 		return err
 	}
@@ -61,15 +47,4 @@ func registerFunc(cmd *cobra.Command, args []string) error {
 	fmt.Println(string(resultJSON))
 
 	return nil
-}
-
-func init() {
-	cmd := RegisterCmd
-	cmd.Flags().SortFlags = false
-
-	cmd.Flags().StringP("target", "t", "", "")
-	cmd.Flags().StringP("custody", "c", "", "")
-
-	cmd.MarkFlagRequired("target")
-	cmd.MarkFlagRequired("custody")
 }

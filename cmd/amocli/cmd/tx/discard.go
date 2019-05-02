@@ -12,26 +12,15 @@ import (
 )
 
 var DiscardCmd = &cobra.Command{
-	Use:   "discard",
+	Use:   "discard <parcel_id>",
 	Short: "Discard the registered data in store/parcel",
-	Args:  cobra.NoArgs,
+	Args:  cobra.MinimumNArgs(1),
 	RunE:  discardFunc,
 }
 
 func discardFunc(cmd *cobra.Command, args []string) error {
-	var (
-		target    string
-		targetHex []byte
-		err       error
-	)
-
-	flags := cmd.Flags()
-
-	if target, err = flags.GetString("target"); err != nil {
-		return err
-	}
-
-	if targetHex, err = hex.DecodeString(target); err != nil {
+	parcel, err := hex.DecodeString(args[0])
+	if err != nil {
 		return err
 	}
 
@@ -40,7 +29,7 @@ func discardFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Discard(targetHex, key)
+	result, err := rpc.Discard(parcel, key)
 	if err != nil {
 		return err
 	}
@@ -53,12 +42,4 @@ func discardFunc(cmd *cobra.Command, args []string) error {
 	fmt.Println(string(resultJSON))
 
 	return nil
-}
-
-func init() {
-	cmd := DiscardCmd
-	cmd.Flags().SortFlags = false
-
-	cmd.Flags().StringP("target", "t", "", "target ...")
-	cmd.MarkFlagRequired("target")
 }

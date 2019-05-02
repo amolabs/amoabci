@@ -13,35 +13,19 @@ import (
 )
 
 var TransferCmd = &cobra.Command{
-	Use:   "transfer",
+	Use:   "transfer <address> <amount>",
 	Short: "Transfer the specified amount of money to <address>",
-	Args:  cobra.NoArgs,
+	Args:  cobra.MinimumNArgs(2),
 	RunE:  transferFunc,
 }
 
 func transferFunc(cmd *cobra.Command, args []string) error {
-	var (
-		to      string
-		balance string
-		amount  *atypes.Currency
-		err     error
-	)
-
-	flags := cmd.Flags()
-
-	if to, err = flags.GetString("to"); err != nil {
-		return err
-	}
-	if balance, err = flags.GetString("amount"); err != nil {
-		return err
-	}
-
-	amount, err = new(atypes.Currency).SetString(balance, 10)
+	recp, err := hex.DecodeString(args[0])
 	if err != nil {
 		return err
 	}
 
-	toAddr, err := hex.DecodeString(to)
+	amount, err := new(atypes.Currency).SetString(args[1], 10)
 	if err != nil {
 		return err
 	}
@@ -51,7 +35,7 @@ func transferFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Transfer(toAddr, amount, key)
+	result, err := rpc.Transfer(recp, amount, key)
 	if err != nil {
 		return err
 	}
@@ -64,15 +48,4 @@ func transferFunc(cmd *cobra.Command, args []string) error {
 	fmt.Println(string(resultJSON))
 
 	return nil
-}
-
-func init() {
-	cmd := TransferCmd
-	cmd.Flags().SortFlags = false
-
-	cmd.Flags().StringP("to", "t", "", "ex) 63A972C247D1DEBCEF2DDCF5D4E0848A42AFA529")
-	cmd.Flags().StringP("amount", "a", "", "actual amount of coin to transfer; base 10")
-
-	cmd.MarkFlagRequired("to")
-	cmd.MarkFlagRequired("amount")
 }

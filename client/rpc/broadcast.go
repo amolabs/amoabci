@@ -24,7 +24,7 @@ func Transfer(to crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes
 	return RPCBroadcastTxCommit(msg)
 }
 
-func Stake(amount *atypes.Currency, vKey cmn.HexBytes ,key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
+func Stake(amount *atypes.Currency, vKey cmn.HexBytes, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
 	msg, err := MakeMessage(operation.TxStake, 0, operation.Stake{
 		Amount:    *amount,
 		Validator: vKey,
@@ -62,9 +62,8 @@ func Delegate(to crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes
 	return RPCBroadcastTxCommit(msg)
 }
 
-func Retract(from crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
+func Retract(amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
 	msg, err := MakeMessage(operation.TxRetract, 0, operation.Retract{
-		From:   from,
 		Amount: *amount,
 	}, key)
 

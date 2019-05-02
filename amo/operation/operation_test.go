@@ -343,7 +343,6 @@ func TestNonValidDelegate(t *testing.T) {
 func TestValidRetract(t *testing.T) {
 	s := getTestStore()
 	op := Retract{
-		From:   alice.addr,
 		Amount: *new(types.Currency).Set(400),
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
@@ -355,14 +354,12 @@ func TestValidRetract(t *testing.T) {
 func TestNonValidRetract(t *testing.T) {
 	s := getTestStore()
 	op := Retract{
-		From:   eve.addr,
 		Amount: *new(types.Currency).Set(500),
 	}
 	NEop := Retract{
-		From:   alice.addr,
 		Amount: *new(types.Currency).Set(1000),
 	}
 	assert.Equal(t, code.TxCodeDelegationNotExists, op.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeBadParam, op.Check(s, bob.addr))
+	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
 	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, bob.addr))
 }

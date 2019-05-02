@@ -1,8 +1,6 @@
 package operation
 
 import (
-	"bytes"
-
 	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -13,7 +11,6 @@ import (
 var _ Operation = Retract{}
 
 type Retract struct {
-	From   crypto.Address `json:"from"`
 	Amount types.Currency `json:"amount"`
 }
 
@@ -23,9 +20,6 @@ func (o Retract) Check(store *store.Store, sender crypto.Address) uint32 {
 	delegate := store.GetDelegate(sender)
 	if delegate == nil {
 		return code.TxCodeDelegationNotExists
-	}
-	if !bytes.Equal(delegate.Delegator, o.From) {
-		return code.TxCodeBadParam
 	}
 	if delegate.Amount.LessThan(&o.Amount) {
 		return code.TxCodeNotEnoughBalance

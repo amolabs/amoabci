@@ -55,8 +55,9 @@ func init() {
 		tx.RevokeCmd,
 	)
 	txCmd.PersistentPreRun = preRunChain
-	txCmd.PersistentFlags().String("user", "", "username")
-	txCmd.PersistentFlags().String("pass", "", "passphrase of an encrypted key")
+	txCmd.PersistentFlags().StringP("user", "u", "", "username")
+	txCmd.PersistentFlags().StringP("pass", "p", "",
+		"passphrase of an encrypted key")
 }
 
 func preRunChain(cmd *cobra.Command, args []string) {
