@@ -2,53 +2,54 @@ package query
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
 
+	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/client/rpc"
 )
 
 var UsageCmd = &cobra.Command{
-	Use:   "usage --buyer <address> --target <parcelID>",
-	Short: "Get buyer's usage information regarding to a parcel",
-	Args:  cobra.NoArgs,
+	Use:   "usage <buyer_address> <parcel_id>",
+	Short: "Granted parcel usage",
+	Args:  cobra.MinimumNArgs(2),
 	RunE:  usageFunc,
 }
 
 func usageFunc(cmd *cobra.Command, args []string) error {
-	var (
-		buyer, target        string
-		buyerAddr, targetHex []byte
-		err                  error
-	)
-
-	flags := cmd.Flags()
-
-	if buyer, err = flags.GetString("buyer"); err != nil {
-		return err
-	}
-
-	if target, err = flags.GetString("target"); err != nil {
-		return err
-	}
-
-	buyerAddr, err = hex.DecodeString(buyer)
+	asJson, err := cmd.Flags().GetBool("json")
 	if err != nil {
 		return err
 	}
 
-	targetHex, err = hex.DecodeString(target)
+	buyerAddr, err := hex.DecodeString(args[0])
 	if err != nil {
 		return err
 	}
 
-	usageValue, err := rpc.QueryUsage(buyerAddr, targetHex)
+	targetHex, err := hex.DecodeString(args[1])
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(usageValue)
+	res, err := rpc.QueryUsage(buyerAddr, targetHex)
+	if err != nil {
+		return err
+	}
+
+	if asJson {
+		fmt.Println(string(res))
+		return nil
+	}
+
+	var usageValue types.UsageValue
+	err = json.Unmarshal(res, &usageValue)
+	if err != nil {
+		return err
+	}
+	// fmt.Printf()
 
 	return nil
 }

@@ -1,4 +1,4 @@
-package db
+package parcel
 
 import (
 	"encoding/hex"
@@ -7,12 +7,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/amolabs/amoabci/client/db"
+	client "github.com/amolabs/amoabci/client/parcel"
 )
 
 var RetrieveCmd = &cobra.Command{
 	Use:   "retrieve <parcelID>",
-	Short: "Retrieve data from db with parcelID",
+	Short: "Retrieve data parcel with parcelID",
 	//Args: cobra.NoArgs,
 	Args: cobra.MinimumNArgs(1),
 	RunE: retrieveFunc,
@@ -29,7 +29,7 @@ func retrieveFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := db.Retrieve(parcelID)
+	result, err := client.Retrieve(parcelID)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package db
+package parcel
 
 var (
 	rpcRemote     = "tcp://0.0.0.0:26657"

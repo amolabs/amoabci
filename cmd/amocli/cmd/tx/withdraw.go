@@ -12,7 +12,7 @@ import (
 )
 
 var WithdrawCmd = &cobra.Command{
-	Use:   "withdraw <currency>",
+	Use:   "withdraw <amount>",
 	Short: "Withdraw all or part of the AMO coin locked as a stake",
 	Args:  cobra.MinimumNArgs(1),
 	RunE:  withdrawFunc,

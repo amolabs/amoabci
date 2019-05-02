@@ -13,36 +13,19 @@ import (
 )
 
 var RequestCmd = &cobra.Command{
-	Use:   "request",
-	Short: "Request parcel to purchase with payment as offer amount and extra info",
-	Args:  cobra.NoArgs,
+	Use:   "request <parcel_id> <amount>",
+	Short: "Request a parcel permission with payment",
+	Args:  cobra.MinimumNArgs(2),
 	RunE:  requestFunc,
 }
 
 func requestFunc(cmd *cobra.Command, args []string) error {
-	var (
-		target    string
-		payment   *atypes.Currency
-		targetHex []byte
-		balance   string
-		err       error
-	)
-
-	flags := cmd.Flags()
-
-	if target, err = flags.GetString("target"); err != nil {
+	parcel, err := hex.DecodeString(args[0])
+	if err != nil {
 		return err
 	}
 
-	if targetHex, err = hex.DecodeString(target); err != nil {
-		return err
-	}
-
-	if balance, err = flags.GetString("payment"); err != nil {
-		return err
-	}
-
-	payment, err = new(atypes.Currency).SetString(balance, 10)
+	payment, err := new(atypes.Currency).SetString(args[1], 10)
 	if err != nil {
 		return err
 	}
@@ -52,7 +35,7 @@ func requestFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := rpc.Request(targetHex, payment, key)
+	result, err := rpc.Request(parcel, payment, key)
 	if err != nil {
 		return err
 	}
@@ -65,15 +48,4 @@ func requestFunc(cmd *cobra.Command, args []string) error {
 	fmt.Println(string(resultJSON))
 
 	return nil
-}
-
-func init() {
-	cmd := RequestCmd
-	cmd.Flags().SortFlags = false
-
-	cmd.Flags().StringP("target", "t", "", "")
-	cmd.Flags().StringP("payment", "p", "", "")
-
-	cmd.MarkFlagRequired("target")
-	cmd.MarkFlagRequired("payment")
 }

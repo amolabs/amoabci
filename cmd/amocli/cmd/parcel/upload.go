@@ -1,4 +1,4 @@
-package db
+package parcel
 
 import (
 	"encoding/hex"
@@ -7,12 +7,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/amolabs/amoabci/client/db"
+	client "github.com/amolabs/amoabci/client/parcel"
 )
 
 var UploadCmd = &cobra.Command{
 	Use:   "upload <hex> --owner <address> --qualifier <json>",
-	Short: "Upload data into db",
+	Short: "Upload data parcel",
 	//Args: cobra.NoArgs,
 	Args: cobra.MinimumNArgs(1),
 	RunE: uploadFunc,
@@ -52,7 +52,7 @@ func uploadFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := db.Upload(owner, data, qualifier)
+	result, err := client.Upload(owner, data, qualifier)
 	if err != nil {
 		return err
 	}

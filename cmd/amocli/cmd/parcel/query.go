@@ -1,4 +1,4 @@
-package db
+package parcel
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/amolabs/amoabci/client/db"
+	client "github.com/amolabs/amoabci/client/parcel"
 )
 
 var QueryCmd = &cobra.Command{
@@ -60,7 +60,7 @@ func queryFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result, err := db.Query(start, end, owner, qualifier)
+	result, err := client.Query(start, end, owner, qualifier)
 	if err != nil {
 		return err
 	}
