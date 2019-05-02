@@ -288,11 +288,17 @@ func TestNonValidStake(t *testing.T) {
 func TestValidWithdraw(t *testing.T) {
 	s := getTestStore()
 	op := Withdraw{
-		Amount: *new(types.Currency).Set(2000),
+		Amount: *new(types.Currency).Set(1000),
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	assert.Equal(t, code.TxCodeOK, op.Execute(s, alice.addr))
+	assert.Equal(t, new(types.Currency).Set(1000), &s.GetStake(alice.addr).Amount)
+
+	op = Withdraw{
+		Amount: *new(types.Currency).Set(1000),
+	}
+	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
+	assert.Equal(t, code.TxCodeOK, op.Execute(s, alice.addr))
 	assert.Equal(t, zero, &s.GetStake(alice.addr).Amount)
 }
 
