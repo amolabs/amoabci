@@ -317,8 +317,8 @@ func TestSignedTransactionTest(t *testing.T) {
 	payload, err := json.Marshal(tx)
 	assert.NoError(t, err)
 	msg := operation.Message{
-		Type:   operation.TxTransfer,
-		Params: payload,
+		Type:    operation.TxTransfer,
+		Payload: payload,
 	}
 
 	// not signed transaction
@@ -344,8 +344,8 @@ func makeTxStake(priv p256.PrivKeyP256, amount uint64) []byte {
 	}
 	payload, _ := json.Marshal(op)
 	tx := operation.Message{
-		Type:   operation.TxStake,
-		Params: payload,
+		Type:    operation.TxStake,
+		Payload: payload,
 	}
 	tx.Sign(priv)
 	rawTx, _ := json.Marshal(tx)

@@ -29,8 +29,8 @@ func MakeMessage(t string, nonce uint32, payload interface{}, key keys.Key) (typ
 	copy(privKey[:], key.PrivKey)
 
 	msg := operation.Message{
-		Type:   t,
-		Params: raw,
+		Type:    t,
+		Payload: raw,
 	}
 
 	err = msg.Sign(privKey)

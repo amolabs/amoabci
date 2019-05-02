@@ -46,11 +46,11 @@ func (s Signature) IsValid() bool {
 }
 
 type Message struct {
-	Type   string          `json:"type"`
-	Sender crypto.Address  `json:"sender"`
-	Nonce  cmn.HexBytes    `json:"nonce"`
-	Params json.RawMessage `json:"param"`
-	Sig    Signature       `json:"signature"`
+	Type    string          `json:"type"`
+	Sender  crypto.Address  `json:"sender"`
+	Nonce   cmn.HexBytes    `json:"nonce"`
+	Payload json.RawMessage `json:"param"`
+	Sig     Signature       `json:"signature"`
 }
 
 func (m Message) GetSigningBytes() []byte {
@@ -150,7 +150,7 @@ func ParseTx(tx []byte) (Message, Operation, bool) {
 		panic(cmn.NewError("Invalid operation type: %v", message.Type))
 	}
 
-	err = json.Unmarshal(message.Params, &payload)
+	err = json.Unmarshal(message.Payload, &payload)
 	if err != nil {
 		panic(err)
 	}
