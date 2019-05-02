@@ -132,8 +132,8 @@ func TestQueryParcel(t *testing.T) {
 	req = abci.RequestQuery{Path: "/parcel", Data: wrongParcelID}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
-	assert.Nil(t, res.Value)
-	assert.Len(t, res.Log, 0)
+	assert.Equal(t, []byte("null"), res.Value)
+	assert.Equal(t, "null", res.Log)
 
 	// query
 	req = abci.RequestQuery{Path: "/parcel", Data: parcelID}

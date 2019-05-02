@@ -28,7 +28,7 @@ func queryBalance(store *store.Store, queryData []byte) (res abci.ResponseQuery)
 	jsonstr, _ := json.Marshal(bal)
 	res.Log = string(jsonstr)
 	// XXX: tendermint will convert this using base64 encoding
-	res.Value = []byte(jsonstr)
+	res.Value = jsonstr
 	res.Code = code.QueryCodeOK
 	res.Key = queryData
 
@@ -49,10 +49,15 @@ func queryStake(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	}
 
 	stake := store.GetStake(addr)
+	if stake == nil {
+		res.Code = code.QueryCodeNoMatch
+	} else {
+		res.Code = code.QueryCodeOK
+	}
+
 	jsonstr, _ := json.Marshal(stake)
 	res.Log = string(jsonstr)
-	res.Value = []byte(jsonstr)
-	res.Code = code.QueryCodeOK
+	res.Value = jsonstr
 	res.Key = queryData
 
 	return
@@ -76,11 +81,12 @@ func queryDelegate(store *store.Store, queryData []byte) (res abci.ResponseQuery
 		res.Code = code.QueryCodeNoMatch
 	} else {
 		res.Code = code.QueryCodeOK
-		jsonstr, _ := json.Marshal(delegate)
-		res.Log = string(jsonstr)
-		res.Value = jsonstr
-		res.Key = queryData
 	}
+
+	jsonstr, _ := json.Marshal(delegate)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Key = queryData
 
 	return
 }
@@ -98,11 +104,12 @@ func queryParcel(store *store.Store, queryData []byte) (res abci.ResponseQuery) 
 		res.Code = code.QueryCodeNoMatch
 	} else {
 		res.Code = code.QueryCodeOK
-		jsonstr, _ := json.Marshal(parcel)
-		res.Log = string(jsonstr)
-		res.Value = []byte(jsonstr)
-		res.Key = queryData
 	}
+
+	jsonstr, _ := json.Marshal(parcel)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Key = queryData
 
 	return
 }
@@ -141,11 +148,12 @@ func queryRequest(store *store.Store, queryData []byte) (res abci.ResponseQuery)
 		res.Code = code.QueryCodeNoMatch
 	} else {
 		res.Code = code.QueryCodeOK
-		jsonstr, _ := json.Marshal(request)
-		res.Log = string(jsonstr)
-		res.Value = []byte(jsonstr)
-		res.Key = queryData
 	}
+
+	jsonstr, _ := json.Marshal(request)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Key = queryData
 
 	return
 }
@@ -184,11 +192,12 @@ func queryUsage(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		res.Code = code.QueryCodeNoMatch
 	} else {
 		res.Code = code.QueryCodeOK
-		jsonstr, _ := json.Marshal(usage)
-		res.Log = string(jsonstr)
-		res.Value = []byte(jsonstr)
-		res.Key = queryData
 	}
+
+	jsonstr, _ := json.Marshal(usage)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Key = queryData
 
 	return
 }
