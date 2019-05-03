@@ -40,14 +40,14 @@ func delegateFunc(cmd *cobra.Command, args []string) error {
 	}
 
 	if res == nil || len(res) == 0 || string(res) == "null" {
-		fmt.Printf("no delegate")
+		fmt.Println("no delegate")
 	} else {
 		var delegate types.Delegate
 		err = json.Unmarshal(res, &delegate)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("amount: %s,\ndelegator address: %s\n",
+		fmt.Printf("amount: %s\ndelegator address: %s\n",
 			delegate.Amount, delegate.Delegator)
 	}
 

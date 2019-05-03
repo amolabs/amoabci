@@ -45,14 +45,14 @@ func requestFunc(cmd *cobra.Command, args []string) error {
 	}
 
 	if res == nil || len(res) == 0 || string(res) == "null" {
-		fmt.Printf("no request")
+		fmt.Println("no request")
 	} else {
 		var request types.RequestValue
 		err = json.Unmarshal(res, &request)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("payment: %s\nexpire: %s", request.Payment, request.Exp)
+		fmt.Printf("payment: %s\nexpire: %s\n", request.Payment, request.Exp)
 	}
 
 	return nil

@@ -40,14 +40,14 @@ func stakeFunc(cmd *cobra.Command, args []string) error {
 	}
 
 	if res == nil || len(res) == 0 || string(res) == "null" {
-		fmt.Printf("no stake")
+		fmt.Println("no stake")
 	} else {
 		var stake types.Stake
 		err = json.Unmarshal(res, &stake)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("amount: %s,\nvalidator pubkey: %s\n",
+		fmt.Printf("amount: %s\nvalidator pubkey: %s\n",
 			stake.Amount, stake.Validator)
 	}
 

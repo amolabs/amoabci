@@ -45,26 +45,15 @@ func usageFunc(cmd *cobra.Command, args []string) error {
 	}
 
 	if res == nil || len(res) == 0 || string(res) == "null" {
-		fmt.Printf("no usage")
+		fmt.Println("no usage")
 	} else {
 		var usage types.UsageValue
 		err = json.Unmarshal(res, &usage)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("custody: %s\nexpire: %s", usage.Custody, usage.Exp)
+		fmt.Printf("custody: %s\nexpire: %s\n", usage.Custody, usage.Exp)
 	}
 
 	return nil
-}
-
-func init() {
-	cmd := UsageCmd
-	cmd.Flags().SortFlags = false
-
-	cmd.Flags().StringP("buyer", "b", "", "buyer ...")
-	cmd.Flags().StringP("target", "t", "", "target ...")
-
-	cmd.MarkFlagRequired("buyer")
-	cmd.MarkFlagRequired("target")
 }
