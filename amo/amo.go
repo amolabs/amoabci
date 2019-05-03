@@ -1,12 +1,14 @@
 package amo
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
@@ -61,6 +63,51 @@ func saveState(state State) {
 	state.db.Set(stateKey, stateBytes)
 }
 
+// Output are sorted by voting power.
+func valUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
+	sort.Slice(oldVals, func(i, j int) bool {
+		return bytes.Compare(oldVals[i].PubKey.Data, oldVals[j].PubKey.Data) < 0
+	})
+	sort.Slice(newVals, func(i, j int) bool {
+		return bytes.Compare(newVals[i].PubKey.Data, newVals[j].PubKey.Data) < 0
+	})
+
+	// extract updates
+	i := 0
+	j := 0
+	updates := abci.ValidatorUpdates{}
+	for i < len(oldVals) && j < len(newVals) {
+		comp := bytes.Compare(oldVals[i].PubKey.Data, newVals[j].PubKey.Data)
+		if comp < 0 {
+			updates = append(updates, abci.ValidatorUpdate{
+				PubKey: oldVals[i].PubKey, Power: 0})
+			i++
+		} else if comp == 0 {
+			updates = append(updates, newVals[j])
+			i++
+			j++
+		} else {
+			updates = append(updates, newVals[j])
+			j++
+		}
+	}
+
+	for ; i < len(oldVals); i++ {
+		updates = append(updates, abci.ValidatorUpdate{
+			PubKey: oldVals[i].PubKey, Power: 0})
+	}
+
+	for ; j < len(newVals); j++ {
+		updates = append(updates, newVals[j])
+	}
+
+	sort.Slice(updates, func(i, j int) bool {
+		// reverse order
+		return updates[i].Power > updates[j].Power
+	})
+	return updates
+}
+
 type AMOApplication struct {
 	abci.BaseApplication
 
@@ -68,6 +115,7 @@ type AMOApplication struct {
 	store         *astore.Store
 	logger        log.Logger
 	flagValUpdate bool
+	oldVals       abci.ValidatorUpdates
 }
 
 var _ abci.Application = (*AMOApplication)(nil)
@@ -187,6 +235,7 @@ func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseIni
 
 func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.flagValUpdate = false
+	app.oldVals = app.store.GetValidators(maxValidators)
 
 	proposer := req.Header.GetProposerAddress()
 	staker := app.store.GetHolderByValidator(proposer)
@@ -201,7 +250,8 @@ func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) (res abci.Resp
 func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	if app.flagValUpdate {
 		app.flagValUpdate = false
-		res.ValidatorUpdates = app.store.GetValidatorUpdates(maxValidators)
+		newVals := app.store.GetValidators(maxValidators)
+		res.ValidatorUpdates = valUpdates(app.oldVals, newVals)
 	}
 	return res
 }

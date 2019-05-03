@@ -299,7 +299,7 @@ func TestValidWithdraw(t *testing.T) {
 	}
 	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
 	assert.Equal(t, code.TxCodeOK, op.Execute(s, alice.addr))
-	assert.Equal(t, zero, &s.GetStake(alice.addr).Amount)
+	assert.Nil(t, s.GetStake(alice.addr))
 }
 
 func TestNonValidWithdraw(t *testing.T) {

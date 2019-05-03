@@ -335,9 +335,38 @@ func TestSignedTransactionTest(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, app.DeliverTx(rawMsg).Code)
 }
 
-func makeTxStake(priv p256.PrivKeyP256, amount uint64) []byte {
-	//staker := priv.PubKey().Address()
-	validator, _ := ed25519.GenPrivKey().PubKey().(ed25519.PubKeyEd25519)
+func TestFuncValUpdates(t *testing.T) {
+	val1 := abci.ValidatorUpdate{
+		PubKey: abci.PubKey{Type: "anything", Data: []byte("0001")},
+		Power:  1,
+	}
+	val2 := abci.ValidatorUpdate{
+		PubKey: abci.PubKey{Type: "anything", Data: []byte("0002")},
+		Power:  2,
+	}
+	val22 := abci.ValidatorUpdate{
+		PubKey: abci.PubKey{Type: "anything", Data: []byte("0002")},
+		Power:  22,
+	}
+	val3 := abci.ValidatorUpdate{
+		PubKey: abci.PubKey{Type: "anything", Data: []byte("0003")},
+		Power:  3,
+	}
+	uold := abci.ValidatorUpdates{val1, val2, val3}
+	unew := abci.ValidatorUpdates{val22, val3}
+	assert.Equal(t, 3, len(uold))
+	assert.Equal(t, 2, len(unew))
+	updates := valUpdates(uold, unew)
+	assert.Equal(t, 3, len(updates))
+	assert.Equal(t, int64(22), updates[0].Power)
+	assert.Equal(t, int64(3), updates[1].Power)
+	assert.Equal(t, int64(0), updates[2].Power)
+	assert.Equal(t, []byte("0001"), updates[2].PubKey.Data)
+}
+
+func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
+	validator, _ := ed25519.GenPrivKeyFromSecret([]byte(val)).
+		PubKey().(ed25519.PubKeyEd25519)
 	op := operation.Stake{
 		Amount:    *new(types.Currency).Set(amount),
 		Validator: validator[:],
@@ -356,24 +385,33 @@ func TestValidatorUpdates(t *testing.T) {
 	app := NewAMOApplication(tdb.NewMemDB(), tdb.NewMemDB(), nil)
 
 	// setup
-	priv := p256.GenPrivKeyFromSecret([]byte("staker"))
-	app.store.SetBalance(priv.PubKey().Address(), new(types.Currency).Set(200))
+	priv1 := p256.GenPrivKeyFromSecret([]byte("staker1"))
+	app.store.SetBalance(priv1.PubKey().Address(), new(types.Currency).Set(500))
+	priv2 := p256.GenPrivKeyFromSecret([]byte("staker2"))
+	app.store.SetBalance(priv2.PubKey().Address(), new(types.Currency).Set(500))
 
 	// begin block
 	blkRequest := abci.RequestBeginBlock{}
-	app.BeginBlock(blkRequest) // does nothing here
+	app.BeginBlock(blkRequest) // we need this
 
 	// deliver stake tx
-	rawTx := makeTxStake(priv, 100)
+	rawTx := makeTxStake(priv1, "staker1", 100)
 	resDeliver := app.DeliverTx(rawTx)
+	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
+	rawTx = makeTxStake(priv2, "staker1", 200)
+	resDeliver = app.DeliverTx(rawTx)
+	assert.Equal(t, code.TxCodeBadValidator, resDeliver.Code)
+	rawTx = makeTxStake(priv2, "staker2", 200)
+	resDeliver = app.DeliverTx(rawTx)
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 
 	// end block
 	endRequest := abci.RequestEndBlock{Height: 1}
 	validators := app.EndBlock(endRequest).ValidatorUpdates
-	assert.Equal(t, 1, len(validators))
+	assert.Equal(t, 2, len(validators))
 
-	assert.Equal(t, int64(100), validators[0].Power)
+	assert.Equal(t, int64(200), validators[0].Power)
+	assert.Equal(t, int64(100), validators[1].Power)
 }
 
 func TestBlockReward(t *testing.T) {

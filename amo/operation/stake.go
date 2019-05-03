@@ -46,7 +46,9 @@ func (o Stake) Execute(store *store.Store, sender crypto.Address) uint32 {
 		stake.Amount.Add(&o.Amount)
 		copy(stake.Validator[:], o.Validator)
 	}
+	if err := store.SetStake(sender, stake); err != nil {
+		return code.TxCodeBadValidator
+	}
 	store.SetBalance(sender, balance)
-	store.SetStake(sender, stake)
 	return code.TxCodeOK
 }

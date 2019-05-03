@@ -130,12 +130,16 @@ func getStakeKey(holder []byte) []byte {
 	return append(prefixStake, holder...)
 }
 
-func (s Store) SetStake(holder crypto.Address, stake *types.Stake) {
+func (s Store) SetStake(holder crypto.Address, stake *types.Stake) error {
 	b, err := json.Marshal(stake)
 	if err != nil {
-		panic(err)
+		return errors.New("failed to parse input stake")
 	}
-	// before state update
+	prevHolder := s.indexValidator.Get(stake.Validator.Address())
+	if prevHolder != nil && !bytes.Equal(prevHolder, holder) {
+		return errors.New("validator already taken")
+	}
+	// clean up
 	es := s.GetEffStake(holder)
 	if es != nil {
 		before := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
@@ -143,11 +147,18 @@ func (s Store) SetStake(holder crypto.Address, stake *types.Stake) {
 			s.indexEffStake.Delete(before)
 		}
 	}
-	s.stateDB.Set(getStakeKey(holder), b)
-	// after state update
-	s.indexValidator.Set(stake.Validator.Address(), holder)
-	after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
-	s.indexEffStake.Set(after, nil)
+	// update
+	if stake.Amount.Sign() == 0 {
+		s.stateDB.Delete(getStakeKey(holder))
+		s.indexValidator.Delete(stake.Validator.Address())
+	} else {
+		s.stateDB.Set(getStakeKey(holder), b)
+		s.indexValidator.Set(stake.Validator.Address(), holder)
+		after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
+		s.indexEffStake.Set(after, nil)
+	}
+
+	return nil
 }
 
 func makeEffStakeKey(amount types.Currency, holder crypto.Address) []byte {
@@ -360,7 +371,7 @@ func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
 	s.stateDB.DeleteSync(getUsageKey(buyer, parcelID))
 }
 
-func (s Store) GetValidatorUpdates(max uint64) abci.ValidatorUpdates {
+func (s Store) GetValidators(max uint64) abci.ValidatorUpdates {
 	var vals abci.ValidatorUpdates
 	stakes := s.GetTopStakes(max)
 	adjFactor := calcAdjustFactor(stakes)
@@ -375,7 +386,9 @@ func (s Store) GetValidatorUpdates(max uint64) abci.ValidatorUpdates {
 			PubKey: key,
 			Power:  power.Int64(),
 		}
-		vals = append(vals, val)
+		if val.Power > 0 {
+			vals = append(vals, val)
+		}
 	}
 	return vals
 }

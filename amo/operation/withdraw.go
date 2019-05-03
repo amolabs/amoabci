@@ -27,8 +27,15 @@ func (o Withdraw) Execute(store *store.Store, sender crypto.Address) uint32 {
 		return resCode
 	}
 	stake := store.GetStake(sender)
-	stake.Amount.Sub(&o.Amount)
-	store.SetStake(sender, stake)
+	if stake == nil {
+		return code.TxCodeNoStake
+	}
+	if stake.Amount.Sub(&o.Amount).Sign() == -1 {
+		return code.TxCodeNotEnoughBalance
+	}
+	if err := store.SetStake(sender, stake); err != nil {
+		return code.TxCodeBadValidator
+	}
 	balance := store.GetBalance(sender)
 	balance.Add(&o.Amount)
 	store.SetBalance(sender, balance)
