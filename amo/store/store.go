@@ -360,7 +360,7 @@ func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
 	s.stateDB.DeleteSync(getUsageKey(buyer, parcelID))
 }
 
-func (s Store) GetValidatorUpdates(max uint64) abci.ValidatorUpdates {
+func (s Store) GetValidators(max uint64) abci.ValidatorUpdates {
 	var vals abci.ValidatorUpdates
 	stakes := s.GetTopStakes(max)
 	adjFactor := calcAdjustFactor(stakes)
@@ -375,7 +375,9 @@ func (s Store) GetValidatorUpdates(max uint64) abci.ValidatorUpdates {
 			PubKey: key,
 			Power:  power.Int64(),
 		}
-		vals = append(vals, val)
+		if val.Power > 0 {
+			vals = append(vals, val)
+		}
 	}
 	return vals
 }

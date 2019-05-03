@@ -179,18 +179,18 @@ func newStake(amount string) (crypto.Address, *types.Stake) {
 func TestVotingPowerCalc(t *testing.T) {
 	s := NewStore(db.NewMemDB(), db.NewMemDB())
 
-	vals := s.GetValidatorUpdates(100)
+	vals := s.GetValidators(100)
 	assert.Equal(t, 0, len(vals))
 
 	s.SetStake(newStake("1000000000000000000"))
 	s.SetStake(newStake("10000000000000000"))
 	s.SetStake(newStake("100000000000000000"))
 
-	vals = s.GetValidatorUpdates(1)
+	vals = s.GetValidators(1)
 	assert.Equal(t, 1, len(vals))
 	assert.Equal(t, int64(500000000000000000), vals[0].Power)
 
-	vals = s.GetValidatorUpdates(100)
+	vals = s.GetValidators(100)
 	assert.Equal(t, 3, len(vals))
 	assert.Equal(t, int64(500000000000000000), vals[0].Power)
 	assert.Equal(t, int64(50000000000000000), vals[1].Power)
@@ -199,13 +199,15 @@ func TestVotingPowerCalc(t *testing.T) {
 	// test voting power adjustment
 	s.Purge()
 	s.SetStake(newStake("1152921504606846975")) // 0xfffffffffffffff
-	vals = s.GetValidatorUpdates(100)
+	vals = s.GetValidators(100)
 	assert.Equal(t, int64(0x7ffffffffffffff), vals[0].Power)
 
 	s.SetStake(newStake("1"))
-	vals = s.GetValidatorUpdates(100)
+	vals = s.GetValidators(100)
+	// The second staker's power shall be adjusted to be zero,
+	// so it shall not be returned as valid validator.
+	assert.Equal(t, 1, len(vals))
 	assert.Equal(t, int64(0x7ffffffffffffff), vals[0].Power)
-	assert.Equal(t, int64(0), vals[1].Power)
 
 	s.SetStake(newStake("47389214732891473289147321"))
 	s.SetStake(newStake("98327483195748293743892147"))
@@ -214,7 +216,7 @@ func TestVotingPowerCalc(t *testing.T) {
 	s.SetStake(newStake("10239481297483914839120049"))
 
 	var sum int64
-	vals = s.GetValidatorUpdates(100)
+	vals = s.GetValidators(100)
 	for _, val := range vals {
 		sum += val.Power
 	}
@@ -227,7 +229,7 @@ func TestVotingPowerCalc(t *testing.T) {
 	s.SetStake(newStake("10000000000000000000"))
 	s.SetStake(newStake("10000000000000000000"))
 	sum = 0
-	vals = s.GetValidatorUpdates(100)
+	vals = s.GetValidators(100)
 	for _, val := range vals {
 		sum += val.Power
 	}
@@ -239,7 +241,7 @@ func TestVotingPowerCalc(t *testing.T) {
 	s.SetStake(newStake("1000000000000000000"))
 	s.SetStake(newStake("1000000000000000000"))
 	sum = 0
-	vals = s.GetValidatorUpdates(100)
+	vals = s.GetValidators(100)
 	for _, val := range vals {
 		sum += val.Power
 	}

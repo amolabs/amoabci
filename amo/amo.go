@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
@@ -61,6 +62,65 @@ func saveState(state State) {
 	state.db.Set(stateKey, stateBytes)
 }
 
+func bytesLess(k1, k2 []byte) bool {
+	return bytesComp(k1, k2) < 0
+}
+
+func bytesEqual(k1, k2 []byte) bool {
+	return bytesComp(k1, k2) == 0
+}
+
+func bytesComp(k1, k2 []byte) int {
+	for i, _ := range k1 {
+		if i >= len(k2) {
+			return 1
+		}
+		if k1[i] == k2[i] {
+			continue
+		}
+		return int(k1[i]) - int(k2[i])
+	}
+	return 0
+}
+
+// XXX Inputs must be sorted ones
+func valUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
+	// extract updates
+	i := 0
+	j := 0
+	updates := abci.ValidatorUpdates{}
+	for i < len(oldVals) && j < len(newVals) {
+		l := oldVals[i]
+		r := newVals[j]
+		comp := bytesComp(r.PubKey.Data, l.PubKey.Data)
+		if comp < 0 {
+			updates = append(updates, abci.ValidatorUpdate{
+				PubKey: r.PubKey, Power: 0})
+			i++
+		} else if comp == 0 {
+			updates = append(updates, l)
+			i++
+			j++
+		} else {
+			updates = append(updates, l)
+			j++
+		}
+	}
+
+	for ; i < len(oldVals); i++ {
+		updates = append(updates, abci.ValidatorUpdate{
+			PubKey: oldVals[i].PubKey, Power: 0})
+		i++
+	}
+
+	for ; j < len(newVals); j++ {
+		updates = append(updates, newVals[j])
+		j++
+	}
+
+	return updates
+}
+
 type AMOApplication struct {
 	abci.BaseApplication
 
@@ -68,6 +128,7 @@ type AMOApplication struct {
 	store         *astore.Store
 	logger        log.Logger
 	flagValUpdate bool
+	oldVals       abci.ValidatorUpdates
 }
 
 var _ abci.Application = (*AMOApplication)(nil)
@@ -187,6 +248,7 @@ func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseIni
 
 func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.flagValUpdate = false
+	app.oldVals = app.store.GetValidators(maxValidators)
 
 	proposer := req.Header.GetProposerAddress()
 	staker := app.store.GetHolderByValidator(proposer)
@@ -201,7 +263,16 @@ func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) (res abci.Resp
 func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	if app.flagValUpdate {
 		app.flagValUpdate = false
-		res.ValidatorUpdates = app.store.GetValidatorUpdates(maxValidators)
+		newVals := app.store.GetValidators(maxValidators)
+		sort.Slice(app.oldVals, func(i, j int) bool {
+			return bytesLess(
+				app.oldVals[i].PubKey.Data, app.oldVals[j].PubKey.Data)
+		})
+		sort.Slice(newVals, func(i, j int) bool {
+			return bytesLess(
+				newVals[i].PubKey.Data, newVals[j].PubKey.Data)
+		})
+		res.ValidatorUpdates = valUpdates(app.oldVals, newVals)
 	}
 	return res
 }
