@@ -97,7 +97,7 @@ func TestNonValidCancel(t *testing.T) {
 	op := Cancel{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeTargetNotExists, op.Check(s, eve.addr))
+	assert.Equal(t, code.TxCodeRequestNotFound, op.Check(s, eve.addr))
 }
 
 func TestValidDiscard(t *testing.T) {
@@ -118,7 +118,7 @@ func TestNonValidDiscard(t *testing.T) {
 	PDOp := Discard{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeTargetNotExists, NEOp.Check(s, alice.addr))
+	assert.Equal(t, code.TxCodeParcelNotFound, NEOp.Check(s, alice.addr))
 	assert.Equal(t, code.TxCodePermissionDenied, PDOp.Check(s, eve.addr))
 }
 
@@ -147,7 +147,7 @@ func TestNonValidGrant(t *testing.T) {
 		Custody: custody[0],
 	}
 	assert.Equal(t, code.TxCodePermissionDenied, PDop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeTargetAlreadyExists, AEop.Check(s, alice.addr))
+	assert.Equal(t, code.TxCodeAlreadyGranted, AEop.Check(s, alice.addr))
 }
 
 func TestValidRegister(t *testing.T) {
@@ -167,7 +167,7 @@ func TestNonValidRegister(t *testing.T) {
 		Target:  parcelID[0],
 		Custody: custody[0],
 	}
-	assert.Equal(t, code.TxCodeTargetAlreadyExists, op.Check(s, alice.addr))
+	assert.Equal(t, code.TxCodeAlreadyRegistered, op.Check(s, alice.addr))
 }
 
 func TestValidRequest(t *testing.T) {
@@ -199,8 +199,8 @@ func TestNonValidRequest(t *testing.T) {
 		Target:  parcelID[1],
 		Payment: *new(types.Currency).Set(100),
 	}
-	assert.Equal(t, code.TxCodeTargetNotExists, TNop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeTargetAlreadyBought, TAop.Check(s, bob.addr))
+	assert.Equal(t, code.TxCodeParcelNotFound, TNop.Check(s, eve.addr))
+	assert.Equal(t, code.TxCodeAlreadyGranted, TAop.Check(s, bob.addr))
 	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, bob.addr))
 	assert.Equal(t, code.TxCodeNotEnoughBalance, NBop.Check(s, eve.addr))
 }
@@ -227,7 +227,7 @@ func TestNonValidRevoke(t *testing.T) {
 		Target:  parcelID[2],
 	}
 	assert.Equal(t, code.TxCodePermissionDenied, PDop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeTargetNotExists, TNop.Check(s, alice.addr))
+	assert.Equal(t, code.TxCodeParcelNotFound, TNop.Check(s, alice.addr))
 }
 
 func TestValidTransfer(t *testing.T) {

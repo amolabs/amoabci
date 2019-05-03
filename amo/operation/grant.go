@@ -25,11 +25,11 @@ func (o Grant) Check(store *store.Store, sender crypto.Address) uint32 {
 		return code.TxCodePermissionDenied
 	}
 	if store.GetRequest(o.Grantee, o.Target) == nil {
-		return code.TxCodeRequestNotExists
+		return code.TxCodeRequestNotFound
 	}
 	usage := store.GetUsage(o.Grantee, o.Target)
 	if usage != nil {
-		return code.TxCodeTargetAlreadyExists
+		return code.TxCodeAlreadyGranted
 	}
 	return code.TxCodeOK
 }

@@ -17,7 +17,7 @@ type Cancel struct {
 func (o Cancel) Check(store *store.Store, sender crypto.Address) uint32 {
 	request := store.GetRequest(sender, o.Target)
 	if request == nil {
-		return code.TxCodeTargetNotExists
+		return code.TxCodeRequestNotFound
 	}
 	return code.TxCodeOK
 }

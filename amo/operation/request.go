@@ -22,13 +22,13 @@ type Request struct {
 func (o Request) Check(store *store.Store, sender crypto.Address) uint32 {
 	parcel := store.GetParcel(o.Target)
 	if parcel == nil {
-		return code.TxCodeTargetNotExists
+		return code.TxCodeParcelNotFound
 	}
 	if bytes.Equal(parcel.Owner, sender) {
 		return code.TxCodeSelfTransaction
 	}
 	if store.GetUsage(sender, o.Target) != nil {
-		return code.TxCodeTargetAlreadyBought
+		return code.TxCodeAlreadyGranted
 	}
 	if store.GetBalance(sender).LessThan(&o.Payment) {
 		return code.TxCodeNotEnoughBalance

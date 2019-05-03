@@ -20,7 +20,7 @@ type Register struct {
 func (o Register) Check(store *store.Store, sender crypto.Address) uint32 {
 	// TODO: permission check from PDSN
 	if store.GetParcel(o.Target) != nil {
-		return code.TxCodeTargetAlreadyExists
+		return code.TxCodeAlreadyRegistered
 	}
 	return code.TxCodeOK
 }

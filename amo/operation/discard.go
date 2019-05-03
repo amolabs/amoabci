@@ -19,7 +19,7 @@ type Discard struct {
 func (o Discard) Check(store *store.Store, sender crypto.Address) uint32 {
 	parcel := store.GetParcel(o.Target)
 	if parcel == nil {
-		return code.TxCodeTargetNotExists
+		return code.TxCodeParcelNotFound
 	}
 	if !bytes.Equal(parcel.Owner, sender) {
 		return code.TxCodePermissionDenied
