@@ -39,12 +39,16 @@ func parcelFunc(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	var parcelValue = types.ParcelValue{}
-	err = json.Unmarshal(res, &parcelValue)
-	if err != nil {
-		return err
+	if res == nil || len(res) == 0 || string(res) == "null" {
+		fmt.Printf("no parcel")
+	} else {
+		var parcel types.ParcelValue
+		err = json.Unmarshal(res, &parcel)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("owner: %s\ncustody: %s", parcel.Owner, parcel.Custody)
 	}
-	fmt.Printf("")
 
 	return nil
 }
