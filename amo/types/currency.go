@@ -99,9 +99,7 @@ func (c *Currency) Add(a *Currency) *Currency {
 }
 
 func (c *Currency) Sub(a *Currency) *Currency {
-	if c.Int.Sub(&c.Int, &a.Int).Sign() == -1 {
-		panic(cmn.NewError("Cannot subtract"))
-	}
+	c.Int.Sub(&c.Int, &a.Int)
 	return c
 }
 

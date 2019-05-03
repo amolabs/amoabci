@@ -1,6 +1,7 @@
 package amo
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -62,47 +63,31 @@ func saveState(state State) {
 	state.db.Set(stateKey, stateBytes)
 }
 
-func bytesLess(k1, k2 []byte) bool {
-	return bytesComp(k1, k2) < 0
-}
-
-func bytesEqual(k1, k2 []byte) bool {
-	return bytesComp(k1, k2) == 0
-}
-
-func bytesComp(k1, k2 []byte) int {
-	for i, _ := range k1 {
-		if i >= len(k2) {
-			return 1
-		}
-		if k1[i] == k2[i] {
-			continue
-		}
-		return int(k1[i]) - int(k2[i])
-	}
-	return 0
-}
-
-// XXX Inputs must be sorted ones
+// Output are sorted by voting power.
 func valUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
+	sort.Slice(oldVals, func(i, j int) bool {
+		return bytes.Compare(oldVals[i].PubKey.Data, oldVals[j].PubKey.Data) < 0
+	})
+	sort.Slice(newVals, func(i, j int) bool {
+		return bytes.Compare(newVals[i].PubKey.Data, newVals[j].PubKey.Data) < 0
+	})
+
 	// extract updates
 	i := 0
 	j := 0
 	updates := abci.ValidatorUpdates{}
 	for i < len(oldVals) && j < len(newVals) {
-		l := oldVals[i]
-		r := newVals[j]
-		comp := bytesComp(r.PubKey.Data, l.PubKey.Data)
+		comp := bytes.Compare(oldVals[i].PubKey.Data, newVals[j].PubKey.Data)
 		if comp < 0 {
 			updates = append(updates, abci.ValidatorUpdate{
-				PubKey: r.PubKey, Power: 0})
+				PubKey: oldVals[i].PubKey, Power: 0})
 			i++
 		} else if comp == 0 {
-			updates = append(updates, l)
+			updates = append(updates, newVals[j])
 			i++
 			j++
 		} else {
-			updates = append(updates, l)
+			updates = append(updates, newVals[j])
 			j++
 		}
 	}
@@ -110,14 +95,16 @@ func valUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
 	for ; i < len(oldVals); i++ {
 		updates = append(updates, abci.ValidatorUpdate{
 			PubKey: oldVals[i].PubKey, Power: 0})
-		i++
 	}
 
 	for ; j < len(newVals); j++ {
 		updates = append(updates, newVals[j])
-		j++
 	}
 
+	sort.Slice(updates, func(i, j int) bool {
+		// reverse order
+		return updates[i].Power > updates[j].Power
+	})
 	return updates
 }
 
@@ -264,14 +251,6 @@ func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.Response
 	if app.flagValUpdate {
 		app.flagValUpdate = false
 		newVals := app.store.GetValidators(maxValidators)
-		sort.Slice(app.oldVals, func(i, j int) bool {
-			return bytesLess(
-				app.oldVals[i].PubKey.Data, app.oldVals[j].PubKey.Data)
-		})
-		sort.Slice(newVals, func(i, j int) bool {
-			return bytesLess(
-				newVals[i].PubKey.Data, newVals[j].PubKey.Data)
-		})
 		res.ValidatorUpdates = valUpdates(app.oldVals, newVals)
 	}
 	return res

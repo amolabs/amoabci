@@ -97,6 +97,7 @@ func TestUsage(t *testing.T) {
 
 func TestStake(t *testing.T) {
 	s := NewStore(db.NewMemDB(), db.NewMemDB())
+
 	holder := p256.GenPrivKeyFromSecret([]byte("holder")).PubKey().Address()
 	valKey := ed25519.GenPrivKeyFromSecret([]byte("holder")).PubKey().(ed25519.PubKeyEd25519)
 	validator := valKey.Address()
@@ -106,10 +107,24 @@ func TestStake(t *testing.T) {
 	}
 	s.SetStake(holder, &stake)
 
+	holder2 := p256.GenPrivKeyFromSecret([]byte("holder2")).PubKey().Address()
+	valKey2 := ed25519.GenPrivKeyFromSecret([]byte("holder2")).PubKey().(ed25519.PubKeyEd25519)
+	validator2 := valKey2.Address()
+	stake2 := types.Stake{
+		Amount:    *new(types.Currency).Set(100),
+		Validator: valKey2,
+	}
+	s.SetStake(holder2, &stake2)
+
 	assert.NotNil(t, s.GetStake(holder))
 	assert.Equal(t, stake, *s.GetStake(holder))
 	assert.NotNil(t, s.GetStakeByValidator(validator))
 	assert.Equal(t, stake, *s.GetStakeByValidator(validator))
+
+	assert.NotNil(t, s.GetStake(holder2))
+	assert.Equal(t, stake2, *s.GetStake(holder2))
+	assert.NotNil(t, s.GetStakeByValidator(validator2))
+	assert.Equal(t, stake2, *s.GetStakeByValidator(validator2))
 }
 
 func TestDelegate(t *testing.T) {
