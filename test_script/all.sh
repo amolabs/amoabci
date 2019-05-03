@@ -11,12 +11,6 @@ ROOT=$(dirname $0)
 . $ROOT/transfer.sh t1
 . $ROOT/transfer.sh t2
 
-. $ROOT/unstake.sh
-
-. $ROOT/stake.sh
-
-. $ROOT/transfer.sh u0
-. $ROOT/transfer.sh u1
-. $ROOT/transfer.sh u2
+. $ROOT/parcel.sh
 
 . $ROOT/withdraw.sh

@@ -17,9 +17,9 @@ echo "---- start"
 amocli tx stake --user t0 "$val0key" 1000000000000000000
 amocli tx stake --user t1 "$val1key" 1000000000000000000
 amocli tx stake --user t2 "$val2key" 1000000000000000000
-amocli tx delegate --user u0 $t0 10000000000000
-amocli tx delegate --user u1 $t1 10000000000000
-amocli tx delegate --user u2 $t2 10000000000000
+amocli tx delegate --user d0 $t0 10000000000000
+amocli tx delegate --user d1 $t1 10000000000000
+amocli tx delegate --user d2 $t2 10000000000000
 echo "---- end"
 
 . $(dirname $0)/qb.sh

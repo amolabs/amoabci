@@ -18,6 +18,9 @@ echo "---- start"
 if [ "$recpuser" != "t0" ]; then amocli tx transfer --user t0 $recp 1000; fi
 if [ "$recpuser" != "t1" ]; then amocli tx transfer --user t1 $recp 1000; fi
 if [ "$recpuser" != "t2" ]; then amocli tx transfer --user t2 $recp 1000; fi
+if [ "$recpuser" != "d0" ]; then amocli tx transfer --user d0 $recp 1000; fi
+if [ "$recpuser" != "d1" ]; then amocli tx transfer --user d1 $recp 1000; fi
+if [ "$recpuser" != "d2" ]; then amocli tx transfer --user d2 $recp 1000; fi
 if [ "$recpuser" != "u0" ]; then amocli tx transfer --user u0 $recp 1000; fi
 if [ "$recpuser" != "u1" ]; then amocli tx transfer --user u1 $recp 1000; fi
 if [ "$recpuser" != "u2" ]; then amocli tx transfer --user u2 $recp 1000; fi
