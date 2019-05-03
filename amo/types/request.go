@@ -9,8 +9,8 @@ import (
 const RequestAminoName = "amo/RequestValue"
 
 type RequestValue struct {
-	Payment Currency
-	Exp     time.Time
+	Payment Currency  `json:"payment"`
+	Exp     time.Time `json:"exp"`
 }
 
 func (value RequestValue) Serialize() ([]byte, error) {

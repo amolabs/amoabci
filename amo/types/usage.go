@@ -9,8 +9,8 @@ import (
 const UsageAminoName = "amo/UsageValue"
 
 type UsageValue struct {
-	Custody cmn.HexBytes
-	Exp     time.Time
+	Custody cmn.HexBytes `json:"custody"`
+	Exp     time.Time    `json:"exp"`
 }
 
 func (value UsageValue) Serialize() ([]byte, error) {

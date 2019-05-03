@@ -44,12 +44,16 @@ func usageFunc(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	var usageValue types.UsageValue
-	err = json.Unmarshal(res, &usageValue)
-	if err != nil {
-		return err
+	if res == nil || len(res) == 0 || string(res) == "null" {
+		fmt.Printf("no usage")
+	} else {
+		var usage types.UsageValue
+		err = json.Unmarshal(res, &usage)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("custody: %s\nexpire: %s", usage.Custody, usage.Exp)
 	}
-	// fmt.Printf()
 
 	return nil
 }

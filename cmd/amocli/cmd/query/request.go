@@ -24,17 +24,17 @@ func requestFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	buyerAddr, err := hex.DecodeString(args[0])
+	buyer, err := hex.DecodeString(args[0])
 	if err != nil {
 		return err
 	}
 
-	targetHex, err := hex.DecodeString(args[1])
+	parcel, err := hex.DecodeString(args[1])
 	if err != nil {
 		return err
 	}
 
-	res, err := rpc.QueryRequest(buyerAddr, targetHex)
+	res, err := rpc.QueryRequest(buyer, parcel)
 	if err != nil {
 		return err
 	}
@@ -44,23 +44,16 @@ func requestFunc(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	var requestValue types.RequestValue
-	err = json.Unmarshal(res, &requestValue)
-	if err != nil {
-		return err
+	if res == nil || len(res) == 0 || string(res) == "null" {
+		fmt.Printf("no request")
+	} else {
+		var request types.RequestValue
+		err = json.Unmarshal(res, &request)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("payment: %s\nexpire: %s", request.Payment, request.Exp)
 	}
-	// fmt.Printf()
 
 	return nil
-}
-
-func init() {
-	cmd := RequestCmd
-	cmd.Flags().SortFlags = false
-
-	cmd.Flags().StringP("buyer", "b", "", "buyer ...")
-	cmd.Flags().StringP("target", "t", "", "target ...")
-
-	cmd.MarkFlagRequired("buyer")
-	cmd.MarkFlagRequired("target")
 }
