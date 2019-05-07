@@ -99,8 +99,9 @@ func TestQueryParcel(t *testing.T) {
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
 	addr := crypto.Address(addrbin)
-	parcelID := cmn.RandBytes(32)
+	parcelID := cmn.HexBytes(cmn.RandBytes(32))
 	parcelID[31] = 0xFF
+	queryjson, _ := json.Marshal(parcelID)
 
 	parcel := types.ParcelValue{
 		Owner:   addr,
@@ -110,8 +111,9 @@ func TestQueryParcel(t *testing.T) {
 
 	app.store.SetParcel(parcelID, &parcel)
 
-	wrongParcelID := cmn.RandBytes(32)
+	wrongParcelID := cmn.HexBytes(cmn.RandBytes(32))
 	wrongParcelID[31] = 0xBB
+	_queryjson, _ := json.Marshal(wrongParcelID)
 
 	var req abci.RequestQuery
 	var res abci.ResponseQuery
@@ -122,21 +124,21 @@ func TestQueryParcel(t *testing.T) {
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeNoKey, res.Code)
 
-	// TODO: check this after parcel type implemented
+	// No bad key, for parcel id is an arbitrary length byte array.
 	/*
 		req = abci.RequestQuery{Path: "/parcel", Data: []byte("f8das")}
 		res = app.Query(req)
 		assert.Equal(t, code.QueryCodeBadKey, res.Code)
 	*/
 
-	req = abci.RequestQuery{Path: "/parcel", Data: wrongParcelID}
+	req = abci.RequestQuery{Path: "/parcel", Data: []byte(_queryjson)}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
 	assert.Equal(t, []byte("null"), res.Value)
 	assert.Equal(t, "null", res.Log)
 
 	// query
-	req = abci.RequestQuery{Path: "/parcel", Data: parcelID}
+	req = abci.RequestQuery{Path: "/parcel", Data: queryjson}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeOK, res.Code)
 	jsonstr, _ = json.Marshal(parcel)

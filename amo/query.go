@@ -98,8 +98,14 @@ func queryParcel(store *store.Store, queryData []byte) (res abci.ResponseQuery) 
 	}
 
 	// TODO: parse parcel id from queryData
+	var id tm.HexBytes
+	err := json.Unmarshal(queryData, &id)
+	if err != nil {
+		res.Code = code.QueryCodeBadKey
+		return
+	}
 
-	parcel := store.GetParcel(queryData)
+	parcel := store.GetParcel(id)
 	if parcel == nil {
 		res.Code = code.QueryCodeNoMatch
 	} else {

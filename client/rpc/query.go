@@ -22,12 +22,12 @@ func QueryBalance(address crypto.Address) ([]byte, error) {
 }
 
 func QueryStake(address crypto.Address) ([]byte, error) {
-	bytes, err := json.Marshal(address)
+	marshalled, err := json.Marshal(address)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := RPCABCIQuery("/stake", tm.HexBytes(bytes))
+	result, err := RPCABCIQuery("/stake", tm.HexBytes(marshalled))
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +49,13 @@ func QueryDelegate(address crypto.Address) ([]byte, error) {
 	return result.Response.Value, nil
 }
 
-func QueryParcel(parcelID []byte) ([]byte, error) {
-	result, err := RPCABCIQuery("/parcel", parcelID)
+func QueryParcel(parcelID tm.HexBytes) ([]byte, error) {
+	marshalled, err := json.Marshal(parcelID)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := RPCABCIQuery("/parcel", tm.HexBytes(marshalled))
 	if err != nil {
 		return nil, err
 	}
