@@ -14,9 +14,9 @@ import (
 var _ Operation = Grant{}
 
 type Grant struct {
-	Target  cmn.HexBytes
-	Grantee crypto.Address
-	Custody cmn.HexBytes
+	Target  cmn.HexBytes   `json:"target"`
+	Grantee crypto.Address `json:"grantee"`
+	Custody cmn.HexBytes   `json:"custody"`
 }
 
 func (o Grant) Check(store *store.Store, sender crypto.Address) uint32 {
