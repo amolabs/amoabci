@@ -49,7 +49,7 @@ type Message struct {
 	Type    string          `json:"type"`
 	Sender  crypto.Address  `json:"sender"`
 	Nonce   cmn.HexBytes    `json:"nonce"`
-	Payload json.RawMessage `json:"param"`
+	Payload json.RawMessage `json:"payload"`
 	Sig     Signature       `json:"signature"`
 }
 
