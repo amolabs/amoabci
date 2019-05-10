@@ -73,13 +73,18 @@ func (kr *KeyRing) Save() error {
 	return nil
 }
 
-func (kr *KeyRing) GenerateNewKey(username string, passphrase []byte, encrypt bool) (*Key, error) {
+func (kr *KeyRing) GenerateNewKey(username string, passphrase []byte, encrypt bool, seed string) (*Key, error) {
 	_, ok := kr.keyList[username]
 	if ok {
 		return nil, errors.New("Username already exists.")
 	}
 
-	privKey := p256.GenPrivKey()
+	var privKey p256.PrivKeyP256
+	if len(seed) > 0 {
+		privKey = p256.GenPrivKeyFromSecret([]byte(seed))
+	} else {
+		privKey = p256.GenPrivKey()
+	}
 
 	return kr.addNewP256Key(privKey, username, passphrase, encrypt)
 }

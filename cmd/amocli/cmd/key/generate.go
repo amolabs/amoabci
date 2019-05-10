@@ -21,6 +21,7 @@ func init() {
 	cmd := GenCmd
 	cmd.Flags().SortFlags = false
 	cmd.Flags().BoolP("encrypt", "e", true, "encrypt the private key with passphrase")
+	cmd.Flags().StringP("seed", "s", "", "optional seed string")
 }
 
 func genFunc(cmd *cobra.Command, args []string) error {
@@ -29,6 +30,11 @@ func genFunc(cmd *cobra.Command, args []string) error {
 	flags := cmd.Flags()
 
 	encrypt, err := flags.GetBool("encrypt")
+	if err != nil {
+		return err
+	}
+
+	seed, err := flags.GetString("seed")
 	if err != nil {
 		return err
 	}
@@ -47,7 +53,7 @@ func genFunc(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	_, err = kr.GenerateNewKey(username, passphrase, encrypt)
+	_, err = kr.GenerateNewKey(username, passphrase, encrypt, seed)
 	if err != nil {
 		return err
 	}

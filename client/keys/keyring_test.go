@@ -31,7 +31,7 @@ func TestGenKey(t *testing.T) {
 	assert.NotNil(t, kr)
 	assert.Equal(t, 0, len(kr.keyList))
 
-	key, err := kr.GenerateNewKey("test", []byte("pass"), true)
+	key, err := kr.GenerateNewKey("test", []byte("pass"), true, "test")
 	assert.NoError(t, err)
 	assert.NotNil(t, key)
 	assert.Equal(t, 40, len(key.Address))
@@ -60,7 +60,7 @@ func TestGenKey(t *testing.T) {
 	assert.Nil(t, key2)
 
 	// test genkey without enc
-	key, err = kr.GenerateNewKey("test", nil, false)
+	key, err = kr.GenerateNewKey("test", nil, false, "test")
 	assert.NoError(t, err)
 	assert.NotNil(t, key)
 	assert.Equal(t, 40, len(key.Address))
