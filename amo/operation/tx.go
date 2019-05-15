@@ -28,7 +28,7 @@ const (
 )
 
 const (
-	nonceSize = 4
+	NonceSize = 4
 )
 
 var (
@@ -46,16 +46,28 @@ func (s Signature) IsValid() bool {
 }
 
 type Message struct {
+	Type      string          `json:"type"`
+	Sender    crypto.Address  `json:"sender"`
+	Nonce     cmn.HexBytes    `json:"nonce"`
+	Payload   json.RawMessage `json:"payload"`
+	Signature Signature       `json:"signature"`
+}
+
+type MessageToSign struct {
 	Type    string          `json:"type"`
 	Sender  crypto.Address  `json:"sender"`
 	Nonce   cmn.HexBytes    `json:"nonce"`
 	Payload json.RawMessage `json:"payload"`
-	Sig     Signature       `json:"signature"`
 }
 
 func (m Message) GetSigningBytes() []byte {
-	m.Sig.SigBytes = nil
-	b, err := json.Marshal(m)
+	mts := MessageToSign{
+		Type:    m.Type,
+		Sender:  m.Sender,
+		Nonce:   m.Nonce,
+		Payload: m.Payload,
+	}
+	b, err := json.Marshal(mts)
 	if err != nil {
 		panic(err)
 	}
@@ -68,36 +80,29 @@ func (m *Message) Sign(privKey crypto.PrivKey) error {
 	if !ok {
 		return cmn.NewError("Fail to convert public key to p256 public key")
 	}
-	m.Nonce = cmn.RandBytes(nonceSize)
-	m.Sender = pubKey.Address()
-	sigJson := Signature{
-		PubKey: p256PubKey,
-	}
-	m.Sig = sigJson
 	sb := m.GetSigningBytes()
 	sig, err := privKey.Sign(sb)
 	if err != nil {
 		return err
 	}
-	sigJson.SigBytes = make([]byte, p256.SignatureSize)
-	sigLen := copy(sigJson.SigBytes, sig)
-	if sigLen != p256.SignatureSize {
-		return cmn.NewError("Fail to sign")
+	sigJson := Signature{
+		PubKey:   p256PubKey,
+		SigBytes: sig,
 	}
-	m.Sig = sigJson
+	m.Signature = sigJson
 	return nil
 }
 
 func (m *Message) Verify() bool {
-	if len(m.Sig.SigBytes) != p256.SignatureSize {
+	if len(m.Signature.SigBytes) != p256.SignatureSize {
 		return false
 	}
 	sb := m.GetSigningBytes()
-	return m.Sig.PubKey.VerifyBytes(sb, m.Sig.SigBytes)
+	return m.Signature.PubKey.VerifyBytes(sb, m.Signature.SigBytes)
 }
 
 func (m Message) IsValid() bool {
-	if len(m.Nonce) != nonceSize {
+	if len(m.Nonce) != NonceSize {
 		return false
 	}
 	return true

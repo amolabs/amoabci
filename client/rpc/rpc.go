@@ -31,6 +31,8 @@ func MakeMessage(t string, nonce uint32, payload interface{}, key keys.Key) (typ
 	msg := operation.Message{
 		Type:    t,
 		Payload: raw,
+		Sender:  privKey.PubKey().Address(),
+		Nonce:   cmn.RandBytes(operation.NonceSize),
 	}
 
 	err = msg.Sign(privKey)
