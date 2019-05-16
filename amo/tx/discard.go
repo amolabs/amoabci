@@ -1,4 +1,4 @@
-package operation
+package tx
 
 import (
 	"bytes"
@@ -10,15 +10,13 @@ import (
 	"github.com/amolabs/amoabci/amo/store"
 )
 
-var _ Operation = Revoke{}
+var _ Operation = Discard{}
 
-type Revoke struct {
-	Grantee crypto.Address `json:"grantee"`
-	Target  cmn.HexBytes   `json:"target"`
+type Discard struct {
+	Target cmn.HexBytes `json:"target"`
 }
 
-// TODO: fix: use GetUsage
-func (o Revoke) Check(store *store.Store, sender crypto.Address) uint32 {
+func (o Discard) Check(store *store.Store, sender crypto.Address) uint32 {
 	parcel := store.GetParcel(o.Target)
 	if parcel == nil {
 		return code.TxCodeParcelNotFound
@@ -29,10 +27,10 @@ func (o Revoke) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Revoke) Execute(store *store.Store, sender crypto.Address) uint32 {
+func (o Discard) Execute(store *store.Store, sender crypto.Address) uint32 {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
 		return resCode
 	}
-	store.DeleteUsage(o.Grantee, o.Target)
+	store.DeleteParcel(o.Target)
 	return code.TxCodeOK
 }

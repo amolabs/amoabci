@@ -13,7 +13,7 @@ import (
 	tdb "github.com/tendermint/tendermint/libs/db"
 
 	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/operation"
+	"github.com/amolabs/amoabci/amo/tx"
 	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/crypto/p256"
 )
@@ -312,14 +312,14 @@ func TestSignedTransactionTest(t *testing.T) {
 	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
-	tx := operation.Transfer{
+	_tx := tx.Transfer{
 		To:     p256.GenPrivKeyFromSecret([]byte("bob")).PubKey().Address(),
 		Amount: *new(types.Currency).Set(500),
 	}
-	payload, err := json.Marshal(tx)
+	payload, err := json.Marshal(_tx)
 	assert.NoError(t, err)
-	msg := operation.Message{
-		Type:    operation.TxTransfer,
+	msg := tx.Message{
+		Type:    tx.TxTransfer,
 		Payload: payload,
 		Sender:  from.PubKey().Address(),
 		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
@@ -371,19 +371,19 @@ func TestFuncValUpdates(t *testing.T) {
 func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
 	validator, _ := ed25519.GenPrivKeyFromSecret([]byte(val)).
 		PubKey().(ed25519.PubKeyEd25519)
-	op := operation.Stake{
+	op := tx.Stake{
 		Amount:    *new(types.Currency).Set(amount),
 		Validator: validator[:],
 	}
 	payload, _ := json.Marshal(op)
-	tx := operation.Message{
-		Type:    operation.TxStake,
+	_tx := tx.Message{
+		Type:    tx.TxStake,
 		Payload: payload,
 		Sender:  priv.PubKey().Address(),
 		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
 	}
-	tx.Sign(priv)
-	rawTx, _ := json.Marshal(tx)
+	_tx.Sign(priv)
+	rawTx, _ := json.Marshal(_tx)
 	return rawTx
 }
 

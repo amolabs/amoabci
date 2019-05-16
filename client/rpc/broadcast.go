@@ -5,14 +5,14 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 
-	"github.com/amolabs/amoabci/amo/operation"
+	"github.com/amolabs/amoabci/amo/tx"
 	atypes "github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/client/keys"
 )
 
 // Transfer handles transfer transaction
 func Transfer(to crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
-	msg, err := MakeMessage(operation.TxTransfer, 0, operation.Transfer{
+	msg, err := MakeMessage(tx.TxTransfer, 0, tx.Transfer{
 		To:     to,
 		Amount: *amount,
 	}, key)
@@ -25,7 +25,7 @@ func Transfer(to crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes
 }
 
 func Stake(amount *atypes.Currency, vKey cmn.HexBytes, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
-	msg, err := MakeMessage(operation.TxStake, 0, operation.Stake{
+	msg, err := MakeMessage(tx.TxStake, 0, tx.Stake{
 		Amount:    *amount,
 		Validator: vKey,
 	}, key)
@@ -38,7 +38,7 @@ func Stake(amount *atypes.Currency, vKey cmn.HexBytes, key keys.Key) (*ctypes.Re
 }
 
 func Withdraw(amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
-	msg, err := MakeMessage(operation.TxWithdraw, 0, operation.Withdraw{
+	msg, err := MakeMessage(tx.TxWithdraw, 0, tx.Withdraw{
 		Amount: *amount,
 	}, key)
 
@@ -50,7 +50,7 @@ func Withdraw(amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxC
 }
 
 func Delegate(to crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
-	msg, err := MakeMessage(operation.TxDelegate, 0, operation.Delegate{
+	msg, err := MakeMessage(tx.TxDelegate, 0, tx.Delegate{
 		To:     to,
 		Amount: *amount,
 	}, key)
@@ -63,7 +63,7 @@ func Delegate(to crypto.Address, amount *atypes.Currency, key keys.Key) (*ctypes
 }
 
 func Retract(amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
-	msg, err := MakeMessage(operation.TxRetract, 0, operation.Retract{
+	msg, err := MakeMessage(tx.TxRetract, 0, tx.Retract{
 		Amount: *amount,
 	}, key)
 
@@ -75,7 +75,7 @@ func Retract(amount *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCo
 }
 
 func Register(target cmn.HexBytes, custody cmn.HexBytes, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
-	msg, err := MakeMessage(operation.TxRegister, 0, operation.Register{
+	msg, err := MakeMessage(tx.TxRegister, 0, tx.Register{
 		Target:  target,
 		Custody: custody,
 	}, key)
@@ -88,7 +88,7 @@ func Register(target cmn.HexBytes, custody cmn.HexBytes, key keys.Key) (*ctypes.
 }
 
 func Request(target cmn.HexBytes, payment *atypes.Currency, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
-	msg, err := MakeMessage(operation.TxRequest, 0, operation.Request{
+	msg, err := MakeMessage(tx.TxRequest, 0, tx.Request{
 		Target:  target,
 		Payment: *payment,
 	}, key)
@@ -101,7 +101,7 @@ func Request(target cmn.HexBytes, payment *atypes.Currency, key keys.Key) (*ctyp
 }
 
 func Cancel(target cmn.HexBytes, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
-	msg, err := MakeMessage(operation.TxCancel, 0, operation.Cancel{
+	msg, err := MakeMessage(tx.TxCancel, 0, tx.Cancel{
 		Target: target,
 	}, key)
 
@@ -113,7 +113,7 @@ func Cancel(target cmn.HexBytes, key keys.Key) (*ctypes.ResultBroadcastTxCommit,
 }
 
 func Grant(target cmn.HexBytes, grantee crypto.Address, custody cmn.HexBytes, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
-	msg, err := MakeMessage(operation.TxGrant, 0, operation.Grant{
+	msg, err := MakeMessage(tx.TxGrant, 0, tx.Grant{
 		Target:  target,
 		Grantee: grantee,
 		Custody: custody,
@@ -127,7 +127,7 @@ func Grant(target cmn.HexBytes, grantee crypto.Address, custody cmn.HexBytes, ke
 }
 
 func Revoke(target cmn.HexBytes, grantee crypto.Address, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
-	msg, err := MakeMessage(operation.TxRevoke, 0, operation.Revoke{
+	msg, err := MakeMessage(tx.TxRevoke, 0, tx.Revoke{
 		Target:  target,
 		Grantee: grantee,
 	}, key)
@@ -140,7 +140,7 @@ func Revoke(target cmn.HexBytes, grantee crypto.Address, key keys.Key) (*ctypes.
 }
 
 func Discard(target cmn.HexBytes, key keys.Key) (*ctypes.ResultBroadcastTxCommit, error) {
-	msg, err := MakeMessage(operation.TxDiscard, 0, operation.Discard{
+	msg, err := MakeMessage(tx.TxDiscard, 0, tx.Discard{
 		Target: target,
 	}, key)
 

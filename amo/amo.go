@@ -18,8 +18,8 @@ import (
 	"github.com/tendermint/tendermint/version"
 
 	"github.com/amolabs/amoabci/amo/code"
-	"github.com/amolabs/amoabci/amo/operation"
 	astore "github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/tx"
 	"github.com/amolabs/amoabci/amo/types"
 )
 
@@ -146,8 +146,8 @@ func (app *AMOApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo
 	}
 }
 
-func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
-	message, op, isStake := operation.ParseTx(tx)
+func (app *AMOApplication) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
+	message, op, isStake := tx.ParseTx(txBytes)
 	if !message.Verify() {
 		return abci.ResponseDeliverTx{
 			Code: code.TxCodeBadSignature,
@@ -174,8 +174,8 @@ func (app *AMOApplication) DeliverTx(tx []byte) abci.ResponseDeliverTx {
 	}
 }
 
-func (app *AMOApplication) CheckTx(tx []byte) abci.ResponseCheckTx {
-	message, op, _ := operation.ParseTx(tx)
+func (app *AMOApplication) CheckTx(txBytes []byte) abci.ResponseCheckTx {
+	message, op, _ := tx.ParseTx(txBytes)
 	if !message.Verify() {
 		return abci.ResponseCheckTx{
 			Code: code.TxCodeBadSignature,

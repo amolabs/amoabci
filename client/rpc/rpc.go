@@ -8,7 +8,7 @@ import (
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/tendermint/tendermint/types"
 
-	"github.com/amolabs/amoabci/amo/operation"
+	"github.com/amolabs/amoabci/amo/tx"
 	"github.com/amolabs/amoabci/client/keys"
 	"github.com/amolabs/amoabci/crypto/p256"
 )
@@ -28,11 +28,11 @@ func MakeMessage(t string, nonce uint32, payload interface{}, key keys.Key) (typ
 	var privKey p256.PrivKeyP256
 	copy(privKey[:], key.PrivKey)
 
-	msg := operation.Message{
+	msg := tx.Message{
 		Type:    t,
 		Payload: raw,
 		Sender:  privKey.PubKey().Address(),
-		Nonce:   cmn.RandBytes(operation.NonceSize),
+		Nonce:   cmn.RandBytes(tx.NonceSize),
 	}
 
 	err = msg.Sign(privKey)
