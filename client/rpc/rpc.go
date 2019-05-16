@@ -18,8 +18,8 @@ var (
 	rpcWsEndpoint = "/websocket"
 )
 
-// MakeMessage handles making tx message
-func MakeMessage(t string, nonce uint32, payload interface{}, key keys.Key) (types.Tx, error) {
+// MakeTx handles making tx message
+func MakeTx(t string, nonce uint32, payload interface{}, key keys.Key) (types.Tx, error) {
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func MakeMessage(t string, nonce uint32, payload interface{}, key keys.Key) (typ
 	var privKey p256.PrivKeyP256
 	copy(privKey[:], key.PrivKey)
 
-	msg := tx.Message{
+	msg := tx.Tx{
 		Type:    t,
 		Payload: raw,
 		Sender:  privKey.PubKey().Address(),

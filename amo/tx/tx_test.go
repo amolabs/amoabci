@@ -91,7 +91,7 @@ func TestParseTx(t *testing.T) {
 		Amount: *new(types.Currency).Set(1000),
 	}
 	b, _ := json.Marshal(transfer)
-	message := Message{
+	message := Tx{
 		Type:    TxTransfer,
 		Payload: b,
 		Sender:  from.PubKey().Address(),

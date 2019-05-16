@@ -45,7 +45,7 @@ func (s Signature) IsValid() bool {
 		c.IsOnCurve(new(big.Int).SetBytes(s.PubKey[1:33]), new(big.Int).SetBytes(s.PubKey[33:]))
 }
 
-type Message struct {
+type Tx struct {
 	Type      string          `json:"type"`
 	Sender    crypto.Address  `json:"sender"`
 	Nonce     cmn.HexBytes    `json:"nonce"`
@@ -53,34 +53,34 @@ type Message struct {
 	Signature Signature       `json:"signature"`
 }
 
-type MessageToSign struct {
+type TxToSign struct {
 	Type    string          `json:"type"`
 	Sender  crypto.Address  `json:"sender"`
 	Nonce   cmn.HexBytes    `json:"nonce"`
 	Payload json.RawMessage `json:"payload"`
 }
 
-func (m Message) GetSigningBytes() []byte {
-	mts := MessageToSign{
-		Type:    m.Type,
-		Sender:  m.Sender,
-		Nonce:   m.Nonce,
-		Payload: m.Payload,
+func (t Tx) GetSigningBytes() []byte {
+	tts := TxToSign{
+		Type:    t.Type,
+		Sender:  t.Sender,
+		Nonce:   t.Nonce,
+		Payload: t.Payload,
 	}
-	b, err := json.Marshal(mts)
+	b, err := json.Marshal(tts)
 	if err != nil {
 		panic(err)
 	}
 	return b
 }
 
-func (m *Message) Sign(privKey crypto.PrivKey) error {
+func (t *Tx) Sign(privKey crypto.PrivKey) error {
 	pubKey := privKey.PubKey()
 	p256PubKey, ok := pubKey.(p256.PubKeyP256)
 	if !ok {
 		return cmn.NewError("Fail to convert public key to p256 public key")
 	}
-	sb := m.GetSigningBytes()
+	sb := t.GetSigningBytes()
 	sig, err := privKey.Sign(sb)
 	if err != nil {
 		return err
@@ -89,20 +89,20 @@ func (m *Message) Sign(privKey crypto.PrivKey) error {
 		PubKey:   p256PubKey,
 		SigBytes: sig,
 	}
-	m.Signature = sigJson
+	t.Signature = sigJson
 	return nil
 }
 
-func (m *Message) Verify() bool {
-	if len(m.Signature.SigBytes) != p256.SignatureSize {
+func (t *Tx) Verify() bool {
+	if len(t.Signature.SigBytes) != p256.SignatureSize {
 		return false
 	}
-	sb := m.GetSigningBytes()
-	return m.Signature.PubKey.VerifyBytes(sb, m.Signature.SigBytes)
+	sb := t.GetSigningBytes()
+	return t.Signature.PubKey.VerifyBytes(sb, t.Signature.SigBytes)
 }
 
-func (m Message) IsValid() bool {
-	if len(m.Nonce) != NonceSize {
+func (t Tx) IsValid() bool {
+	if len(t.Nonce) != NonceSize {
 		return false
 	}
 	return true
@@ -113,18 +113,18 @@ type Operation interface {
 	Execute(store *store.Store, sender crypto.Address) uint32
 }
 
-func ParseTx(tx []byte) (Message, Operation, bool) {
-	var message Message
+func ParseTx(txBytes []byte) (Tx, Operation, bool) {
+	var t Tx
 
-	err := json.Unmarshal(tx, &message)
+	err := json.Unmarshal(txBytes, &t)
 	if err != nil {
 		panic(err)
 	}
 
 	isStake := false
-	message.Type = strings.ToLower(message.Type)
+	t.Type = strings.ToLower(t.Type)
 	var payload interface{}
-	switch message.Type {
+	switch t.Type {
 	case TxTransfer:
 		payload = new(Transfer)
 	case TxRegister:
@@ -152,13 +152,13 @@ func ParseTx(tx []byte) (Message, Operation, bool) {
 		payload = new(Retract)
 		isStake = true
 	default:
-		panic(cmn.NewError("Invalid operation type: %v", message.Type))
+		panic(cmn.NewError("Invalid operation type: %v", t.Type))
 	}
 
-	err = json.Unmarshal(message.Payload, &payload)
+	err = json.Unmarshal(t.Payload, &payload)
 	if err != nil {
 		panic(err)
 	}
 
-	return message, payload.(Operation), isStake
+	return t, payload.(Operation), isStake
 }

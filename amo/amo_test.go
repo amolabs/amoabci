@@ -318,7 +318,7 @@ func TestSignedTransactionTest(t *testing.T) {
 	}
 	payload, err := json.Marshal(_tx)
 	assert.NoError(t, err)
-	msg := tx.Message{
+	msg := tx.Tx{
 		Type:    tx.TxTransfer,
 		Payload: payload,
 		Sender:  from.PubKey().Address(),
@@ -376,7 +376,7 @@ func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
 		Validator: validator[:],
 	}
 	payload, _ := json.Marshal(op)
-	_tx := tx.Message{
+	_tx := tx.Tx{
 		Type:    tx.TxStake,
 		Payload: payload,
 		Sender:  priv.PubKey().Address(),
