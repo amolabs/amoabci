@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -13,7 +13,7 @@ import (
 var _ Operation = Discard{}
 
 type Discard struct {
-	Target cmn.HexBytes `json:"target"`
+	Target tm.HexBytes `json:"target"`
 }
 
 func (o Discard) Check(store *store.Store, sender crypto.Address) uint32 {
@@ -27,10 +27,13 @@ func (o Discard) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Discard) Execute(store *store.Store, sender crypto.Address) uint32 {
+func (o Discard) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode
+		return resCode, nil
 	}
 	store.DeleteParcel(o.Target)
-	return code.TxCodeOK
+	tags := []tm.KVPair{
+		{Key: []byte("parcel.id"), Value: []byte(o.Target.String())},
+	}
+	return code.TxCodeOK, tags
 }

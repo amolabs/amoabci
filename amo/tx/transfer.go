@@ -4,17 +4,18 @@ import (
 	"bytes"
 
 	"github.com/tendermint/tendermint/crypto"
+	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
-	atypes "github.com/amolabs/amoabci/amo/types"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 var _ Operation = Transfer{}
 
 type Transfer struct {
-	To     crypto.Address  `json:"to"`
-	Amount atypes.Currency `json:"amount"`
+	To     crypto.Address `json:"to"`
+	Amount types.Currency `json:"amount"`
 }
 
 func (o Transfer) Check(store *store.Store, sender crypto.Address) uint32 {
@@ -32,9 +33,9 @@ func (o Transfer) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Transfer) Execute(store *store.Store, sender crypto.Address) uint32 {
+func (o Transfer) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode
+		return resCode, nil
 	}
 	fromBalance := store.GetBalance(sender)
 	toBalance := store.GetBalance(o.To)
@@ -42,5 +43,5 @@ func (o Transfer) Execute(store *store.Store, sender crypto.Address) uint32 {
 	toBalance.Add(&o.Amount)
 	store.SetBalance(sender, fromBalance)
 	store.SetBalance(o.To, toBalance)
-	return code.TxCodeOK
+	return code.TxCodeOK, nil
 }

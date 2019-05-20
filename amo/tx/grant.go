@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -14,9 +14,9 @@ import (
 var _ Operation = Grant{}
 
 type Grant struct {
-	Target  cmn.HexBytes   `json:"target"`
+	Target  tm.HexBytes    `json:"target"`
 	Grantee crypto.Address `json:"grantee"`
-	Custody cmn.HexBytes   `json:"custody"`
+	Custody tm.HexBytes    `json:"custody"`
 }
 
 func (o Grant) Check(store *store.Store, sender crypto.Address) uint32 {
@@ -34,9 +34,9 @@ func (o Grant) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Grant) Execute(store *store.Store, sender crypto.Address) uint32 {
+func (o Grant) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode
+		return resCode, nil
 	}
 	request := store.GetRequest(o.Grantee, o.Target)
 	store.DeleteRequest(o.Grantee, o.Target)
@@ -47,5 +47,8 @@ func (o Grant) Execute(store *store.Store, sender crypto.Address) uint32 {
 		Custody: o.Custody,
 	}
 	store.SetUsage(o.Grantee, o.Target, &usage)
-	return code.TxCodeOK
+	tags := []tm.KVPair{
+		{Key: []byte("parcel.id"), Value: []byte(o.Target.String())},
+	}
+	return code.TxCodeOK, tags
 }

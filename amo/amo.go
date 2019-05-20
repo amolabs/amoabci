@@ -154,7 +154,11 @@ func (app *AMOApplication) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 			Tags: nil,
 		}
 	}
-	resCode := op.Execute(app.store, message.Sender)
+	defTags := []tm.KVPair{
+		{Key: []byte("tx.type"), Value: []byte(message.Type)},
+		{Key: []byte("tx.sender"), Value: []byte(message.Sender.String())},
+	}
+	resCode, opTags := op.Execute(app.store, message.Sender)
 	if resCode != code.TxCodeOK {
 		return abci.ResponseDeliverTx{
 			Code: resCode,
@@ -164,13 +168,10 @@ func (app *AMOApplication) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 		app.flagValUpdate = true
 	}
 	app.state.Walk++
+	tags := append(defTags, opTags...)
 	return abci.ResponseDeliverTx{
 		Code: resCode,
-		Tags: []tm.KVPair{
-			{Key: []byte("all"), Value: []byte("true")},
-			{Key: []byte("tx.type"), Value: []byte(message.Type)},
-			{Key: []byte("tx.sender"), Value: []byte(message.Sender.String())},
-		},
+		Tags: tags,
 	}
 }
 

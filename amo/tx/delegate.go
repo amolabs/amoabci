@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/tendermint/tendermint/crypto"
+	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -36,9 +37,9 @@ func (o Delegate) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Delegate) Execute(store *store.Store, sender crypto.Address) uint32 {
+func (o Delegate) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode
+		return resCode, nil
 	}
 	balance := store.GetBalance(sender)
 	balance.Sub(&o.Amount)
@@ -54,5 +55,5 @@ func (o Delegate) Execute(store *store.Store, sender crypto.Address) uint32 {
 	store.SetBalance(sender, balance)
 	store.SetDelegate(sender, delegate)
 	// TODO Update delegation state
-	return code.TxCodeOK
+	return code.TxCodeOK, nil
 }

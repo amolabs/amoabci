@@ -165,7 +165,12 @@ func (pubKey PubKeyP256) VerifyBytes(msg []byte, sig []byte) (res bool) {
 	if len(sig) != 64 {
 		return false
 	}
-	return ecdsa.Verify(pubKey.ToECDSA(), h(msg), new(big.Int).SetBytes(sig[:32]), new(big.Int).SetBytes(sig[32:]))
+	return ecdsa.Verify(
+		pubKey.ToECDSA(),
+		h(msg),
+		new(big.Int).SetBytes(sig[:32]),
+		new(big.Int).SetBytes(sig[32:]),
+	)
 }
 
 func (pubKey PubKeyP256) Equals(other tmc.PubKey) bool {

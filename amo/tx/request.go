@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -14,7 +14,7 @@ import (
 var _ Operation = Request{}
 
 type Request struct {
-	Target  cmn.HexBytes   `json:"target"`
+	Target  tm.HexBytes    `json:"target"`
 	Payment types.Currency `json:"payment"`
 	// TODO: Extra info
 }
@@ -36,9 +36,9 @@ func (o Request) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Request) Execute(store *store.Store, sender crypto.Address) uint32 {
+func (o Request) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode
+		return resCode, nil
 	}
 	balance := store.GetBalance(sender)
 	balance.Sub(&o.Payment)
@@ -47,5 +47,8 @@ func (o Request) Execute(store *store.Store, sender crypto.Address) uint32 {
 		Payment: o.Payment,
 	}
 	store.SetRequest(sender, o.Target, &request)
-	return code.TxCodeOK
+	tags := []tm.KVPair{
+		{Key: []byte("parcel.id"), Value: []byte(o.Target.String())},
+	}
+	return code.TxCodeOK, tags
 }

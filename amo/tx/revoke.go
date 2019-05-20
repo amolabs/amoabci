@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -14,7 +14,7 @@ var _ Operation = Revoke{}
 
 type Revoke struct {
 	Grantee crypto.Address `json:"grantee"`
-	Target  cmn.HexBytes   `json:"target"`
+	Target  tm.HexBytes    `json:"target"`
 }
 
 // TODO: fix: use GetUsage
@@ -29,10 +29,13 @@ func (o Revoke) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Revoke) Execute(store *store.Store, sender crypto.Address) uint32 {
+func (o Revoke) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode
+		return resCode, nil
 	}
 	store.DeleteUsage(o.Grantee, o.Target)
-	return code.TxCodeOK
+	tags := []tm.KVPair{
+		{Key: []byte("parcel.id"), Value: []byte(o.Target.String())},
+	}
+	return code.TxCodeOK, tags
 }

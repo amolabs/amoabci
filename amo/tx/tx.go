@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/crypto/p256"
@@ -37,7 +37,7 @@ var (
 
 type Signature struct {
 	PubKey   p256.PubKeyP256 `json:"pubkey"`
-	SigBytes cmn.HexBytes    `json:"sig_bytes"`
+	SigBytes tm.HexBytes     `json:"sig_bytes"`
 }
 
 func (s Signature) IsValid() bool {
@@ -48,7 +48,7 @@ func (s Signature) IsValid() bool {
 type Tx struct {
 	Type      string          `json:"type"`
 	Sender    crypto.Address  `json:"sender"`
-	Nonce     cmn.HexBytes    `json:"nonce"`
+	Nonce     tm.HexBytes     `json:"nonce"`
 	Payload   json.RawMessage `json:"payload"`
 	Signature Signature       `json:"signature"`
 }
@@ -56,7 +56,7 @@ type Tx struct {
 type TxToSign struct {
 	Type    string          `json:"type"`
 	Sender  crypto.Address  `json:"sender"`
-	Nonce   cmn.HexBytes    `json:"nonce"`
+	Nonce   tm.HexBytes     `json:"nonce"`
 	Payload json.RawMessage `json:"payload"`
 }
 
@@ -78,7 +78,7 @@ func (t *Tx) Sign(privKey crypto.PrivKey) error {
 	pubKey := privKey.PubKey()
 	p256PubKey, ok := pubKey.(p256.PubKeyP256)
 	if !ok {
-		return cmn.NewError("Fail to convert public key to p256 public key")
+		return tm.NewError("Fail to convert public key to p256 public key")
 	}
 	sb := t.GetSigningBytes()
 	sig, err := privKey.Sign(sb)
@@ -110,7 +110,7 @@ func (t Tx) IsValid() bool {
 
 type Operation interface {
 	Check(store *store.Store, sender crypto.Address) uint32
-	Execute(store *store.Store, sender crypto.Address) uint32
+	Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair)
 }
 
 func ParseTx(txBytes []byte) (Tx, Operation, bool) {
@@ -152,7 +152,7 @@ func ParseTx(txBytes []byte) (Tx, Operation, bool) {
 		payload = new(Retract)
 		isStake = true
 	default:
-		panic(cmn.NewError("Invalid operation type: %v", t.Type))
+		panic(tm.NewError("Invalid operation type: %v", t.Type))
 	}
 
 	err = json.Unmarshal(t.Payload, &payload)
