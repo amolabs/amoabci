@@ -34,16 +34,6 @@ services:
     ports:
       - "26657:26657"
 
-  #pdb0:
-  #container_name: pdb0
-  #image: paust-db
-  #networks:
-  #amolocal:
-  #ipv4_address: 192.167.10.10
-  #environment:
-  #- ID=0
-  #volumes:
-  #- /tmp/pdb0:/tendermint:Z
 
   #rep1:
   #  container_name: rep1
