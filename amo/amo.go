@@ -231,7 +231,9 @@ func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseIni
 	}
 	app.logger.Info("InitChain: new genesis app state applied.")
 
-	return abci.ResponseInitChain{}
+	return abci.ResponseInitChain{
+		Validators: app.store.GetValidators(maxValidators),
+	}
 }
 
 func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
