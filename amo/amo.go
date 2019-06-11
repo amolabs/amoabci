@@ -229,6 +229,12 @@ func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseIni
 	if FillGenesisState(app.store, genAppState) != nil {
 		return abci.ResponseInitChain{}
 	}
+	app.state.Walk = 0 // TODO: This is an ad-hoc fix!
+	b := make([]byte, 8)
+	binary.PutVarint(b, app.state.Walk)
+	app.state.AppHash = b
+
+	saveState(app.state)
 	app.logger.Info("InitChain: new genesis app state applied.")
 
 	return abci.ResponseInitChain{
