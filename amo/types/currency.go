@@ -28,7 +28,7 @@ func init() {
 	maxCurrency.SetString(maxCurrencyHex, 16)
 }
 
-func isExceed(i *big.Int) bool {
+func isTooBig(i *big.Int) bool {
 	return maxCurrency.Cmp(i) != 1
 }
 
@@ -52,7 +52,7 @@ func (c *Currency) SetString(x string, base int) (*Currency, error) {
 	if !ok {
 		return nil, cmn.NewError("Fail to convert hex string(%v)", x)
 	}
-	if isExceed(i) {
+	if isTooBig(i) {
 		return nil, cmn.NewError("Currency supports up to 32 bytes;%v", x)
 	}
 	*c = Currency{
@@ -92,8 +92,9 @@ func (c *Currency) UnmarshalJSON(data []byte) error {
 }
 
 func (c *Currency) Add(a *Currency) *Currency {
-	if isExceed(c.Int.Add(&c.Int, &a.Int)) {
-		panic(cmn.NewError("Cannot add"))
+	// XXX Well.. This is a problem.
+	if isTooBig(c.Int.Add(&c.Int, &a.Int)) {
+		c.Int.Set(&maxCurrency)
 	}
 	return c
 }
