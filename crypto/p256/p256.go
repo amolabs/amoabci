@@ -6,7 +6,6 @@ import (
 	"crypto/elliptic"
 	"encoding/hex"
 	"encoding/json"
-	"io"
 	"math/big"
 	"strings"
 
@@ -52,15 +51,12 @@ func GenPrivKeyFromSecret(secret []byte) PrivKeyP256 {
 }
 
 func GenPrivKey() PrivKeyP256 {
-	return genPrivKey(tmc.CReader())
-}
-
-func genPrivKey(rand io.Reader) PrivKeyP256 {
-	p256, err := ecdsa.GenerateKey(c, rand)
-	if err != nil {
-		panic(err)
-	}
 	var privKey PrivKeyP256
+	p256, err := ecdsa.GenerateKey(c, tmc.CReader())
+	if err != nil {
+		// TODO: error log or something
+		return privKey
+	}
 	copy(privKey[:], p256.D.Bytes())
 	return privKey
 }
@@ -136,7 +132,7 @@ func (privKey *PrivKeyP256) UnmarshalJSON(data []byte) error {
 	}
 	_, err := hex.Decode(privKey[:], data[1:len(data)-1])
 	if err != nil {
-		panic(err)
+		return err
 	}
 	return nil
 }
@@ -195,7 +191,7 @@ func (pubKey *PubKeyP256) UnmarshalJSON(data []byte) error {
 	}
 	_, err := hex.Decode(pubKey[:], data[1:len(data)-1])
 	if err != nil {
-		panic(err)
+		return err
 	}
 	return nil
 }

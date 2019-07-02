@@ -147,7 +147,14 @@ func (app *AMOApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo
 }
 
 func (app *AMOApplication) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
-	message, op, isStake := tx.ParseTx(txBytes)
+	message, op, isStake, err := tx.ParseTx(txBytes)
+	if err != nil {
+		return abci.ResponseDeliverTx{
+			Code: code.TxCodeBadParam,
+			Tags: []tm.KVPair{},
+		}
+	}
+
 	if !message.Verify() {
 		return abci.ResponseDeliverTx{
 			Code: code.TxCodeBadSignature,
@@ -176,7 +183,12 @@ func (app *AMOApplication) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 }
 
 func (app *AMOApplication) CheckTx(txBytes []byte) abci.ResponseCheckTx {
-	message, op, _ := tx.ParseTx(txBytes)
+	message, op, _, err := tx.ParseTx(txBytes)
+	if err != nil {
+		return abci.ResponseCheckTx{
+			Code: code.TxCodeBadParam,
+		}
+	}
 	if !message.Verify() {
 		return abci.ResponseCheckTx{
 			Code: code.TxCodeBadSignature,

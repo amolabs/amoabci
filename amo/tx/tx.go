@@ -69,7 +69,8 @@ func (t Tx) GetSigningBytes() []byte {
 	}
 	b, err := json.Marshal(tts)
 	if err != nil {
-		panic(err)
+		// XXX: nothing to do here
+		return b
 	}
 	return b
 }
@@ -113,12 +114,13 @@ type Operation interface {
 	Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair)
 }
 
-func ParseTx(txBytes []byte) (Tx, Operation, bool) {
+// TODO: too clumsy prototype. improve it
+func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
 	var t Tx
 
 	err := json.Unmarshal(txBytes, &t)
 	if err != nil {
-		panic(err)
+		return t, nil, false, err
 	}
 
 	isStake := false
@@ -152,13 +154,13 @@ func ParseTx(txBytes []byte) (Tx, Operation, bool) {
 		payload = new(Retract)
 		isStake = true
 	default:
-		panic(tm.NewError("Invalid operation type: %v", t.Type))
+		return t, nil, false, tm.NewError("Invalid operation type: %v", t.Type)
 	}
 
 	err = json.Unmarshal(t.Payload, &payload)
 	if err != nil {
-		panic(err)
+		return t, nil, false, err
 	}
 
-	return t, payload.(Operation), isStake
+	return t, payload.(Operation), isStake, nil
 }
