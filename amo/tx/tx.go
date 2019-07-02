@@ -69,7 +69,8 @@ func (t Tx) GetSigningBytes() []byte {
 	}
 	b, err := json.Marshal(tts)
 	if err != nil {
-		panic(err)
+		// XXX: nothing to do here
+		return b
 	}
 	return b
 }

@@ -96,20 +96,22 @@ func (s Store) Purge() error {
 	return nil
 }
 
-func (s Store) SetBalance(addr tm.Address, balance *types.Currency) {
+func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
 	b, err := json.Marshal(balance)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	s.stateDB.Set(getBalanceKey(addr), b)
+	return nil
 }
 
-func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) {
+func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) error {
 	b, err := json.Marshal(new(types.Currency).Set(balance))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	s.stateDB.Set(getBalanceKey(addr), b)
+	return nil
 }
 
 func (s Store) GetBalance(addr tm.Address) *types.Currency {
@@ -120,7 +122,7 @@ func (s Store) GetBalance(addr tm.Address) *types.Currency {
 	}
 	err := json.Unmarshal(balance, &c)
 	if err != nil {
-		panic(err)
+		return &c
 	}
 	return &c
 }
@@ -177,7 +179,7 @@ func (s Store) GetStake(holder crypto.Address) *types.Stake {
 	var stake types.Stake
 	err := json.Unmarshal(b, &stake)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	return &stake
 }
@@ -231,7 +233,7 @@ func (s Store) GetDelegate(holder crypto.Address) *types.Delegate {
 	var delegate types.Delegate
 	err := json.Unmarshal(b, &delegate)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	delegate.Holder = holder
 	return &delegate
@@ -286,12 +288,13 @@ func getParcelKey(parcelID []byte) []byte {
 	return append(prefixParcel, parcelID...)
 }
 
-func (s Store) SetParcel(parcelID []byte, value *types.ParcelValue) {
+func (s Store) SetParcel(parcelID []byte, value *types.ParcelValue) error {
 	b, err := json.Marshal(value)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	s.stateDB.Set(getParcelKey(parcelID), b)
+	return nil
 }
 
 func (s Store) GetParcel(parcelID []byte) *types.ParcelValue {
@@ -302,7 +305,7 @@ func (s Store) GetParcel(parcelID []byte) *types.ParcelValue {
 	var parcel types.ParcelValue
 	err := json.Unmarshal(b, &parcel)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	return &parcel
 }
@@ -316,12 +319,13 @@ func getRequestKey(buyer crypto.Address, parcelID []byte) []byte {
 	return append(prefixRequest, append(append(buyer, ':'), parcelID...)...)
 }
 
-func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.RequestValue) {
+func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.RequestValue) error {
 	b, err := json.Marshal(value)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	s.stateDB.Set(getRequestKey(buyer, parcelID), b)
+	return nil
 }
 
 func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *types.RequestValue {
@@ -332,7 +336,7 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *types.RequestV
 	var request types.RequestValue
 	err := json.Unmarshal(b, &request)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	return &request
 }
@@ -346,12 +350,13 @@ func getUsageKey(buyer crypto.Address, parcelID []byte) []byte {
 	return append(prefixUsage, append(append(buyer, ':'), parcelID...)...)
 }
 
-func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.UsageValue) {
+func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.UsageValue) error {
 	b, err := json.Marshal(value)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	s.stateDB.Set(getUsageKey(buyer, parcelID), b)
+	return nil
 }
 
 func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *types.UsageValue {
@@ -362,7 +367,7 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *types.UsageValue
 	var usage types.UsageValue
 	err := json.Unmarshal(b, &usage)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	return &usage
 }
