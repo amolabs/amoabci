@@ -151,14 +151,14 @@ func (app *AMOApplication) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 	if err != nil {
 		return abci.ResponseDeliverTx{
 			Code: code.TxCodeBadParam,
-			Tags: []tm.KVPair{},
+			Info: err.Error(),
 		}
 	}
 
 	if !message.Verify() {
 		return abci.ResponseDeliverTx{
 			Code: code.TxCodeBadSignature,
-			Tags: nil,
+			Info: "Signature verification failed",
 		}
 	}
 	defTags := []tm.KVPair{
@@ -187,11 +187,13 @@ func (app *AMOApplication) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 	if err != nil {
 		return abci.ResponseCheckTx{
 			Code: code.TxCodeBadParam,
+			Info: err.Error(),
 		}
 	}
 	if !message.Verify() {
 		return abci.ResponseCheckTx{
 			Code: code.TxCodeBadSignature,
+			Info: "Signature verification failed",
 		}
 	}
 	// TODO: implement signature verify logic
