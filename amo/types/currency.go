@@ -3,9 +3,8 @@ package types
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
-
-	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 const (
@@ -50,10 +49,10 @@ func (c *Currency) SetAMO(x float64) *Currency {
 func (c *Currency) SetString(x string, base int) (*Currency, error) {
 	i, ok := c.Int.SetString(x, base)
 	if !ok {
-		return nil, cmn.NewError("Fail to convert hex string(%v)", x)
+		return nil, fmt.Errorf("Fail to convert hex string(%v)", x)
 	}
 	if isTooBig(i) {
-		return nil, cmn.NewError("Currency supports up to 32 bytes;%v", x)
+		return nil, fmt.Errorf("Currency supports up to 32 bytes;%v", x)
 	}
 	*c = Currency{
 		Int: *i,
@@ -86,7 +85,7 @@ func (c *Currency) UnmarshalJSON(data []byte) error {
 	}
 	_, err := c.SetString(s, 10)
 	if c.Int.Cmp(&maxCurrency) == 1 {
-		return cmn.NewError("Currency supports up to 32 bytes(%v)", s)
+		return fmt.Errorf("Currency supports up to 32 bytes(%v)", s)
 	}
 	return err
 }
