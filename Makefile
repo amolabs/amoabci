@@ -65,19 +65,15 @@ update_vendor_deps:
 build:
 	@echo "--> Building amo daemon (amod)"
 	$(BUILDENV) go build ./cmd/amod
-	@echo "--> Building amo console (amocli)"
-	$(BUILDENV) go build ./cmd/amocli
 
 install:
 	@echo "--> Installing amo daemon (amod)"
 	go install ./cmd/amod
-	@echo "--> Installing amo console (amocli)"
-	go install ./cmd/amocli
 
 test:
 	go test ./...
 
 docker:
 	$(MAKE) TARGET=linux build
-	cp -f amod amocli DOCKER/
+	cp -f amod DOCKER/
 	docker build -t amolabs/amotest DOCKER
