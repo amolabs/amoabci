@@ -35,6 +35,11 @@
       }
     ],
 	"stakes": [
+      {
+        "holder": "FD037CADE0A0B3C8FB5039BAC17779E9F6E8BD8F",
+        "amount": "1000000000000000000",
+        "validator": "0cOwFQkn9/DTDo1BuqfargBy+1CAPdlQqZpWodbU2F8="
+      }
 	]
   },
   "app_hash": ""

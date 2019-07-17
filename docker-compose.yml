@@ -9,6 +9,8 @@ services:
     environment:
       - MONIKER=seed
       - SEEDS=
+    ports:
+      - "26657:26657"
 
   val1:
     depends_on:
@@ -31,9 +33,17 @@ services:
     environment:
       - MONIKER=val2
       - SEEDS=bdc37be128bdcdb11d2b8a9ea0c7b16f9876481d@seed:26656
-    ports:
-      - "26657:26657"
 
+  val3:
+    depends_on:
+      - seed
+    container_name: val3
+    image: amolabs/amotest
+    networks:
+      - amolocal
+    environment:
+      - MONIKER=val3
+      - SEEDS=bdc37be128bdcdb11d2b8a9ea0c7b16f9876481d@seed:26656
 
   #rep1:
   #  container_name: rep1
