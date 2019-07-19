@@ -41,7 +41,7 @@ func initApp() error {
 	if err != nil {
 		return err
 	}
-	app := amo.NewAMOApplication(db, index, appLogger.With("module", "abci-app"))
+	app := amo.NewAMOApp(db, index, appLogger.With("module", "abci-app"))
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
 	if err != nil {
 		return err

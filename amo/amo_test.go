@@ -20,7 +20,7 @@ import (
 
 func TestInitChain(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
+	app := NewAMOApp(db, tdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
 	res := app.InitChain(req)
@@ -37,7 +37,7 @@ func TestInitChain(t *testing.T) {
 
 func TestQueryDefault(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
+	app := NewAMOApp(db, tdb.NewMemDB(), nil)
 
 	// query
 	req := abci.RequestQuery{}
@@ -48,7 +48,7 @@ func TestQueryDefault(t *testing.T) {
 
 func TestQueryBalance(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
+	app := NewAMOApp(db, tdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -94,7 +94,7 @@ func TestQueryBalance(t *testing.T) {
 
 func TestQueryParcel(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
+	app := NewAMOApp(db, tdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -149,7 +149,7 @@ func TestQueryParcel(t *testing.T) {
 
 func TestQueryRequest(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
+	app := NewAMOApp(db, tdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -228,7 +228,7 @@ func TestQueryRequest(t *testing.T) {
 
 func TestQueryUsage(t *testing.T) {
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
+	app := NewAMOApp(db, tdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -309,7 +309,7 @@ func TestSignedTransactionTest(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
 	db := tdb.NewMemDB()
-	app := NewAMOApplication(db, tdb.NewMemDB(), nil)
+	app := NewAMOApp(db, tdb.NewMemDB(), nil)
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
 	_tx := tx.Transfer{
@@ -388,7 +388,7 @@ func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
 }
 
 func TestValidatorUpdates(t *testing.T) {
-	app := NewAMOApplication(tdb.NewMemDB(), tdb.NewMemDB(), nil)
+	app := NewAMOApp(tdb.NewMemDB(), tdb.NewMemDB(), nil)
 
 	// setup
 	priv1 := p256.GenPrivKeyFromSecret([]byte("staker1"))
@@ -422,7 +422,7 @@ func TestValidatorUpdates(t *testing.T) {
 
 func TestBlockReward(t *testing.T) {
 	// setup
-	app := NewAMOApplication(tdb.NewMemDB(), tdb.NewMemDB(), nil)
+	app := NewAMOApp(tdb.NewMemDB(), tdb.NewMemDB(), nil)
 
 	// stake holder
 	priv := ed25519.GenPrivKey()

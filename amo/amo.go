@@ -15,7 +15,6 @@ import (
 	tm "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/version"
 
 	"github.com/amolabs/amoabci/amo/code"
 	astore "github.com/amolabs/amoabci/amo/store"
@@ -24,11 +23,14 @@ import (
 )
 
 var (
-	stateKey                         = []byte("stateKey")
-	ProtocolVersion version.Protocol = 0x1
+	stateKey = []byte("stateKey") // TODO: remove this when applying merkle tree
 )
 
 const (
+	// versions
+	AMOAppVersion      = "v1.0"
+	AMOProtocolVersion = 0x1
+	// hard-coded configs
 	maxValidators = 100
 	wValidator    = 2
 	wDelegate     = 1
@@ -38,8 +40,8 @@ const (
 
 type State struct {
 	db      dbm.DB
-	Walk    int64  `json:"walk"`
-	AppHash []byte `json:"app_hash"`
+	Walk    int64  `json:"walk"`     // TODO: use merkle tree
+	AppHash []byte `json:"app_hash"` // TODO: use merkle tree
 }
 
 func loadState(db dbm.DB) State {
@@ -108,7 +110,7 @@ func valUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
 	return updates
 }
 
-type AMOApplication struct {
+type AMOApp struct {
 	abci.BaseApplication
 
 	state         State
@@ -118,9 +120,9 @@ type AMOApplication struct {
 	oldVals       abci.ValidatorUpdates
 }
 
-var _ abci.Application = (*AMOApplication)(nil)
+var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApplication(db dbm.DB, index dbm.DB, l log.Logger) *AMOApplication {
+func NewAMOApp(db dbm.DB, index dbm.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -130,7 +132,7 @@ func NewAMOApplication(db dbm.DB, index dbm.DB, l log.Logger) *AMOApplication {
 	if index == nil {
 		index = dbm.NewMemDB()
 	}
-	app := &AMOApplication{
+	app := &AMOApp{
 		state:  loadState(db),
 		store:  astore.NewStore(db, index),
 		logger: l,
@@ -138,27 +140,112 @@ func NewAMOApplication(db dbm.DB, index dbm.DB, l log.Logger) *AMOApplication {
 	return app
 }
 
-func (app *AMOApplication) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
+func (app *AMOApp) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
 	return abci.ResponseInfo{
-		Data:       fmt.Sprintf("{\"walk\":%v}", app.state.Walk),
-		Version:    version.ABCIVersion,
-		AppVersion: ProtocolVersion.Uint64(),
+		Data:             fmt.Sprintf("{\"walk\":%v}", app.state.Walk),
+		Version:          AMOAppVersion,
+		AppVersion:       AMOProtocolVersion,
+		LastBlockHeight:  0, // TODO: this will make the app broken. fix this ASAP.
+		LastBlockAppHash: app.state.AppHash,
 	}
 }
 
-func (app *AMOApplication) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
+func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
+	genAppState, err := ParseGenesisStateBytes(req.AppStateBytes)
+	// TODO: use proper methods to inform error
+	if err != nil {
+		return abci.ResponseInitChain{}
+	}
+	if FillGenesisState(app.store, genAppState) != nil {
+		return abci.ResponseInitChain{}
+	}
+	app.state.Walk = 0 // TODO: This is an ad-hoc fix!
+	b := make([]byte, 8)
+	binary.PutVarint(b, app.state.Walk)
+	app.state.AppHash = b
+
+	saveState(app.state)
+	app.logger.Info("InitChain: new genesis app state applied.")
+
+	return abci.ResponseInitChain{
+		Validators: app.store.GetValidators(maxValidators),
+	}
+}
+
+// TODO: return proof also
+func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuery) {
+	switch reqQuery.Path {
+	case "/balance":
+		resQuery = queryBalance(app.store, reqQuery.Data)
+	case "/stake":
+		resQuery = queryStake(app.store, reqQuery.Data)
+	case "/delegate":
+		resQuery = queryDelegate(app.store, reqQuery.Data)
+	case "/parcel":
+		resQuery = queryParcel(app.store, reqQuery.Data)
+	case "/request":
+		resQuery = queryRequest(app.store, reqQuery.Data)
+	case "/usage":
+		resQuery = queryUsage(app.store, reqQuery.Data)
+	default:
+		resQuery.Code = code.QueryCodeBadPath
+	}
+
+	app.logger.Debug("Query: "+reqQuery.Path, "query_data", reqQuery.Data)
+
+	return resQuery
+}
+
+func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
+	app.flagValUpdate = false
+	app.oldVals = app.store.GetValidators(maxValidators)
+
+	proposer := req.Header.GetProposerAddress()
+	staker := app.store.GetHolderByValidator(proposer)
+	numTxs := req.Header.GetNumTxs()
+
+	// XXX no means to convey error to res
+	app.DistributeReward(staker, numTxs)
+
+	return res
+}
+
+func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
+	message, op, _, err := tx.ParseTx(txBytes)
+	if err != nil {
+		return abci.ResponseCheckTx{
+			Code:      code.TxCodeBadParam,
+			Info:      err.Error(),
+			Codespace: "amo",
+		}
+	}
+	if !message.Verify() {
+		return abci.ResponseCheckTx{
+			Code:      code.TxCodeBadSignature,
+			Info:      "Signature verification failed",
+			Codespace: "amo",
+		}
+	}
+	return abci.ResponseCheckTx{
+		Code: op.Check(app.store, message.Sender),
+	}
+}
+
+func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 	message, op, isStake, err := tx.ParseTx(txBytes)
 	if err != nil {
 		return abci.ResponseDeliverTx{
-			Code: code.TxCodeBadParam,
-			Info: err.Error(),
+			Code:      code.TxCodeBadParam,
+			Info:      err.Error(),
+			Codespace: "amo",
 		}
 	}
 
 	if !message.Verify() {
 		return abci.ResponseDeliverTx{
-			Code: code.TxCodeBadSignature,
-			Info: "Signature verification failed",
+			Code:      code.TxCodeBadSignature,
+			Info:      "Signature verification failed",
+			Codespace: "amo",
 		}
 	}
 	defTags := []tm.KVPair{
@@ -182,95 +269,8 @@ func (app *AMOApplication) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 	}
 }
 
-func (app *AMOApplication) CheckTx(txBytes []byte) abci.ResponseCheckTx {
-	message, op, _, err := tx.ParseTx(txBytes)
-	if err != nil {
-		return abci.ResponseCheckTx{
-			Code: code.TxCodeBadParam,
-			Info: err.Error(),
-		}
-	}
-	if !message.Verify() {
-		return abci.ResponseCheckTx{
-			Code: code.TxCodeBadSignature,
-			Info: "Signature verification failed",
-		}
-	}
-	// TODO: implement signature verify logic
-	return abci.ResponseCheckTx{
-		Code: op.Check(app.store, message.Sender),
-	}
-}
-
-func (app *AMOApplication) Commit() abci.ResponseCommit {
-	b := make([]byte, 8)
-	binary.PutVarint(b, app.state.Walk)
-	app.state.AppHash = b
-
-	saveState(app.state)
-	return abci.ResponseCommit{Data: app.state.AppHash}
-}
-
-func (app *AMOApplication) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuery) {
-	switch reqQuery.Path {
-	case "/balance":
-		resQuery = queryBalance(app.store, reqQuery.Data)
-	case "/stake":
-		resQuery = queryStake(app.store, reqQuery.Data)
-	case "/delegate":
-		resQuery = queryDelegate(app.store, reqQuery.Data)
-	case "/parcel":
-		resQuery = queryParcel(app.store, reqQuery.Data)
-	case "/request":
-		resQuery = queryRequest(app.store, reqQuery.Data)
-	case "/usage":
-		resQuery = queryUsage(app.store, reqQuery.Data)
-	default:
-		resQuery.Code = code.QueryCodeBadPath
-	}
-
-	app.logger.Debug("Query: "+reqQuery.Path, "query_data", reqQuery.Data)
-
-	return resQuery
-}
-
-func (app *AMOApplication) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
-	genAppState, err := ParseGenesisStateBytes(req.AppStateBytes)
-	// TODO: use proper methods to inform error
-	if err != nil {
-		return abci.ResponseInitChain{}
-	}
-	if FillGenesisState(app.store, genAppState) != nil {
-		return abci.ResponseInitChain{}
-	}
-	app.state.Walk = 0 // TODO: This is an ad-hoc fix!
-	b := make([]byte, 8)
-	binary.PutVarint(b, app.state.Walk)
-	app.state.AppHash = b
-
-	saveState(app.state)
-	app.logger.Info("InitChain: new genesis app state applied.")
-
-	return abci.ResponseInitChain{
-		Validators: app.store.GetValidators(maxValidators),
-	}
-}
-
-func (app *AMOApplication) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
-	app.flagValUpdate = false
-	app.oldVals = app.store.GetValidators(maxValidators)
-
-	proposer := req.Header.GetProposerAddress()
-	staker := app.store.GetHolderByValidator(proposer)
-	numTxs := req.Header.GetNumTxs()
-
-	// XXX no means to convey error to res
-	app.DistributeReward(staker, numTxs)
-
-	return res
-}
-
-func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
+// TODO: use req.Height
+func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	if app.flagValUpdate {
 		app.flagValUpdate = false
 		newVals := app.store.GetValidators(maxValidators)
@@ -279,9 +279,19 @@ func (app *AMOApplication) EndBlock(req abci.RequestEndBlock) (res abci.Response
 	return res
 }
 
+// TODO: must use height information from EndBlock()
+func (app *AMOApp) Commit() abci.ResponseCommit {
+	b := make([]byte, 8)
+	binary.PutVarint(b, app.state.Walk)
+	app.state.AppHash = b // TODO
+
+	saveState(app.state)
+	return abci.ResponseCommit{Data: app.state.AppHash}
+}
+
 /////////////////////////////////////
 
-func (app *AMOApplication) DistributeReward(staker crypto.Address, numTxs int64) error {
+func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
 	stake := app.store.GetStake(staker)
 	if stake == nil {
 		return errors.New("No stake to calculate reward.")
