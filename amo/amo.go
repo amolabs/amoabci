@@ -38,33 +38,6 @@ const (
 	txRewardAMO   = uint64(types.OneAMOUint64 / 10)
 )
 
-type State struct {
-	db      dbm.DB
-	Walk    int64  `json:"walk"`     // TODO: use merkle tree
-	AppHash []byte `json:"app_hash"` // TODO: use merkle tree
-}
-
-func loadState(db dbm.DB) State {
-	stateBytes := db.Get(stateKey)
-	var state State
-	if len(stateBytes) != 0 {
-		err := json.Unmarshal(stateBytes, &state)
-		if err != nil {
-			panic(err)
-		}
-	}
-	state.db = db
-	return state
-}
-
-func saveState(state State) {
-	stateBytes, err := json.Marshal(state)
-	if err != nil {
-		panic(err)
-	}
-	state.db.Set(stateKey, stateBytes)
-}
-
 // Output are sorted by voting power.
 func valUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
 	sort.Slice(oldVals, func(i, j int) bool {
@@ -110,34 +83,66 @@ func valUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
 	return updates
 }
 
+// TODO: use 2-stage state
+type State struct {
+	Walk        int64 `json:"-"` // TODO: remove this
+	height      int64 `json:"-"` // current block height
+	appHash     []byte
+	lastHeight  int64  `json:"last_height"`   // last completed block height
+	lastAppHash []byte `json:"last_app_hash"` // TODO: use merkle tree
+}
+
 type AMOApp struct {
 	abci.BaseApplication
+	logger log.Logger
 
-	state         State
-	store         *astore.Store
-	logger        log.Logger
-	flagValUpdate bool
-	oldVals       abci.ValidatorUpdates
+	stateDB dbm.DB
+	indexDB dbm.DB
+	state   State
+	store   *astore.Store
+
+	doValUpdate bool
+	oldVals     abci.ValidatorUpdates
 }
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(db dbm.DB, index dbm.DB, l log.Logger) *AMOApp {
+func NewAMOApp(sdb dbm.DB, idb dbm.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
-	if db == nil {
-		db = dbm.NewMemDB()
+	if sdb == nil {
+		sdb = dbm.NewMemDB()
 	}
-	if index == nil {
-		index = dbm.NewMemDB()
+	if idb == nil {
+		idb = dbm.NewMemDB()
 	}
 	app := &AMOApp{
-		state:  loadState(db),
-		store:  astore.NewStore(db, index),
-		logger: l,
+		stateDB: sdb,
+		indexDB: idb,
+		store:   astore.NewStore(sdb, idb),
+		logger:  l,
 	}
+	app.load()
 	return app
+}
+
+func (app *AMOApp) load() {
+	stateBytes := app.stateDB.Get(stateKey)
+	if len(stateBytes) != 0 {
+		err := json.Unmarshal(stateBytes, &app.state)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func (app *AMOApp) save() {
+	stateBytes, err := json.Marshal(app.state)
+	if err != nil {
+		panic(err)
+	}
+	app.stateDB.Set(stateKey, stateBytes)
 }
 
 func (app *AMOApp) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
@@ -145,8 +150,8 @@ func (app *AMOApp) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
 		Data:             fmt.Sprintf("{\"walk\":%v}", app.state.Walk),
 		Version:          AMOAppVersion,
 		AppVersion:       AMOProtocolVersion,
-		LastBlockHeight:  0, // TODO: this will make the app broken. fix this ASAP.
-		LastBlockAppHash: app.state.AppHash,
+		LastBlockHeight:  app.state.lastHeight,
+		LastBlockAppHash: app.state.lastAppHash,
 	}
 }
 
@@ -159,12 +164,13 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	if FillGenesisState(app.store, genAppState) != nil {
 		return abci.ResponseInitChain{}
 	}
-	app.state.Walk = 0 // TODO: This is an ad-hoc fix!
+	app.state.Walk = 0 // TODO: Replace this with merkle tree
 	b := make([]byte, 8)
 	binary.PutVarint(b, app.state.Walk)
-	app.state.AppHash = b
+	app.state.lastHeight = 0
+	app.state.lastAppHash = b
 
-	saveState(app.state)
+	app.save()
 	app.logger.Info("InitChain: new genesis app state applied.")
 
 	return abci.ResponseInitChain{
@@ -197,7 +203,8 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 }
 
 func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
-	app.flagValUpdate = false
+	app.state.height = req.Header.Height
+	app.doValUpdate = false
 	app.oldVals = app.store.GetValidators(maxValidators)
 
 	proposer := req.Header.GetProposerAddress()
@@ -259,7 +266,7 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 		}
 	}
 	if isStake {
-		app.flagValUpdate = true
+		app.doValUpdate = true
 	}
 	app.state.Walk++
 	tags := append(defTags, opTags...)
@@ -271,22 +278,23 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 
 // TODO: use req.Height
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
-	if app.flagValUpdate {
-		app.flagValUpdate = false
+	if app.doValUpdate {
+		app.doValUpdate = false
 		newVals := app.store.GetValidators(maxValidators)
 		res.ValidatorUpdates = valUpdates(app.oldVals, newVals)
 	}
+	// update appHash
+	// TODO: use merkle tree
+	app.state.appHash = make([]byte, 8)
+	binary.PutVarint(app.state.appHash, app.state.Walk)
 	return res
 }
 
-// TODO: must use height information from EndBlock()
 func (app *AMOApp) Commit() abci.ResponseCommit {
-	b := make([]byte, 8)
-	binary.PutVarint(b, app.state.Walk)
-	app.state.AppHash = b // TODO
-
-	saveState(app.state)
-	return abci.ResponseCommit{Data: app.state.AppHash}
+	app.state.lastAppHash = app.state.appHash
+	app.state.lastHeight = app.state.height
+	app.save()
+	return abci.ResponseCommit{Data: app.state.lastAppHash}
 }
 
 /////////////////////////////////////
@@ -294,7 +302,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
 	stake := app.store.GetStake(staker)
 	if stake == nil {
-		return errors.New("No stake to calculate reward.")
+		return errors.New("No stake, no reward.")
 	}
 	ds := app.store.GetDelegatesByDelegator(staker)
 
