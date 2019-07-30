@@ -8,7 +8,7 @@ services:
       - amolocal
     environment:
       - MONIKER=seed
-      - SEEDS=
+      - PEERS=
     ports:
       - "26657:26657"
 
@@ -21,37 +21,31 @@ services:
       - amolocal
     environment:
       - MONIKER=val1
-      - SEEDS=bdc37be128bdcdb11d2b8a9ea0c7b16f9876481d@seed:26656
+      - PEERS=bdc37be128bdcdb11d2b8a9ea0c7b16f9876481d@seed:26656
 
   val2:
     depends_on:
       - seed
+      - val1
     container_name: val2
     image: amolabs/amotest
     networks:
       - amolocal
     environment:
       - MONIKER=val2
-      - SEEDS=bdc37be128bdcdb11d2b8a9ea0c7b16f9876481d@seed:26656
+      - PEERS=bdc37be128bdcdb11d2b8a9ea0c7b16f9876481d@seed:26656
 
   val3:
     depends_on:
       - seed
+      - val2
     container_name: val3
     image: amolabs/amotest
     networks:
       - amolocal
     environment:
       - MONIKER=val3
-      - SEEDS=bdc37be128bdcdb11d2b8a9ea0c7b16f9876481d@seed:26656
-
-  #rep1:
-  #  container_name: rep1
-  #  build: .
-
-  #rep2:
-  #  container_name: rep2
-  #  build: .
+      - PEERS=bdc37be128bdcdb11d2b8a9ea0c7b16f9876481d@seed:26656
 
 networks:
   amolocal:
