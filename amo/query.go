@@ -91,6 +91,29 @@ func queryDelegate(store *store.Store, queryData []byte) (res abci.ResponseQuery
 	return
 }
 
+func queryValidator(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	if len(queryData) == 0 {
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	var addr crypto.Address
+	err := json.Unmarshal(queryData, &addr)
+	if err != nil {
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	holder := store.GetHolderByValidator(addr)
+	jsonstr, _ := json.Marshal(crypto.Address(holder))
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}
+
 func queryParcel(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Code = code.QueryCodeNoKey
