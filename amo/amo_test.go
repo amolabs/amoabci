@@ -305,6 +305,43 @@ func TestQueryUsage(t *testing.T) {
 	assert.Equal(t, code.QueryCodeBadKey, res.Code)
 }
 
+func TestQueryValidator(t *testing.T) {
+	app := NewAMOApp(nil, nil, nil)
+
+	// stake holder
+	priv := ed25519.GenPrivKey()
+	validator, _ := priv.PubKey().(ed25519.PubKeyEd25519)
+	valaddr := validator.Address()
+	queryjson, _ := json.Marshal(valaddr)
+	addrbin, _ := hex.DecodeString("BCECB223B976F27D77B0E03E95602DABCC28D876")
+	holder := crypto.Address(addrbin)
+	stake := types.Stake{
+		Amount:    *new(types.Currency).Set(150),
+		Validator: validator,
+	}
+	app.store.SetStake(holder, &stake)
+
+	var req abci.RequestQuery
+	var res abci.ResponseQuery
+	var jsonstr []byte
+
+	req = abci.RequestQuery{Path: "/validator"}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoKey, res.Code)
+
+	req = abci.RequestQuery{Path: "/validator", Data: []byte("f8das")}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeBadKey, res.Code)
+
+	req = abci.RequestQuery{Path: "/validator", Data: []byte(queryjson)}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeOK, res.Code)
+	jsonstr, _ = json.Marshal(holder)
+	assert.Equal(t, []byte(jsonstr), res.Value)
+	assert.Equal(t, req.Data, res.Key)
+	assert.Equal(t, string(jsonstr), res.Log)
+}
+
 func TestSignedTransactionTest(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
