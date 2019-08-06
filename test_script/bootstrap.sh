@@ -25,6 +25,7 @@ fi
 DATAROOT=$HOME/.amotest
 VALNUM=6
 
+GENESISPRIVKEY="McFS24Dds4eezIfe+lfoni02J7lfs2eQQyhwF51ufmA="
 AMO100=100000000000000000000
 
 # build docker image
@@ -38,6 +39,10 @@ mkdir -p $DATAROOT/seed/amo
 mkdir -p $DATAROOT/seed/tendermint/config
 mkdir -p $DATAROOT/seed/tendermint/data
 
+# generate amo's genesis key
+amocli key remove tgenesis
+amocli key import --username=tgenesis --encrypt=false "$GENESISPRIVKEY"
+
 for ((i=1; i<=VALNUM; i++))
 do
     mkdir -p $DATAROOT/val$i/amo
@@ -45,8 +50,8 @@ do
     mkdir -p $DATAROOT/val$i/tendermint/data
    
     # generate validator's amo key
-    amocli key remove val$i
-    amocli key generate val$i --encrypt=false
+    amocli key remove tval$i
+    amocli key generate tval$i --encrypt=false
 done
 
 # get validators' amo address
@@ -66,11 +71,11 @@ sed -e s/@val1_addr@/$val1addr/ -i.tmp docker-compose.yml
 
 # faucet to val1 owner: 100 AMO
 echo "Transfer 100 AMO: genesis -> val1"
-amocli tx transfer --json --user genesis "$val1" "$AMO100"
+amocli tx transfer --json --user tgenesis "$tval1" "$AMO100"
 
 # stake for val1
 echo "Stake 100 AMO: val1"
-amocli tx stake --json --user val1 "$val1pubkey" "$AMO100"
+amocli tx stake --json --user tval1 "$val1pubkey" "$AMO100"
 
 # wait for val1 to fully wakeup
 sleep 2s
@@ -96,10 +101,10 @@ done
 # faucet to the validator owners: 100 AMO for each
 for ((i=2; i<=VALNUM; i++))
 do
-    tmpaddr=val$i
+    tmpaddr=tval$i
 
     echo "Transfer 100 AMO: genesis -> val$i"
-    amocli tx transfer --json --user genesis "${!tmpaddr}" "$AMO100"
+    amocli tx transfer --json --user tgenesis "${!tmpaddr}" "$AMO100"
 done
 
 # stake for val2, val3, val4, val5, val6
@@ -108,7 +113,7 @@ do
     tmppubkey=$(docker exec -it val$i tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
     
     echo "Stake 100 AMO: val$i"
-    amocli tx stake --json --user val$i "$tmppubkey" "$AMO100"
+    amocli tx stake --json --user tval$i "$tmppubkey" "$AMO100"
 done
 
 rm -f *.tmp
