@@ -17,8 +17,12 @@ vendor
 # output binary files
 /amocli
 /amod
+
+# docker-related files
 DOCKER/amocli
 DOCKER/amod
+DOCKER/tendermint
+docker-compose.yml
 
 # IDE- or OS-related garbages
 .DS_Storeg

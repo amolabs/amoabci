@@ -1,11 +1,11 @@
 {
-  "genesis_time": "2019-02-25T11:10:25.475921037Z",
-  "chain_id": "amo-test-dev",
+  "genesis_time": "2019-07-24T03:00:00.000000Z",
+  "chain_id": "amo-testnet-190724",
   "consensus_params": {
     "block": {
       "max_bytes": "22020096",
       "max_gas": "-1",
-	  "time_iota_ms": "1000"
+      "time_iota_ms": "1000"
     },
     "evidence": {
       "max_age": "100000"
@@ -18,29 +18,23 @@
   },
   "validators": [
     {
-      "address": "7CECB223B976F27D77B0E03E95602DABCC28D876",
+      "address": "9A8F09C644941B5A526B19641A3D7C8805E312B9",
       "pub_key": {
         "type": "tendermint/PubKeyEd25519",
-        "value": "0cOwFQkn9/DTDo1BuqfargBy+1CAPdlQqZpWodbU2F8="
+        "value": "+4jvv6ZCP+TxC0CwBQRr31ieZzj7KMZL3iwribL3czM="
       },
       "power": "10",
-      "name": "firstman"
+      "name": ""
     }
   ],
   "app_state": {
     "balances": [
       {
-        "owner": "FD037CADE0A0B3C8FB5039BAC17779E9F6E8BD8F",
-        "amount": "3100000000000000000"
+        "owner": "45FF7A090F423BEE319D2BF140B1BA772C04C44B",
+        "amount": "10000000000000000000000000"
       }
     ],
-	"stakes": [
-      {
-        "holder": "FD037CADE0A0B3C8FB5039BAC17779E9F6E8BD8F",
-        "amount": "1000000000000000000",
-        "validator": "0cOwFQkn9/DTDo1BuqfargBy+1CAPdlQqZpWodbU2F8="
-      }
-	]
+    "stakes": []
   },
   "app_hash": ""
 }

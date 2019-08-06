@@ -1,5 +1,3 @@
-#!/bin/bash
-
 echo "set moniker = $MONIKER"
 echo "set peers = $PEERS"
 
@@ -11,17 +9,21 @@ cp config.toml.in config.toml
 sed -e s/@moniker@/$MONIKER/ -i.tmp config.toml
 sed -e s/@peers@/$PEERS/ -i.tmp config.toml
 sed -e s/@external@/tcp:\\/\\/$extaddr:26656/ -i.tmp config.toml
-mkdir config
-mkdir data
-mv -f config.toml config/
-if [ "$MONIKER" == "seed" ]; then
-	mv node_key.json config/
-	mv priv_validator_key.json config/
-	mv priv_validator_state.json data/
+
+mv -f config.toml /tendermint/config/
+mv -f genesis.json /tendermint/config/
+
+# val1 == genesis validator
+if [ "$MONIKER" == "val1" ]; then 
+    mv -f priv_validator_key.json /tendermint/config
 fi
-mv genesis.json config/
+
+mv -f priv_validator_state.json /tendermint/data
+
 /usr/bin/amod run &
-if [ "$MONIKER" == "seed" ]; then
+
+if [ "$MONIKER" == "val1" ]; then
 	/usr/bin/tendermint init
 fi
+
 /usr/bin/tendermint node

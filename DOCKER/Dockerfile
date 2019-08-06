@@ -1,17 +1,19 @@
 # vim: set expandtab:
-FROM tendermint/tendermint:latest
+FROM alpine:3.7
 
-# tendermint base image uses /tendermint as a home directory
-WORKDIR /tendermint
+ENV AMOHOME /amo
+ENV TMHOME /tendermint
 
-#RUN apk add --update ca-certificates
+VOLUME [ $AMOHOME ]
+VOLUME [ $TMHOME ]
 
-COPY amod amocli /usr/bin/
-COPY run.sh config/* ./
-COPY --chown=tmuser:tmuser config/keys.json ./.amocli/keys/
+COPY tendermint amod /usr/bin/
+COPY run_node.sh config/* /
+
+WORKDIR /
 
 EXPOSE 26656 26657
 
-# We need to override ENTRYPOINT from tendermint base image.
-ENTRYPOINT ["/bin/sh"]
-CMD ["/tendermint/run.sh"]
+ENTRYPOINT [ "/bin/sh", "-c" ]
+CMD [ "/run_node.sh" ]
+
