@@ -1,6 +1,6 @@
 {
   "genesis_time": "2019-07-24T03:00:00.000000Z",
-  "chain_id": "amo-testnet-190724",
+  "chain_id": "amo-test-dev",
   "consensus_params": {
     "block": {
       "max_bytes": "22020096",
