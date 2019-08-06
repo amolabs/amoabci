@@ -32,7 +32,7 @@ docker build -t amolabs/amotest DOCKER
 
 # set basic environments
 cp -f docker-compose.yml.in docker-compose.yml
-sed -e s#@dataroot@#$DATAROOT# -i docker-compose.yml
+sed -e s#@dataroot@#$DATAROOT# -i.tmp docker-compose.yml
 
 mkdir -p $DATAROOT/seed/amo
 mkdir -p $DATAROOT/seed/tendermint/config
@@ -62,7 +62,7 @@ val1pubkey=$(docker exec -it val1 tendermint show_validator | python -c "import 
 val1addr=$(docker exec -it val1 tendermint show_node_id | tr -d '\015')
 
 # update seed node's peer set with val1addr on docker-compose.yml 
-sed -e s/@val1_addr@/$val1addr/ -i docker-compose.yml
+sed -e s/@val1_addr@/$val1addr/ -i.tmp docker-compose.yml
 
 # faucet to val1 owner: 100 AMO
 echo "Transfer 100 AMO: genesis -> val1"
@@ -82,7 +82,7 @@ docker-compose up -d seed
 seedaddr=$(docker exec -it seed tendermint show_node_id | tr -d '\015')
 
 # update seed node's peer set with val1addr on docker-compose.yml 
-sed -e s/@seed_addr@/$seedaddr/ -i docker-compose.yml
+sed -e s/@seed_addr@/$seedaddr/ -i.tmp docker-compose.yml
 
 # wait for seed to fully wakeup
 sleep 2s
@@ -111,3 +111,4 @@ do
     amocli tx stake --json --user val$i "$tmppubkey" "$AMO100"
 done
 
+rm -f *.tmp
