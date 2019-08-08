@@ -1,31 +1,33 @@
 #!/bin/bash
 
-. $(dirname $0)/env.sh
+ROOT=$(dirname $0)
 
-val0key=$(docker exec -it seed tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
-val1key=$(docker exec -it val1 tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
-val2key=$(docker exec -it val2 tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
-val3key=$(docker exec -it val3 tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
+FROM=$1
+NODENUM=$2
+AMOUNT=$3
 
-. $(dirname $0)/qb.sh
-. $(dirname $0)/qs.sh
+AMO1=1000000000000000000
 
-echo "seed val key:" $val0key
-echo "val1 val key:" $val1key
-echo "val2 val key:" $val2key
-echo "val3 val key:" $val3key
+$ROOT/qb.sh "$NODENUM" 
+$ROOT/qs.sh "$NODENUM"
+$ROOT/qd.sh "$NODENUM"
 
-echo "---- start"
-#amocli tx stake --json --user t0 "$val0key" 1000000000000000000
-amocli tx stake --json --user t1 "$val1key" 1000000000000000000
-amocli tx stake --json --user t2 "$val2key" 1000000000000000000
-amocli tx stake --json --user t3 "$val3key" 1000000000000000000
-amocli tx delegate --json --user d0 $t0 10000000000000
-amocli tx delegate --json --user d1 $t1 10000000000000
-amocli tx delegate --json --user d2 $t2 10000000000000
-amocli tx delegate --json --user d3 $t3 10000000000000
-echo "---- end"
+. $ROOT/get_key.sh
 
-. $(dirname $0)/qb.sh
-. $(dirname $0)/qs.sh
+for ((i=FROM; i<=NODENUM; i++))
+do
+
+    addr=tval$i
+    pubkey=$(docker exec -it val$i tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
+
+    echo "Stake $(bc <<< "$AMOUNT / $AMO1") AMO: val$i"
+    amocli tx stake --json --user tval$i "$pubkey" "$AMOUNT"
+
+    echo "Delegate $(bc <<< "$AMOUNT / $AMO1") AMO: del$i -> val$i"
+    amocli tx delegate --json --user tdel$i "${!addr}" "$AMOUNT"
+done
+
+$ROOT/qb.sh "$NODENUM"
+$ROOT/qs.sh "$NODENUM"
+$ROOT/qd.sh "$NODENUM"
 

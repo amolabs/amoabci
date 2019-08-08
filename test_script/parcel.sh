@@ -5,45 +5,52 @@
 #	exit 0
 #fi
 
-. $(dirname $0)/env.sh
-. $(dirname $0)/qb.sh
+. $(dirname $0)/get_key.sh
 
-echo "---- start"
-amocli tx register --json --user u0 10ffe9 1f2faacc
-amocli tx register --json --user u1 11ffe9 1f2faacc
-amocli tx register --json --user u2 12ffe9 1f2faacc
-amocli tx register --json --user u3 13ffe9 1f2faacc
-echo "---- end"
+AMO1=1000000000000000000
 
-. $(dirname $0)/qb.sh
-amocli query parcel 10ffe9
-amocli query parcel 11ffe9
-amocli query parcel 12ffe9
-amocli query parcel 13ffe9
+P1="7465737470617263656C6964"
+CUSTODY="11ffeeff"
 
-echo "---- start"
-amocli tx request --json --user t0 10ffe9 1000
-amocli tx request --json --user t1 11ffe9 1000
-amocli tx request --json --user t2 12ffe9 1000
-amocli tx request --json --user t3 13ffe9 1000
-echo "---- end"
+echo "faucet transfer coin to tu2: 1 AMO"
+amocli tx transfer --json --user tgenesis "$tu2" "$AMO1"
 
-. $(dirname $0)/qb.sh
-amocli query request 10ffe9 $t0
-amocli query request 11ffe9 $t1
-amocli query request 12ffe9 $t2
-amocli query request 13ffe9 $t3
+echo "tu1 register p1"
+amocli tx register --json --user tu1 "$P1" "$CUSTODY"
 
-echo "---- start"
-amocli tx grant --json --user u0 10ffe9 $t0 1f1f1f1f
-amocli tx grant --json --user u1 11ffe9 $t1 1f1f1f1f
-amocli tx grant --json --user u2 12ffe9 $t2 1f1f1f1f
-amocli tx grant --json --user u3 13ffe9 $t3 1f1f1f1f
-echo "---- end"
+echo "query parcel info p1"
+amocli query parcel --json "$P1"
 
-. $(dirname $0)/qb.sh
-amocli query usage 10ffe9 $t0
-amocli query usage 11ffe9 $t1
-amocli query usage 12ffe9 $t2
-amocli query usage 13ffe9 $t3
+echo "tu1 discard p1"
+amocli tx discard --json --user tu1 "$P1"
+
+echo "query parcel info p1"
+amocli query parcel --json "$P1"
+
+echo "tu1 register p1"
+amocli tx register --json --user tu1 "$P1" "$CUSTODY" 
+
+echo "query parcel info p1"
+amocli query parcel --json "$P1"
+
+echo "tu2 request p1 with 1 AMO"
+amocli tx request --json --user tu2 "$P1" "$AMO1"
+
+echo "query request of tu2 for p1"
+amocli query request --json "$tu2" "$P1" 
+
+echo "query usage of tu2 for p1" 
+amocli query usage --json "$tu2" "$P1"
+
+echo "tu1 grant tu2 on p1, collect 1 AMO"
+amocli tx grant --json --user tu1 "$P1" "$tu2" "$CUSTODY"
+
+echo "query usage of tu2 for p1" 
+amocli query usage --json "$tu2" "$P1"
+
+echo "tu1 revoke grant given to tu2 on p1"
+amocli tx revoke --json --user tu1 "$P1" "$tu2"
+
+echo "query usage of tu2 for p1" 
+amocli query usage --json "$tu2" "$P1"
 

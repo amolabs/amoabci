@@ -6,7 +6,7 @@ GO := $(shell command -v go 2> /dev/null)
 FS := /
 # go source code files including files from vendor directory
 GOSRCS=$(shell find . -name \*.go)
-#BUILDENV=CGO_ENABLED=0
+BUILDENV=CGO_ENABLED=0
 
 ifeq ($(GO),)
   $(error could not find go. Is it in PATH? $(GO))
@@ -18,8 +18,7 @@ endif
 
 GOPATH ?= $(shell $(GO) env GOPATH)
 GITHUBDIR := $(GOPATH)$(FS)src$(FS)github.com
-
-GOPATH ?= $(shell $(GO) env GOPATH)
+TMPATH=$(GOPATH)/src/github.com/tendermint/tendermint
 
 go_get = $(if $(findstring Windows_NT,$(OS)),\
 IF NOT EXIST $(GITHUBDIR)$(FS)$(1)$(FS) ( mkdir $(GITHUBDIR)$(FS)$(1) ) else (cd .) &\
@@ -73,7 +72,15 @@ install:
 test:
 	go test ./...
 
-docker:
+tendermint:
+	-git clone https://github.com/tendermint/tendermint $(TMPATH)
+	cd $(TMPATH); git checkout v0.31.7
+	make -C $(TMPATH) get_tools
+	make -C $(TMPATH) get_vendor_deps
+	make -C $(TMPATH) build-linux
+	cp $(TMPATH)/build/tendermint ./
+
+docker: tendermint
 	$(MAKE) TARGET=linux build
-	cp -f amod DOCKER/
+	cp -f amod tendermint DOCKER/
 	docker build -t amolabs/amotest DOCKER
