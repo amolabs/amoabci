@@ -1,7 +1,21 @@
 #!/bin/bash
 
-eval $(amocli key list | awk '{ if ($2 != "t0") printf "%s=%s\n",$2,$4 }')
+DATAROOT=$1
+NODENUM=$2
 
-# Be careful about this. This account's balance is the source of all assets.
-t0=FD037CADE0A0B3C8FB5039BAC17779E9F6E8BD8F
+# set basic environments
+cp -f docker-compose.yml.in docker-compose.yml
+
+sed -e s#@dataroot@#$DATAROOT# -i.tmp docker-compose.yml
+
+mkdir -p $DATAROOT/seed/amo/
+mkdir -p $DATAROOT/seed/tendermint/config/
+mkdir -p $DATAROOT/seed/tendermint/data/
+
+for ((i=1; i<=NODENUM; i++))
+do
+    mkdir -p $DATAROOT/val$i/amo/
+    mkdir -p $DATAROOT/val$i/tendermint/config/
+    mkdir -p $DATAROOT/val$i/tendermint/data/
+done
 

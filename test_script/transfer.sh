@@ -1,30 +1,46 @@
 #!/bin/bash
 
-if [ $# != 1 ]; then
-	echo "usage: $(basename $0) <recipient_user>"
-	exit 0
-fi
+NODENUM=$1
+AMOUNT=1000
 
-. $(dirname $0)/env.sh
-
-recpuser=$1
-echo "recipient: $recpuser"
-recp=${!recpuser}
-echo "address: $recp"
-
+. $(dirname $0)/get_key.sh
 . $(dirname $0)/qb.sh
 
-echo "---- start"
-if [ "$recpuser" != "t0" ]; then amocli tx transfer --json --user t0 $recp 1000; fi
-if [ "$recpuser" != "t1" ]; then amocli tx transfer --json --user t1 $recp 1000; fi
-if [ "$recpuser" != "t2" ]; then amocli tx transfer --json --user t2 $recp 1000; fi
-if [ "$recpuser" != "d0" ]; then amocli tx transfer --json --user d0 $recp 1000; fi
-if [ "$recpuser" != "d1" ]; then amocli tx transfer --json --user d1 $recp 1000; fi
-if [ "$recpuser" != "d2" ]; then amocli tx transfer --json --user d2 $recp 1000; fi
-if [ "$recpuser" != "u0" ]; then amocli tx transfer --json --user u0 $recp 1000; fi
-if [ "$recpuser" != "u1" ]; then amocli tx transfer --json --user u1 $recp 1000; fi
-if [ "$recpuser" != "u2" ]; then amocli tx transfer --json --user u2 $recp 1000; fi
-echo "---- end"
+for ((i=1; i<=NODENUM; i++))
+do
+    for ((j=1; j<=NODENUM; j++))
+    do
+        
+        if [ "$i" -ne "$j" ]; then
+            echo "tval$i -> tval$j: $AMOUNT"
+            addr=tval$j
+            amocli tx transfer --json --user tval$i ${!addr} "$AMOUNT" 
+        fi
+
+        echo "tval$i -> tdel$j: $AMOUNT"
+        addr=tdel$j
+        amocli tx transfer --json --user tval$i ${!addr} "$AMOUNT"
+
+        if [ "$i" -ne "$j" ]; then
+            echo "tdel$i -> tdel$j: $AMOUNT"
+            amocli tx transfer --json --user tdel$i ${!addr} "$AMOUNT"
+        fi
+
+        echo "tdel$i -> tval$j: $AMOUNT"
+        addr=tval$j
+        amocli tx transfer --json --user tdel$i ${!addr} "$AMOUNT"
+
+    done
+    echo "tval$i, tdel$i -> tu1: $AMOUNT"
+    addr=tu1
+    amocli tx transfer --json --user tval$i ${!addr} "$AMOUNT"
+    amocli tx transfer --json --user tdel$i ${!addr} "$AMOUNT"
+
+    echo "tval$i, tdel$i -> tu2: $AMOUNT"
+    addr=tu2
+    amocli tx transfer --json --user tval$i ${!addr} "$AMOUNT"
+    amocli tx transfer --json --user tdel$i ${!addr} "$AMOUNT"
+done
 
 . $(dirname $0)/qb.sh
 

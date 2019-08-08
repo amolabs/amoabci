@@ -17,6 +17,7 @@ vendor
 # output binary files
 /amocli
 /amod
+/tendermint
 
 # docker-related files
 DOCKER/amocli

@@ -1,21 +1,38 @@
 #!/bin/bash
 
-. $(dirname $0)/env.sh
+ROOT=$(dirname $0)
 
-. $(dirname $0)/qb.sh
-. $(dirname $0)/qs.sh
+FROM=$1
+NODENUM=$2
+AMOUNT=$3
 
-echo "---- start"
-amocli tx retract --json --user d0 10000000000000
-amocli tx retract --json --user d1 10000000000000
-amocli tx retract --json --user d2 10000000000000
-amocli tx retract --json --user d3 10000000000000
-amocli tx withdraw --json --user t1 1000000000000000000
-amocli tx withdraw --json --user t2 1000000000000000000
-amocli tx withdraw --json --user t3 1000000000000000000
-amocli tx withdraw --json --user t0 999999999999999999
-echo "---- end"
+AMO1=1000000000000000000
 
-. $(dirname $0)/qb.sh
-. $(dirname $0)/qs.sh
+$ROOT/qb.sh "$NODENUM" 
+$ROOT/qs.sh "$NODENUM"
+$ROOT/qd.sh "$NODENUM"
+
+. $ROOT/get_key.sh
+
+for ((i=FROM; i<=NODENUM; i++))
+do
+    echo "Retract $(bc <<< "$AMOUNT / $AMO1") AMO: del$i"
+    amocli tx retract --json --user tdel$i "$AMOUNT"
+done
+
+for ((i=FROM; i<=NODENUM; i++))
+do
+    echo "Withdraw $(bc <<< "$AMOUNT / $AMO1") AMO: val$i"
+
+    # to prevent crash when no stake
+    if [ "$i" -eq "$NODENUM" ]; then
+        amocli tx withdraw --json --user tval$i "$AMO1"
+    else
+        amocli tx withdraw --json --user tval$i "$AMOUNT"
+    fi
+done
+
+$ROOT/qb.sh "$NODENUM"
+$ROOT/qs.sh "$NODENUM"
+$ROOT/qd.sh "$NODENUM"
 

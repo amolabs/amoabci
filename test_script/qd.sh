@@ -6,7 +6,7 @@ NODENUM=$1
 
 for ((i=1; i<=NODENUM; i++))
 do
-    addr=tval$i
-    echo "stake of tval$i:" $(amocli query stake ${!addr})
+    addr=tdel$i
+    echo "stake of tdel$i:" $(amocli query delegate ${!addr})
 done
 

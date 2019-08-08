@@ -10,6 +10,9 @@ sed -e s/@moniker@/$MONIKER/ -i.tmp config.toml
 sed -e s/@peers@/$PEERS/ -i.tmp config.toml
 sed -e s/@external@/tcp:\\/\\/$extaddr:26656/ -i.tmp config.toml
 
+mkdir -p /tendermint/config/
+mkdir -p /tendermint/data/
+
 mv -f config.toml /tendermint/config/
 mv -f genesis.json /tendermint/config/
 
