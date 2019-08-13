@@ -30,19 +30,20 @@ jobs:
       - run:
           name: "docker copy config files from host to container"
           command: echo "dummy1"
+
   test:
     docker:
       - image: circleci/classic:latest
     steps:
       - run:
-        command: echo "dummy"
+          command: make test
     
   deploy:
     docker:
       - image: circleci/classic:latest
     steps:
       - run:
-        command: echo "dummy"
+          command: echo "dummy"
 
 workflows:
   version: 2
