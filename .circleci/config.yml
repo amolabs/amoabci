@@ -32,11 +32,17 @@ jobs:
           command: 
   test:
     docker:
-      - image: alpine
+      - image: circleci/classic:latest
+    steps:
+      - run:
+        command: echo "dummy"
     
   deploy:
     docker:
-      - image: alpine
+      - image: circleci/classic:latest
+    steps:
+      - run:
+        command: echo "dummy"
 
 workflows:
   version: 2
