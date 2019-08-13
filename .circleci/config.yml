@@ -1,4 +1,4 @@
-# vim: set expandtab:
+# vim: set expandtab sw=2:
 # amolabs/amoabci CircleCI 2.0 configuration file
 #
 # - executor: docker (amo-client image)
@@ -31,8 +31,12 @@ jobs:
           name: "docker copy config files from host to container"
           command: 
   test:
+    docker:
+      - image: alpine
     
   deploy:
+    docker:
+      - image: alpine
 
 workflows:
   version: 2
