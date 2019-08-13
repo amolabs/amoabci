@@ -29,7 +29,7 @@ jobs:
           command: docker-compose create
       - run:
           name: "docker copy config files from host to container"
-          command: 
+          command: echo "dummy1"
   test:
     docker:
       - image: circleci/classic:latest
