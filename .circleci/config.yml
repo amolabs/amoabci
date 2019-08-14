@@ -84,7 +84,7 @@ jobs:
           command: |
             # install necessary things
             apk update
-            apk add ca-certificates curl tar
+            apk add ca-certificates curl tar bash
 
             # install docker client
             set -x
