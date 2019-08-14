@@ -80,24 +80,25 @@ jobs:
     steps:
       - checkout
       - run:
-          name: "install ca-certificates"
-          command: apk add ca-certificates
-      - attach_workspace:
-          at: /tmp
-      - run:
-          name: "install docker client"
+          name: "setup environments"
           command: |
+            # install necessary things
+            apk update
+            apk add ca-certificates curl tar
+
+            # install docker client
             set -x
             VER="17.03.0-ce"
             curl -L -o /tmp/docker-$VER.tgz https://download.docker.com/linux/static/stable/x86_64/docker-$VER.tgz
             tar -xz -C /tmp -f /tmp/docker-$VER.tgz
             mv /tmp/docker/* /usr/bin
-      - run:
-          name: "install docker-compose client"
-          command: |
+            
+            # install docker-compose client
             curl -L https://github.com/docker/compose/releases/download/1.19.0/docker-compose-`uname -s`-`uname -m` > /tmp/docker-compose
             chmod +x /tmp/docker-compose
             mv /tmp/docker-compose /usr/bin
+      - attach_workspace:
+          at: /tmp
       - setup_remote_docker
       - run:
           name: "[TEST] load and setup necessary configs"
