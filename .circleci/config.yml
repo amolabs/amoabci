@@ -73,9 +73,6 @@ jobs:
   test:
     docker:
       - image: alpine:3.7
-        environment:
-          AMO100=100000000000000000000
-          NODENUM=6
     working_directory: /go/src/github.com/amolabs/amoabci
     steps:
       - checkout
@@ -85,6 +82,8 @@ jobs:
             # install necessary things
             apk update
             apk add ca-certificates curl tar bash
+            apk add py-pip python-dev libffi-dev openssl-dev gcc libc-dev make
+            pip install --upgrade pip
 
             # install docker client
             set -x
@@ -94,9 +93,7 @@ jobs:
             mv /tmp/docker/* /usr/bin
             
             # install docker-compose client
-            curl -L https://github.com/docker/compose/releases/download/1.19.0/docker-compose-`uname -s`-`uname -m` > /tmp/docker-compose
-            chmod +x /tmp/docker-compose
-            mv /tmp/docker-compose /usr/bin
+            pip install docker-compose
       - attach_workspace:
           at: /tmp
       - setup_remote_docker
@@ -108,22 +105,22 @@ jobs:
             cp -f docker-compose.yml.circleci docker-compose.yml
       - run:
           name: "[TEST] generate amocli test key set and save it"
-          command: ./test_script/gen_key.sh "$NODENUM"
+          command: ./test_script/gen_key.sh 6
       - run:
           name: "[TEST] bootstrap nodes with docker-compose"
-          command: ./test_script/bootstrap.sh "$NODENUM"
+          command: ./test_script/bootstrap.sh 6
       - run:
           name: "[TEST] distribute coins"
-          command: ./test_script/distribute.sh 1 "$NODENUM" "$AMO100"
+          command: ./test_script/distribute.sh 1 6 100000000000000000000
       - run:
           name: "[TEST] transfer coins"
-          command: ./test_script/transfer.sh "$NODENUM"
+          command: ./test_script/transfer.sh 6
       - run:
           name: "[TEST] run parcel related transactions"
           command: ./test_script/parcel.sh
       - run:
           name: "[TEST] withdraw stakes and retract delegates"
-          command: ./test_script/withdraw.sh "$NODENUM" "$AMO100"
+          command: ./test_script/withdraw.sh 6 100000000000000000000
     
   deploy:
     docker:
