@@ -26,15 +26,15 @@ jobs:
   amocli:
     docker:
       - image: circleci/golang:1.12
-    working_directory: /
+    working_directory: /tmp
     steps:
       - run:
           name: "[AMOCLI] get amo-client-go from github repository"
-          command: go get -u github.com/amolabs/amo-client-go
+          command: git clone https://github.com/amolabs/amo-client-go
       - run:
           name: "[AMOCLI] build amo-client-go and save the binary file"
           command: |
-            cd $GOPATH/src/github.com/amolabs/amo-client-go
+            cd amo-client-go
             make test
             make TARGET=linux build
             mkdir -p /tmp
