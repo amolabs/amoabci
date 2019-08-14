@@ -30,8 +30,7 @@ jobs:
     steps:
       - run:
           name: "[AMOCLI] get amo-client-go from github repository"
-          command: |
-            git clone https://github.com/amolabs/amo-client-go $GOPATH/src/amolabs/amo-client-go
+          command: go get -u -d github.com/amolabs/amo-client-go/cmd/amocli
       - run:
           name: "[AMOCLI] build amo-client-go and save the binary file"
           command: |
