@@ -1,6 +1,15 @@
 # vim: set expandtab sw=2:
 # amolabs/amoabci CircleCI 2.0 configuration file
 #
+# << nodes to config >>
+# - seed 
+# - val1, val2, val3, val4, val5, val6
+# (total 7 nodes)
+#
+# << peeer dependency >>
+# - val1 <- seed
+# - seed <- val2, val3, val4, val5, val6
+#
 # - executor: docker (amo-client image)
 # - build (bootstrap)
 #    - docker build image
@@ -14,6 +23,27 @@
 #
 version: 2
 jobs:
+  build-amocli:
+    docker:
+      -image: circleci/golang:1.12
+    working_directory: /
+    steps:
+      - run:
+          name: "get amo-client-go from github repository"
+          command: go get -u github.com/amolabs/amo-client-go
+      - run:
+          name: "build amo-client-go and save the binary file"
+          command: |
+            cd $GOPATH/src/github.com/amolabs/amo-client-go
+            make test
+            make TARGET=linux build
+            mkdir -p /tmp
+            cp -f amocli /tmp/amocli
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - amocli
+
   build:
     docker:
       - image: circleci/golang:1.12
@@ -24,35 +54,77 @@ jobs:
       - run:
           name: "get vendor deps"
           command: make get_vendor_deps
+      - run:
+          name: "run unit test"
+          command: make test
       - run: 
           name: "docker build image"
           command: make docker
       - run:
-          name: "docker-compose create: creating dummy containers"
-          command: docker-compose create
+          name: "save docker image"
+          command: |
+            docker save -o /tmp/amoabci-test.tar amolabs/amotest
       - run:
-          name: "docker copy config files from host to container"
-          command: echo "dummy1"
-
+          name: "generate amocli test key set and save it"
+          command: |
+            ./test_script/gen_key.sh 6
+            cp -f $HOME/.amocli/keys/keys.json /tmp/keys.json
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - amoabci-test.tar
+            - keys.json
+      
   test:
     docker:
-      - image: circleci/classic:latest
+      - image: alpine:3.7
+        environment:
+          AMO100=100000000000000000000
+          NODENUM=6
+    working_directory: /go/src/github.com/amolabs/amoabci
     steps:
+      - checkout
+      - setup_remote_docker
+      - attach_workspace:
+          at: /tmp
       - run:
-          command: make test
+          name: "[TEST] load and setup necessary configs"
+          command: |
+            docker load -i /tmp/amoabci-test.tar
+            cp -f /tmp/amocli /usr/bin/amocli
+            cp -f /tmp/keys.json $HOME/.amocli/keys/keys.json
+            cp -f docker-compose.yml.circleci docker-compose.yml
+      - run:
+          name: "[TEST] bootstrap nodes with docker-compose"
+          command: ./test_script/bootstrap.sh "$NODENUM"
+      - run:
+          name: "[TEST] distribute coins"
+          command: ./test_script/distribute.sh 1 "$NODENUM" "$AMO100"
+      - run:
+          name: "[TEST] transfer coins"
+          command: ./test_script/transfer.sh "$NODENUM"
+      - run:
+          name: "[TEST] run parcel related transactions"
+          command: ./test_script/parcel.sh
+      - run:
+          name: "[TEST] withdraw stakes and retract delegates"
+          command: ./test_script/withdraw.sh "$NODENUM" "$AMO100"
     
   deploy:
     docker:
-      - image: circleci/classic:latest
+      - image: alpine:3.7
     steps:
       - run:
-          command: echo "dummy"
+          command: echo "finally got here !! Congrats :)"
 
 workflows:
   version: 2
   build-test-deploy:
     jobs:
-      - build
+      - build-amocli
+      - build:
+          requires:
+            - build-amocli
       - test:
           requires:
             - build
