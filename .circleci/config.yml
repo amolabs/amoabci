@@ -35,6 +35,7 @@ jobs:
           name: "[AMOCLI] build amo-client-go and save the binary file"
           command: |
             cd amo-client-go
+            make get_vendor_deps
             make test
             make TARGET=linux build
             mkdir -p /tmp
