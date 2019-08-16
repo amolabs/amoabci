@@ -26,13 +26,13 @@ jobs:
   amocli:
     docker:
       - image: circleci/golang:1.12
-    working_directory: /
+    working_directory: /go/src/github.com/amolabs/amoabci
     steps:
+      - checkout
       - setup_remote_docker
       - run:
           name: "get amo-client-go from github repository"
-          command: |
-            go get -u -d github.com/amolabs/amo-client-go/cmd/amocli
+          command: go get -u -d github.com/amolabs/amo-client-go/cmd/amocli
       - run:
           name: "build and prepare to build docker image"
           command: |
