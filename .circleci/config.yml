@@ -45,7 +45,7 @@ jobs:
           name: "build docker image"
           command: |
             cd /go/src/github.com/amolabs/amoabci/.circleci
-            cp -r ../test_script ./
+            cp -r ../test_script ./DOCKER_amocli/test_script
             docker build -t amolabs/amocli-test DOCKER_amocli
       - run:
           name: "save docker image"
