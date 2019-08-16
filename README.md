@@ -1,18 +1,49 @@
 # Tendermint ABCI App for AMO blockchain
 
-<!--
-***NOTE: Tendermint node and the app are built into one single binary in current implementation. This may change in the future.***
--->
+## Introduction
+Current implementation of AMO blockchain uses
+[Tendermint](https://github.com/tendermint/tendermint) as its base consensus
+layer. Tendermint handles P2P connection between blockchain nodes; BFT
+consensus process among validator nodes; and RPC framework which serves client
+requests. However, Tendermint requires ABCI application to interpret block
+contents, i.e. transactions. This ABCI app is a main body of a blockchain
+application. ABCI app handles processing of transactions, i.e. state transfer;
+abstract blockchain state; validator control; and client query for blockchain
+state. This repository holds a collection of codes implementing *Tendermint
+ABCI app for AMO blockchain* (`amoabci`) and necessary helper scripts.
 
-## Installation
-### Pre-requisites
+## Install from pre-built binary
+TBA
+
+## Install from source
+
+### Prerequisites
+To build from source, you need to install the followings:
+* [git](https://git-scm.com)
+* [make](https://www.gnu.org/software/make/)
+  * For Debian or Ubuntu linux, you can install `build-essential` package.
+  * For MacOS, you can use `make` from Xcode, or install GNU Make via
+	[Homebrew](https://brew.sh).
 * [golang](https://golang.org/dl/)
+  * In some cases, you need to set `GOPATH` and `GOBIN` environment variables
+	manually. Check these variables before you proceed.
 * [golang/dep](https://golang.github.io/dep/docs/installation.html)
-* [tendermint](https://github.com/tendermint/tendermint)
 
-### Build from source
-* run commands to build Tendermint node:
+If you want to run daemons in a container or execute some tests requiring
+docker, you need install the following:
+* [docker](https://www.docker.com) (In Debian or Ubuntu, install docker.io)
+* [docker-compose](https://www.docker.com)
+
+### Install tendermint
+ABCI app for AMO blockchain requires a
+[tendermint](https://github.com/tendermint/tendermint) daemon running in the
+same host. So, we need to install tendermint first. Current version of AMO ABCI
+app requires tendermint v0.31.7.
+
+Run the following commands to install tendermint daemon:
 ```bash
+mkdir -p $GOPATH/src/github.com/tendermint
+cd $GOPATH/src/github.com/tendermint
 git clone https://github.com/tendermint/tendermint
 cd tendermint
 make get_tools
@@ -20,99 +51,172 @@ make get_vendor_deps
 make install
 ```
 
-* run commands to install AMO ABCI app (amod, amocli):
+### Install amod
+Run the following commands to install amod:
 ```bash
+mkdir -p $GOPATH/src/github.com/amolabs
+cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
 make get_tools
 make get_vendor_deps
 make install
 ```
-In order to build for another platform (cross-compile) use `TARGET` variable. ex)
+
+### Install amocli
+You can run necessary daemons without `amocli`, but you may want to peek into
+blockchain node daemons to see what's going on there. AMO Labs provides a
+reference implementation of AMO client(`amocli`) and you may install it to
+communicate with AMO blockchain nodes.
 ```bash
-make TARGET=linux install
+mkdir -p $GOPATH/src/github.com/amolabs
+cd $GOPATH/src/github.com/amolabs
+git clone https://github.com/amolabs/amo-client-go
+cd amo-client-go
+make install
 ```
 
-### Gather network information
-* mainnet or testnet node address &rarr; $HOME/config/config.toml
-* genesis.json &rarr; $HOME/config/genesis.json
+See [amo-client-go](https://github.com/amolabs/amo-client-go) for more
+information.
 
-### Prepare node
-* run commands:
-```bash
-tendermint init
+## Prepare for launch
+### Get network information
+AMO blockchain node is a networked application. It does nothing useful if not
+connected to other nodes. The first thing to figure out is to find out
+addresses of other nodes in a AMO blockchain network. Among various nodes in
+the network, it is recommended to connect to one of **seed** nodes. If there is
+no appropriate seed node, connect to a node having enough **peers**.
+
+* Mainnet information: http://mainnet.amolabs.io
+* Testnet information: http://testnet.amolabs.io
+
+*For information about launching a local testnet, see TBA.*
+
+### Get genesis.json
+A blockchain is an ever-changing state machine. So you need to find out what is
+the initial state of the blockchain. Since AMO blockchain uses tendermint-like
+scheme, you need to get `genesis.json` file that defines the initial state of
+the chain.
+
+* Mainnet information: http://mainnet.amolabs.io
+* Testnet information: http://testnet.amolabs.io
+
+### Prepare data directory
+Both of `tendermint` and `amod` need a data directory where they keep
+configuration file and internal databases. Although `tendermint` and `amod` do
+not share the data directory, a combination of the two directories defines a
+complete snapshot of an AMO blockchain. So, it recommended to a keep directory
+structure something like the following:
+```
+(node_data_root)
+├── amo
+│   └── data
+└── tendermint
+    ├── config
+    └── data
 ```
 
-### Run daemons
-* First, run ABCI app via the following command:
+`dataroot/tendermint/config` directory stores some sensitive files such as
+`node_key.json` and `priv_validator_key.json`. You need to keep these files
+secure by control read permission of them. **Note that his applies to the case
+when you run daemons using a docker container**.
+
+### Prepare necessary files
+`tendermint` needs several files to operate properly:
+- `config.toml`<sup>&dagger;</sup>: configuration
+- `genesis.json`<sup>&dagger;</sup>: initial blockchain and app state
+- `node_key.json`<sup>&dagger;&dagger;</sup>: node key for p2p connection
+- `priv_validator_key.json`<sup>&dagger;&dagger;</sup>: validator key for
+  conesnsus process
+
+&dagger; These files must be prepared before launching `tendermint` or `amod`.
+Some notable configuration options are as follows:
+- `moniker`
+- `rpc.laddr`
+- `rpc.cors_allowed_origins`
+- `p2p.laddr`
+- `p2p.external_adderess`
+- `p2p.seeds`
+- `p2p.persistent_peers`
+
+For more information, see [Tendermint
+document](https://tendermint.com/docs/tendermint-core/configuration.html).
+
+&dagger;&dagger; `tendermint` will generate on its own if not prepared before
+launching. But, if you want to use specific keys, of course you need to prepare
+it before launching. One possible way to do this is to generate these keys
+using `tendermint init` command and put them in a configuration directory along
+with `config.toml` and `genesis.json`.
+
+## Run daemons manually
+It is safer to run `amod` first.
 ```bash
-amod run
+amod --home <dataroot>/amo run
 ```
-**NOTE:** To run the daemon in background mode, run `amod run &`.
+To run the daemon in background mode, use `amod run &`. Here, `<dataroot>` is a
+data directory prepared previously. `amod` will open port 26658 for incoming
+ABCI connection.
 
-* Run Tendermint node via the following command:
+And then run `tendermint`.
 ```bash
-tendermint node
+tendermint --home <dataroot>/tendermint node
 ```
+Of course, you can run the daemon in background mode using `tendermint node &`.
+Here, `<dataroot>` is a data directory prepared previously. `tendermint` will
+open port 26656 for incoming P2P connection and port 26657 for incoming RPC
+connection. It will connect to port 26658 on localhost for ABCI daemon, `amod`
+in our case.
 
-## Test with Docker
-For test setup details, see [test-env.md](https://github.com/amolabs/docs/blob/master/test-env.md).
-
+## Run daemons using docker
 ### Pre-requisites
-* [docker](https://www.docker.com)
-* [docker-compose](https://www.docker.com)
-* [tendermint](https://github.com/amolabs/tendermint)
-* [paust-db](https://github.com/paust-team/paust-db)
+* [docker](https://www.docker.com) (In Debian or Ubuntu, install docker.io)
 
-### Build
-First, we need to build tendermint node image, and use it as a base image when
-building an amod image.
+### Build docker image
+You may download the official `amod` docker image(`amolabs/amod`) released from
+AMO Labs from [Docker hub](https://hub.docker.com). However, you can build your
+own local docker image.
+
+Before building a `amod` docker image, you need to build `tendermint` first.
+You can do it yourself as following or let the `amod` Makefile do it for you.
+If you want to build on your own:
 ```bash
-cd $GOPATH/src/github.com/tendermint/tendermint
-# If not the first build, get_tools and get_vendor_deps targets are optional.
+mkdir -p $GOPATH/src/github.com/tendermint
+cd $GOPATH/src/github.com/tendermint
+git clone https://github.com/tendermint/tendermint
+cd tendermint
 make get_tools
 make get_vendor_deps
 make build-linux
-make build-docker
+cp tendermint $GOPATH/src/github.com/amolabs/amoabci/
 ```
-This will put an image with the tag tendermint/tendermint:latest in the local image pool.
 
-Next, build an amod image
+To build a `amod` docker image, do the followings:
 ```bash
-cd $GOPATH/src/github.com/amolabs/amoabci
-# If not the first build, get_tools and get_vendor_deps targets are optional.
+mkdir -p $GOPATH/src/github.com/amolabs
+cd $GOPATH/src/github.com/amolabs
+git clone https://github.com/amolabs/amoabci
+cd amoabci
 make get_tools
 make get_vendor_deps
 make docker
 ```
-This will put an image with the tag amolabs/amod:latest in the local image pool.
-
-We need PAUST-DB as a storage layer. Build paust-db image with the following commands:
-```bash
-cd $GOPATH/src/github.com/paust-team/paust-db
-cd docker
-make build-image
-```
-This will put an image with the tag paust-db:latest in the local image pool.
+The iamge will be tagged as `amolabs/amod:latest`. This image include both of
+`tendermint` and `amod`, so you just need one image (and one container).
 
 ### Run
-Init paust-db storage with the following command:
+Run the daemons in a container as follows:
 ```bash
-rm -rf /tmp/pdb0
-docker run --rm -v /tmp/pdb0:/tendermint:Z paust-db init
+docker run -it --rm -p 26656-26657 -v <dataroot>/tendermint:/tendermint:Z -v <dataroot>/amo:/amo:Z amolabs/amod:latest
 ```
+Options above have the following meaning:
+- `-it`: make sure the terminal connects correctly
+- `--rm`: remove the container after daemons stop
+- `-p 26656-26657`: publish the container's ports to the host machine. This
+  make sure that other nodes in the network can connect to our node.
+- `-v <dataroot>/tendermint:/tendermint:Z`: mount tendermint data directory.
+  **`<dataroot>` must be an absolute path.**
+- `-v <dataroot>/amo:/amo:Z`: mount amod data directory.
+  **`<dataroot>` must be an absolute path.**
+- `amolabs/amod:latest`: use this docker image when creating a container
 
-Run test containers with docker-compose via the following command:
-```bash
-make run-cluster
-```
-This will run one seed node and two non-seed validator nodes in *detatched mode*. To run nodes with `stdout` logging, run instead:
-```bash
-docker-compose up
-```
-
-To send a test transaction, run:
-```bash
-docker exec val2 amocli tx transfer --to 63A972C247D1DEBCEF2DDCF5D4E0848A42AFA529 --amount 10
-```
-And make sure that you see series of logs as the transaction propagate across the nodes and commited in the blockchain.
+Make sure that you see series of logs as the daemons init and run.
