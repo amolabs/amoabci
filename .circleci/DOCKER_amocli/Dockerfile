@@ -1,7 +1,6 @@
 FROM alpine:3.7
 
 COPY amocli /usr/bin/
-COPY test_script/ /test_script/
 
 WORKDIR /
 

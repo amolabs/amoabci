@@ -8,6 +8,6 @@ OPT=$2
 for ((i=1; i<=NODENUM; i++))
 do
     addr=tdel$i
-    echo "delegate of tdel$i:" $(amocli query delegate "$OPT" ${!addr})
+    echo "delegate of tdel$i:" $(docker exec -it cli amocli query delegate $OPT ${!addr})
 done
 

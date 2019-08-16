@@ -10,4 +10,4 @@ sleep 2s
 seedaddr=$(docker exec -it seed tendermint show_node_id | tr -d '\015')
 
 # update validator nodes' peer set with val1addr on docker-compose.yml 
-sed -e s/@seed_addr@/$seedaddr/ -i.tmp docker-compose.yml
+sed -e s/__seed_addr__/$seedaddr/ -i.tmp docker-compose.yml

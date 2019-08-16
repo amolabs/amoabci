@@ -45,7 +45,8 @@ jobs:
           name: "build docker image"
           command: |
             cd /go/src/github.com/amolabs/amoabci/.circleci
-            cp -r ../test_script ./DOCKER_amocli/test_script
+            cp -f ../test_script/gen_key.sh ./DOCKER_amocli/gen_key.sh
+
             docker build -t amolabs/amocli-test DOCKER_amocli
       - run:
           name: "save docker image"
@@ -122,56 +123,44 @@ jobs:
           command: docker-compose up -d cli
       - run:
           name: "generate amocli test key set"
-          command: docker exec -it cli /test_script/gen_key.sh "$NODENUM"
+          command: ./test_script/gen_key.sh "$NODENUM"
       - run:
           name: "bootstrap genesis node"
           command: |
-            docker-compose up -d val1
-            sleep 2s
-            val1addr=$(docker exec -it val1 tendermint show_node_id | tr -d "\n\r")
-            sed -e s/@val1_addr@/$val1addr/ -i.tmp docker-compose.yml
+            ./test_script/run_genesis.sh
 
             val1ip=$(docker exec -it val1 ip -f inet a show dev eth0 | grep '\<inet\>' | head -1 | awk '{print $2}' | awk -F'/' '{print $1}')
-            echo 'export OPT="--rpc $val1ip:26657"' >> $BASH_ENV
+            echo 'export OPT="--json --rpc=$val1ip:26657"' >> $BASH_ENV
       - run:
           name: "faucet to val1 owner: 100 AMO"
-          command: docker exec -it cli /test_script/distribute.sh 1 1 "$AMO100" "$OPT"
+          command: ./test_script/distribute.sh 1 1 "$AMO100" "$OPT"
       - run:
           name: "stake for val1"
-          command: docker exec -it cli /test_script/stake.sh 1 1 "$AMO100" "$OPT"
+          command: ./test_script/stake.sh 1 1 "$AMO100" "$OPT"
       - run:
           name: "bootstrap seed node"
-          command: |
-            docker-compose up -d seed
-            sleep 2s
-            seedaddr=$(docker exec -it seed tendermint show_node_id | tr -d "\n\r")
-            sed -e s/@seed_addr@/$seedaddr/ -i.tmp docker-compose.yml
+          command: ./test_script/run_seed.sh
       - run:
           name: "bootstrap validator nodes"
-          command: |
-            for ((i=2; i<=NODENUM; i++))
-            do
-              docker-compose up -d val$i
-              sleep 2s
-            done
+          command: ./test_script/run_validators.sh "$NODENUM"
       - run:
           name: "faucet to the validator owners: 100 AMO for each"
-          command: docker exec -it cli /test_script/distribute.sh 2 "$NODENUM" "$AMO100" "$OPT"
+          command: ./test_script/distribute.sh 2 "$NODENUM" "$AMO100" "$OPT"
       - run:
           name: "stake for val2, val3, val4, val5, val6"
-          command: docker exec -it cli /test_script/stake.sh 2 "$NODENUM" "$AMO100" "$OPT"
+          command: ./test_script/stake.sh 2 "$NODENUM" "$AMO100" "$OPT"
       - run:
           name: "distribute coins"
-          command: docker exec -it cli /test_script/distribute.sh 1 "$NODENUM" "$AMO100" "$OPT"
+          command: ./test_script/distribute.sh 1 "$NODENUM" "$AMO100" "$OPT"
       - run:
           name: "transfer coins"
-          command: docker exec -it cli /test_script/transfer.sh "$NODENUM" "$OPT"
+          command: ./test_script/transfer.sh "$NODENUM" "$OPT"
       - run:
           name: "run parcel related transactions"
-          command: docker exec -it cli /test_script/parcel.sh "$OPT"
+          command: ./test_script/parcel.sh "$OPT"
       - run:
           name: "withdraw stakes and retract delegates"
-          command: docker exec -it cli /test_script/withdraw.sh "$NODENUM" "$AMO100" "$OPT"
+          command: ./test_script/withdraw.sh "$NODENUM" "$AMO100" "$OPT"
     
   deploy:
     docker:

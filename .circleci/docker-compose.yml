@@ -19,7 +19,7 @@ services:
       - amolocal
     environment:
       - MONIKER=seed
-      - PEERS=@val1_addr@@val1:26656
+      - PEERS=__val1_addr__@val1:26656
     volumes:
       - /tendermint
       - /amo
@@ -43,7 +43,7 @@ services:
       - amolocal
     environment:
       - MONIKER=val2
-      - PEERS=@seed_addr@@seed:26656
+      - PEERS=__seed_addr__@seed:26656
     volumes:
       - /tendermint
       - /amo
@@ -55,7 +55,7 @@ services:
       - amolocal
     environment:
       - MONIKER=val3
-      - PEERS=@seed_addr@@seed:26656
+      - PEERS=__seed_addr__@seed:26656
     volumes:
       - /tendermint
       - /amo
@@ -67,7 +67,7 @@ services:
       - amolocal
     environment:
       - MONIKER=val4
-      - PEERS=@seed_addr@@seed:26656
+      - PEERS=__seed_addr__@seed:26656
     volumes:
         - /tendermint
         - /amo
@@ -79,7 +79,7 @@ services:
       - amolocal
     environment:
       - MONIKER=val5
-      - PEERS=@seed_addr@@seed:26656
+      - PEERS=__seed_addr__@seed:26656
     volumes:
         - /tendermint
         - /amo
@@ -91,7 +91,7 @@ services:
       - amolocal
     environment:
       - MONIKER=val6
-      - PEERS=@seed_addr@@seed:26656
+      - PEERS=__seed_addr__@seed:26656
     volumes:
         - /tendermint
         - /amo
