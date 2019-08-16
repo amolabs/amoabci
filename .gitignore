@@ -23,7 +23,11 @@ vendor
 DOCKER/amocli
 DOCKER/amod
 DOCKER/tendermint
-docker-compose.yml
+/docker-compose.yml
+
+# circleci-related files
+.circleci/DOCKER_amocli/amocli
+.circleci/DOCKER_amocli/test_script
 
 # IDE- or OS-related garbages
 .DS_Storeg

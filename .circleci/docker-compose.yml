@@ -6,6 +6,12 @@
 
 version: '3.3'
 services:
+  cli:
+    container_name: cli
+    image: amolabs/amocli-test
+    networks:
+      - amolocal
+    
   seed:
     container_name: seed
     image: amolabs/amotest

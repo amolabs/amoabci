@@ -28,22 +28,32 @@ jobs:
       - image: circleci/golang:1.12
     working_directory: /
     steps:
+      - setup_remote_docker
       - run:
           name: "[AMOCLI] get amo-client-go from github repository"
           command: go get -u -d github.com/amolabs/amo-client-go/cmd/amocli
       - run:
-          name: "[AMOCLI] build amo-client-go and save the binary file"
+          name: "[AMOCLI] build amo-client-go"
           command: |
             cd $GOPATH/src/github.com/amolabs/amo-client-go
             make get_vendor_deps
             make test
             make TARGET=linux build
-            mkdir -p /tmp
-            cp -f amocli /tmp/amocli
+      - run:
+          name: "[AMOCLI] prepare to build docker image"
+          command: |
+            cp -f amocli .circleci/DOCKER_amocli/amocli
+            cp -r test_script .circleci/DOCKER_amocli/test_script
+      - run:
+          name: "[AMOCLI] build docker image"
+          command: docker build -t amolabs/amocli-test DOCKER_amocli
+      - run:
+          name: "[AMOCLI] save docker image"
+          command: docker save -o /tmp/amocli-test.tar amolabs/amocli-test
       - persist_to_workspace:
           root: /tmp
           paths:
-            - amocli
+            - amocli-test.tar
 
   build:
     docker:
@@ -59,12 +69,11 @@ jobs:
           name: "[BUILD] run unit test"
           command: make test
       - run: 
-          name: "[BUILD] docker build image"
+          name: "[BUILD] build docker image"
           command: make docker
       - run:
           name: "[BUILD] save docker image"
-          command: |
-            docker save -o /tmp/amoabci-test.tar amolabs/amotest
+          command: docker save -o /tmp/amoabci-test.tar amolabs/amotest
       - persist_to_workspace:
           root: /tmp
           paths:
@@ -73,6 +82,9 @@ jobs:
   test:
     docker:
       - image: alpine:3.7
+    environment:
+      NODENUM: 6
+      AMO100: 100000000000000000000
     working_directory: /go/src/github.com/amolabs/amoabci
     steps:
       - checkout
@@ -81,7 +93,7 @@ jobs:
           command: |
             # install necessary things
             apk update
-            apk add ca-certificates curl tar bash
+            apk add ca-certificates curl tar bash bc
             apk add py-pip python-dev libffi-dev openssl-dev gcc libc-dev make
             pip install --upgrade pip
 
@@ -98,29 +110,65 @@ jobs:
           at: /tmp
       - setup_remote_docker
       - run:
-          name: "[TEST] load and setup necessary configs"
+          name: "load and setup necessary configs"
           command: |
+            # load pre-built docker images
             docker load -i /tmp/amoabci-test.tar
-            cp -f /tmp/amocli /usr/bin/amocli
-            cp -f docker-compose.yml.circleci docker-compose.yml
+            docker load -i /tmp/amocli-test.tar
+
+            cp -f .circleci/docker-compose.yml docker-compose.yml
       - run:
-          name: "[TEST] generate amocli test key set and save it"
-          command: ./test_script/gen_key.sh 6
+          name: "run amocli docker image"
+          command: docker-compose up -d cli
       - run:
-          name: "[TEST] bootstrap nodes with docker-compose"
-          command: ./test_script/bootstrap.sh 6
+          name: "generate amocli test key set"
+          command: docker exec -it cli /test_script/gen_key.sh "$NODENUM"
       - run:
-          name: "[TEST] distribute coins"
-          command: ./test_script/distribute.sh 1 6 100000000000000000000
+          name: "bootstrap genesis node"
+          command: |
+            docker-compose up -d val1
+            sleep 2s
+            val1addr=$(docker exec -it val1 tendermint show_node_id | tr -d '\015')
+            sed -e s/@val1_addr@/$val1addr/ -i.tmp docker-compose.yml
       - run:
-          name: "[TEST] transfer coins"
-          command: ./test_script/transfer.sh 6
+          name: "faucet to val1 owner: 100 AMO"
+          command: docker exec -it cli /test_script/distribute.sh 1 1 "$AMO100"
       - run:
-          name: "[TEST] run parcel related transactions"
-          command: ./test_script/parcel.sh
+          name: "stake for val1"
+          command: docker exec -it cli /test_script/stake.sh 1 1 "$AMO100"
       - run:
-          name: "[TEST] withdraw stakes and retract delegates"
-          command: ./test_script/withdraw.sh 6 100000000000000000000
+          name: "bootstrap seed node"
+          command: |
+            docker-compose up -d seed
+            sleep 2s
+            seedaddr=$(docker exec -it seed tendermint show_node_id | tr -d '\015')
+            sed -e s/@seed_addr@/$seedaddr/ -i.tmp docker-compose.yml
+      - run:
+          name: "bootstrap validator nodes"
+          command: |
+            for ((i=2; i<=NODENUM; i++))
+            do
+              docker-compose up -d val%i
+              sleep 2s
+            done
+      - run:
+          name: "faucet to the validator owners: 100 AMO for each"
+          command: docker exec -it cli /test_script/distribute.sh 2 "$NODENUM" "$AMO100"
+      - run:
+          name: "stake for val2, val3, val4, val5, val6"
+          command: docker exec -it cli /test_script/stake.sh 2 "$NODENUM" "$AMO100"
+      - run:
+          name: "distribute coins"
+          command: docker exec -it cli /test_script/distribute.sh 1 "$NODENUM" "$AMO100"
+      - run:
+          name: "transfer coins"
+          command: docker exec -it cli /test_script/transfer.sh "$NODENUM"
+      - run:
+          name: "run parcel related transactions"
+          command: docker exec -it cli /test_script/parcel.sh
+      - run:
+          name: "withdraw stakes and retract delegates"
+          command: docker exec -it cli /test_script/withdraw.sh "$NODENUM" "$AMO100"
     
   deploy:
     docker:
