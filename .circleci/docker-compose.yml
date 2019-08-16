@@ -32,8 +32,6 @@ services:
     environment:
       - MONIKER=val1
       - PEERS=
-    ports:
-      - "26656-26657:26656-26657"
     volumes:
       - /tendermint
       - /amo

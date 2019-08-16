@@ -1,12 +1,13 @@
 #!/bin/bash
 
 NODENUM=$1
+OPT=$2
 
 . $(dirname $0)/get_key.sh
 
 for ((i=1; i<=NODENUM; i++))
 do
     addr=tdel$i
-    echo "delegate of tdel$i:" $(amocli query delegate ${!addr})
+    echo "delegate of tdel$i:" $(amocli query delegate "$OPT" ${!addr})
 done
 
