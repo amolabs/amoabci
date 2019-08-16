@@ -25,7 +25,7 @@ do
     docker exec -it cli amocli tx stake $OPT --user tval$i "$pubkey" "$AMOUNT"
 
     echo "Delegate $(bc <<< "$AMOUNT / $AMO1") AMO: del$i -> val$i"
-    amocli tx delegate $OPT --user tdel$i "${!addr}" "$AMOUNT"
+    docker exec -it cli amocli tx delegate $OPT --user tdel$i "${!addr}" "$AMOUNT"
 done
 
 $ROOT/qb.sh "$NODENUM" "$OPT"
