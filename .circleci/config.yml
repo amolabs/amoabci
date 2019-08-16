@@ -86,6 +86,7 @@ jobs:
     environment:
       NODENUM: 6
       AMO100: 100000000000000000000
+      OPT: "--json --rpc=val1:26657"
     working_directory: /go/src/github.com/amolabs/amoabci
     steps:
       - checkout
@@ -126,11 +127,7 @@ jobs:
           command: ./test_script/gen_key.sh "$NODENUM"
       - run:
           name: "bootstrap genesis node"
-          command: |
-            ./test_script/run_genesis.sh
-
-            val1ip=$(docker exec -it val1 ip -f inet a show dev eth0 | grep '\<inet\>' | head -1 | awk '{print $2}' | awk -F'/' '{print $1}')
-            echo 'export OPT="--json --rpc=$val1ip:26657"' >> $BASH_ENV
+          command: ./test_script/run_genesis.sh
       - run:
           name: "faucet to val1 owner: 100 AMO"
           command: ./test_script/distribute.sh 1 1 "$AMO100" "$OPT"
