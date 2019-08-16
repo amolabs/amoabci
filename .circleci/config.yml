@@ -157,7 +157,7 @@ jobs:
           command: ./test_script/parcel.sh "$OPT"
       - run:
           name: "withdraw stakes and retract delegates"
-          command: ./test_script/withdraw.sh "$NODENUM" 100000000000000000000 "$OPT"
+          command: ./test_script/withdraw.sh 1 "$NODENUM" 100000000000000000000 "$OPT"
     
   deploy:
     docker:
