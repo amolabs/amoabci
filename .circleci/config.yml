@@ -30,25 +30,21 @@ jobs:
     steps:
       - setup_remote_docker
       - run:
-          name: "[AMOCLI] get amo-client-go from github repository"
+          name: "get amo-client-go from github repository"
           command: go get -u -d github.com/amolabs/amo-client-go/cmd/amocli
       - run:
-          name: "[AMOCLI] build amo-client-go"
+          name: "build and prepare to build docker image"
           command: |
             cd $GOPATH/src/github.com/amolabs/amo-client-go
             make get_vendor_deps
             make test
             make TARGET=linux build
-      - run:
-          name: "[AMOCLI] prepare to build docker image"
-          command: |
             cp -f amocli .circleci/DOCKER_amocli/amocli
-            cp -r test_script .circleci/DOCKER_amocli/test_script
       - run:
-          name: "[AMOCLI] build docker image"
+          name: "build docker image"
           command: docker build -t amolabs/amocli-test DOCKER_amocli
       - run:
-          name: "[AMOCLI] save docker image"
+          name: "save docker image"
           command: docker save -o /tmp/amocli-test.tar amolabs/amocli-test
       - persist_to_workspace:
           root: /tmp
@@ -63,16 +59,16 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: "[BUILD] get vendor deps"
+          name: "get vendor deps"
           command: make get_vendor_deps
       - run:
-          name: "[BUILD] run unit test"
+          name: "run unit test"
           command: make test
       - run: 
-          name: "[BUILD] build docker image"
+          name: "build docker image"
           command: make docker
       - run:
-          name: "[BUILD] save docker image"
+          name: "save docker image"
           command: docker save -o /tmp/amoabci-test.tar amolabs/amotest
       - persist_to_workspace:
           root: /tmp
