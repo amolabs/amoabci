@@ -31,18 +31,22 @@ jobs:
       - setup_remote_docker
       - run:
           name: "get amo-client-go from github repository"
-          command: go get -u -d github.com/amolabs/amo-client-go/cmd/amocli
+          command: |
+            go get -u -d github.com/amolabs/amo-client-go/cmd/amocli
       - run:
           name: "build and prepare to build docker image"
           command: |
-            cd $GOPATH/src/github.com/amolabs/amo-client-go
+            cd /go/src/github.com/amolabs/amo-client-go
             make get_vendor_deps
             make test
             make TARGET=linux build
-            cp -f amocli .circleci/DOCKER_amocli/amocli
+            cp -f amocli /go/src/github.com/amolabs/amoabci/.circleci/DOCKER_amocli/amocli
       - run:
           name: "build docker image"
-          command: docker build -t amolabs/amocli-test DOCKER_amocli
+          command: |
+            cd /go/src/github.com/amolabs/amoabci/.circleci
+            cp -r ../test_script ./
+            docker build -t amolabs/amocli-test DOCKER_amocli
       - run:
           name: "save docker image"
           command: docker save -o /tmp/amocli-test.tar amolabs/amocli-test
