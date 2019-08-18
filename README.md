@@ -206,7 +206,7 @@ The iamge will be tagged as `amolabs/amod:latest`. This image include both of
 ### Run
 Run the daemons in a container as follows:
 ```bash
-docker run -it --rm -p 26656-26657 -v <dataroot>/tendermint:/tendermint:Z -v <dataroot>/amo:/amo:Z amolabs/amod:latest
+docker run -it --rm -p 26656-26657 -v <dataroot>/tendermint:/tendermint:Z -v <dataroot>/amo:/amo:Z -d amolabs/amod:latest
 ```
 Options above have the following meaning:
 - `-it`: make sure the terminal connects correctly
