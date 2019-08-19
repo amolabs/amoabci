@@ -25,21 +25,21 @@ GENESISPRIVKEY="McFS24Dds4eezIfe+lfoni02J7lfs2eQQyhwF51ufmA="
 NODENUM=$1
 
 # regenerate genesis key
-docker exec -it testcli amocli key remove tgenesis
-docker exec -it testcli amocli key import --username=tgenesis --encrypt=false "$GENESISPRIVKEY"
+$CLIOPT key remove tgenesis
+$CLIOPT key import --username=tgenesis --encrypt=false "$GENESISPRIVKEY"
 
 # regenerate validator, delegator keys
 for ((i=1; i<=NODENUM; i++))
 do
-    docker exec -it testcli amocli key remove tval$i
-    docker exec -it testcli amocli key generate tval$i --encrypt=false
+    $CLIOPT key remove tval$i
+    $CLIOPT key generate tval$i --encrypt=false
 
-    docker exec -it testcli amocli key remove tdel$i
-    docker exec -it testcli amocli key generate tdel$i --encrypt=false
+    $CLIOPT key remove tdel$i
+    $CLIOPT key generate tdel$i --encrypt=false
 done
 
 # regenerate user keys
-docker exec -it testcli amocli key remove tu1
-docker exec -it testcli amocli key generate tu1 --encrypt=false
-docker exec -it testcli amocli key remove tu2
-docker exec -it testcli amocli key generate tu2 --encrypt=false
+$CLIOPT key remove tu1
+$CLIOPT key generate tu1 --encrypt=false
+$CLIOPT key remove tu2
+$CLIOPT key generate tu2 --encrypt=false

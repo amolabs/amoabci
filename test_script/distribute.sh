@@ -18,19 +18,19 @@ do
     valaddr=tval$i
 
     echo "Transfer $(bc <<< "$AMOUNT / $AMO1") AMO: tval$i"
-    docker exec -it testcli amocli tx transfer $OPT --user tgenesis "${!valaddr}" "$AMOUNT"
+    $CLIOPT tx transfer $OPT --user tgenesis "${!valaddr}" "$AMOUNT"
     
     deladdr=tdel$i
 
     echo "Transfer $(bc <<< "$AMOUNT / $AMO1") AMO: tdel$i"
-    docker exec -it testcli amocli tx transfer $OPT --user tgenesis "${!deladdr}" "$AMOUNT"
+    $CLIOPT tx transfer $OPT --user tgenesis "${!deladdr}" "$AMOUNT"
 done
 
 echo "Transfer $(bc <<< "$AMOUNT / $AMO1") AMO: tu1"
-docker exec -it testcli amocli tx transfer $OPT --user tgenesis "$tu1" "$AMOUNT"
+$CLIOPT tx transfer $OPT --user tgenesis "$tu1" "$AMOUNT"
 
 echo "Transfer $(bc <<< "$AMOUNT / $AMO1") AMO: tu2"
-docker exec -it testcli amocli tx transfer $OPT --user tgenesis "$tu2" "$AMOUNT"
+$CLIOPT tx transfer $OPT --user tgenesis "$tu2" "$AMOUNT"
 
 $ROOT/qb.sh "$NODENUM" "$OPT"
 

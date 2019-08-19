@@ -45,7 +45,6 @@ jobs:
           name: "build docker image"
           command: |
             cd /go/src/github.com/amolabs/amoabci/.circleci
-            cp -f ../test_script/gen_key.sh ./DOCKER_testcli/gen_key.sh
             docker build -t amolabs/testcli DOCKER_testcli
       - run:
           name: "save docker image"
@@ -85,6 +84,7 @@ jobs:
     environment:
       NODENUM: 6
       AMO100: 100000000000000000000
+      CLIOPT: docker exec -it testcli amocli
       OPT: "--json --rpc=val1:26657"
     working_directory: /go/src/github.com/amolabs/amoabci
     steps:

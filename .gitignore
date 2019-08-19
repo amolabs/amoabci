@@ -37,3 +37,6 @@ tags
 TAGS
 # GoLand
 .idea/
+
+# temp files
+*.tmp

@@ -23,6 +23,8 @@ if [ ! -f docker-compose.yml.in ]; then
     exit
 fi
 
+export CLIOPT=amocli
+
 ROOT=$(dirname $0)
 DATAROOT=$HOME/.amotest
 NODENUM=6

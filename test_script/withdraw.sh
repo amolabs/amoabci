@@ -18,7 +18,7 @@ $ROOT/qd.sh "$NODENUM" "$OPT"
 for ((i=FROM; i<=NODENUM; i++))
 do
     echo "Retract $(bc <<< "$AMOUNT / $AMO1") AMO: del$i"
-    docker exec -it testcli amocli tx retract $OPT --user tdel$i "$AMOUNT"
+    $CLIOPT tx retract $OPT --user tdel$i "$AMOUNT"
 done
 
 for ((i=FROM; i<=NODENUM; i++))
@@ -27,9 +27,9 @@ do
 
     # to prevent crash when no stake
     if [ "$i" -eq "$NODENUM" ]; then
-        docker exec -it testcli amocli tx withdraw $OPT --user tval$i "$AMO1"
+        $CLIOPT tx withdraw $OPT --user tval$i "$AMO1"
     else
-        docker exec -it testcli amocli tx withdraw $OPT --user tval$i "$AMOUNT"
+        $CLIOPT tx withdraw $OPT --user tval$i "$AMOUNT"
     fi
 done
 
