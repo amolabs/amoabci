@@ -14,7 +14,7 @@ services:
     
   seed:
     container_name: seed
-    image: amolabs/testamod
+    image: amolabs/amod
     networks:
       - amolocal
     environment:
@@ -26,7 +26,7 @@ services:
 
   val1:
     container_name: val1
-    image: amolabs/testamod
+    image: amolabs/amod
     networks:
       - amolocal
     environment:
@@ -38,7 +38,7 @@ services:
 
   val2:
     container_name: val2
-    image: amolabs/testamod
+    image: amolabs/amod
     networks:
       - amolocal
     environment:
@@ -50,7 +50,7 @@ services:
 
   val3:
     container_name: val3
-    image: amolabs/testamod
+    image: amolabs/amod
     networks:
       - amolocal
     environment:
@@ -62,7 +62,7 @@ services:
 
   val4:
     container_name: val4
-    image: amolabs/testamod
+    image: amolabs/amod
     networks:
       - amolocal
     environment:
@@ -74,7 +74,7 @@ services:
 
   val5:
     container_name: val5
-    image: amolabs/testamod
+    image: amolabs/amod
     networks:
       - amolocal
     environment:
@@ -86,7 +86,7 @@ services:
 
   val6:
     container_name: val6
-    image: amolabs/testamod
+    image: amolabs/amod
     networks:
       - amolocal
     environment:

@@ -83,4 +83,4 @@ tendermint:
 docker: tendermint
 	$(MAKE) TARGET=linux build
 	cp -f amod tendermint DOCKER/
-	docker build -t amolabs/amotest DOCKER
+	docker build -t amolabs/amod DOCKER

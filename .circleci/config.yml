@@ -73,11 +73,11 @@ jobs:
           command: make docker
       - run:
           name: "save docker image"
-          command: docker save -o /tmp/testamod.tar amolabs/testamod
+          command: docker save -o /tmp/amod.tar amolabs/amod
       - persist_to_workspace:
           root: /tmp
           paths:
-            - testamod.tar
+            - amod.tar
       
   test:
     docker:
@@ -114,7 +114,7 @@ jobs:
           name: "load and setup necessary configs"
           command: |
             # load pre-built docker images
-            docker load -i /tmp/testamod.tar
+            docker load -i /tmp/amod.tar
             docker load -i /tmp/testcli.tar
 
             cp -f .circleci/docker-compose.yml docker-compose.yml
