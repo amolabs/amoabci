@@ -22,10 +22,10 @@ do
     pubkey=$(docker exec -it val$i tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
 
     echo "Stake $(bc <<< "$AMOUNT / $AMO1") AMO: val$i"
-    docker exec -it cli amocli tx stake $OPT --user tval$i "$pubkey" "$AMOUNT"
+    docker exec -it testcli amocli tx stake $OPT --user tval$i "$pubkey" "$AMOUNT"
 
     echo "Delegate $(bc <<< "$AMOUNT / $AMO1") AMO: del$i -> val$i"
-    docker exec -it cli amocli tx delegate $OPT --user tdel$i "${!addr}" "$AMOUNT"
+    docker exec -it testcli amocli tx delegate $OPT --user tdel$i "${!addr}" "$AMOUNT"
 done
 
 $ROOT/qb.sh "$NODENUM" "$OPT"

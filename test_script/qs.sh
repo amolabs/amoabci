@@ -8,6 +8,6 @@ OPT=$2
 for ((i=1; i<=NODENUM; i++))
 do
     addr=tval$i
-    echo "stake of tval$i:" $(docker exec -it cli amocli query stake $OPT ${!addr})
+    echo "stake of tval$i:" $(docker exec -it testcli amocli query stake $OPT ${!addr})
 done
 
