@@ -23,11 +23,17 @@ if [ ! -f docker-compose.yml.in ]; then
     exit
 fi
 
+export CLIOPT=amocli
+export OPT="--json"
+
 ROOT=$(dirname $0)
 DATAROOT=$HOME/.amotest
 NODENUM=6
 
 AMO100=100000000000000000000
+
+echo "get vendor deps"
+make get_vendor_deps
 
 echo "build docker image"
 make docker

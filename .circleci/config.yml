@@ -1,34 +1,181 @@
-# vim: set expandtab:
-# Golang CircleCI 2.0 configuration file
+# vim: set expandtab sw=2:
+# amolabs/amoabci CircleCI 2.0 configuration file
 #
-# Check https://circleci.com/docs/2.0/language-go/ for more details
+# << nodes to config >>
+# - seed 
+# - val1, val2, val3, val4, val5, val6
+# (total 7 nodes)
+#
+# << peeer dependency >>
+# - val1 <- seed
+# - seed <- val2, val3, val4, val5, val6
+#
+# - executor: docker (amo-client image)
+# - build (bootstrap)
+#    - docker build image
+#    - docker-compose create (without mounting volumes)
+#    - docker copy config files from host to container
+# - test
+#    - run test_script
+# - deploy
 #
 # DO NOT USE TABS FOR INDENTATION!!!
 #
 version: 2
 jobs:
-  build:
+  testcli:
     docker:
-      # specify the version
-      - image: circleci/golang:1.10
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
-    #### TEMPLATE_NOTE: go expects specific checkout path representing url
-    #### expecting it in the form of
-    ####   /go/src/github.com/circleci/go-tool
-    ####   /go/src/bitbucket.org/circleci/go-tool
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/amolabs/amoabci
     steps:
       - checkout
+      - setup_remote_docker
+      - run:
+          name: "get amo-client-go from github repository"
+          command: go get -u -d github.com/amolabs/amo-client-go/cmd/amocli
+      - run:
+          name: "prepare to build docker image"
+          command: |
+            cd /go/src/github.com/amolabs/amo-client-go
+            make get_vendor_deps
+            make test
+            make TARGET=linux build
+            cp -f amocli /go/src/github.com/amolabs/amoabci/.circleci/DOCKER_testcli/amocli
+      - run:
+          name: "build docker image"
+          command: |
+            cd /go/src/github.com/amolabs/amoabci/.circleci
+            docker build -t amolabs/testcli DOCKER_testcli
+      - run:
+          name: "save docker image"
+          command: docker save -o /tmp/testcli.tar amolabs/testcli
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - testcli.tar
 
+  build:
+    docker:
+      - image: circleci/golang:1.12
+    working_directory: /go/src/github.com/amolabs/amoabci
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: "get vendor deps"
+          command: make get_vendor_deps
+      - run:
+          name: "run unit test"
+          command: make test
+      - run: 
+          name: "build docker image"
+          command: make docker
+      - run:
+          name: "save docker image"
+          command: docker save -o /tmp/amod.tar amolabs/amod
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - amod.tar
+      
+  test:
+    docker:
+      - image: alpine:3.7
+    environment:
+      NODENUM: 6
+      AMO100: 100000000000000000000
+      CLIOPT: docker exec -it testcli amocli
+      OPT: "--json --rpc=val1:26657"
+    working_directory: /go/src/github.com/amolabs/amoabci
+    steps:
+      - checkout
+      - run:
+          name: "setup environments"
+          command: |
+            # install necessary things
+            apk update
+            apk add ca-certificates curl tar bash bc
+            apk add py-pip python-dev libffi-dev openssl-dev gcc libc-dev make
+            pip install --upgrade pip
 
-      # specify any bash command here prefixed with `run: `
-      #- run: go get -v -t -d ./...
-      #- run: go test -v ./...
-      - run: make get_vendor_deps
-      - run: make build
-      - run: make test
+            # install docker client
+            set -x
+            VER="17.03.0-ce"
+            curl -L -o /tmp/docker-$VER.tgz https://download.docker.com/linux/static/stable/x86_64/docker-$VER.tgz
+            tar -xz -C /tmp -f /tmp/docker-$VER.tgz
+            mv /tmp/docker/* /usr/bin
+            
+            # install docker-compose client
+            pip install docker-compose
+      - attach_workspace:
+          at: /tmp
+      - setup_remote_docker
+      - run:
+          name: "load and setup necessary configs"
+          command: |
+            # load pre-built docker images
+            docker load -i /tmp/amod.tar
+            docker load -i /tmp/testcli.tar
+
+            cp -f .circleci/docker-compose.yml docker-compose.yml
+      - run:
+          name: "run testcli docker image"
+          command: docker-compose up -d testcli
+      - run:
+          name: "generate testcli test key set"
+          command: ./test_script/gen_key.sh "$NODENUM"
+      - run:
+          name: "bootstrap genesis node"
+          command: ./test_script/run_genesis.sh
+      - run:
+          name: "faucet to val1 owner: 100 AMO"
+          command: ./test_script/distribute.sh 1 1 100000000000000000000
+      - run:
+          name: "stake for val1"
+          command: ./test_script/stake.sh 1 1 100000000000000000000
+      - run:
+          name: "bootstrap seed node"
+          command: ./test_script/run_seed.sh
+      - run:
+          name: "bootstrap validator nodes"
+          command: ./test_script/run_validators.sh "$NODENUM"
+      - run:
+          name: "faucet to the validator owners: 100 AMO for each"
+          command: ./test_script/distribute.sh 2 "$NODENUM" 100000000000000000000
+      - run:
+          name: "stake for val2, val3, val4, val5, val6"
+          command: ./test_script/stake.sh 2 "$NODENUM" 100000000000000000000
+      - run:
+          name: "distribute coins"
+          command: ./test_script/distribute.sh 1 "$NODENUM" 100000000000000000000
+      - run:
+          name: "transfer coins"
+          command: ./test_script/transfer.sh "$NODENUM"
+      - run:
+          name: "run parcel related transactions"
+          command: ./test_script/parcel.sh
+      - run:
+          name: "withdraw stakes and retract delegates"
+          command: ./test_script/withdraw.sh 1 "$NODENUM" 100000000000000000000
+    
+  deploy:
+    docker:
+      - image: alpine:3.7
+    steps:
+      - run:
+          command: echo "finally got here !! Congrats :)"
+
+workflows:
+  version: 2
+  build-test-deploy:
+    jobs:
+      - testcli
+      - build:
+          requires:
+            - testcli
+      - test:
+          requires:
+            - build
+      - deploy:
+          requires:
+            - test

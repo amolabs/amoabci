@@ -16,14 +16,8 @@ $ROOT/distribute.sh 1 1 "$AMO100"
 echo "stake for val1"
 $ROOT/stake.sh 1 1 "$AMO100"
 
-# wait for genesis node(val1) to fully wakeup
-sleep 2s
-
 echo "bootstrap seed node"
 $ROOT/run_seed.sh
-
-# wait for seed to fully wakeup
-sleep 2s
 
 echo "bootstrap validator nodes: val2, val3, val4, val5, val6"
 $ROOT/run_validators.sh "$NODENUM"

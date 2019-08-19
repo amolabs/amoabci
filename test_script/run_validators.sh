@@ -6,4 +6,7 @@ NODENUM=$1
 for ((i=2; i<=NODENUM; i++))
 do
     docker-compose up -d val$i
+    
+    # wait for node to fully wakeup
+    sleep 2s
 done
