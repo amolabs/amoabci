@@ -1,5 +1,12 @@
 #!/bin/bash
 
+WD=$(dirname $0)
+
+docker-compose up --no-start val1
+
+docker cp $WD/priv_validator_key.json val1:/tendermint/config/
+docker cp $WD/priv_validator_state.json val1:/tendermint/data/
+
 # run val1(genesis) node
 docker-compose up -d val1
 

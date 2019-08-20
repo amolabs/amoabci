@@ -20,17 +20,5 @@ if [ ! -f /tendermint/config/genesis.json ]; then
 	cp -f genesis.json.sample /tendermint/config/genesis.json
 fi
 
-# val1 == genesis validator
-if [ "$MONIKER" == "val1" ]; then 
-    mv -f priv_validator_key.json /tendermint/config
-fi
-
-mv -f priv_validator_state.json /tendermint/data
-
 /usr/bin/amod run &
-
-if [ "$MONIKER" == "val1" ]; then
-	/usr/bin/tendermint init
-fi
-
 /usr/bin/tendermint node
