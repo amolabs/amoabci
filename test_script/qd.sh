@@ -7,6 +7,6 @@ NODENUM=$1
 for ((i=1; i<=NODENUM; i++))
 do
     addr=tdel$i
-    echo "delegate of tdel$i:" $(amocli query delegate ${!addr})
+    echo "delegate of tdel$i:" $($CLIOPT query delegate $OPT ${!addr})
 done
 

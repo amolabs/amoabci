@@ -8,7 +8,7 @@ AMOUNT=$3
 
 AMO1=1000000000000000000
 
-$ROOT/qb.sh "$NODENUM" 
+$ROOT/qb.sh "$NODENUM"
 $ROOT/qs.sh "$NODENUM"
 $ROOT/qd.sh "$NODENUM"
 
@@ -17,7 +17,7 @@ $ROOT/qd.sh "$NODENUM"
 for ((i=FROM; i<=NODENUM; i++))
 do
     echo "Retract $(bc <<< "$AMOUNT / $AMO1") AMO: del$i"
-    amocli tx retract --json --user tdel$i "$AMOUNT"
+    $CLIOPT tx retract $OPT --user tdel$i "$AMOUNT"
 done
 
 for ((i=FROM; i<=NODENUM; i++))
@@ -26,9 +26,9 @@ do
 
     # to prevent crash when no stake
     if [ "$i" -eq "$NODENUM" ]; then
-        amocli tx withdraw --json --user tval$i "$AMO1"
+        $CLIOPT tx withdraw $OPT --user tval$i "$AMO1"
     else
-        amocli tx withdraw --json --user tval$i "$AMOUNT"
+        $CLIOPT tx withdraw $OPT --user tval$i "$AMOUNT"
     fi
 done
 

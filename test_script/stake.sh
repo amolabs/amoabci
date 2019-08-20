@@ -8,7 +8,7 @@ AMOUNT=$3
 
 AMO1=1000000000000000000
 
-$ROOT/qb.sh "$NODENUM" 
+$ROOT/qb.sh "$NODENUM"
 $ROOT/qs.sh "$NODENUM"
 $ROOT/qd.sh "$NODENUM"
 
@@ -21,10 +21,10 @@ do
     pubkey=$(docker exec -it val$i tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
 
     echo "Stake $(bc <<< "$AMOUNT / $AMO1") AMO: val$i"
-    amocli tx stake --json --user tval$i "$pubkey" "$AMOUNT"
+    $CLIOPT tx stake $OPT --user tval$i "$pubkey" "$AMOUNT"
 
     echo "Delegate $(bc <<< "$AMOUNT / $AMO1") AMO: del$i -> val$i"
-    amocli tx delegate --json --user tdel$i "${!addr}" "$AMOUNT"
+    $CLIOPT tx delegate $OPT --user tdel$i "${!addr}" "$AMOUNT"
 done
 
 $ROOT/qb.sh "$NODENUM"

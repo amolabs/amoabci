@@ -7,6 +7,6 @@ NODENUM=$1
 for ((i=1; i<=NODENUM; i++))
 do
     addr=tval$i
-    echo "stake of tval$i:" $(amocli query stake ${!addr})
+    echo "stake of tval$i:" $($CLIOPT query stake $OPT ${!addr})
 done
 
