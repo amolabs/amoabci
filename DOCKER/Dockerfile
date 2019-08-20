@@ -14,6 +14,5 @@ WORKDIR /
 
 EXPOSE 26656 26657
 
-ENTRYPOINT [ "/bin/sh", "-c" ]
-CMD [ "/run_node.sh" ]
+CMD ["/bin/sh", "/run_node.sh"]
 
