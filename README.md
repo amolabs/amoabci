@@ -29,9 +29,9 @@ To build from source, you need to install the followings:
 	manually. Check these variables before you proceed.
 * [golang/dep](https://golang.github.io/dep/docs/installation.html)
 
-If you want to run daemons in a container or execute some tests requiring
-docker, you need install the following:
-* [docker](https://www.docker.com) (In Debian or Ubuntu, install docker.io)
+If you want to run daemons in a docker container or execute some tests
+requiring docker, you need install the following:
+* [docker](https://www.docker.com) (In Debian or Ubuntu, install `docker.io`)
 * [docker-compose](https://www.docker.com)
 
 ### Install tendermint
@@ -93,10 +93,11 @@ no appropriate seed node, connect to a node having enough **peers**.
 *For information about launching a local testnet, see TBA.*
 
 ### Get genesis.json
-A blockchain is an ever-changing state machine. So you need to find out what is
-the initial state of the blockchain. Since AMO blockchain uses tendermint-like
-scheme, you need to get `genesis.json` file that defines the initial state of
-the chain.
+A blockchain is an ever-changing [state
+machine](https://en.wikipedia.org/wiki/Finite-state_machine). So you need to
+find out what is the initial state of the blockchain. Since AMO blockchain uses
+tendermint-like scheme, you need to get `genesis.json` file that defines the
+initial state of the chain.
 
 * Mainnet information: http://mainnet.amolabs.io
 * Testnet information: http://testnet.amolabs.io
@@ -169,12 +170,12 @@ in our case.
 
 ## Run daemons using docker
 ### Pre-requisites
-* [docker](https://www.docker.com) (In Debian or Ubuntu, install docker.io)
+* [docker](https://www.docker.com) (In Debian or Ubuntu, install `docker.io`)
 
 ### Build docker image
 You may download the official `amod` docker image(`amolabs/amod`) released from
-AMO Labs from [Docker hub](https://hub.docker.com). However, you can build your
-own local docker image.
+AMO Labs from [Docker hub](https://hub.docker.com). Of cource, you can build
+your own local docker image.
 
 Before building a `amod` docker image, you need to build `tendermint` first.
 You can do it yourself as following or let the `amod` Makefile do it for you.
