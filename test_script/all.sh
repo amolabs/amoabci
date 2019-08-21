@@ -51,9 +51,6 @@ $ROOT/bootstrap.sh "$NODENUM"
 echo "distribute coins"
 $ROOT/distribute.sh 1 "$NODENUM" "$AMO100"
 
-echo "transfer coins"
-$ROOT/transfer.sh "$NODENUM" 
-
 echo "parcel related transactions"
 $ROOT/parcel.sh
 
