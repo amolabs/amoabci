@@ -1,4 +1,5 @@
 # AMO blockchain을 위한 Tendermint ABCI 앱
+This document is available in [English](README.md) also.
 
 ## 개요
 현재 AMO 블록체인은 구현상
