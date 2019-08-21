@@ -101,7 +101,7 @@ jobs:
 
             cp -f .circleci/docker-compose.yml docker-compose.yml
 
-            apt add bash bc
+            apt install bash bc
       - run:
           name: "run testcli docker image"
           command: docker-compose up -d testcli
