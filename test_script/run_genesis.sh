@@ -1,10 +1,10 @@
 #!/bin/bash
 
 docker-compose up --no-start val1
-docker-compose run val1 mkdir -p /tendermint/config
-docker-compose run val1 mkdir -p /tendermint/data
+docker-compose run --rm val1 mkdir -p /tendermint/config
+docker-compose run --rm val1 mkdir -p /tendermint/data
 
-WD=$(dirname $0 | tr -d '\n')
+WD=$(dirname $0)
 docker cp $WD/priv_validator_key.json val1:/tendermint/config/
 docker cp $WD/priv_validator_state.json val1:/tendermint/data/
 
