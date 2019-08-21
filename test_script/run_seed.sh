@@ -1,10 +1,14 @@
 #!/bin/bash
 
 # run seed node
+docker-compose up --no-start seed
+docker-compose run --rm seed mkdir -p /tendermint/config
+WD=$(dirname $0)
+docker cp $WD/genesis.json seed:/tendermint/config/
 docker-compose up -d seed
 
 # wait for node to fully wakeup
-sleep 2s
+sleep 1s
 
 # get val1's tendermint node addr
 seedaddr=$(docker exec -it seed tendermint show_node_id | tr -d '\015' | tr -d '^@')

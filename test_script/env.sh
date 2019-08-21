@@ -4,9 +4,9 @@ DATAROOT=$1
 NODENUM=$2
 
 # set basic environments
-cp -f docker-compose.yml.in docker-compose.yml
-
 sed -e s#__dataroot__#$DATAROOT# -i.tmp docker-compose.yml
+
+rm -rf $DATAROOT
 
 mkdir -p $DATAROOT/seed/amo/
 mkdir -p $DATAROOT/seed/tendermint/config/
