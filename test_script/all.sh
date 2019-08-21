@@ -22,12 +22,13 @@ if [ ! -f docker-compose.yml.in ]; then
     echo "docker-compose.yml.in doesn't exist"
     exit
 fi
+cp -f docker-compose.yml.in docker-compose.yml
 
 export CLIOPT=amocli
 export OPT="--json"
 
 ROOT=$(dirname $0)
-DATAROOT=$HOME/.amotest
+DATAROOT=$PWD/testdata
 NODENUM=6
 
 AMO100=100000000000000000000

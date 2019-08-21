@@ -21,7 +21,7 @@ services:
       - MONIKER=seed
       - PEERS=__val1_addr__@val1:26656
     volumes:
-      - /tendermint
+      - seedconfig:/tendermint
       - /amo
 
   val1:
@@ -45,7 +45,7 @@ services:
       - MONIKER=val2
       - PEERS=__seed_addr__@seed:26656
     volumes:
-      - /tendermint
+      - val2config:/tendermint
       - /amo
 
   val3:
@@ -57,7 +57,7 @@ services:
       - MONIKER=val3
       - PEERS=__seed_addr__@seed:26656
     volumes:
-      - /tendermint
+      - val3config:/tendermint
       - /amo
 
   val4:
@@ -69,8 +69,8 @@ services:
       - MONIKER=val4
       - PEERS=__seed_addr__@seed:26656
     volumes:
-        - /tendermint
-        - /amo
+      - val4config:/tendermint
+      - /amo
 
   val5:
     container_name: val5
@@ -81,8 +81,8 @@ services:
       - MONIKER=val5
       - PEERS=__seed_addr__@seed:26656
     volumes:
-        - /tendermint
-        - /amo
+      - val5config:/tendermint
+      - /amo
 
   val6:
     container_name: val6
@@ -93,9 +93,8 @@ services:
       - MONIKER=val6
       - PEERS=__seed_addr__@seed:26656
     volumes:
-        - /tendermint
-        - /amo
-
+      - val6config:/tendermint
+      - /amo
 
 networks:
   amolocal:
@@ -107,4 +106,10 @@ networks:
         subnet: 192.167.10.0/24
 
 volumes:
+  seedconfig:
   val1config:
+  val2config:
+  val3config:
+  val4config:
+  val5config:
+  val6config:

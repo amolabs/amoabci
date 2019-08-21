@@ -1,18 +1,17 @@
 #!/bin/bash
 
+# run val1(genesis) node
 docker-compose up --no-start val1
 docker-compose run --rm val1 mkdir -p /tendermint/config
 docker-compose run --rm val1 mkdir -p /tendermint/data
-
 WD=$(dirname $0)
+docker cp $WD/genesis.json val1:/tendermint/config/
 docker cp $WD/priv_validator_key.json val1:/tendermint/config/
 docker cp $WD/priv_validator_state.json val1:/tendermint/data/
-
-# run val1(genesis) node
 docker-compose up -d val1
 
 # wait for node to fully wakeup
-sleep 2s
+sleep 1s
 
 # get val1's tendermint node addr
 val1addr=$(docker exec -it val1 tendermint show_node_id | tr -d '\015' | tr -d '^@')

@@ -1,4 +1,4 @@
-if [ ! -f /tendermint/config/config.toml ]; then
+if [ ! -f /tendermint/config/config.toml -a ! -z "$MONIKER" -a ! -z "$PEERS" ]; then
 	echo "set moniker = $MONIKER"
 	echo "set peers = $PEERS"
 
@@ -12,13 +12,10 @@ if [ ! -f /tendermint/config/config.toml ]; then
 	sed -e s/@external@/tcp:\\/\\/$extaddr:26656/ -i.tmp config.toml
 
 	mkdir -p /tendermint/config/
-	mkdir -p /tendermint/data/
-
 	mv -f config.toml /tendermint/config/
 fi
-if [ ! -f /tendermint/config/genesis.json ]; then
-	cp -f genesis.json.sample /tendermint/config/genesis.json
-fi
+
+/usr/bin/tendermint init
 
 /usr/bin/amod run &
 /usr/bin/tendermint node
