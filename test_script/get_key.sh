@@ -1,5 +1,7 @@
 #!/bin/bash
 
 # get amo keys
-eval $($CLIOPT key list | tr -d '\r' | awk '{ printf "%s=%s\n",$2,$4 }')
+keys=$($CLIOPT key list)
+sleep 2s
 
+eval $(echo "$keys"| tr -d '\r' | awk '{ printf "%s=%s\n",$2,$4 }')

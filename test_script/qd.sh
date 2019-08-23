@@ -2,11 +2,19 @@
 
 NODENUM=$1
 
+fail() {
+	echo "test failed"
+	echo $1
+	exit -1
+}
+
 . $(dirname $0)/get_key.sh
 
 for ((i=1; i<=NODENUM; i++))
 do
     addr=tdel$i
-    echo "delegate of tdel$i:" $($CLIOPT query delegate $OPT ${!addr})
+	out=$($CLIOPT query delegate $OPT ${!addr})
+	if [ $? -ne 0 ]; then fail $out; fi
+	echo "delegate of tdel$i: "$out
 done
 

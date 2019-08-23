@@ -8,6 +8,12 @@ AMOUNT=$3
 
 AMO1=1000000000000000000
 
+fail() {
+	echo "test failed"
+	echo $1
+	exit -1
+}
+
 $ROOT/qb.sh "$NODENUM"
 $ROOT/qs.sh "$NODENUM"
 $ROOT/qd.sh "$NODENUM"
@@ -16,15 +22,19 @@ $ROOT/qd.sh "$NODENUM"
 
 for ((i=FROM; i<=NODENUM; i++))
 do
-
     addr=tval$i
-    pubkey=$(docker exec -it val$i tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
+    out=$(docker exec -it val$i tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
+	if [ $? -ne 0 ]; then fail $out; fi
 
-    echo "Stake $(bc <<< "$AMOUNT / $AMO1") AMO: val$i"
-    $CLIOPT tx stake $OPT --user tval$i "$pubkey" "$AMOUNT"
+	echo "stake to tval$i: $(bc <<< "$AMOUNT / $AMO1") AMO"
+	out=$($CLIOPT tx stake $OPT --user tval$i $out "$AMOUNT")
+	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
+	if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
-    echo "Delegate $(bc <<< "$AMOUNT / $AMO1") AMO: del$i -> val$i"
-    $CLIOPT tx delegate $OPT --user tdel$i "${!addr}" "$AMOUNT"
+	echo "delegate from tdel$i to tval$i: $(bc <<< "$AMOUNT / $AMO1") AMO"
+	out=$($CLIOPT tx delegate $OPT --user tdel$i "${!addr}" "$AMOUNT")
+	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
+	if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 done
 
 $ROOT/qb.sh "$NODENUM"

@@ -24,6 +24,7 @@ DOCKER/amocli
 DOCKER/amod
 DOCKER/tendermint
 /docker-compose.yml
+testdata/
 
 # circleci-related files
 .circleci/DOCKER_amocli/amocli

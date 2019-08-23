@@ -186,10 +186,11 @@ mkdir -p $GOPATH/src/github.com/tendermint
 cd $GOPATH/src/github.com/tendermint
 git clone https://github.com/tendermint/tendermint
 cd tendermint
+git checkout v0.31.7
 make get_tools
 make get_vendor_deps
 make build-linux
-cp tendermint $GOPATH/src/github.com/amolabs/amoabci/
+cp build/tendermint $GOPATH/src/github.com/amolabs/amoabci/
 ```
 
 To build a `amod` docker image, do the followings:
@@ -202,7 +203,7 @@ make get_tools
 make get_vendor_deps
 make docker
 ```
-The iamge will be tagged as `amolabs/amod:latest`. This image include both of
+The image will be tagged as `amolabs/amod:latest`. This image include both of
 `tendermint` and `amod`, so you just need one image (and one container).
 
 ### Run
