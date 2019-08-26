@@ -19,7 +19,7 @@ fail() {
 }
 
 echo "faucet transfer coin to tu2: 1 AMO"
-out=$($CLIOPT tx transfer $OPT --user tgenesis "$tu2" "$AMO1")
+out=$($CLIOPT tx transfer $OPT --user tgenesis "$tu2" "$AMO1" | tr -cd "[:print:]")
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
