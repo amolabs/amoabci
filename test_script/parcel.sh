@@ -5,7 +5,7 @@
 #	exit 0
 #fi
 
-. $(dirname $0)/get_key.sh
+. testaddr.sh
 
 AMO1=1000000000000000000
 

@@ -15,10 +15,9 @@ fail() {
 }
 
 $ROOT/qb.sh "$NODENUM"
-. $ROOT/get_key.sh
+. testaddr.sh
 
-for ((i=FROM; i<=NODENUM; i++))
-do
+for ((i=FROM; i<=NODENUM; i++)); do
     valaddr=tval$i
 
 	echo "faucet to tval$i: $(bc <<< "$AMOUNT / $AMO1") AMO"

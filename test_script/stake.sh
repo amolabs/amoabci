@@ -18,7 +18,7 @@ $ROOT/qb.sh "$NODENUM"
 $ROOT/qs.sh "$NODENUM"
 $ROOT/qd.sh "$NODENUM"
 
-. $ROOT/get_key.sh
+. testaddr.sh
 
 for ((i=FROM; i<=NODENUM; i++))
 do

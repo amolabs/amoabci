@@ -57,3 +57,7 @@ echo "regenerate tu2 key"
 out=$($CLIOPT key remove tu2)
 out=$($CLIOPT key generate tu2 --encrypt=false)
 if [ $? -ne 0 ]; then fail "$out"; fi
+
+keys=$($CLIOPT key list)
+echo "$keys"| tr -d '\r' | awk '{ printf "%s=%s\n",$2,$4 }' > testaddr.sh
+

@@ -8,7 +8,7 @@ fail() {
 	exit -1
 }
 
-. $(dirname $0)/get_key.sh
+. testaddr.sh
 
 for ((i=1; i<=NODENUM; i++))
 do

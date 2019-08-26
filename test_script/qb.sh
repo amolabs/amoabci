@@ -8,14 +8,13 @@ fail() {
 	exit -1
 }
 
-. $(dirname $0)/get_key.sh
+. testaddr.sh
 
 out=$($CLIOPT query balance $OPT $tgenesis)
 if [ $? -ne 0 ]; then fail $out; fi
 echo "balance of genesis: "$out
 
-for ((i=1; i<=NODENUM; i++))
-do
+for ((i=1; i<=NODENUM; i++)); do
     addr=tval$i
 	out=$($CLIOPT query balance $OPT ${!addr})
 	if [ $? -ne 0 ]; then fail $out; fi

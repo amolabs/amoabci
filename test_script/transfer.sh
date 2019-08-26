@@ -4,7 +4,7 @@ NODENUM=$1
 
 AMOUNT=1000
 
-. $(dirname $0)/get_key.sh
+. testaddr.sh
 . $(dirname $0)/qb.sh "$NODENUM"
 
 for ((i=1; i<=NODENUM; i++))
