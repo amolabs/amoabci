@@ -24,32 +24,32 @@ h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height'
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu1 register p1"
-out=$($CLIOPT tx register $OPT --user tu1 "$P1" "$CUSTODY")
+out=$($CLIOPT tx register $OPT --user tu1 "$P1" "$CUSTODY" | tr -cd "[:print:]")
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu1 discard p1"
-out=$($CLIOPT tx discard $OPT --user tu1 "$P1")
+out=$($CLIOPT tx discard $OPT --user tu1 "$P1" | tr -cd "[:print:]")
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu1 register p1"
-out=$($CLIOPT tx register $OPT --user tu1 "$P1" "$CUSTODY")
+out=$($CLIOPT tx register $OPT --user tu1 "$P1" "$CUSTODY" | tr -cd "[:print:]")
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu2 request p1 with 1 AMO"
-out=$($CLIOPT tx request $OPT --user tu2 "$P1" "$AMO1")
+out=$($CLIOPT tx request $OPT --user tu2 "$P1" "$AMO1" | tr -cd "[:print:]")
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu1 grant tu2 on p1, collect 1 AMO"
-out=$($CLIOPT tx grant $OPT --user tu1 "$P1" "$tu2" "$CUSTODY")
+out=$($CLIOPT tx grant $OPT --user tu1 "$P1" "$tu2" "$CUSTODY" | tr -cd "[:print:]")
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu1 revoke grant given to tu2 on p1"
-out=$($CLIOPT tx revoke $OPT --user tu1 "$P1" "$tu2")
+out=$($CLIOPT tx revoke $OPT --user tu1 "$P1" "$tu2" | tr -cd "[:print:]")
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
