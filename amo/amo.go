@@ -28,7 +28,7 @@ var (
 
 const (
 	// versions
-	AMOAppVersion      = "v1.0"
+	AMOAppVersion      = "v1.0.1"
 	AMOProtocolVersion = 0x1
 	// hard-coded configs
 	maxValidators = 100
