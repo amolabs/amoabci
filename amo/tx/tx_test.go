@@ -77,8 +77,8 @@ func getTestStore() *store.Store {
 		Validator: k,
 	})
 	s.SetDelegate(bob.addr, &types.Delegate{
+		Delegatee: alice.addr,
 		Amount:    *new(types.Currency).Set(500),
-		Delegator: alice.addr,
 	})
 	return s
 }

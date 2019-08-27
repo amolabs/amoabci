@@ -335,10 +335,10 @@ func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
 			app.state.Walk++
 		}
 		tmp.Add(&tmp2)
-		b := app.store.GetBalance(d.Holder).Add(&tmp2)
-		app.store.SetBalance(d.Holder, b)
+		b := app.store.GetBalance(d.Delegator).Add(&tmp2)
+		app.store.SetBalance(d.Delegator, b)
 		app.logger.Debug("Block reward",
-			"delegate", hex.EncodeToString(d.Holder), "reward", tmp2.Int64())
+			"delegate", hex.EncodeToString(d.Delegator), "reward", tmp2.Int64())
 	}
 	tmp2.Int.Sub(&rTotal.Int, &tmp.Int)
 	if !tmp2.Equals(new(types.Currency).Set(0)) {

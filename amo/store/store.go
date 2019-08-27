@@ -32,7 +32,8 @@ type Store struct {
 	stateDB db.DB // DB for blockchain state: see protocol.md
 	indexDB db.DB
 	// search index for delegators:
-	// key: delegator address || holder address
+	// XXX: a delegatee can have multiple delegators
+	// key: delegatee address || delegator address
 	// value: nil
 	indexDelegator db.DB
 	// search index for validator:
@@ -207,11 +208,11 @@ func (s Store) SetDelegate(holder crypto.Address, value *types.Delegate) error {
 		return err
 	}
 	// before state update
-	es := s.GetEffStake(value.Delegator)
+	es := s.GetEffStake(value.Delegatee)
 	if es == nil {
 		return errors.New("No stake for a delegator")
 	} else {
-		before := makeEffStakeKey(es.Amount, value.Delegator)
+		before := makeEffStakeKey(es.Amount, value.Delegatee)
 		if s.indexEffStake.Has(before) {
 			s.indexEffStake.Delete(before)
 		}
@@ -219,8 +220,8 @@ func (s Store) SetDelegate(holder crypto.Address, value *types.Delegate) error {
 	// state update
 	s.stateDB.Set(getDelegateKey(holder), b)
 	// after state update
-	s.indexDelegator.Set(append(value.Delegator, holder...), nil)
-	after := makeEffStakeKey(s.GetEffStake(value.Delegator).Amount, value.Delegator)
+	s.indexDelegator.Set(append(value.Delegatee, holder...), nil)
+	after := makeEffStakeKey(s.GetEffStake(value.Delegatee).Amount, value.Delegatee)
 	s.indexEffStake.Set(after, nil)
 	return nil
 }
@@ -235,7 +236,7 @@ func (s Store) GetDelegate(holder crypto.Address) *types.Delegate {
 	if err != nil {
 		return nil
 	}
-	delegate.Holder = holder
+	delegate.Delegator = holder
 	return &delegate
 }
 

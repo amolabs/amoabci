@@ -139,14 +139,14 @@ func TestDelegate(t *testing.T) {
 		Validator: valkey,
 	}
 	delegate1 := &types.Delegate{
-		Holder:    holder1,
+		Delegator: holder1,
+		Delegatee: staker,
 		Amount:    *new(types.Currency).Set(101),
-		Delegator: staker,
 	}
 	delegate2 := &types.Delegate{
-		Holder:    holder2,
+		Delegator: holder2,
+		Delegatee: staker,
 		Amount:    *new(types.Currency).Set(102),
-		Delegator: staker,
 	}
 
 	// staker must have his own stake in order to be a delegator.
