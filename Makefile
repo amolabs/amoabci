@@ -1,6 +1,6 @@
 .PHONY: build docker run-cluster test
 
-all: install
+all: build
 
 GO := $(shell command -v go 2> /dev/null)
 FS := /
@@ -67,7 +67,7 @@ build:
 
 install:
 	@echo "--> Installing amo daemon (amod)"
-	go install ./cmd/amod
+	$(BUILDENV) go install ./cmd/amod
 
 test:
 	go test ./...
