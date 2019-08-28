@@ -9,6 +9,7 @@ import (
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 func queryBalance(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
@@ -55,7 +56,8 @@ func queryStake(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		res.Code = code.QueryCodeOK
 	}
 
-	jsonstr, _ := json.Marshal(stake)
+	stakeEx := types.StakeEx{stake, store.GetDelegatesByDelegatee(addr)}
+	jsonstr, _ := json.Marshal(stakeEx)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
 	res.Key = queryData

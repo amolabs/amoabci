@@ -236,28 +236,35 @@ func (s Store) GetDelegate(holder crypto.Address) *types.Delegate {
 	if err != nil {
 		return nil
 	}
-	delegate.Delegator = holder
 	return &delegate
 }
 
-func (s Store) GetDelegatesByDelegator(delegator crypto.Address) []*types.Delegate {
-	var itr db.Iterator = s.indexDelegator.Iterator(delegator, nil)
+func (s Store) GetDelegateEx(holder crypto.Address) *types.DelegateEx {
+	delegate := s.GetDelegate(holder)
+	if delegate == nil {
+		return nil
+	}
+	return &types.DelegateEx{holder, delegate}
+}
+
+func (s Store) GetDelegatesByDelegatee(delegatee crypto.Address) []*types.DelegateEx {
+	var itr db.Iterator = s.indexDelegator.Iterator(delegatee, nil)
 	defer itr.Close()
 
-	var delegates []*types.Delegate
-	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), delegator); itr.Next() {
-		holder := itr.Key()[len(delegator):]
-		delegates = append(delegates, s.GetDelegate(holder))
+	var delegates []*types.DelegateEx
+	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), delegatee); itr.Next() {
+		delegator := itr.Key()[len(delegatee):]
+		delegates = append(delegates, s.GetDelegateEx(delegator))
 	}
 	return delegates
 }
 
-func (s Store) GetEffStake(delegator crypto.Address) *types.Stake {
-	stake := s.GetStake(delegator)
+func (s Store) GetEffStake(delegatee crypto.Address) *types.Stake {
+	stake := s.GetStake(delegatee)
 	if stake == nil {
 		return nil
 	}
-	for _, d := range s.GetDelegatesByDelegator(delegator) {
+	for _, d := range s.GetDelegatesByDelegatee(delegatee) {
 		stake.Amount.Add(&d.Amount)
 	}
 	return stake

@@ -139,12 +139,10 @@ func TestDelegate(t *testing.T) {
 		Validator: valkey,
 	}
 	delegate1 := &types.Delegate{
-		Delegator: holder1,
 		Delegatee: staker,
 		Amount:    *new(types.Currency).Set(101),
 	}
 	delegate2 := &types.Delegate{
-		Delegator: holder2,
 		Delegatee: staker,
 		Amount:    *new(types.Currency).Set(102),
 	}
@@ -160,10 +158,10 @@ func TestDelegate(t *testing.T) {
 	assert.Equal(t, delegate2, s.GetDelegate(holder2))
 
 	// test delegator search index
-	ds := s.GetDelegatesByDelegator(staker)
+	ds := s.GetDelegatesByDelegatee(staker)
 	assert.Equal(t, 2, len(ds))
-	assert.Equal(t, delegate1, ds[0])
-	assert.Equal(t, delegate2, ds[1])
+	assert.Equal(t, delegate1, ds[0].Delegate)
+	assert.Equal(t, delegate2, ds[1].Delegate)
 
 	es := *new(types.Currency)
 	es.Add(&stake.Amount)
