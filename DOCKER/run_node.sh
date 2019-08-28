@@ -1,4 +1,4 @@
-if [ ! -f /tendermint/config/config.toml -a ! -z "$MONIKER" -a ! -z "$PEERS" ]; then
+if [ ! -f /tendermint/config/config.toml -a ! -z "$MONIKER" ]; then
 	echo "set moniker = $MONIKER"
 	echo "set peers = $PEERS"
 
