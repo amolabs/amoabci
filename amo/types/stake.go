@@ -5,6 +5,6 @@ import (
 )
 
 type Stake struct {
-	Amount    Currency              `json:"amount"`
 	Validator ed25519.PubKeyEd25519 `json:"validator"`
+	Amount    Currency              `json:"amount"`
 }
