@@ -306,7 +306,7 @@ func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
 	if stake == nil {
 		return errors.New("No stake, no reward.")
 	}
-	ds := app.store.GetDelegatesByDelegator(staker)
+	ds := app.store.GetDelegatesByDelegatee(staker)
 
 	var tmp, tmp2 types.Currency
 

@@ -13,8 +13,8 @@ import (
 var _ Operation = Stake{}
 
 type Stake struct {
-	Amount    types.Currency `json:"amount"`
 	Validator tm.HexBytes    `json:"validator"`
+	Amount    types.Currency `json:"amount"`
 }
 
 func (o Stake) Check(store *store.Store, sender crypto.Address) uint32 {

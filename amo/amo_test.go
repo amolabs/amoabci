@@ -476,12 +476,10 @@ func TestBlockReward(t *testing.T) {
 	daddr1 := p256.GenPrivKeyFromSecret([]byte("d1")).PubKey().Address()
 	daddr2 := p256.GenPrivKeyFromSecret([]byte("d2")).PubKey().Address()
 	delegate1 := types.Delegate{
-		Delegator: daddr1,
 		Delegatee: holder,
 		Amount:    *new(types.Currency).Set(100),
 	}
 	delegate2 := types.Delegate{
-		Delegator: daddr2,
 		Delegatee: holder,
 		Amount:    *new(types.Currency).Set(200),
 	}
