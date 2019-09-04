@@ -11,6 +11,7 @@ import (
 	"github.com/tendermint/tendermint/libs/db"
 	tm "github.com/tendermint/tendermint/types"
 
+	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/types"
 )
 
@@ -136,12 +137,27 @@ func getStakeKey(holder []byte) []byte {
 func (s Store) SetStake(holder crypto.Address, stake *types.Stake) error {
 	b, err := json.Marshal(stake)
 	if err != nil {
-		return errors.New("failed to parse input stake")
+		return code.TxErrBadParam
 	}
 	prevHolder := s.indexValidator.Get(stake.Validator.Address())
 	if prevHolder != nil && !bytes.Equal(prevHolder, holder) {
-		return errors.New("validator already taken")
+		return code.TxErrBadValidator
 	}
+
+	if stake.Amount.Sign() == 0 {
+		// check if there is a delegate appointed to this stake
+		ds := s.GetDelegatesByDelegatee(holder)
+		if len(ds) > 0 {
+			return code.TxErrDelegateExists
+		}
+
+		// check if this is the last stake
+		ts := s.GetTopStakes(2)
+		if len(ts) == 1 { // requested 2 but got 1
+			return code.TxErrLastValidator
+		}
+	}
+
 	// clean up
 	es := s.GetEffStake(holder)
 	if es != nil {

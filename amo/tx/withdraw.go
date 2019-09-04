@@ -35,7 +35,18 @@ func (o Withdraw) Execute(store *store.Store, sender crypto.Address) (uint32, []
 		return code.TxCodeNotEnoughBalance, nil
 	}
 	if err := store.SetStake(sender, stake); err != nil {
-		return code.TxCodeBadValidator, nil
+		switch err {
+		case code.TxErrBadParam:
+			return code.TxCodeBadParam, nil
+		case code.TxErrBadValidator:
+			return code.TxCodeBadValidator, nil
+		case code.TxErrLastValidator:
+			return code.TxCodeLastValidator, nil
+		case code.TxErrDelegateExists:
+			return code.TxCodeDelegateExists, nil
+		default:
+			return code.TxCodeBadParam, nil
+		}
 	}
 	balance := store.GetBalance(sender)
 	balance.Add(&o.Amount)
