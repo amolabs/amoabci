@@ -31,11 +31,11 @@ const (
 	AMOAppVersion      = "v1.1.0-dev"
 	AMOProtocolVersion = 0x2
 	// hard-coded configs
-	maxValidators = 100
-	wValidator    = 2
-	wDelegate     = 1
-	blkRewardAMO  = uint64(0)
-	txRewardAMO   = uint64(types.OneAMOUint64 / 10)
+	defaultMaxValidators   = 100
+	defaultWeightValidator = int64(2)
+	defaultWeightDelegator = int64(1)
+	defaultBlkReward       = uint64(0)
+	defaultTxReward        = uint64(types.OneAMOUint64 / 10)
 )
 
 // Output are sorted by voting power.
@@ -92,15 +92,29 @@ type State struct {
 	lastAppHash []byte `json:"last_app_hash"` // TODO: use merkle tree
 }
 
+type AMOAppConfig struct {
+	MaxValidators   uint64
+	WeightValidator int64
+	WeightDelegator int64
+	BlkReward       uint64
+	TxReward        uint64
+}
+
 type AMOApp struct {
+	// app scaffold
 	abci.BaseApplication
 	logger log.Logger
 
+	// app config
+	config AMOAppConfig
+
+	// internal state
 	stateDB dbm.DB
 	indexDB dbm.DB
 	state   State
 	store   *astore.Store
 
+	// runtime temporary variables
 	doValUpdate bool
 	oldVals     abci.ValidatorUpdates
 }
@@ -118,10 +132,17 @@ func NewAMOApp(sdb dbm.DB, idb dbm.DB, l log.Logger) *AMOApp {
 		idb = dbm.NewMemDB()
 	}
 	app := &AMOApp{
+		logger: l,
+		config: AMOAppConfig{
+			defaultMaxValidators,
+			defaultWeightValidator,
+			defaultWeightDelegator,
+			defaultBlkReward,
+			defaultTxReward,
+		},
 		stateDB: sdb,
 		indexDB: idb,
 		store:   astore.NewStore(sdb, idb),
-		logger:  l,
 	}
 	app.load()
 	return app
@@ -174,7 +195,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	app.logger.Info("InitChain: new genesis app state applied.")
 
 	return abci.ResponseInitChain{
-		Validators: app.store.GetValidators(maxValidators),
+		Validators: app.store.GetValidators(app.config.MaxValidators),
 	}
 }
 
@@ -207,7 +228,7 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.state.height = req.Header.Height
 	app.doValUpdate = false
-	app.oldVals = app.store.GetValidators(maxValidators)
+	app.oldVals = app.store.GetValidators(app.config.MaxValidators)
 
 	proposer := req.Header.GetProposerAddress()
 	staker := app.store.GetHolderByValidator(proposer)
@@ -287,7 +308,7 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	if app.doValUpdate {
 		app.doValUpdate = false
-		newVals := app.store.GetValidators(maxValidators)
+		newVals := app.store.GetValidators(app.config.MaxValidators)
 		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
 	}
 	// update appHash
@@ -317,17 +338,17 @@ func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
 
 	// total reward
 	var rTotal, rTx types.Currency
-	rTotal.Set(blkRewardAMO)
-	rTx.Set(txRewardAMO)
+	rTotal.Set(app.config.BlkReward)
+	rTx.Set(app.config.TxReward)
 	tmp.SetInt64(numTxs)
 	tmp.Mul(&tmp.Int, &rTx.Int)
 	rTotal.Add(&tmp)
 
 	// weighted sum
 	var wsum, w big.Int
-	w.SetInt64(wValidator)
+	w.SetInt64(app.config.WeightValidator)
 	wsum.Mul(&w, &stake.Amount.Int)
-	w.SetInt64(wDelegate)
+	w.SetInt64(app.config.WeightDelegator)
 	for _, d := range ds {
 		tmp.Mul(&w, &d.Amount.Int)
 		wsum.Add(&wsum, &tmp.Int)
@@ -335,17 +356,17 @@ func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
 	// individual rewards
 	tmp.Set(0) // subtotal for delegate holders
 	for _, d := range ds {
-		tmp2 = *partialReward(wDelegate, &d.Amount.Int, &wsum, &rTotal)
+		tmp2 = *partialReward(app.config.WeightDelegator, &d.Amount.Int, &wsum, &rTotal)
 		if !tmp2.Equals(new(types.Currency).Set(0)) {
 			app.state.Walk++
 		}
-		tmp.Add(&tmp2)
+		tmp.Add(&tmp2) // update subtotal
 		b := app.store.GetBalance(d.Delegator).Add(&tmp2)
-		app.store.SetBalance(d.Delegator, b)
+		app.store.SetBalance(d.Delegator, b) // update balance
 		app.logger.Debug("Block reward",
 			"delegate", hex.EncodeToString(d.Delegator), "reward", tmp2.Int64())
 	}
-	tmp2.Int.Sub(&rTotal.Int, &tmp.Int)
+	tmp2.Int.Sub(&rTotal.Int, &tmp.Int) // calc validator reward
 	if !tmp2.Equals(new(types.Currency).Set(0)) {
 		app.state.Walk++
 	}
