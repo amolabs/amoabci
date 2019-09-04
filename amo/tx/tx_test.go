@@ -316,7 +316,14 @@ func TestNonValidStake(t *testing.T) {
 }
 
 func TestValidWithdraw(t *testing.T) {
-	s := getTestStore()
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(alice.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+
 	op := Withdraw{
 		Amount: *new(types.Currency).Set(1000),
 	}
@@ -324,6 +331,14 @@ func TestValidWithdraw(t *testing.T) {
 	resCode, _ := op.Execute(s, alice.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
 	assert.Equal(t, new(types.Currency).Set(1000), &s.GetStake(alice.addr).Amount)
+
+	// add more stakeholder to test stake deletion
+	//var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(bob.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
 
 	op = Withdraw{
 		Amount: *new(types.Currency).Set(1000),
@@ -335,11 +350,35 @@ func TestValidWithdraw(t *testing.T) {
 }
 
 func TestNonValidWithdraw(t *testing.T) {
-	s := getTestStore()
+	// prepare
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(alice.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+
+	// test
 	op := Withdraw{
 		Amount: *new(types.Currency).Set(2000),
 	}
 	assert.Equal(t, code.TxCodeNotEnoughBalance, op.Check(s, eve.addr))
+
+	// test
+	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
+	resCode, _ := op.Execute(s, alice.addr)
+	assert.Equal(t, code.TxCodeLastValidator, resCode)
+
+	// prepare
+	s.SetDelegate(bob.addr, &types.Delegate{
+		Delegatee: alice.addr,
+		Amount:    *new(types.Currency).Set(500),
+	})
+
+	// test
+	resCode, _ = op.Execute(s, alice.addr)
+	assert.Equal(t, code.TxCodeDelegateExists, resCode)
 }
 
 func TestValidDelegate(t *testing.T) {
