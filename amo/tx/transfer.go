@@ -23,10 +23,6 @@ func (o TransferParam) Check(store *store.Store, sender crypto.Address) uint32 {
 	if len(o.To) != crypto.AddressSize {
 		return code.TxCodeBadParam
 	}
-	fromBalance := store.GetBalance(sender)
-	if fromBalance.LessThan(&o.Amount) {
-		return code.TxCodeNotEnoughBalance
-	}
 	if bytes.Equal(sender, o.To) {
 		return code.TxCodeSelfTransaction
 	}
@@ -38,6 +34,9 @@ func (o TransferParam) Execute(store *store.Store, sender crypto.Address) (uint3
 		return resCode, nil
 	}
 	fromBalance := store.GetBalance(sender)
+	if fromBalance.LessThan(&o.Amount) {
+		return code.TxCodeNotEnoughBalance, nil
+	}
 	toBalance := store.GetBalance(o.To)
 	fromBalance.Sub(&o.Amount)
 	toBalance.Add(&o.Amount)

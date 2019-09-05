@@ -322,8 +322,9 @@ func TestNonValidTransfer(t *testing.T) {
 		Amount: *new(types.Currency).Set(10),
 	}
 	assert.Equal(t, code.TxCodeBadParam, BPop.Check(s, alice.addr))
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
 	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, eve.addr))
+	c, _ := NEop.Execute(s, eve.addr)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, c)
 }
 
 func TestValidStake(t *testing.T) {
