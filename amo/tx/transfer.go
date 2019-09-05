@@ -2,6 +2,7 @@ package tx
 
 import (
 	"bytes"
+	"encoding/json"
 
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -18,6 +19,32 @@ type TransferParam struct {
 	Amount types.Currency `json:"amount"`
 }
 
+func parseTransferParam(bytes []byte) (TransferParam, error) {
+	var param TransferParam
+	err := json.Unmarshal(bytes, &param)
+	if err != nil {
+		return param, err
+	}
+	return param, nil
+}
+
+func TransferCheck(t Tx) (uint32, string) {
+	txParam, err := parseTransferParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
+	}
+
+	// TODO: make util for checking address size
+	if len(txParam.To) != crypto.AddressSize {
+		return code.TxCodeBadParam, "wrong recipient address size"
+	}
+	if bytes.Equal(t.Sender, txParam.To) {
+		return code.TxCodeSelfTransaction, "tried to transfer to self"
+	}
+	return code.TxCodeOK, "ok"
+}
+
+// obsolete
 func (o TransferParam) Check(store *store.Store, sender crypto.Address) uint32 {
 	// TODO: make util for checking address size
 	if len(o.To) != crypto.AddressSize {

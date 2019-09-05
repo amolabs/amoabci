@@ -223,7 +223,7 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 // - check signature
 // - check parameter format
 func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
-	message, op, _, err := tx.ParseTx(txBytes)
+	t, op, _, err := tx.ParseTx(txBytes)
 	if err != nil {
 		return abci.ResponseCheckTx{
 			Code:      code.TxCodeBadParam,
@@ -231,15 +231,27 @@ func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 			Codespace: "amo",
 		}
 	}
-	if !message.Verify() {
+	if !t.Verify() {
 		return abci.ResponseCheckTx{
 			Code:      code.TxCodeBadSignature,
 			Info:      "Signature verification failed",
 			Codespace: "amo",
 		}
 	}
+
+	var resCode uint32
+	var info string
+	switch t.Type {
+	case "transfer":
+		resCode, info = tx.TransferCheck(t)
+	default:
+		resCode = op.Check(app.store, t.Sender)
+	}
+
 	return abci.ResponseCheckTx{
-		Code: op.Check(app.store, message.Sender),
+		Code:      resCode,
+		Info:      info,
+		Codespace: "amo",
 	}
 }
 
