@@ -84,6 +84,47 @@ func getTestStore() *store.Store {
 }
 
 func TestParseTx(t *testing.T) {
+	bytes := []byte(`{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","nonce":"12345678","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"},"signature":{"pubkey":"0485FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B185FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B1EF1D55E9B1EF1D","sig_bytes":"FFFFFFFF"}}`)
+	var sender, nonce, tmp, sigbytes cmn.HexBytes
+	err := json.Unmarshal(
+		[]byte(`"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"`),
+		&sender,
+	)
+	assert.NoError(t, err)
+	err = json.Unmarshal(
+		[]byte(`"12345678"`),
+		&nonce,
+	)
+	assert.NoError(t, err)
+	err = json.Unmarshal(
+		[]byte(`"0485FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B185FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B1EF1D55E9B1EF1D"`),
+		&tmp,
+	)
+	assert.NoError(t, err)
+	var pubkey p256.PubKeyP256
+	copy(pubkey[:], tmp)
+	err = json.Unmarshal(
+		[]byte(`"FFFFFFFF"`),
+		&sigbytes,
+	)
+	assert.NoError(t, err)
+
+	exptected := Tx{
+		Type:    "transfer",
+		Sender:  sender,
+		Nonce:   nonce,
+		Payload: []byte(`{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}`),
+		Signature: Signature{
+			PubKey:   pubkey,
+			SigBytes: sigbytes,
+		},
+	}
+	parsedTx, _, _, err := ParseTx(bytes)
+	assert.NoError(t, err)
+	assert.Equal(t, exptected, parsedTx)
+}
+
+func TestTxSignature(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("test1"))
 	to := p256.GenPrivKeyFromSecret([]byte("test2")).PubKey().Address()
 	transfer := Transfer{
@@ -104,11 +145,6 @@ func TestParseTx(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	bMsg, _ := json.Marshal(message)
-	msg, op, _, err := ParseTx(bMsg)
-	assert.Nil(t, err)
-	assert.Equal(t, message, msg)
-	assert.Equal(t, &transfer, op)
 	assert.True(t, message.Verify())
 }
 
