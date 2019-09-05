@@ -18,6 +18,7 @@ const (
 	TxCodeBadValidator
 	TxCodeLastValidator
 	TxCodeDelegateExists
+	TxCodeStakeLocked
 	TxCodeUnknown
 )
 

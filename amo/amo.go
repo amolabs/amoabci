@@ -36,6 +36,7 @@ const (
 	defaultWeightDelegator = int64(1)
 	defaultBlkReward       = uint64(0)
 	defaultTxReward        = uint64(types.OneAMOUint64 / 10)
+	defaultLockupPeriod    = uint64(1000000)
 )
 
 // Output are sorted by voting power.
@@ -98,6 +99,7 @@ type AMOAppConfig struct {
 	WeightDelegator int64
 	BlkReward       uint64
 	TxReward        uint64
+	LockupPeriod    uint64
 }
 
 type AMOApp struct {
@@ -133,17 +135,20 @@ func NewAMOApp(sdb dbm.DB, idb dbm.DB, l log.Logger) *AMOApp {
 	}
 	app := &AMOApp{
 		logger: l,
-		config: AMOAppConfig{
+		config: AMOAppConfig{ // TODO: read from config file
 			defaultMaxValidators,
 			defaultWeightValidator,
 			defaultWeightDelegator,
 			defaultBlkReward,
 			defaultTxReward,
+			defaultLockupPeriod,
 		},
 		stateDB: sdb,
 		indexDB: idb,
 		store:   astore.NewStore(sdb, idb),
 	}
+	// TODO: use something more elegant
+	tx.ConfigLockupPeriod = app.config.LockupPeriod
 	app.load()
 	return app
 }
@@ -311,6 +316,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		newVals := app.store.GetValidators(app.config.MaxValidators)
 		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
 	}
+	app.store.LoosenLockedStakes()
 	// update appHash
 	// TODO: use merkle tree
 	app.state.appHash = make([]byte, 8)
