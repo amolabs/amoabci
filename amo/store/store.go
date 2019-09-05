@@ -166,6 +166,7 @@ func (s Store) SetStake(holder crypto.Address, stake *types.Stake) error {
 			s.indexEffStake.Delete(before)
 		}
 	}
+
 	// update
 	if stake.Amount.Sign() == 0 {
 		s.stateDB.Delete(getStakeKey(holder))
@@ -221,24 +222,31 @@ func getDelegateKey(holder []byte) []byte {
 func (s Store) SetDelegate(holder crypto.Address, value *types.Delegate) error {
 	b, err := json.Marshal(value)
 	if err != nil {
-		return err
+		return code.TxErrBadParam
 	}
 	// before state update
 	es := s.GetEffStake(value.Delegatee)
 	if es == nil {
-		return errors.New("No stake for a delegator")
-	} else {
-		before := makeEffStakeKey(es.Amount, value.Delegatee)
-		if s.indexEffStake.Has(before) {
-			s.indexEffStake.Delete(before)
-		}
+		return code.TxErrNoStake
 	}
-	// state update
-	s.stateDB.Set(getDelegateKey(holder), b)
-	// after state update
-	s.indexDelegator.Set(append(value.Delegatee, holder...), nil)
-	after := makeEffStakeKey(s.GetEffStake(value.Delegatee).Amount, value.Delegatee)
-	s.indexEffStake.Set(after, nil)
+
+	// make effStakeKey to find its corresponding value
+	before := makeEffStakeKey(es.Amount, value.Delegatee)
+	if s.indexEffStake.Has(before) {
+		s.indexEffStake.Delete(before)
+	}
+
+	// upadate
+	if value.Amount.Sign() == 0 {
+		s.stateDB.Delete(getDelegateKey(holder))
+		s.indexDelegator.Delete(append(value.Delegatee, holder...))
+	} else {
+		s.stateDB.Set(getDelegateKey(holder), b)
+		s.indexDelegator.Set(append(value.Delegatee, holder...), nil)
+		after := makeEffStakeKey(s.GetEffStake(value.Delegatee).Amount, value.Delegatee)
+		s.indexEffStake.Set(after, nil)
+	}
+
 	return nil
 }
 
