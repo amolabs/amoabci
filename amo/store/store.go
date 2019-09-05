@@ -3,7 +3,6 @@ package store
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"math/big"
 
 	abci "github.com/tendermint/tendermint/abci/types"

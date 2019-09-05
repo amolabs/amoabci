@@ -433,7 +433,7 @@ func TestValidRetract(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
 	resCode, _ = op.Execute(s, bob.addr)
 	assert.Equal(t, code.TxCodeOK, resCode)
-	assert.Equal(t, zero, &s.GetDelegate(bob.addr).Amount)
+	assert.Nil(t, s.GetDelegate(bob.addr))
 }
 
 func TestNonValidRetract(t *testing.T) {
