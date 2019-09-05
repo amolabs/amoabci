@@ -59,7 +59,7 @@ func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
 	t.Type = strings.ToLower(t.Type)
 	var payload interface{}
 	switch t.Type {
-	case "transfer":
+	case "transfer": // remove this
 		payload = new(TransferParam)
 	case "stake":
 		payload = new(Stake)

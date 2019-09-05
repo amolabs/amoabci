@@ -256,7 +256,7 @@ func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 }
 
 func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
-	message, op, isStake, err := tx.ParseTx(txBytes)
+	t, op, isStake, err := tx.ParseTx(txBytes)
 	if err != nil {
 		return abci.ResponseDeliverTx{
 			Code:      code.TxCodeBadParam,
@@ -265,24 +265,37 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 		}
 	}
 
-	defTags := []tm.KVPair{
-		{Key: []byte("tx.type"), Value: []byte(message.Type)},
-		{Key: []byte("tx.sender"), Value: []byte(message.Sender.String())},
+	tags := []tm.KVPair{
+		{Key: []byte("tx.type"), Value: []byte(t.Type)},
+		{Key: []byte("tx.sender"), Value: []byte(t.Sender.String())},
 	}
-	resCode, opTags := op.Execute(app.store, message.Sender)
-	if resCode != code.TxCodeOK {
-		return abci.ResponseDeliverTx{
-			Code: resCode,
+
+	var resCode uint32
+	var info string
+	var opTags []tm.KVPair
+	switch t.Type {
+	case "transfer":
+		resCode, info, opTags = tx.TransferExecute(app.store, t)
+	default:
+		resCode, opTags = op.Execute(app.store, t.Sender)
+	}
+
+	// if the operation was not successful, change nothing
+	if resCode == code.TxCodeOK {
+		if isStake {
+			app.doValUpdate = true
 		}
+		app.state.Walk++
+		tags = append(tags, opTags...)
+	} else {
+		tags = nil
 	}
-	if isStake {
-		app.doValUpdate = true
-	}
-	app.state.Walk++
-	tags := append(defTags, opTags...)
+
 	return abci.ResponseDeliverTx{
-		Code: resCode,
-		Tags: tags,
+		Code:      resCode,
+		Info:      info,
+		Tags:      tags,
+		Codespace: "amo",
 	}
 }
 

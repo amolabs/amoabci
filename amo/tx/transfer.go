@@ -44,6 +44,24 @@ func TransferCheck(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
+func TransferExecute(store *store.Store, t Tx) (uint32, string, []tm.KVPair) {
+	txParam, err := parseTransferParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	fromBalance := store.GetBalance(t.Sender)
+	if fromBalance.LessThan(&txParam.Amount) {
+		return code.TxCodeNotEnoughBalance, "not enough balance", nil
+	}
+	toBalance := store.GetBalance(txParam.To)
+	fromBalance.Sub(&txParam.Amount)
+	toBalance.Add(&txParam.Amount)
+	store.SetBalance(t.Sender, fromBalance)
+	store.SetBalance(txParam.To, toBalance)
+	return code.TxCodeOK, "ok", nil
+}
+
 // obsolete
 func (o TransferParam) Check(store *store.Store, sender crypto.Address) uint32 {
 	// TODO: make util for checking address size
@@ -56,6 +74,7 @@ func (o TransferParam) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
+// obsolete
 func (o TransferParam) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
 		return resCode, nil
