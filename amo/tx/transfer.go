@@ -11,14 +11,14 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-var _ Operation = Transfer{}
+var _ Operation = TransferParam{}
 
-type Transfer struct {
+type TransferParam struct {
 	To     crypto.Address `json:"to"`
 	Amount types.Currency `json:"amount"`
 }
 
-func (o Transfer) Check(store *store.Store, sender crypto.Address) uint32 {
+func (o TransferParam) Check(store *store.Store, sender crypto.Address) uint32 {
 	// TODO: make util for checking address size
 	if len(o.To) != crypto.AddressSize {
 		return code.TxCodeBadParam
@@ -33,7 +33,7 @@ func (o Transfer) Check(store *store.Store, sender crypto.Address) uint32 {
 	return code.TxCodeOK
 }
 
-func (o Transfer) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
+func (o TransferParam) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
 	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
 		return resCode, nil
 	}

@@ -349,7 +349,7 @@ func TestSignedTransactionTest(t *testing.T) {
 	app := NewAMOApp(db, tdb.NewMemDB(), nil)
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
-	_tx := tx.Transfer{
+	_tx := tx.TransferParam{
 		To:     p256.GenPrivKeyFromSecret([]byte("bob")).PubKey().Address(),
 		Amount: *new(types.Currency).Set(500),
 	}

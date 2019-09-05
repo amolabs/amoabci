@@ -46,6 +46,57 @@ type TxToSign struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
+// TODO: too clumsy prototype. improve it
+func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
+	var t Tx
+
+	err := json.Unmarshal(txBytes, &t)
+	if err != nil {
+		return t, nil, false, err
+	}
+
+	isStake := false
+	t.Type = strings.ToLower(t.Type)
+	var payload interface{}
+	switch t.Type {
+	case "transfer":
+		payload = new(TransferParam)
+	case "stake":
+		payload = new(Stake)
+		isStake = true
+	case "withdraw":
+		payload = new(Withdraw)
+		isStake = true
+	case "delegate":
+		payload = new(Delegate)
+		isStake = true
+	case "retract":
+		payload = new(Retract)
+		isStake = true
+	case "register":
+		payload = new(Register)
+	case "request":
+		payload = new(Request)
+	case "cancel":
+		payload = new(Cancel)
+	case "grant":
+		payload = new(Grant)
+	case "revoke":
+		payload = new(Revoke)
+	case "discard":
+		payload = new(Discard)
+	default:
+		return t, nil, false, tm.NewError("Invalid tx type: %v", t.Type)
+	}
+
+	err = json.Unmarshal(t.Payload, &payload)
+	if err != nil {
+		return t, nil, false, err
+	}
+
+	return t, payload.(Operation), isStake, nil
+}
+
 func (t Tx) GetSigningBytes() []byte {
 	tts := TxToSign{
 		Type:    t.Type,
@@ -99,55 +150,4 @@ func (t Tx) IsValid() bool {
 type Operation interface {
 	Check(store *store.Store, sender crypto.Address) uint32
 	Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair)
-}
-
-// TODO: too clumsy prototype. improve it
-func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
-	var t Tx
-
-	err := json.Unmarshal(txBytes, &t)
-	if err != nil {
-		return t, nil, false, err
-	}
-
-	isStake := false
-	t.Type = strings.ToLower(t.Type)
-	var payload interface{}
-	switch t.Type {
-	case "transfer":
-		payload = new(Transfer)
-	case "stake":
-		payload = new(Stake)
-		isStake = true
-	case "withdraw":
-		payload = new(Withdraw)
-		isStake = true
-	case "delegate":
-		payload = new(Delegate)
-		isStake = true
-	case "retract":
-		payload = new(Retract)
-		isStake = true
-	case "register":
-		payload = new(Register)
-	case "request":
-		payload = new(Request)
-	case "cancel":
-		payload = new(Cancel)
-	case "grant":
-		payload = new(Grant)
-	case "revoke":
-		payload = new(Revoke)
-	case "discard":
-		payload = new(Discard)
-	default:
-		return t, nil, false, tm.NewError("Invalid tx type: %v", t.Type)
-	}
-
-	err = json.Unmarshal(t.Payload, &payload)
-	if err != nil {
-		return t, nil, false, err
-	}
-
-	return t, payload.(Operation), isStake, nil
 }

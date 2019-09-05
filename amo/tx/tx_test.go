@@ -127,7 +127,7 @@ func TestParseTx(t *testing.T) {
 func TestTxSignature(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("test1"))
 	to := p256.GenPrivKeyFromSecret([]byte("test2")).PubKey().Address()
-	transfer := Transfer{
+	transfer := TransferParam{
 		To:     to,
 		Amount: *new(types.Currency).Set(1000),
 	}
@@ -298,7 +298,7 @@ func TestNonValidRevoke(t *testing.T) {
 
 func TestValidTransfer(t *testing.T) {
 	s := getTestStore()
-	op := Transfer{
+	op := TransferParam{
 		To:     bob.addr,
 		Amount: *new(types.Currency).Set(1230),
 	}
@@ -309,15 +309,15 @@ func TestValidTransfer(t *testing.T) {
 
 func TestNonValidTransfer(t *testing.T) {
 	s := getTestStore()
-	BPop := Transfer{
+	BPop := TransferParam{
 		To:     []byte("bob"),
 		Amount: *new(types.Currency).Set(1230),
 	}
-	NEop := Transfer{
+	NEop := TransferParam{
 		To:     bob.addr,
 		Amount: *new(types.Currency).Set(500),
 	}
-	STop := Transfer{
+	STop := TransferParam{
 		To:     eve.addr,
 		Amount: *new(types.Currency).Set(10),
 	}
