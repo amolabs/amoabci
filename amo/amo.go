@@ -253,13 +253,6 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 		}
 	}
 
-	if !message.Verify() { // move to CheckTx()
-		return abci.ResponseDeliverTx{
-			Code:      code.TxCodeBadSignature,
-			Info:      "Signature verification failed",
-			Codespace: "amo",
-		}
-	}
 	defTags := []tm.KVPair{
 		{Key: []byte("tx.type"), Value: []byte(message.Type)},
 		{Key: []byte("tx.sender"), Value: []byte(message.Sender.String())},
