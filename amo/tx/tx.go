@@ -35,7 +35,7 @@ type Tx struct {
 	Type      string          `json:"type"`
 	Sender    crypto.Address  `json:"sender"`
 	Nonce     tm.HexBytes     `json:"nonce"`
-	Payload   json.RawMessage `json:"payload"`
+	Payload   json.RawMessage `json:"payload"` // TODO: change to txparam
 	Signature Signature       `json:"signature"`
 }
 

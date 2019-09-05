@@ -219,6 +219,9 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	return res
 }
 
+// Invariant checks. Do not consider app's store.
+// - check signature
+// - check parameter format
 func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 	message, op, _, err := tx.ParseTx(txBytes)
 	if err != nil {
@@ -250,7 +253,7 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 		}
 	}
 
-	if !message.Verify() {
+	if !message.Verify() { // move to CheckTx()
 		return abci.ResponseDeliverTx{
 			Code:      code.TxCodeBadSignature,
 			Info:      "Signature verification failed",
