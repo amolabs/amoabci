@@ -92,7 +92,7 @@ func TestParseTx(t *testing.T) {
 	}
 	b, _ := json.Marshal(transfer)
 	message := Tx{
-		Type:    TxTransfer,
+		Type:    "transfer",
 		Payload: b,
 		Sender:  from.PubKey().Address(),
 		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},

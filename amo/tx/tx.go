@@ -14,20 +14,6 @@ import (
 )
 
 const (
-	TxTransfer = "transfer"
-	TxRegister = "register"
-	TxRequest  = "request"
-	TxCancel   = "cancel"
-	TxGrant    = "grant"
-	TxRevoke   = "revoke"
-	TxDiscard  = "discard"
-	TxStake    = "stake"
-	TxWithdraw = "withdraw"
-	TxDelegate = "delegate"
-	TxRetract  = "retract"
-)
-
-const (
 	NonceSize = 4
 )
 
@@ -102,6 +88,7 @@ func (t *Tx) Verify() bool {
 	return t.Signature.PubKey.VerifyBytes(sb, t.Signature.SigBytes)
 }
 
+// TODO: not used any more. remove this
 func (t Tx) IsValid() bool {
 	if len(t.Nonce) != NonceSize {
 		return false
@@ -127,34 +114,34 @@ func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
 	t.Type = strings.ToLower(t.Type)
 	var payload interface{}
 	switch t.Type {
-	case TxTransfer:
+	case "transfer":
 		payload = new(Transfer)
-	case TxRegister:
-		payload = new(Register)
-	case TxRequest:
-		payload = new(Request)
-	case TxCancel:
-		payload = new(Cancel)
-	case TxGrant:
-		payload = new(Grant)
-	case TxRevoke:
-		payload = new(Revoke)
-	case TxDiscard:
-		payload = new(Discard)
-	case TxStake:
+	case "stake":
 		payload = new(Stake)
 		isStake = true
-	case TxWithdraw:
+	case "withdraw":
 		payload = new(Withdraw)
 		isStake = true
-	case TxDelegate:
+	case "delegate":
 		payload = new(Delegate)
 		isStake = true
-	case TxRetract:
+	case "retract":
 		payload = new(Retract)
 		isStake = true
+	case "register":
+		payload = new(Register)
+	case "request":
+		payload = new(Request)
+	case "cancel":
+		payload = new(Cancel)
+	case "grant":
+		payload = new(Grant)
+	case "revoke":
+		payload = new(Revoke)
+	case "discard":
+		payload = new(Discard)
 	default:
-		return t, nil, false, tm.NewError("Invalid operation type: %v", t.Type)
+		return t, nil, false, tm.NewError("Invalid tx type: %v", t.Type)
 	}
 
 	err = json.Unmarshal(t.Payload, &payload)
