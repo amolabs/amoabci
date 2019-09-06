@@ -443,9 +443,9 @@ func TestEndBlock(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 	rawTx = makeTxStake(priv2, "val1", 200)
 	resCheck := app.CheckTx(rawTx)
-	assert.Equal(t, code.TxCodeOK, resCheck.Code) //
+	assert.Equal(t, code.TxCodeOK, resCheck.Code)
 	resDeliver = app.DeliverTx(rawTx)
-	assert.Equal(t, code.TxCodeUnknown, resDeliver.Code) //
+	assert.Equal(t, code.TxCodePermissionDenied, resDeliver.Code)
 	rawTx = makeTxStake(priv2, "val2", 200)
 	resDeliver = app.DeliverTx(rawTx)
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)

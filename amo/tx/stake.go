@@ -67,8 +67,18 @@ func ExecuteStake(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodePermissionDenied, "validator key mismatch", nil
 	}
 	if err := store.SetStake(t.Sender, stake); err != nil {
-		// TODO: search code from err
-		return code.TxCodeUnknown, err.Error(), nil
+		switch err {
+		case code.TxErrBadParam:
+			return code.TxCodeBadParam, err.Error(), nil
+		case code.TxErrPermissionDenied:
+			return code.TxCodePermissionDenied, err.Error(), nil
+		case code.TxErrDelegateExists:
+			return code.TxCodeDelegateExists, err.Error(), nil
+		case code.TxErrLastValidator:
+			return code.TxCodeLastValidator, err.Error(), nil
+		default:
+			return code.TxCodeUnknown, err.Error(), nil
+		}
 	}
 	store.SetBalance(t.Sender, balance)
 	return code.TxCodeOK, "ok", nil

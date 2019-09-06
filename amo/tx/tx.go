@@ -76,7 +76,7 @@ func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
 		payload = new(DummyOp)
 		isStake = true
 	case "withdraw":
-		payload = new(Withdraw)
+		payload = new(DummyOp)
 		isStake = true
 	case "delegate":
 		payload = new(Delegate)

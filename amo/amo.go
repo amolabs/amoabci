@@ -246,6 +246,8 @@ func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 		resCode, info = tx.CheckTransfer(t)
 	case "stake":
 		resCode, info = tx.CheckStake(t)
+	case "withdraw":
+		resCode, info = tx.CheckWithdraw(t)
 	case "register":
 		resCode, info = tx.CheckRegister(t)
 	case "request":
@@ -292,6 +294,8 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 		resCode, info, opTags = tx.ExecuteTransfer(t, app.store)
 	case "stake":
 		resCode, info, opTags = tx.ExecuteStake(t, app.store)
+	case "withdraw":
+		resCode, info, opTags = tx.ExecuteWithdraw(t, app.store)
 	case "register":
 		resCode, info, opTags = tx.ExecuteRegister(t, app.store)
 	case "request":

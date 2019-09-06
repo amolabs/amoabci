@@ -1,7 +1,8 @@
 package tx
 
 import (
-	"github.com/tendermint/tendermint/crypto"
+	"encoding/json"
+
 	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -9,47 +10,59 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-var _ Operation = Withdraw{}
-
-type Withdraw struct {
+type WithdrawParam struct {
 	Amount types.Currency `json:"amount"`
 }
 
-func (o Withdraw) Check(store *store.Store, sender crypto.Address) uint32 {
-	stake := store.GetStake(sender)
-	if stake == nil || stake.Amount.LessThan(&o.Amount) {
-		return code.TxCodeNotEnoughBalance
+func parseWithdrawParam(raw []byte) (WithdrawParam, error) {
+	var param WithdrawParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
 	}
-	return code.TxCodeOK
+	return param, nil
 }
 
-func (o Withdraw) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+func CheckWithdraw(t Tx) (uint32, string) {
+	// TODO: check format
+	//txParam, err := parseWithdrawParam(t.Payload)
+	_, err := parseWithdrawParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
-	stake := store.GetStake(sender)
+
+	return code.TxCodeOK, "ok"
+}
+
+func ExecuteWithdraw(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+	txParam, err := parseWithdrawParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	stake := store.GetStake(t.Sender)
 	if stake == nil {
-		return code.TxCodeNoStake, nil
+		return code.TxCodeNoStake, "no stake", nil
 	}
-	if stake.Amount.Sub(&o.Amount).Sign() == -1 {
-		return code.TxCodeNotEnoughBalance, nil
+	if stake.Amount.Sub(&txParam.Amount).Sign() == -1 {
+		return code.TxCodeNotEnoughBalance, "not enough stake", nil
 	}
-	if err := store.SetStake(sender, stake); err != nil {
+	if err := store.SetStake(t.Sender, stake); err != nil {
 		switch err {
 		case code.TxErrBadParam:
-			return code.TxCodeBadParam, nil
-		case code.TxErrBadValidator:
-			return code.TxCodeBadValidator, nil
-		case code.TxErrLastValidator:
-			return code.TxCodeLastValidator, nil
+			return code.TxCodeBadParam, err.Error(), nil
+		case code.TxErrPermissionDenied:
+			return code.TxCodePermissionDenied, err.Error(), nil
 		case code.TxErrDelegateExists:
-			return code.TxCodeDelegateExists, nil
+			return code.TxCodeDelegateExists, err.Error(), nil
+		case code.TxErrLastValidator:
+			return code.TxCodeLastValidator, err.Error(), nil
 		default:
-			return code.TxCodeBadParam, nil
+			return code.TxCodeUnknown, err.Error(), nil
 		}
 	}
-	balance := store.GetBalance(sender)
-	balance.Add(&o.Amount)
-	store.SetBalance(sender, balance)
-	return code.TxCodeOK, nil
+	balance := store.GetBalance(t.Sender)
+	balance.Add(&txParam.Amount)
+	store.SetBalance(t.Sender, balance)
+	return code.TxCodeOK, "ok", nil
 }

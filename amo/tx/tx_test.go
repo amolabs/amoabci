@@ -630,10 +630,11 @@ func TestNonValidStake(t *testing.T) {
 
 	// test
 	rc, _, _ = ExecuteStake(t2, s)
-	assert.Equal(t, code.TxCodeUnknown, rc)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
 }
 
 func TestValidWithdraw(t *testing.T) {
+	// env
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
@@ -642,12 +643,19 @@ func TestValidWithdraw(t *testing.T) {
 		Validator: k,
 	})
 
-	op := Withdraw{
+	// target
+	param := WithdrawParam{
 		Amount: *new(types.Currency).Set(1000),
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("withdraw", "alice", payload)
+
+	// test
+	rc, _ := CheckWithdraw(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteWithdraw(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, new(types.Currency).Set(1000), &s.GetStake(alice.addr).Amount)
 
 	// add more stakeholder to test stake deletion
@@ -658,13 +666,14 @@ func TestValidWithdraw(t *testing.T) {
 		Validator: k,
 	})
 
-	op = Withdraw{
-		Amount: *new(types.Currency).Set(1000),
-	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ = op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	// test
+	rc, _ = CheckWithdraw(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteWithdraw(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Nil(t, s.GetStake(alice.addr))
+	assert.NotNil(t, s.GetStake(bob.addr))
 }
 
 func TestNonValidWithdraw(t *testing.T) {
@@ -677,26 +686,33 @@ func TestNonValidWithdraw(t *testing.T) {
 		Validator: k,
 	})
 
-	// test
-	op := Withdraw{
+	// target
+	param := WithdrawParam{
 		Amount: *new(types.Currency).Set(2000),
 	}
-	assert.Equal(t, code.TxCodeNotEnoughBalance, op.Check(s, eve.addr))
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("withdraw", "eve", payload)
+	t2 := makeTestTx("withdraw", "alice", payload)
 
 	// test
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeLastValidator, resCode)
+	rc, _, _ := ExecuteWithdraw(t1, s)
+	assert.Equal(t, code.TxCodeNoStake, rc)
 
-	// prepare
+	// test
+	rc, _ = CheckWithdraw(t2)
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = ExecuteWithdraw(t2, s)
+	assert.Equal(t, code.TxCodeLastValidator, rc)
+
+	// env
 	s.SetDelegate(bob.addr, &types.Delegate{
 		Delegatee: alice.addr,
 		Amount:    *new(types.Currency).Set(500),
 	})
 
 	// test
-	resCode, _ = op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeDelegateExists, resCode)
+	rc, _, _ = ExecuteWithdraw(t2, s)
+	assert.Equal(t, code.TxCodeDelegateExists, rc)
 }
 
 func TestValidDelegate(t *testing.T) {
