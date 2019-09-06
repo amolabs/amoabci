@@ -1,7 +1,8 @@
 package tx
 
 import (
-	"github.com/tendermint/tendermint/crypto"
+	"encoding/json"
+
 	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -9,34 +10,50 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-var _ Operation = Register{}
-
-type Register struct {
+type RegisterParam struct {
 	Target  tm.HexBytes `json:"target"`
 	Custody tm.HexBytes `json:"custody"`
 	// TODO: extra info
 }
 
-func (o Register) Check(store *store.Store, sender crypto.Address) uint32 {
-	// TODO: permission check from PDSN
-	if store.GetParcel(o.Target) != nil {
-		return code.TxCodeAlreadyRegistered
+func parseRegisterParam(raw []byte) (RegisterParam, error) {
+	var param RegisterParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
 	}
-	return code.TxCodeOK
+	return param, nil
 }
 
-func (o Register) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+func CheckRegister(t Tx) (uint32, string) {
+	// TOOD: check format
+	//txParam, err := parseRegisterParam(t.Payload)
+	_, err := parseRegisterParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
+
+	return code.TxCodeOK, "ok"
+}
+
+func ExecuteRegister(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+	txParam, err := parseRegisterParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	if store.GetParcel(txParam.Target) != nil {
+		return code.TxCodeAlreadyRegistered, "parcel already registered", nil
+	}
+
 	parcel := types.ParcelValue{
-		Owner:   sender,
-		Custody: o.Custody,
+		Owner:   t.Sender,
+		Custody: txParam.Custody,
 	}
-	store.SetParcel(o.Target, &parcel)
+	store.SetParcel(txParam.Target, &parcel)
 	tags := []tm.KVPair{
-		{Key: []byte("parcel.id"), Value: []byte(o.Target.String())},
-		{Key: []byte("parcel.owner"), Value: sender},
+		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
+		{Key: []byte("parcel.owner"), Value: t.Sender},
 	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK, "ok", tags
 }

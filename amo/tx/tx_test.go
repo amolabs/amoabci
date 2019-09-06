@@ -263,23 +263,47 @@ func TestNonValidGrant(t *testing.T) {
 }
 
 func TestValidRegister(t *testing.T) {
-	s := getTestStore()
-	op := Register{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+
+	// target
+	param := RegisterParam{
 		Target:  parcelID[2],
 		Custody: custody[2],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("register", "alice", payload)
+
+	// test
+	rc, _ := CheckRegister(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteRegister(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidRegister(t *testing.T) {
-	s := getTestStore()
-	op := Register{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+
+	// target
+	param := RegisterParam{
 		Target:  parcelID[0],
 		Custody: custody[0],
 	}
-	assert.Equal(t, code.TxCodeAlreadyRegistered, op.Check(s, alice.addr))
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("register", "alice", payload)
+
+	// test
+	rc, _ := CheckRegister(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteRegister(t1, s)
+	assert.Equal(t, code.TxCodeAlreadyRegistered, rc)
 }
 
 func TestValidRequest(t *testing.T) {
