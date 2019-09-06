@@ -141,7 +141,7 @@ func (s Store) SetStake(holder crypto.Address, stake *types.Stake) error {
 	}
 	prevHolder := s.indexValidator.Get(stake.Validator.Address())
 	if prevHolder != nil && !bytes.Equal(prevHolder, holder) {
-		return code.TxErrBadValidator
+		return code.TxErrPermissionDenied
 	}
 
 	if stake.Amount.Sign() == 0 {

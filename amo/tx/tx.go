@@ -72,8 +72,8 @@ func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
 	switch t.Type {
 	case "transfer": // remove this
 		payload = new(DummyOp)
-	case "stake":
-		payload = new(Stake)
+	case "stake": // remove this
+		payload = new(DummyOp)
 		isStake = true
 	case "withdraw":
 		payload = new(Withdraw)

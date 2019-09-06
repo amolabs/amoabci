@@ -408,11 +408,11 @@ func TestFuncValUpdates(t *testing.T) {
 func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
 	validator, _ := ed25519.GenPrivKeyFromSecret([]byte(val)).
 		PubKey().(ed25519.PubKeyEd25519)
-	op := tx.Stake{
+	param := tx.StakeParam{
 		Amount:    *new(types.Currency).Set(amount),
 		Validator: validator[:],
 	}
-	payload, _ := json.Marshal(op)
+	payload, _ := json.Marshal(param)
 	_tx := tx.Tx{
 		Type:    "stake",
 		Payload: payload,
@@ -424,7 +424,7 @@ func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
 	return rawTx
 }
 
-func TestValidatorUpdates(t *testing.T) {
+func TestEndBlock(t *testing.T) {
 	app := NewAMOApp(tdb.NewMemDB(), tdb.NewMemDB(), nil)
 
 	// setup
@@ -438,13 +438,15 @@ func TestValidatorUpdates(t *testing.T) {
 	app.BeginBlock(blkRequest) // we need this
 
 	// deliver stake tx
-	rawTx := makeTxStake(priv1, "staker1", 100)
+	rawTx := makeTxStake(priv1, "val1", 100)
 	resDeliver := app.DeliverTx(rawTx)
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
-	rawTx = makeTxStake(priv2, "staker1", 200)
+	rawTx = makeTxStake(priv2, "val1", 200)
+	resCheck := app.CheckTx(rawTx)
+	assert.Equal(t, code.TxCodeOK, resCheck.Code) //
 	resDeliver = app.DeliverTx(rawTx)
-	assert.Equal(t, code.TxCodeBadValidator, resDeliver.Code)
-	rawTx = makeTxStake(priv2, "staker2", 200)
+	assert.Equal(t, code.TxCodeUnknown, resDeliver.Code) //
+	rawTx = makeTxStake(priv2, "val2", 200)
 	resDeliver = app.DeliverTx(rawTx)
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 

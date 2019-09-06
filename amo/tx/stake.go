@@ -1,7 +1,9 @@
 package tx
 
 import (
-	"github.com/tendermint/tendermint/crypto"
+	"bytes"
+	"encoding/json"
+
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	tm "github.com/tendermint/tendermint/libs/common"
 
@@ -10,45 +12,64 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-var _ Operation = Stake{}
-
-type Stake struct {
+type StakeParam struct {
 	Validator tm.HexBytes    `json:"validator"`
 	Amount    types.Currency `json:"amount"`
 }
 
-func (o Stake) Check(store *store.Store, sender crypto.Address) uint32 {
-	balance := store.GetBalance(sender)
-	if balance.LessThan(&o.Amount) {
-		return code.TxCodeNotEnoughBalance
+func parseStakeParam(raw []byte) (StakeParam, error) {
+	var param StakeParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
 	}
-	if len(o.Validator) != ed25519.PubKeyEd25519Size {
-		return code.TxCodeBadValidator
-	}
-	return code.TxCodeOK
+	return param, nil
 }
 
-func (o Stake) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+func CheckStake(t Tx) (uint32, string) {
+	txParam, err := parseStakeParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
-	balance := store.GetBalance(sender)
-	balance.Sub(&o.Amount)
-	stake := store.GetStake(sender)
+
+	// TODO: check format
+
+	if len(txParam.Validator) != ed25519.PubKeyEd25519Size {
+		return code.TxCodeBadValidator, "bad validator key"
+	}
+	return code.TxCodeOK, "ok"
+}
+
+func ExecuteStake(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+	txParam, err := parseStakeParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	balance := store.GetBalance(t.Sender)
+	if balance.LessThan(&txParam.Amount) {
+		return code.TxCodeNotEnoughBalance, "not enough balance", nil
+	}
+
+	balance.Sub(&txParam.Amount)
+	stake := store.GetStake(t.Sender)
 	if stake == nil {
 		var k ed25519.PubKeyEd25519
-		copy(k[:], o.Validator)
+		copy(k[:], txParam.Validator)
 		stake = &types.Stake{
-			Amount:    o.Amount,
+			Amount:    txParam.Amount,
 			Validator: k,
 		}
+	} else if bytes.Equal(stake.Validator[:], txParam.Validator[:]) {
+		stake.Amount.Add(&txParam.Amount)
+		copy(stake.Validator[:], txParam.Validator)
 	} else {
-		stake.Amount.Add(&o.Amount)
-		copy(stake.Validator[:], o.Validator)
+		return code.TxCodePermissionDenied, "validator key mismatch", nil
 	}
-	if err := store.SetStake(sender, stake); err != nil {
-		return code.TxCodeBadValidator, nil
+	if err := store.SetStake(t.Sender, stake); err != nil {
+		// TODO: search code from err
+		return code.TxCodeUnknown, err.Error(), nil
 	}
-	store.SetBalance(sender, balance)
-	return code.TxCodeOK, nil
+	store.SetBalance(t.Sender, balance)
+	return code.TxCodeOK, "ok", nil
 }

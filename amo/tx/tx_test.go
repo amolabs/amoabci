@@ -584,28 +584,53 @@ func TestNonValidTransfer(t *testing.T) {
 }
 
 func TestValidStake(t *testing.T) {
-	s := getTestStore()
-	op := Stake{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetBalanceUint64(alice.addr, 3000)
+
+	// target
+	param := StakeParam{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: cmn.RandBytes(32),
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("stake", "alice", payload)
+
+	// test
+	rc, _ := CheckStake(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteStake(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidStake(t *testing.T) {
-	s := getTestStore()
-	NEop := Stake{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetBalanceUint64(alice.addr, 3000)
+
+	// target
+	param := StakeParam{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: cmn.RandBytes(32),
 	}
-	BVop := Stake{
-		Amount:    *new(types.Currency).Set(500),
-		Validator: cmn.RandBytes(33),
-	}
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeBadValidator, BVop.Check(s, alice.addr))
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("stake", "eve", payload)
+
+	t2 := makeTestTx("stake", "alice", payload)
+
+	// test
+	rc, _, _ := ExecuteStake(t1, s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	// env
+	s.SetBalanceUint64(eve.addr, 2000)
+	rc, _, _ = ExecuteStake(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// test
+	rc, _, _ = ExecuteStake(t2, s)
+	assert.Equal(t, code.TxCodeUnknown, rc)
 }
 
 func TestValidWithdraw(t *testing.T) {
