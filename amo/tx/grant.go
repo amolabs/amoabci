@@ -2,6 +2,7 @@ package tx
 
 import (
 	"bytes"
+	"encoding/json"
 
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -11,44 +12,67 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-var _ Operation = Grant{}
-
-type Grant struct {
+type GrantParam struct {
 	Target  tm.HexBytes    `json:"target"`
 	Grantee crypto.Address `json:"grantee"`
 	Custody tm.HexBytes    `json:"custody"`
 }
 
-func (o Grant) Check(store *store.Store, sender crypto.Address) uint32 {
-	parcel := store.GetParcel(o.Target)
-	if !bytes.Equal(parcel.Owner, sender) {
-		return code.TxCodePermissionDenied
+func parseGrantParam(raw []byte) (GrantParam, error) {
+	var param GrantParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
 	}
-	if store.GetRequest(o.Grantee, o.Target) == nil {
-		return code.TxCodeRequestNotFound
-	}
-	usage := store.GetUsage(o.Grantee, o.Target)
-	if usage != nil {
-		return code.TxCodeAlreadyGranted
-	}
-	return code.TxCodeOK
+	return param, nil
 }
 
-func (o Grant) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+func CheckGrant(t Tx) (uint32, string) {
+	txParam, err := parseGrantParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
-	request := store.GetRequest(o.Grantee, o.Target)
-	store.DeleteRequest(o.Grantee, o.Target)
-	balance := store.GetBalance(sender)
+
+	// TODO: check format
+
+	if len(txParam.Grantee) != crypto.AddressSize {
+		return code.TxCodeBadParam, "wrong recipient address size"
+	}
+
+	return code.TxCodeOK, "ok"
+}
+
+func ExecuteGrant(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+	txParam, err := parseGrantParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	parcel := store.GetParcel(txParam.Target)
+	if parcel == nil {
+		return code.TxCodeParcelNotFound, "parcel not found", nil
+	}
+	if !bytes.Equal(parcel.Owner, t.Sender) {
+		return code.TxCodePermissionDenied, "parcel not owned", nil
+	}
+	if store.GetUsage(txParam.Grantee, txParam.Target) != nil {
+		return code.TxCodeAlreadyGranted, "parcel already granted", nil
+	}
+	request := store.GetRequest(txParam.Grantee, txParam.Target)
+	if request == nil {
+		return code.TxCodeRequestNotFound, "request not found", nil
+	}
+
+	store.DeleteRequest(txParam.Grantee, txParam.Target)
+	balance := store.GetBalance(t.Sender)
 	balance.Add(&request.Payment)
-	store.SetBalance(sender, balance)
+	store.SetBalance(t.Sender, balance)
 	usage := types.UsageValue{
-		Custody: o.Custody,
+		Custody: txParam.Custody,
 	}
-	store.SetUsage(o.Grantee, o.Target, &usage)
+	store.SetUsage(txParam.Grantee, txParam.Target, &usage)
 	tags := []tm.KVPair{
-		{Key: []byte("parcel.id"), Value: []byte(o.Target.String())},
+		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK, "ok", tags
 }

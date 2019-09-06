@@ -235,31 +235,68 @@ func TestNonValidDiscard(t *testing.T) {
 }
 
 func TestValidGrant(t *testing.T) {
-	s := getTestStore()
-	op := Grant{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[1], &types.ParcelValue{
+		Owner:   bob.addr,
+		Custody: custody[1],
+	})
+	s.SetRequest(alice.addr, parcelID[1], &types.RequestValue{
+		Payment: *new(types.Currency).Set(100),
+	})
+
+	// target
+	param := GrantParam{
 		Target:  parcelID[1],
 		Grantee: alice.addr,
 		Custody: custody[1],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("cancel", "bob", payload)
+
+	// test
+	rc, _ := CheckGrant(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteGrant(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidGrant(t *testing.T) {
-	s := getTestStore()
-	PDop := Grant{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+		Custody: custody[0],
+		Exp:     time.Now().UTC().Add(24 * time.Hour),
+	})
+
+	// target
+	param := GrantParam{
 		Target:  parcelID[0],
 		Grantee: eve.addr,
 		Custody: custody[0],
 	}
-	AEop := Grant{
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("cancel", "eve", payload)
+
+	param = GrantParam{
 		Target:  parcelID[0],
 		Grantee: bob.addr,
 		Custody: custody[0],
 	}
-	assert.Equal(t, code.TxCodePermissionDenied, PDop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeAlreadyGranted, AEop.Check(s, alice.addr))
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("cancel", "alice", payload)
+
+	// test
+	rc, _, _ := ExecuteGrant(t1, s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+
+	rc, _, _ = ExecuteGrant(t2, s)
+	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
 }
 
 func TestValidRegister(t *testing.T) {

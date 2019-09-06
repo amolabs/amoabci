@@ -48,7 +48,7 @@ func ExecuteRequest(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
 	if store.GetUsage(t.Sender, txParam.Target) != nil {
-		return code.TxCodeAlreadyGranted, "usage already granted", nil
+		return code.TxCodeAlreadyGranted, "request already granted", nil
 	}
 	if store.GetBalance(t.Sender).LessThan(&txParam.Payment) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
