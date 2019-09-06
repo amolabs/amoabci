@@ -2,6 +2,7 @@ package tx
 
 import (
 	"bytes"
+	"encoding/json"
 
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -11,49 +12,71 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-var _ Operation = Delegate{}
-
-type Delegate struct {
+type DelegateParam struct {
 	To     crypto.Address `json:"to"`
 	Amount types.Currency `json:"amount"`
 }
 
-func (o Delegate) Check(store *store.Store, sender crypto.Address) uint32 {
-	if bytes.Equal(o.To, sender) {
-		return code.TxCodeSelfTransaction
+func parseDelegateParam(raw []byte) (DelegateParam, error) {
+	var param DelegateParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
 	}
-	balance := store.GetBalance(sender)
-	if balance.LessThan(&o.Amount) {
-		return code.TxCodeNotEnoughBalance
-	}
-	delegate := store.GetDelegate(sender)
-	if delegate != nil && !bytes.Equal(delegate.Delegatee, o.To) {
-		return code.TxCodeMultipleDelegates
-	}
-	stake := store.GetStake(o.To)
-	if stake == nil || stake.Amount.Equals(zero) {
-		return code.TxCodeNoStake
-	}
-	return code.TxCodeOK
+	return param, nil
 }
 
-func (o Delegate) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+func CheckDelegate(t Tx) (uint32, string) {
+	txParam, err := parseDelegateParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
-	balance := store.GetBalance(sender)
-	balance.Sub(&o.Amount)
-	delegate := store.GetDelegate(sender)
+
+	if len(txParam.To) != crypto.AddressSize {
+		return code.TxCodeBadParam, "wrong recipient address size"
+	}
+	if bytes.Equal(txParam.To, t.Sender) {
+		return code.TxCodeSelfTransaction, "tried to delegate to self"
+	}
+	return code.TxCodeOK, "ok"
+}
+
+func ExecuteDelegate(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+	txParam, err := parseDelegateParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	balance := store.GetBalance(t.Sender)
+	if balance.LessThan(&txParam.Amount) {
+		return code.TxCodeNotEnoughBalance, "not enough balance", nil
+	}
+	balance.Sub(&txParam.Amount)
+
+	stake := store.GetStake(txParam.To)
+	if stake == nil || stake.Amount.Equals(zero) {
+		return code.TxCodeNoStake, "no stake", nil
+	}
+
+	delegate := store.GetDelegate(t.Sender)
 	if delegate == nil {
 		delegate = &types.Delegate{
-			Delegatee: o.To,
-			Amount:    o.Amount,
+			Delegatee: txParam.To,
+			Amount:    txParam.Amount,
 		}
+	} else if bytes.Equal(delegate.Delegatee, txParam.To) {
+		delegate.Amount.Add(&txParam.Amount)
 	} else {
-		delegate.Amount.Add(&o.Amount)
+		return code.TxCodeMultipleDelegates, "multiple delegate", nil
 	}
-	store.SetBalance(sender, balance)
-	store.SetDelegate(sender, delegate)
-	// TODO Update delegation state
-	return code.TxCodeOK, nil
+	if err := store.SetDelegate(t.Sender, delegate); err != nil {
+		switch err {
+		case code.TxErrNoStake:
+			return code.TxCodeNoStake, err.Error(), nil
+		default:
+			return code.TxCodeUnknown, err.Error(), nil
+		}
+	}
+	store.SetBalance(t.Sender, balance)
+	return code.TxCodeOK, "ok", nil
 }

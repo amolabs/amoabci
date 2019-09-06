@@ -716,39 +716,86 @@ func TestNonValidWithdraw(t *testing.T) {
 }
 
 func TestValidDelegate(t *testing.T) {
-	s := getTestStore()
-	op := Delegate{
-		Amount: *new(types.Currency).Set(500),
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(alice.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+	s.SetBalanceUint64(bob.addr, 1000)
+
+	// target
+	param := DelegateParam{
+		Amount: *new(types.Currency).Set(1000),
 		To:     alice.addr,
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("delegate", "bob", payload)
+
+	// test
+	rc, _ := CheckDelegate(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteDelegate(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, new(types.Currency).Set(1000), &s.GetDelegate(bob.addr).Amount)
 }
 
 func TestNonValidDelegate(t *testing.T) {
-	s := getTestStore()
-	STop := Delegate{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(alice.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(eve.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+	s.SetBalanceUint64(alice.addr, 1000)
+	s.SetBalanceUint64(bob.addr, 1000)
+
+	// test
+	payload, _ := json.Marshal(DelegateParam{
 		Amount: *new(types.Currency).Set(500),
 		To:     eve.addr,
-	}
-	NEop := Delegate{
+	})
+	t1 := makeTestTx("delegate", "eve", payload)
+	rc, _ := CheckDelegate(t1)
+	assert.Equal(t, code.TxCodeSelfTransaction, rc)
+
+	payload, _ = json.Marshal(DelegateParam{
 		Amount: *new(types.Currency).Set(500),
 		To:     alice.addr,
-	}
-	ADop := Delegate{
+	})
+	t1 = makeTestTx("delegate", "eve", payload)
+	rc, _, _ = ExecuteDelegate(t1, s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	t1 = makeTestTx("delegate", "bob", payload)
+	rc, _, _ = ExecuteDelegate(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	payload, _ = json.Marshal(DelegateParam{
 		Amount: *new(types.Currency).Set(500),
 		To:     eve.addr,
-	}
-	NSop := Delegate{
+	})
+	t1 = makeTestTx("delegate", "bob", payload)
+	rc, _, _ = ExecuteDelegate(t1, s)
+	assert.Equal(t, code.TxCodeMultipleDelegates, rc)
+
+	payload, _ = json.Marshal(DelegateParam{
 		Amount: *new(types.Currency).Set(500),
-		To:     eve.addr,
-	}
-	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeMultipleDelegates, ADop.Check(s, bob.addr))
-	assert.Equal(t, code.TxCodeNoStake, NSop.Check(s, alice.addr))
+		To:     bob.addr,
+	})
+	t1 = makeTestTx("delegate", "alice", payload)
+	rc, _, _ = ExecuteDelegate(t1, s)
+	assert.Equal(t, code.TxCodeNoStake, rc)
 }
 
 func TestValidRetract(t *testing.T) {

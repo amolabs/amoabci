@@ -3,7 +3,6 @@ package store
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"math/big"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -226,7 +225,7 @@ func (s Store) SetDelegate(holder crypto.Address, value *types.Delegate) error {
 	// before state update
 	es := s.GetEffStake(value.Delegatee)
 	if es == nil {
-		return errors.New("No stake for a delegator")
+		return code.TxErrNoStake
 	} else {
 		before := makeEffStakeKey(es.Amount, value.Delegatee)
 		if s.indexEffStake.Has(before) {

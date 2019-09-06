@@ -62,7 +62,6 @@ func ExecuteStake(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 		}
 	} else if bytes.Equal(stake.Validator[:], txParam.Validator[:]) {
 		stake.Amount.Add(&txParam.Amount)
-		copy(stake.Validator[:], txParam.Validator)
 	} else {
 		return code.TxCodePermissionDenied, "validator key mismatch", nil
 	}
