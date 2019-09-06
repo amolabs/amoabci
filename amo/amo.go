@@ -243,7 +243,7 @@ func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 	var info string
 	switch t.Type {
 	case "transfer":
-		resCode, info = tx.TransferCheck(t)
+		resCode, info = tx.CheckTransfer(t)
 	default:
 		resCode = op.Check(app.store, t.Sender)
 	}
@@ -275,7 +275,7 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 	var opTags []tm.KVPair
 	switch t.Type {
 	case "transfer":
-		resCode, info, opTags = tx.TransferExecute(app.store, t)
+		resCode, info, opTags = tx.ExecuteTransfer(t, app.store)
 	default:
 		resCode, opTags = op.Execute(app.store, t.Sender)
 	}

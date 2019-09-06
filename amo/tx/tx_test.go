@@ -47,6 +47,25 @@ var custody = []cmn.HexBytes{
 	[]byte{0x2, 0x2, 0x2, 0x2},
 }
 
+func makeTestTx(txType string, seed string, payload []byte) Tx {
+	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
+	addr := privKey.PubKey().Address()
+	trans := Tx{
+		Type:    txType,
+		Sender:  addr,
+		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
+		Payload: payload,
+	}
+	trans.Sign(privKey)
+	return trans
+}
+
+func makeTestAddress(seed string) crypto.Address {
+	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
+	addr := privKey.PubKey().Address()
+	return addr
+}
+
 func getTestStore() *store.Store {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 3000)
@@ -297,34 +316,58 @@ func TestNonValidRevoke(t *testing.T) {
 }
 
 func TestValidTransfer(t *testing.T) {
-	s := getTestStore()
-	op := TransferParam{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetBalanceUint64(makeTestAddress("alice"), 1230)
+
+	// target
+	param := TransferParam{
 		To:     bob.addr,
 		Amount: *new(types.Currency).Set(1230),
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	trans := makeTestTx("transfer", "alice", payload)
+
+	// test
+	rc, _ := CheckTransfer(trans)
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = ExecuteTransfer(trans, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidTransfer(t *testing.T) {
-	s := getTestStore()
-	BPop := TransferParam{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+
+	// target
+	param := TransferParam{
 		To:     []byte("bob"),
 		Amount: *new(types.Currency).Set(1230),
 	}
-	NEop := TransferParam{
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("transfer", "alice", payload)
+
+	param = TransferParam{
 		To:     bob.addr,
 		Amount: *new(types.Currency).Set(500),
 	}
-	STop := TransferParam{
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("transfer", "bob", payload)
+
+	param = TransferParam{
 		To:     eve.addr,
 		Amount: *new(types.Currency).Set(10),
 	}
-	assert.Equal(t, code.TxCodeBadParam, BPop.Check(s, alice.addr))
-	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, eve.addr))
-	c, _ := NEop.Execute(s, eve.addr)
-	assert.Equal(t, code.TxCodeNotEnoughBalance, c)
+	payload, _ = json.Marshal(param)
+	t3 := makeTestTx("transfer", "eve", payload)
+
+	// test
+	rc, _ := CheckTransfer(t1)
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	rc, _ = CheckTransfer(t2)
+	assert.Equal(t, code.TxCodeSelfTransaction, rc)
+	rc, _, _ = ExecuteTransfer(t3, s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 }
 
 func TestValidStake(t *testing.T) {

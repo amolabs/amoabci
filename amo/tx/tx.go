@@ -46,6 +46,17 @@ type TxToSign struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
+// TODO: delete me after refactoring is done
+type DummyOp struct{}
+
+func (dum DummyOp) Check(store *store.Store, sender crypto.Address) uint32 {
+	return 0
+}
+
+func (dum DummyOp) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
+	return 0, nil
+}
+
 // TODO: too clumsy prototype. improve it
 func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
 	var t Tx
@@ -60,7 +71,7 @@ func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
 	var payload interface{}
 	switch t.Type {
 	case "transfer": // remove this
-		payload = new(TransferParam)
+		payload = new(DummyOp)
 	case "stake":
 		payload = new(Stake)
 		isStake = true
