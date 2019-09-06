@@ -438,28 +438,65 @@ func TestNonValidRequest(t *testing.T) {
 }
 
 func TestValidRevoke(t *testing.T) {
-	s := getTestStore()
-	op := Revoke{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+		Custody: custody[0],
+		Exp:     time.Now().UTC().Add(24 * time.Hour),
+	})
+
+	// target
+	param := RevokeParam{
 		Grantee: bob.addr,
 		Target:  parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("revoke", "alice", payload)
+
+	// test
+	rc, _ := CheckRevoke(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = ExecuteRevoke(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidRevoke(t *testing.T) {
-	s := getTestStore()
-	PDop := Revoke{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+		Custody: custody[0],
+		Exp:     time.Now().UTC().Add(24 * time.Hour),
+	})
+
+	// target
+	param := RevokeParam{
 		Grantee: eve.addr,
 		Target:  parcelID[0],
 	}
-	TNop := Revoke{
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("revoke", "eve", payload)
+
+	param = RevokeParam{
 		Grantee: bob.addr,
 		Target:  parcelID[2],
 	}
-	assert.Equal(t, code.TxCodePermissionDenied, PDop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeParcelNotFound, TNop.Check(s, alice.addr))
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("revoke", "alice", payload)
+
+	// test
+	rc, _, _ := ExecuteRevoke(t1, s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+
+	rc, _, _ = ExecuteRevoke(t2, s)
+	assert.Equal(t, code.TxCodeParcelNotFound, rc)
 }
 
 func TestValidTransfer(t *testing.T) {

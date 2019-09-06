@@ -2,6 +2,7 @@ package tx
 
 import (
 	"bytes"
+	"encoding/json"
 
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -10,32 +11,53 @@ import (
 	"github.com/amolabs/amoabci/amo/store"
 )
 
-var _ Operation = Revoke{}
-
-type Revoke struct {
+type RevokeParam struct {
 	Grantee crypto.Address `json:"grantee"`
 	Target  tm.HexBytes    `json:"target"`
 }
 
-// TODO: fix: use GetUsage
-func (o Revoke) Check(store *store.Store, sender crypto.Address) uint32 {
-	parcel := store.GetParcel(o.Target)
-	if parcel == nil {
-		return code.TxCodeParcelNotFound
+func parseRevokeParam(raw []byte) (RevokeParam, error) {
+	var param RevokeParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
 	}
-	if !bytes.Equal(parcel.Owner, sender) {
-		return code.TxCodePermissionDenied
-	}
-	return code.TxCodeOK
+	return param, nil
 }
 
-func (o Revoke) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+// TODO: fix: use GetUsage
+func CheckRevoke(t Tx) (uint32, string) {
+	txParam, err := parseRevokeParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
-	store.DeleteUsage(o.Grantee, o.Target)
+
+	// TODO: check format
+
+	if len(txParam.Grantee) != crypto.AddressSize {
+		return code.TxCodeBadParam, "wrong grantee address size"
+	}
+
+	return code.TxCodeOK, "ok"
+}
+
+func ExecuteRevoke(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+	txParam, err := parseRevokeParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	parcel := store.GetParcel(txParam.Target)
+	if parcel == nil {
+		return code.TxCodeParcelNotFound, "parcel not found", nil
+	}
+	if !bytes.Equal(parcel.Owner, t.Sender) {
+		return code.TxCodePermissionDenied, "parcel not owned", nil
+	}
+
+	store.DeleteUsage(txParam.Grantee, txParam.Target)
 	tags := []tm.KVPair{
-		{Key: []byte("parcel.id"), Value: []byte(o.Target.String())},
+		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK, "ok", tags
 }

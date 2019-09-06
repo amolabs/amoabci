@@ -36,7 +36,7 @@ func CheckGrant(t Tx) (uint32, string) {
 	// TODO: check format
 
 	if len(txParam.Grantee) != crypto.AddressSize {
-		return code.TxCodeBadParam, "wrong recipient address size"
+		return code.TxCodeBadParam, "wrong grantee address size"
 	}
 
 	return code.TxCodeOK, "ok"
