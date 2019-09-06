@@ -88,8 +88,8 @@ func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
 		payload = new(Register)
 	case "request":
 		payload = new(Request)
-	case "cancel":
-		payload = new(Cancel)
+	case "cancel": // remove this
+		payload = new(DummyOp)
 	case "grant":
 		payload = new(Grant)
 	case "revoke":

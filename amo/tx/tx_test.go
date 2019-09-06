@@ -168,21 +168,48 @@ func TestTxSignature(t *testing.T) {
 }
 
 func TestValidCancel(t *testing.T) {
-	s := getTestStore()
-	op := Cancel{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+	s.SetRequest(bob.addr, parcelID[0], &types.RequestValue{
+		Payment: *new(types.Currency).Set(100),
+	})
+
+	// target
+	param := CancelParam{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("cancel", "bob", payload)
+
+	// test
+	rc, _ := CheckCancel(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteCancel(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidCancel(t *testing.T) {
-	s := getTestStore()
-	op := Cancel{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+
+	// target
+	param := CancelParam{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeRequestNotFound, op.Check(s, eve.addr))
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("cancel", "eve", payload)
+
+	// test
+	rc, _ := CheckCancel(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteCancel(t1, s)
+	assert.Equal(t, code.TxCodeRequestNotFound, rc)
 }
 
 func TestValidDiscard(t *testing.T) {
@@ -430,7 +457,7 @@ func TestValidWithdraw(t *testing.T) {
 }
 
 func TestNonValidWithdraw(t *testing.T) {
-	// prepare
+	// env
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))

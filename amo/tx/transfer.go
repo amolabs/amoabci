@@ -17,9 +17,9 @@ type TransferParam struct {
 	Amount types.Currency `json:"amount"`
 }
 
-func parseTransferParam(bytes []byte) (TransferParam, error) {
+func parseTransferParam(raw []byte) (TransferParam, error) {
 	var param TransferParam
-	err := json.Unmarshal(bytes, &param)
+	err := json.Unmarshal(raw, &param)
 	if err != nil {
 		return param, err
 	}
