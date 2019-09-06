@@ -3,7 +3,6 @@ package store
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"math/big"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -166,6 +165,7 @@ func (s Store) SetStake(holder crypto.Address, stake *types.Stake) error {
 			s.indexEffStake.Delete(before)
 		}
 	}
+
 	// update
 	if stake.Amount.Sign() == 0 {
 		s.stateDB.Delete(getStakeKey(holder))
@@ -218,27 +218,40 @@ func getDelegateKey(holder []byte) []byte {
 	return append(prefixDelegate, holder...)
 }
 
-func (s Store) SetDelegate(holder crypto.Address, value *types.Delegate) error {
-	b, err := json.Marshal(value)
+// Update data on stateDB, indexDelegator, indexEffStake
+func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) error {
+	b, err := json.Marshal(delegate)
 	if err != nil {
-		return err
+		return code.TxErrBadParam
 	}
 	// before state update
-	es := s.GetEffStake(value.Delegatee)
+	es := s.GetEffStake(delegate.Delegatee)
 	if es == nil {
-		return errors.New("No stake for a delegator")
-	} else {
-		before := makeEffStakeKey(es.Amount, value.Delegatee)
-		if s.indexEffStake.Has(before) {
-			s.indexEffStake.Delete(before)
-		}
+		return code.TxErrNoStake
 	}
-	// state update
-	s.stateDB.Set(getDelegateKey(holder), b)
-	// after state update
-	s.indexDelegator.Set(append(value.Delegatee, holder...), nil)
-	after := makeEffStakeKey(s.GetEffStake(value.Delegatee).Amount, value.Delegatee)
+
+	// make effStakeKey to find its corresponding value
+	before := makeEffStakeKey(es.Amount, delegate.Delegatee)
+	if s.indexEffStake.Has(before) {
+		s.indexEffStake.Delete(before)
+	}
+
+	// upadate
+	if delegate.Amount.Sign() == 0 {
+		s.stateDB.Delete(getDelegateKey(holder))
+		s.indexDelegator.Delete(append(delegate.Delegatee, holder...))
+	} else {
+		s.stateDB.Set(getDelegateKey(holder), b)
+		s.indexDelegator.Set(append(delegate.Delegatee, holder...), nil)
+	}
+
+	after := makeEffStakeKey(
+		s.GetEffStake(delegate.Delegatee).Amount,
+		delegate.Delegatee,
+	)
+
 	s.indexEffStake.Set(after, nil)
+
 	return nil
 }
 
