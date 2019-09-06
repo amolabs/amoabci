@@ -307,38 +307,97 @@ func TestNonValidRegister(t *testing.T) {
 }
 
 func TestValidRequest(t *testing.T) {
-	s := getTestStore()
-	op := Request{
-		Target:  parcelID[1],
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetBalanceUint64(alice.addr, 200)
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   bob.addr,
+		Custody: custody[0],
+	})
+
+	// target
+	param := RequestParam{
+		Target:  parcelID[0],
 		Payment: *new(types.Currency).Set(200),
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("request", "alice", payload)
+
+	// test
+	rc, _ := CheckRequest(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteRequest(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidRequest(t *testing.T) {
+	// env
 	s := getTestStore()
-	TNop := Request{
+
+	// target
+	param := RequestParam{
 		Target:  []byte{0x0, 0x0, 0x0, 0x0},
 		Payment: *new(types.Currency).Set(100),
 	}
-	TAop := Request{
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("request", "eve", payload)
+
+	// test
+	rc, _, _ := ExecuteRequest(t1, s)
+	assert.Equal(t, code.TxCodeParcelNotFound, rc)
+
+	// env
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+		Custody: custody[0],
+		Exp:     time.Now().UTC().Add(24 * time.Hour),
+	})
+
+	// target
+	param = RequestParam{
 		Target:  parcelID[0],
 		Payment: *new(types.Currency).Set(100),
 	}
-	STop := Request{
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("request", "bob", payload)
+
+	// test
+	rc, _, _ = ExecuteRequest(t2, s)
+	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
+
+	// env
+	s.SetParcel(parcelID[1], &types.ParcelValue{
+		Owner:   bob.addr,
+		Custody: custody[1],
+	})
+
+	// target
+	param = RequestParam{
 		Target:  parcelID[1],
 		Payment: *new(types.Currency).Set(100),
 	}
-	NBop := Request{
+	payload, _ = json.Marshal(param)
+	t3 := makeTestTx("request", "bob", payload)
+
+	// test
+	rc, _, _ = ExecuteRequest(t3, s)
+	assert.Equal(t, code.TxCodeSelfTransaction, rc)
+
+	// target
+	param = RequestParam{
 		Target:  parcelID[1],
 		Payment: *new(types.Currency).Set(100),
 	}
-	assert.Equal(t, code.TxCodeParcelNotFound, TNop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeAlreadyGranted, TAop.Check(s, bob.addr))
-	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, bob.addr))
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NBop.Check(s, eve.addr))
+	payload, _ = json.Marshal(param)
+	t4 := makeTestTx("request", "eve", payload)
+
+	// test
+	rc, _, _ = ExecuteRequest(t4, s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 }
 
 func TestValidRevoke(t *testing.T) {

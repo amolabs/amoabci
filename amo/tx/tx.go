@@ -86,8 +86,8 @@ func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
 		isStake = true
 	case "register": // remove this
 		payload = new(DummyOp)
-	case "request":
-		payload = new(Request)
+	case "request": // remove this
+		payload = new(DummyOp)
 	case "cancel": // remove this
 		payload = new(DummyOp)
 	case "grant":
