@@ -2,38 +2,55 @@ package tx
 
 import (
 	"bytes"
+	"encoding/json"
 
-	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
 )
 
-var _ Operation = Discard{}
-
-type Discard struct {
+type DiscardParam struct {
 	Target tm.HexBytes `json:"target"`
 }
 
-func (o Discard) Check(store *store.Store, sender crypto.Address) uint32 {
-	parcel := store.GetParcel(o.Target)
-	if parcel == nil {
-		return code.TxCodeParcelNotFound
+func parseDiscardParam(raw []byte) (DiscardParam, error) {
+	var param DiscardParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
 	}
-	if !bytes.Equal(parcel.Owner, sender) {
-		return code.TxCodePermissionDenied
-	}
-	return code.TxCodeOK
+	return param, nil
 }
 
-func (o Discard) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+func CheckDiscard(t Tx) (uint32, string) {
+	// TOOD: check format
+	//txParam, err := parseDiscardParam(t.Payload)
+	_, err := parseDiscardParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
-	store.DeleteParcel(o.Target)
+
+	return code.TxCodeOK, "ok"
+}
+
+func ExecuteDiscard(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+	txParam, err := parseDiscardParam(t.Payload)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	parcel := store.GetParcel(txParam.Target)
+	if parcel == nil {
+		return code.TxCodeParcelNotFound, "parcel not found", nil
+	}
+	if !bytes.Equal(parcel.Owner, t.Sender) {
+		return code.TxCodePermissionDenied, "parcel not owned", nil
+	}
+
+	store.DeleteParcel(txParam.Target)
 	tags := []tm.KVPair{
-		{Key: []byte("parcel.id"), Value: []byte(o.Target.String())},
+		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK, "ok", tags
 }

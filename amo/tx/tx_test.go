@@ -213,25 +213,54 @@ func TestNonValidCancel(t *testing.T) {
 }
 
 func TestValidDiscard(t *testing.T) {
-	s := getTestStore()
-	op := Discard{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+
+	// target
+	param := DiscardParam{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("discard", "alice", payload)
+
+	// test
+	rc, _ := CheckDiscard(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = ExecuteDiscard(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidDiscard(t *testing.T) {
-	s := getTestStore()
-	NEOp := Discard{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+
+	// target
+	param := DiscardParam{
 		[]byte{0xFF, 0xFF, 0xFF, 0xEE},
 	}
-	PDOp := Discard{
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("discard", "alice", payload)
+
+	param = DiscardParam{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeParcelNotFound, NEOp.Check(s, alice.addr))
-	assert.Equal(t, code.TxCodePermissionDenied, PDOp.Check(s, eve.addr))
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("discard", "eve", payload)
+
+	// test
+	rc, _, _ := ExecuteDiscard(t1, s)
+	assert.Equal(t, code.TxCodeParcelNotFound, rc)
+
+	rc, _, _ = ExecuteDiscard(t2, s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
 }
 
 func TestValidGrant(t *testing.T) {

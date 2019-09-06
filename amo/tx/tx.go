@@ -94,8 +94,8 @@ func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
 		payload = new(DummyOp)
 	case "revoke": // remove this
 		payload = new(DummyOp)
-	case "discard":
-		payload = new(Discard)
+	case "discard": // remove this
+		payload = new(DummyOp)
 	default:
 		return t, nil, false, tm.NewError("Invalid tx type: %v", t.Type)
 	}
