@@ -246,6 +246,18 @@ func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 		resCode, info = tx.CheckTransfer(t)
 	case "stake":
 		resCode, info = tx.CheckStake(t)
+	case "register":
+		resCode, info = tx.CheckRegister(t)
+	case "request":
+		resCode, info = tx.CheckRequest(t)
+	case "cancel":
+		resCode, info = tx.CheckCancel(t)
+	case "grant":
+		resCode, info = tx.CheckGrant(t)
+	case "revoke":
+		resCode, info = tx.CheckRevoke(t)
+	case "discard":
+		resCode, info = tx.CheckDiscard(t)
 	default:
 		resCode = op.Check(app.store, t.Sender)
 	}
@@ -280,6 +292,18 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 		resCode, info, opTags = tx.ExecuteTransfer(t, app.store)
 	case "stake":
 		resCode, info, opTags = tx.ExecuteStake(t, app.store)
+	case "register":
+		resCode, info, opTags = tx.ExecuteRegister(t, app.store)
+	case "request":
+		resCode, info, opTags = tx.ExecuteRequest(t, app.store)
+	case "cancel":
+		resCode, info, opTags = tx.ExecuteCancel(t, app.store)
+	case "grant":
+		resCode, info, opTags = tx.ExecuteGrant(t, app.store)
+	case "revoke":
+		resCode, info, opTags = tx.ExecuteRevoke(t, app.store)
+	case "discard":
+		resCode, info, opTags = tx.ExecuteDiscard(t, app.store)
 	default:
 		resCode, opTags = op.Execute(app.store, t.Sender)
 	}
