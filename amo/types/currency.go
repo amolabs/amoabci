@@ -14,6 +14,8 @@ const (
 	//oneAMO         = 0xDE0B6B3A7640000
 )
 
+var Zero = new(Currency).Set(0)
+
 // Currency uses big endian for compatibility to big.Int
 type Currency struct {
 	big.Int

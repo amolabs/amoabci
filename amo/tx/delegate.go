@@ -54,7 +54,7 @@ func ExecuteDelegate(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 	balance.Sub(&txParam.Amount)
 
 	stake := store.GetStake(txParam.To)
-	if stake == nil || stake.Amount.Equals(zero) {
+	if stake == nil || stake.Amount.Equals(types.Zero) {
 		return code.TxCodeNoStake, "no stake", nil
 	}
 

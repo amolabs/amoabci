@@ -15,8 +15,6 @@ type Retract struct {
 	Amount types.Currency `json:"amount"`
 }
 
-var zero = new(types.Currency).Set(0)
-
 func (o Retract) Check(store *store.Store, sender crypto.Address) uint32 {
 	delegate := store.GetDelegate(sender)
 	if delegate == nil {
