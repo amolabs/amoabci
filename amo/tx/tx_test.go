@@ -799,33 +799,72 @@ func TestNonValidDelegate(t *testing.T) {
 }
 
 func TestValidRetract(t *testing.T) {
-	s := getTestStore()
-	op := Retract{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(alice.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+	s.SetDelegate(bob.addr, &types.Delegate{
+		Delegatee: alice.addr,
+		Amount:    *new(types.Currency).Set(500),
+	})
+
+	// test
+	payload, _ := json.Marshal(RetractParam{
 		Amount: *new(types.Currency).Set(400),
-	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	})
+	t1 := makeTestTx("retract", "bob", payload)
+
+	rc, _ := CheckRetract(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteRetract(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, new(types.Currency).Set(100), &s.GetDelegate(bob.addr).Amount)
 
-	op = Retract{
+	// test
+	payload, _ = json.Marshal(RetractParam{
 		Amount: *new(types.Currency).Set(100),
-	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ = op.Execute(s, bob.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	})
+	t1 = makeTestTx("retract", "bob", payload)
+
+	rc, _ = CheckRetract(t1)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteRetract(t1, s)
+	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, types.Zero, &s.GetDelegate(bob.addr).Amount)
 }
 
 func TestNonValidRetract(t *testing.T) {
-	s := getTestStore()
-	op := Retract{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(alice.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+	s.SetDelegate(bob.addr, &types.Delegate{
+		Delegatee: alice.addr,
+		Amount:    *new(types.Currency).Set(500),
+	})
+
+	payload, _ := json.Marshal(RetractParam{
 		Amount: *new(types.Currency).Set(500),
-	}
-	NEop := Retract{
-		Amount: *new(types.Currency).Set(1000),
-	}
-	assert.Equal(t, code.TxCodeDelegationNotExists, op.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, bob.addr))
+	})
+	t1 := makeTestTx("retract", "eve", payload)
+	t2 := makeTestTx("retract", "bob", payload)
+
+	rc, _, _ := ExecuteRetract(t1, s)
+	assert.Equal(t, code.TxCodeDelegateNotFound, rc)
+
+	rc, _, _ = ExecuteRetract(t2, s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = ExecuteRetract(t2, s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 }
