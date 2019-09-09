@@ -46,66 +46,17 @@ type TxToSign struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
-// TODO: delete me after refactoring is done
-type DummyOp struct{}
-
-func (dum DummyOp) Check(store *store.Store, sender crypto.Address) uint32 {
-	return 0
-}
-
-func (dum DummyOp) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	return 0, nil
-}
-
-// TODO: too clumsy prototype. improve it
-func ParseTx(txBytes []byte) (Tx, Operation, bool, error) {
+func ParseTx(txBytes []byte) (Tx, error) {
 	var t Tx
 
 	err := json.Unmarshal(txBytes, &t)
 	if err != nil {
-		return t, nil, false, err
+		return t, err
 	}
 
-	isStake := false
 	t.Type = strings.ToLower(t.Type)
-	var payload interface{}
-	switch t.Type {
-	case "transfer": // remove this
-		payload = new(DummyOp)
-	case "stake": // remove this
-		payload = new(DummyOp)
-		isStake = true
-	case "withdraw":
-		payload = new(DummyOp)
-		isStake = true
-	case "delegate":
-		payload = new(DummyOp)
-		isStake = true
-	case "retract":
-		payload = new(DummyOp)
-		isStake = true
-	case "register": // remove this
-		payload = new(DummyOp)
-	case "request": // remove this
-		payload = new(DummyOp)
-	case "cancel": // remove this
-		payload = new(DummyOp)
-	case "grant": // remove this
-		payload = new(DummyOp)
-	case "revoke": // remove this
-		payload = new(DummyOp)
-	case "discard": // remove this
-		payload = new(DummyOp)
-	default:
-		return t, nil, false, tm.NewError("Invalid tx type: %v", t.Type)
-	}
 
-	err = json.Unmarshal(t.Payload, &payload)
-	if err != nil {
-		return t, nil, false, err
-	}
-
-	return t, payload.(Operation), isStake, nil
+	return t, nil
 }
 
 func (t Tx) GetSigningBytes() []byte {

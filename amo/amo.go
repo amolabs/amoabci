@@ -223,7 +223,7 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 // - check signature
 // - check parameter format
 func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
-	t, op, _, err := tx.ParseTx(txBytes)
+	t, err := tx.ParseTx(txBytes)
 	if err != nil {
 		return abci.ResponseCheckTx{
 			Code:      code.TxCodeBadParam,
@@ -265,7 +265,8 @@ func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 	case "discard":
 		resCode, info = tx.CheckDiscard(t)
 	default:
-		resCode = op.Check(app.store, t.Sender)
+		resCode = code.TxCodeUnknown
+		info = "unknown transaction"
 	}
 
 	return abci.ResponseCheckTx{
@@ -276,7 +277,7 @@ func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 }
 
 func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
-	t, op, isStake, err := tx.ParseTx(txBytes)
+	t, err := tx.ParseTx(txBytes)
 	if err != nil {
 		return abci.ResponseDeliverTx{
 			Code:      code.TxCodeBadParam,
@@ -317,12 +318,15 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 	case "discard":
 		resCode, info, opTags = tx.ExecuteDiscard(t, app.store)
 	default:
-		resCode, opTags = op.Execute(app.store, t.Sender)
+		resCode = code.TxCodeUnknown
+		info = "unknown transaction"
+		opTags = nil
 	}
 
 	// if the operation was not successful, change nothing
 	if resCode == code.TxCodeOK {
-		if isStake {
+		if t.Type == "stake" || t.Type == "withdraw" ||
+			t.Type == "delegate" || t.Type == "retract" {
 			app.doValUpdate = true
 		}
 		app.state.Walk++

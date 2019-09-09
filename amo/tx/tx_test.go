@@ -138,7 +138,7 @@ func TestParseTx(t *testing.T) {
 			SigBytes: sigbytes,
 		},
 	}
-	parsedTx, _, _, err := ParseTx(bytes)
+	parsedTx, err := ParseTx(bytes)
 	assert.NoError(t, err)
 	assert.Equal(t, exptected, parsedTx)
 }
