@@ -39,7 +39,7 @@ const (
 )
 
 // Output are sorted by voting power.
-func valUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
+func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
 	sort.Slice(oldVals, func(i, j int) bool {
 		return bytes.Compare(oldVals[i].PubKey.Data, oldVals[j].PubKey.Data) < 0
 	})
@@ -239,38 +239,10 @@ func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 		}
 	}
 
-	var resCode uint32
-	var info string
-	switch t.Type {
-	case "transfer":
-		resCode, info = tx.CheckTransfer(t)
-	case "stake":
-		resCode, info = tx.CheckStake(t)
-	case "withdraw":
-		resCode, info = tx.CheckWithdraw(t)
-	case "delegate":
-		resCode, info = tx.CheckDelegate(t)
-	case "retract":
-		resCode, info = tx.CheckRetract(t)
-	case "register":
-		resCode, info = tx.CheckRegister(t)
-	case "request":
-		resCode, info = tx.CheckRequest(t)
-	case "cancel":
-		resCode, info = tx.CheckCancel(t)
-	case "grant":
-		resCode, info = tx.CheckGrant(t)
-	case "revoke":
-		resCode, info = tx.CheckRevoke(t)
-	case "discard":
-		resCode, info = tx.CheckDiscard(t)
-	default:
-		resCode = code.TxCodeUnknown
-		info = "unknown transaction"
-	}
+	rc, info := t.Check()
 
 	return abci.ResponseCheckTx{
-		Code:      resCode,
+		Code:      rc,
 		Info:      info,
 		Codespace: "amo",
 	}
@@ -291,52 +263,20 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 		{Key: []byte("tx.sender"), Value: []byte(t.Sender.String())},
 	}
 
-	var resCode uint32
-	var info string
-	var opTags []tm.KVPair
-	switch t.Type {
-	case "transfer":
-		resCode, info, opTags = tx.ExecuteTransfer(t, app.store)
-	case "stake":
-		resCode, info, opTags = tx.ExecuteStake(t, app.store)
-	case "withdraw":
-		resCode, info, opTags = tx.ExecuteWithdraw(t, app.store)
-	case "delegate":
-		resCode, info, opTags = tx.ExecuteDelegate(t, app.store)
-	case "retract":
-		resCode, info, opTags = tx.ExecuteRetract(t, app.store)
-	case "register":
-		resCode, info, opTags = tx.ExecuteRegister(t, app.store)
-	case "request":
-		resCode, info, opTags = tx.ExecuteRequest(t, app.store)
-	case "cancel":
-		resCode, info, opTags = tx.ExecuteCancel(t, app.store)
-	case "grant":
-		resCode, info, opTags = tx.ExecuteGrant(t, app.store)
-	case "revoke":
-		resCode, info, opTags = tx.ExecuteRevoke(t, app.store)
-	case "discard":
-		resCode, info, opTags = tx.ExecuteDiscard(t, app.store)
-	default:
-		resCode = code.TxCodeUnknown
-		info = "unknown transaction"
-		opTags = nil
-	}
+	rc, info, opTags := t.Execute(app.store)
 
 	// if the operation was not successful, change nothing
-	if resCode == code.TxCodeOK {
+	if rc == code.TxCodeOK {
 		if t.Type == "stake" || t.Type == "withdraw" ||
 			t.Type == "delegate" || t.Type == "retract" {
 			app.doValUpdate = true
 		}
 		app.state.Walk++
 		tags = append(tags, opTags...)
-	} else {
-		tags = nil
 	}
 
 	return abci.ResponseDeliverTx{
-		Code:      resCode,
+		Code:      rc,
 		Info:      info,
 		Tags:      tags,
 		Codespace: "amo",
@@ -348,7 +288,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	if app.doValUpdate {
 		app.doValUpdate = false
 		newVals := app.store.GetValidators(maxValidators)
-		res.ValidatorUpdates = valUpdates(app.oldVals, newVals)
+		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
 	}
 	// update appHash
 	// TODO: use merkle tree

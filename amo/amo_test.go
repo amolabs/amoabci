@@ -397,7 +397,7 @@ func TestFuncValUpdates(t *testing.T) {
 	unew := abci.ValidatorUpdates{val22, val3}
 	assert.Equal(t, 3, len(uold))
 	assert.Equal(t, 2, len(unew))
-	updates := valUpdates(uold, unew)
+	updates := findValUpdates(uold, unew)
 	assert.Equal(t, 3, len(updates))
 	assert.Equal(t, int64(22), updates[0].Power)
 	assert.Equal(t, int64(3), updates[1].Power)

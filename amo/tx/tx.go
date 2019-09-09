@@ -9,6 +9,7 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
 
+	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/crypto/p256"
 )
@@ -101,15 +102,72 @@ func (t *Tx) Verify() bool {
 	return t.Signature.PubKey.VerifyBytes(sb, t.Signature.SigBytes)
 }
 
-// TODO: not used any more. remove this
-func (t Tx) IsValid() bool {
-	if len(t.Nonce) != NonceSize {
-		return false
+func (t Tx) Check() (uint32, string) {
+	var rc uint32
+	var info string
+
+	switch t.Type {
+	case "transfer":
+		rc, info = CheckTransfer(t)
+	case "stake":
+		rc, info = CheckStake(t)
+	case "withdraw":
+		rc, info = CheckWithdraw(t)
+	case "delegate":
+		rc, info = CheckDelegate(t)
+	case "retract":
+		rc, info = CheckRetract(t)
+	case "register":
+		rc, info = CheckRegister(t)
+	case "request":
+		rc, info = CheckRequest(t)
+	case "cancel":
+		rc, info = CheckCancel(t)
+	case "grant":
+		rc, info = CheckGrant(t)
+	case "revoke":
+		rc, info = CheckRevoke(t)
+	case "discard":
+		rc, info = CheckDiscard(t)
+	default:
+		rc = code.TxCodeUnknown
+		info = "unknown transaction type"
 	}
-	return true
+	return rc, info
 }
 
-type Operation interface {
-	Check(store *store.Store, sender crypto.Address) uint32
-	Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair)
+func (t Tx) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+	var rc uint32
+	var info string
+	var tags []tm.KVPair
+	switch t.Type {
+	case "transfer":
+		rc, info, tags = ExecuteTransfer(t, store)
+	case "stake":
+		rc, info, tags = ExecuteStake(t, store)
+	case "withdraw":
+		rc, info, tags = ExecuteWithdraw(t, store)
+	case "delegate":
+		rc, info, tags = ExecuteDelegate(t, store)
+	case "retract":
+		rc, info, tags = ExecuteRetract(t, store)
+	case "register":
+		rc, info, tags = ExecuteRegister(t, store)
+	case "request":
+		rc, info, tags = ExecuteRequest(t, store)
+	case "cancel":
+		rc, info, tags = ExecuteCancel(t, store)
+	case "grant":
+		rc, info, tags = ExecuteGrant(t, store)
+	case "revoke":
+		rc, info, tags = ExecuteRevoke(t, store)
+	case "discard":
+		rc, info, tags = ExecuteDiscard(t, store)
+	default:
+		rc = code.TxCodeUnknown
+		info = "unknown transaction type"
+		tags = nil
+	}
+
+	return rc, info, tags
 }
