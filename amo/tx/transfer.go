@@ -26,7 +26,14 @@ func parseTransferParam(raw []byte) (TransferParam, error) {
 	return param, nil
 }
 
-func CheckTransfer(t Tx) (uint32, string) {
+type TxTransfer struct {
+	TxBase
+	Param TransferParam `json:"-"`
+}
+
+var _ Tx = &TxTransfer{}
+
+func (t *TxTransfer) Check() (uint32, string) {
 	txParam, err := parseTransferParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
@@ -41,7 +48,7 @@ func CheckTransfer(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func ExecuteTransfer(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseTransferParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

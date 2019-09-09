@@ -128,19 +128,22 @@ func TestParseTx(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	exptected := &TxBase{
-		Type:    "transfer",
-		Sender:  sender,
-		Nonce:   nonce,
-		Payload: []byte(`{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}`),
-		Signature: Signature{
-			PubKey:   pubkey,
-			SigBytes: sigbytes,
+	expected := &TxTransfer{
+		TxBase{
+			Type:    "transfer",
+			Sender:  sender,
+			Nonce:   nonce,
+			Payload: []byte(`{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}`),
+			Signature: Signature{
+				PubKey:   pubkey,
+				SigBytes: sigbytes,
+			},
 		},
+		TransferParam{},
 	}
 	parsedTx, err := ParseTx(bytes)
 	assert.NoError(t, err)
-	assert.Equal(t, exptected, parsedTx)
+	assert.Equal(t, expected, parsedTx)
 }
 
 func TestTxSignature(t *testing.T) {

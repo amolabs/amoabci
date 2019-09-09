@@ -65,16 +65,23 @@ type TxToSign struct {
 }
 
 func ParseTx(txBytes []byte) (Tx, error) {
-	var t TxBase
+	var base TxBase
 
-	err := json.Unmarshal(txBytes, &t)
+	err := json.Unmarshal(txBytes, &base)
 	if err != nil {
-		return &t, err
+		return &base, err
 	}
 
-	t.Type = strings.ToLower(t.Type)
-
-	return &t, nil
+	base.Type = strings.ToLower(base.Type)
+	var t Tx
+	switch base.Type {
+	case "transfer":
+		t = new(TxTransfer)
+		err = json.Unmarshal(txBytes, t)
+		return t, nil
+	default:
+		return &base, nil
+	}
 }
 
 // accessors
@@ -142,8 +149,6 @@ func (t *TxBase) Check() (uint32, string) {
 	var info string
 
 	switch t.Type {
-	case "transfer":
-		rc, info = CheckTransfer(t)
 	case "stake":
 		rc, info = CheckStake(t)
 	case "withdraw":
@@ -176,8 +181,6 @@ func (t *TxBase) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	var info string
 	var tags []tm.KVPair
 	switch t.Type {
-	case "transfer":
-		rc, info, tags = ExecuteTransfer(t, store)
 	case "stake":
 		rc, info, tags = ExecuteStake(t, store)
 	case "withdraw":
