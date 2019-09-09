@@ -28,7 +28,7 @@ func parseGrantParam(raw []byte) (GrantParam, error) {
 }
 
 func CheckGrant(t Tx) (uint32, string) {
-	txParam, err := parseGrantParam(t.Payload)
+	txParam, err := parseGrantParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -43,7 +43,7 @@ func CheckGrant(t Tx) (uint32, string) {
 }
 
 func ExecuteGrant(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
-	txParam, err := parseGrantParam(t.Payload)
+	txParam, err := parseGrantParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
@@ -52,7 +52,7 @@ func ExecuteGrant(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
-	if !bytes.Equal(parcel.Owner, t.Sender) {
+	if !bytes.Equal(parcel.Owner, t.GetSender()) {
 		return code.TxCodePermissionDenied, "parcel not owned", nil
 	}
 	if store.GetUsage(txParam.Grantee, txParam.Target) != nil {
@@ -64,9 +64,9 @@ func ExecuteGrant(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 	}
 
 	store.DeleteRequest(txParam.Grantee, txParam.Target)
-	balance := store.GetBalance(t.Sender)
+	balance := store.GetBalance(t.GetSender())
 	balance.Add(&request.Payment)
-	store.SetBalance(t.Sender, balance)
+	store.SetBalance(t.GetSender(), balance)
 	usage := types.UsageValue{
 		Custody: txParam.Custody,
 	}

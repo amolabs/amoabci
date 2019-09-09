@@ -32,7 +32,23 @@ func (s Signature) IsValid() bool {
 		c.IsOnCurve(new(big.Int).SetBytes(s.PubKey[1:33]), new(big.Int).SetBytes(s.PubKey[33:]))
 }
 
-type Tx struct {
+type Tx interface {
+	GetType() string
+	GetSender() crypto.Address
+	getNonce() tm.HexBytes
+	getPayload() json.RawMessage
+	getSignature() Signature
+	getSigningBytes() []byte
+
+	Sign(privKey crypto.PrivKey) error
+	Verify() bool
+	Check() (uint32, string)
+	Execute(store *store.Store) (uint32, string, []tm.KVPair)
+}
+
+var _ Tx = &TxBase{}
+
+type TxBase struct {
 	Type      string          `json:"type"`
 	Sender    crypto.Address  `json:"sender"`
 	Nonce     tm.HexBytes     `json:"nonce"`
@@ -41,47 +57,66 @@ type Tx struct {
 }
 
 type TxToSign struct {
-	Type    string          `json:"type"`
-	Sender  crypto.Address  `json:"sender"`
-	Nonce   tm.HexBytes     `json:"nonce"`
-	Payload json.RawMessage `json:"payload"`
+	Type      string          `json:"type"`
+	Sender    crypto.Address  `json:"sender"`
+	Nonce     tm.HexBytes     `json:"nonce"`
+	Payload   json.RawMessage `json:"payload"`
+	Signature Signature       `json:"-"`
 }
 
 func ParseTx(txBytes []byte) (Tx, error) {
-	var t Tx
+	var t TxBase
 
 	err := json.Unmarshal(txBytes, &t)
 	if err != nil {
-		return t, err
+		return &t, err
 	}
 
 	t.Type = strings.ToLower(t.Type)
 
-	return t, nil
+	return &t, nil
 }
 
-func (t Tx) GetSigningBytes() []byte {
-	tts := TxToSign{
-		Type:    t.Type,
-		Sender:  t.Sender,
-		Nonce:   t.Nonce,
-		Payload: t.Payload,
-	}
-	b, err := json.Marshal(tts)
+// accessors
+
+func (t *TxBase) GetType() string {
+	return t.Type
+}
+
+func (t *TxBase) GetSender() crypto.Address {
+	return t.Sender
+}
+
+func (t *TxBase) getNonce() tm.HexBytes {
+	return t.Nonce
+}
+
+func (t *TxBase) getPayload() json.RawMessage {
+	return t.Payload
+}
+
+func (t *TxBase) getSignature() Signature {
+	return t.Signature
+}
+
+func (t *TxBase) getSigningBytes() []byte {
+	var tts TxToSign = TxToSign(*t)
+	b, _ := json.Marshal(tts)
+	/* XXX: nothing to do here
 	if err != nil {
-		// XXX: nothing to do here
 		return b
 	}
+	*/
 	return b
 }
 
-func (t *Tx) Sign(privKey crypto.PrivKey) error {
+func (t *TxBase) Sign(privKey crypto.PrivKey) error {
 	pubKey := privKey.PubKey()
 	p256PubKey, ok := pubKey.(p256.PubKeyP256)
 	if !ok {
 		return tm.NewError("Fail to convert public key to p256 public key")
 	}
-	sb := t.GetSigningBytes()
+	sb := t.getSigningBytes()
 	sig, err := privKey.Sign(sb)
 	if err != nil {
 		return err
@@ -94,15 +129,15 @@ func (t *Tx) Sign(privKey crypto.PrivKey) error {
 	return nil
 }
 
-func (t *Tx) Verify() bool {
+func (t *TxBase) Verify() bool {
 	if len(t.Signature.SigBytes) != p256.SignatureSize {
 		return false
 	}
-	sb := t.GetSigningBytes()
+	sb := t.getSigningBytes()
 	return t.Signature.PubKey.VerifyBytes(sb, t.Signature.SigBytes)
 }
 
-func (t Tx) Check() (uint32, string) {
+func (t *TxBase) Check() (uint32, string) {
 	var rc uint32
 	var info string
 
@@ -136,7 +171,7 @@ func (t Tx) Check() (uint32, string) {
 	return rc, info
 }
 
-func (t Tx) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxBase) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	var rc uint32
 	var info string
 	var tags []tm.KVPair

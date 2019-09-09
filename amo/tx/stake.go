@@ -27,7 +27,7 @@ func parseStakeParam(raw []byte) (StakeParam, error) {
 }
 
 func CheckStake(t Tx) (uint32, string) {
-	txParam, err := parseStakeParam(t.Payload)
+	txParam, err := parseStakeParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -41,18 +41,18 @@ func CheckStake(t Tx) (uint32, string) {
 }
 
 func ExecuteStake(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
-	txParam, err := parseStakeParam(t.Payload)
+	txParam, err := parseStakeParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	balance := store.GetBalance(t.Sender)
+	balance := store.GetBalance(t.GetSender())
 	if balance.LessThan(&txParam.Amount) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 
 	balance.Sub(&txParam.Amount)
-	stake := store.GetStake(t.Sender)
+	stake := store.GetStake(t.GetSender())
 	if stake == nil {
 		var k ed25519.PubKeyEd25519
 		copy(k[:], txParam.Validator)
@@ -65,7 +65,7 @@ func ExecuteStake(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 	} else {
 		return code.TxCodePermissionDenied, "validator key mismatch", nil
 	}
-	if err := store.SetStake(t.Sender, stake); err != nil {
+	if err := store.SetStake(t.GetSender(), stake); err != nil {
 		switch err {
 		case code.TxErrBadParam:
 			return code.TxCodeBadParam, err.Error(), nil
@@ -79,6 +79,6 @@ func ExecuteStake(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 			return code.TxCodeUnknown, err.Error(), nil
 		}
 	}
-	store.SetBalance(t.Sender, balance)
+	store.SetBalance(t.GetSender(), balance)
 	return code.TxCodeOK, "ok", nil
 }

@@ -27,7 +27,7 @@ func parseDelegateParam(raw []byte) (DelegateParam, error) {
 }
 
 func CheckDelegate(t Tx) (uint32, string) {
-	txParam, err := parseDelegateParam(t.Payload)
+	txParam, err := parseDelegateParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -35,19 +35,19 @@ func CheckDelegate(t Tx) (uint32, string) {
 	if len(txParam.To) != crypto.AddressSize {
 		return code.TxCodeBadParam, "wrong recipient address size"
 	}
-	if bytes.Equal(txParam.To, t.Sender) {
+	if bytes.Equal(txParam.To, t.GetSender()) {
 		return code.TxCodeSelfTransaction, "tried to delegate to self"
 	}
 	return code.TxCodeOK, "ok"
 }
 
 func ExecuteDelegate(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
-	txParam, err := parseDelegateParam(t.Payload)
+	txParam, err := parseDelegateParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	balance := store.GetBalance(t.Sender)
+	balance := store.GetBalance(t.GetSender())
 	if balance.LessThan(&txParam.Amount) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
@@ -58,7 +58,7 @@ func ExecuteDelegate(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeNoStake, "no stake", nil
 	}
 
-	delegate := store.GetDelegate(t.Sender)
+	delegate := store.GetDelegate(t.GetSender())
 	if delegate == nil {
 		delegate = &types.Delegate{
 			Delegatee: txParam.To,
@@ -69,7 +69,7 @@ func ExecuteDelegate(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 	} else {
 		return code.TxCodeMultipleDelegates, "multiple delegate", nil
 	}
-	if err := store.SetDelegate(t.Sender, delegate); err != nil {
+	if err := store.SetDelegate(t.GetSender(), delegate); err != nil {
 		switch err {
 		case code.TxErrNoStake:
 			return code.TxCodeNoStake, err.Error(), nil
@@ -77,6 +77,6 @@ func ExecuteDelegate(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 			return code.TxCodeUnknown, err.Error(), nil
 		}
 	}
-	store.SetBalance(t.Sender, balance)
+	store.SetBalance(t.GetSender(), balance)
 	return code.TxCodeOK, "ok", nil
 }

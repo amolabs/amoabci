@@ -259,16 +259,16 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 	}
 
 	tags := []tm.KVPair{
-		{Key: []byte("tx.type"), Value: []byte(t.Type)},
-		{Key: []byte("tx.sender"), Value: []byte(t.Sender.String())},
+		{Key: []byte("tx.type"), Value: []byte(t.GetType())},
+		{Key: []byte("tx.sender"), Value: []byte(t.GetSender().String())},
 	}
 
 	rc, info, opTags := t.Execute(app.store)
 
 	// if the operation was not successful, change nothing
 	if rc == code.TxCodeOK {
-		if t.Type == "stake" || t.Type == "withdraw" ||
-			t.Type == "delegate" || t.Type == "retract" {
+		if t.GetType() == "stake" || t.GetType() == "withdraw" ||
+			t.GetType() == "delegate" || t.GetType() == "retract" {
 			app.doValUpdate = true
 		}
 		app.state.Walk++

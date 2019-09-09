@@ -27,7 +27,7 @@ func parseTransferParam(raw []byte) (TransferParam, error) {
 }
 
 func CheckTransfer(t Tx) (uint32, string) {
-	txParam, err := parseTransferParam(t.Payload)
+	txParam, err := parseTransferParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -35,26 +35,26 @@ func CheckTransfer(t Tx) (uint32, string) {
 	if len(txParam.To) != crypto.AddressSize {
 		return code.TxCodeBadParam, "wrong recipient address size"
 	}
-	if bytes.Equal(t.Sender, txParam.To) {
+	if bytes.Equal(t.GetSender(), txParam.To) {
 		return code.TxCodeSelfTransaction, "tried to transfer to self"
 	}
 	return code.TxCodeOK, "ok"
 }
 
 func ExecuteTransfer(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
-	txParam, err := parseTransferParam(t.Payload)
+	txParam, err := parseTransferParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	fromBalance := store.GetBalance(t.Sender)
+	fromBalance := store.GetBalance(t.GetSender())
 	if fromBalance.LessThan(&txParam.Amount) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 	toBalance := store.GetBalance(txParam.To)
 	fromBalance.Sub(&txParam.Amount)
 	toBalance.Add(&txParam.Amount)
-	store.SetBalance(t.Sender, fromBalance)
+	store.SetBalance(t.GetSender(), fromBalance)
 	store.SetBalance(txParam.To, toBalance)
 	return code.TxCodeOK, "ok", nil
 }

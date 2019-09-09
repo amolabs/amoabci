@@ -24,8 +24,8 @@ func parseCancelParam(raw []byte) (CancelParam, error) {
 
 func CheckCancel(t Tx) (uint32, string) {
 	// TODO: check parcel id format in the future
-	//txParam, err := parseCancelParam(t.Payload)
-	_, err := parseCancelParam(t.Payload)
+	//txParam, err := parseCancelParam(t.getPayload())
+	_, err := parseCancelParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -34,19 +34,19 @@ func CheckCancel(t Tx) (uint32, string) {
 }
 
 func ExecuteCancel(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
-	txParam, err := parseCancelParam(t.Payload)
+	txParam, err := parseCancelParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	request := store.GetRequest(t.Sender, txParam.Target)
+	request := store.GetRequest(t.GetSender(), txParam.Target)
 	if request == nil {
 		return code.TxCodeRequestNotFound, "request not found", nil
 	}
-	store.DeleteRequest(t.Sender, txParam.Target)
-	balance := store.GetBalance(t.Sender)
+	store.DeleteRequest(t.GetSender(), txParam.Target)
+	balance := store.GetBalance(t.GetSender())
 	balance.Add(&request.Payment)
-	store.SetBalance(t.Sender, balance)
+	store.SetBalance(t.GetSender(), balance)
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}

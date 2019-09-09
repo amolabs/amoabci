@@ -29,7 +29,7 @@ func parseRequestParam(raw []byte) (RequestParam, error) {
 func CheckRequest(t Tx) (uint32, string) {
 	// TOOD: check format
 	//txParam, err := parseRequestParam(t.Payload)
-	_, err := parseRequestParam(t.Payload)
+	_, err := parseRequestParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -38,7 +38,7 @@ func CheckRequest(t Tx) (uint32, string) {
 }
 
 func ExecuteRequest(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
-	txParam, err := parseRequestParam(t.Payload)
+	txParam, err := parseRequestParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
@@ -47,24 +47,24 @@ func ExecuteRequest(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
-	if store.GetUsage(t.Sender, txParam.Target) != nil {
+	if store.GetUsage(t.GetSender(), txParam.Target) != nil {
 		return code.TxCodeAlreadyGranted, "request already granted", nil
 	}
-	if store.GetBalance(t.Sender).LessThan(&txParam.Payment) {
+	if store.GetBalance(t.GetSender()).LessThan(&txParam.Payment) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
-	if bytes.Equal(parcel.Owner, t.Sender) {
+	if bytes.Equal(parcel.Owner, t.GetSender()) {
 		// add new code for this
 		return code.TxCodeSelfTransaction, "requesting own parcel", nil
 	}
 
-	balance := store.GetBalance(t.Sender)
+	balance := store.GetBalance(t.GetSender())
 	balance.Sub(&txParam.Payment)
-	store.SetBalance(t.Sender, balance)
+	store.SetBalance(t.GetSender(), balance)
 	request := types.RequestValue{
 		Payment: txParam.Payment,
 	}
-	store.SetRequest(t.Sender, txParam.Target, &request)
+	store.SetRequest(t.GetSender(), txParam.Target, &request)
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}

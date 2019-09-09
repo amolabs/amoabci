@@ -25,8 +25,8 @@ func parseDiscardParam(raw []byte) (DiscardParam, error) {
 
 func CheckDiscard(t Tx) (uint32, string) {
 	// TOOD: check format
-	//txParam, err := parseDiscardParam(t.Payload)
-	_, err := parseDiscardParam(t.Payload)
+	//txParam, err := parseDiscardParam(t.getPayload())
+	_, err := parseDiscardParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -35,7 +35,7 @@ func CheckDiscard(t Tx) (uint32, string) {
 }
 
 func ExecuteDiscard(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
-	txParam, err := parseDiscardParam(t.Payload)
+	txParam, err := parseDiscardParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
@@ -44,7 +44,7 @@ func ExecuteDiscard(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
-	if !bytes.Equal(parcel.Owner, t.Sender) {
+	if !bytes.Equal(parcel.Owner, t.GetSender()) {
 		return code.TxCodePermissionDenied, "parcel not owned", nil
 	}
 

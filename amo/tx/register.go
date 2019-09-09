@@ -27,8 +27,8 @@ func parseRegisterParam(raw []byte) (RegisterParam, error) {
 
 func CheckRegister(t Tx) (uint32, string) {
 	// TOOD: check format
-	//txParam, err := parseRegisterParam(t.Payload)
-	_, err := parseRegisterParam(t.Payload)
+	//txParam, err := parseRegisterParam(t.getPayload())
+	_, err := parseRegisterParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -37,7 +37,7 @@ func CheckRegister(t Tx) (uint32, string) {
 }
 
 func ExecuteRegister(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
-	txParam, err := parseRegisterParam(t.Payload)
+	txParam, err := parseRegisterParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
@@ -47,13 +47,13 @@ func ExecuteRegister(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 	}
 
 	parcel := types.ParcelValue{
-		Owner:   t.Sender,
+		Owner:   t.GetSender(),
 		Custody: txParam.Custody,
 	}
 	store.SetParcel(txParam.Target, &parcel)
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
-		{Key: []byte("parcel.owner"), Value: t.Sender},
+		{Key: []byte("parcel.owner"), Value: t.GetSender()},
 	}
 	return code.TxCodeOK, "ok", tags
 }

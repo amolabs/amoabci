@@ -27,7 +27,7 @@ func parseRevokeParam(raw []byte) (RevokeParam, error) {
 
 // TODO: fix: use GetUsage
 func CheckRevoke(t Tx) (uint32, string) {
-	txParam, err := parseRevokeParam(t.Payload)
+	txParam, err := parseRevokeParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -42,7 +42,7 @@ func CheckRevoke(t Tx) (uint32, string) {
 }
 
 func ExecuteRevoke(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
-	txParam, err := parseRevokeParam(t.Payload)
+	txParam, err := parseRevokeParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
@@ -51,7 +51,7 @@ func ExecuteRevoke(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
-	if !bytes.Equal(parcel.Owner, t.Sender) {
+	if !bytes.Equal(parcel.Owner, t.GetSender()) {
 		return code.TxCodePermissionDenied, "parcel not owned", nil
 	}
 

@@ -24,7 +24,7 @@ func parseRetractParam(raw []byte) (RetractParam, error) {
 }
 
 func CheckRetract(t Tx) (uint32, string) {
-	_, err := parseRetractParam(t.Payload)
+	_, err := parseRetractParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -33,12 +33,12 @@ func CheckRetract(t Tx) (uint32, string) {
 }
 
 func ExecuteRetract(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
-	txParam, err := parseRetractParam(t.Payload)
+	txParam, err := parseRetractParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	delegate := store.GetDelegate(t.Sender)
+	delegate := store.GetDelegate(t.GetSender())
 	if delegate == nil {
 		return code.TxCodeDelegateNotFound, "delegate not found", nil
 	}
@@ -47,9 +47,9 @@ func ExecuteRetract(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
 	}
 
 	delegate.Amount.Sub(&txParam.Amount)
-	store.SetDelegate(t.Sender, delegate)
-	balance := store.GetBalance(t.Sender)
+	store.SetDelegate(t.GetSender(), delegate)
+	balance := store.GetBalance(t.GetSender())
 	balance.Add(&txParam.Amount)
-	store.SetBalance(t.Sender, balance)
+	store.SetBalance(t.GetSender(), balance)
 	return code.TxCodeOK, "ok", nil
 }

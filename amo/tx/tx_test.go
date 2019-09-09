@@ -50,7 +50,7 @@ var custody = []cmn.HexBytes{
 func makeTestTx(txType string, seed string, payload []byte) Tx {
 	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
 	addr := privKey.PubKey().Address()
-	trans := Tx{
+	trans := &TxBase{
 		Type:    txType,
 		Sender:  addr,
 		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
@@ -128,7 +128,7 @@ func TestParseTx(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	exptected := Tx{
+	exptected := &TxBase{
 		Type:    "transfer",
 		Sender:  sender,
 		Nonce:   nonce,
@@ -151,20 +151,20 @@ func TestTxSignature(t *testing.T) {
 		Amount: *new(types.Currency).Set(1000),
 	}
 	b, _ := json.Marshal(transfer)
-	message := Tx{
+	trnx := &TxBase{
 		Type:    "transfer",
 		Payload: b,
 		Sender:  from.PubKey().Address(),
 		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
 	}
-	sb := message.GetSigningBytes()
+	sb := trnx.getSigningBytes()
 	_sb := `{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","nonce":"12345678","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}}`
 	assert.Equal(t, _sb, string(sb))
-	err := message.Sign(from)
+	err := trnx.Sign(from)
 	if err != nil {
 		panic(err)
 	}
-	assert.True(t, message.Verify())
+	assert.True(t, trnx.Verify())
 }
 
 func TestValidCancel(t *testing.T) {
