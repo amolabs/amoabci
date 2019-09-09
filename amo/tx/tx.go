@@ -4,7 +4,6 @@ import (
 	"crypto/elliptic"
 	"encoding/json"
 	"math/big"
-	"strings"
 
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -64,24 +63,30 @@ type TxToSign struct {
 	Signature Signature       `json:"-"`
 }
 
+func classifyTx(base TxBase) Tx {
+	var t Tx
+	switch base.Type {
+	case "transfer":
+		param, _ := parseTransferParam(base.Payload)
+		t = &TxTransfer{
+			TxBase: base,
+			Param:  param,
+		}
+	default:
+		t = &base
+	}
+	return t
+}
+
 func ParseTx(txBytes []byte) (Tx, error) {
 	var base TxBase
 
 	err := json.Unmarshal(txBytes, &base)
 	if err != nil {
-		return &base, err
+		return nil, err
 	}
 
-	base.Type = strings.ToLower(base.Type)
-	var t Tx
-	switch base.Type {
-	case "transfer":
-		t = new(TxTransfer)
-		err = json.Unmarshal(txBytes, t)
-		return t, nil
-	default:
-		return &base, nil
-	}
+	return classifyTx(base), nil
 }
 
 // accessors

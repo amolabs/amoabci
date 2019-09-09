@@ -50,14 +50,14 @@ var custody = []cmn.HexBytes{
 func makeTestTx(txType string, seed string, payload []byte) Tx {
 	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
 	addr := privKey.PubKey().Address()
-	trans := &TxBase{
+	trans := TxBase{
 		Type:    txType,
 		Sender:  addr,
 		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
 		Payload: payload,
 	}
 	trans.Sign(privKey)
-	return trans
+	return classifyTx(trans)
 }
 
 func makeTestAddress(seed string) crypto.Address {
@@ -128,6 +128,13 @@ func TestParseTx(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
+	var to crypto.Address
+	err = json.Unmarshal(
+		[]byte(`"218B954DF74E7267E72541CE99AB9F49C410DB96"`),
+		&to,
+	)
+	assert.NoError(t, err)
+
 	expected := &TxTransfer{
 		TxBase{
 			Type:    "transfer",
@@ -139,7 +146,10 @@ func TestParseTx(t *testing.T) {
 				SigBytes: sigbytes,
 			},
 		},
-		TransferParam{},
+		TransferParam{
+			To:     to,
+			Amount: *new(types.Currency).Set(1000),
+		},
 	}
 	parsedTx, err := ParseTx(bytes)
 	assert.NoError(t, err)
@@ -545,9 +555,9 @@ func TestValidTransfer(t *testing.T) {
 	trans := makeTestTx("transfer", "alice", payload)
 
 	// test
-	rc, _ := CheckTransfer(trans)
+	rc, _ := trans.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
-	rc, _, _ = ExecuteTransfer(trans, s)
+	rc, _, _ = trans.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 }
 
@@ -578,11 +588,11 @@ func TestNonValidTransfer(t *testing.T) {
 	t3 := makeTestTx("transfer", "eve", payload)
 
 	// test
-	rc, _ := CheckTransfer(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeBadParam, rc)
-	rc, _ = CheckTransfer(t2)
+	rc, _ = t2.Check()
 	assert.Equal(t, code.TxCodeSelfTransaction, rc)
-	rc, _, _ = ExecuteTransfer(t3, s)
+	rc, _, _ = t3.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 }
 
