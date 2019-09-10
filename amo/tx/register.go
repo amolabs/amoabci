@@ -25,7 +25,14 @@ func parseRegisterParam(raw []byte) (RegisterParam, error) {
 	return param, nil
 }
 
-func CheckRegister(t Tx) (uint32, string) {
+type TxRegister struct {
+	TxBase
+	Param RegisterParam `json:"-"`
+}
+
+var _ Tx = &TxRegister{}
+
+func (t *TxRegister) Check() (uint32, string) {
 	// TOOD: check format
 	//txParam, err := parseRegisterParam(t.getPayload())
 	_, err := parseRegisterParam(t.getPayload())
@@ -36,7 +43,7 @@ func CheckRegister(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func ExecuteRegister(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseRegisterParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

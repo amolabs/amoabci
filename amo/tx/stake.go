@@ -26,7 +26,14 @@ func parseStakeParam(raw []byte) (StakeParam, error) {
 	return param, nil
 }
 
-func CheckStake(t Tx) (uint32, string) {
+type TxStake struct {
+	TxBase
+	Param StakeParam `json:"-"`
+}
+
+var _ Tx = &TxStake{}
+
+func (t *TxStake) Check() (uint32, string) {
 	txParam, err := parseStakeParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
@@ -40,7 +47,7 @@ func CheckStake(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func ExecuteStake(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxStake) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseStakeParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

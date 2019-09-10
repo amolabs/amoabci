@@ -199,10 +199,10 @@ func TestValidCancel(t *testing.T) {
 	t1 := makeTestTx("cancel", "bob", payload)
 
 	// test
-	rc, _ := CheckCancel(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteCancel(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 }
 
@@ -218,10 +218,10 @@ func TestNonValidCancel(t *testing.T) {
 	t1 := makeTestTx("cancel", "eve", payload)
 
 	// test
-	rc, _ := CheckCancel(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteCancel(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeRequestNotFound, rc)
 }
 
@@ -241,9 +241,9 @@ func TestValidDiscard(t *testing.T) {
 	t1 := makeTestTx("discard", "alice", payload)
 
 	// test
-	rc, _ := CheckDiscard(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
-	rc, _, _ = ExecuteDiscard(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 }
 
@@ -269,10 +269,10 @@ func TestNonValidDiscard(t *testing.T) {
 	t2 := makeTestTx("discard", "eve", payload)
 
 	// test
-	rc, _, _ := ExecuteDiscard(t1, s)
+	rc, _, _ := t1.Execute(s)
 	assert.Equal(t, code.TxCodeParcelNotFound, rc)
 
-	rc, _, _ = ExecuteDiscard(t2, s)
+	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
 }
 
@@ -294,13 +294,13 @@ func TestValidGrant(t *testing.T) {
 		Custody: custody[1],
 	}
 	payload, _ := json.Marshal(param)
-	t1 := makeTestTx("cancel", "bob", payload)
+	t1 := makeTestTx("grant", "bob", payload)
 
 	// test
-	rc, _ := CheckGrant(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteGrant(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 }
 
@@ -323,7 +323,7 @@ func TestNonValidGrant(t *testing.T) {
 		Custody: custody[0],
 	}
 	payload, _ := json.Marshal(param)
-	t1 := makeTestTx("cancel", "eve", payload)
+	t1 := makeTestTx("grant", "eve", payload)
 
 	param = GrantParam{
 		Target:  parcelID[0],
@@ -331,13 +331,13 @@ func TestNonValidGrant(t *testing.T) {
 		Custody: custody[0],
 	}
 	payload, _ = json.Marshal(param)
-	t2 := makeTestTx("cancel", "alice", payload)
+	t2 := makeTestTx("grant", "alice", payload)
 
 	// test
-	rc, _, _ := ExecuteGrant(t1, s)
+	rc, _, _ := t1.Execute(s)
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
 
-	rc, _, _ = ExecuteGrant(t2, s)
+	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
 }
 
@@ -354,10 +354,10 @@ func TestValidRegister(t *testing.T) {
 	t1 := makeTestTx("register", "alice", payload)
 
 	// test
-	rc, _ := CheckRegister(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteRegister(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 }
 
@@ -378,10 +378,10 @@ func TestNonValidRegister(t *testing.T) {
 	t1 := makeTestTx("register", "alice", payload)
 
 	// test
-	rc, _ := CheckRegister(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteRegister(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyRegistered, rc)
 }
 
@@ -403,10 +403,10 @@ func TestValidRequest(t *testing.T) {
 	t1 := makeTestTx("request", "alice", payload)
 
 	// test
-	rc, _ := CheckRequest(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteRequest(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 }
 
@@ -423,7 +423,7 @@ func TestNonValidRequest(t *testing.T) {
 	t1 := makeTestTx("request", "eve", payload)
 
 	// test
-	rc, _, _ := ExecuteRequest(t1, s)
+	rc, _, _ := t1.Execute(s)
 	assert.Equal(t, code.TxCodeParcelNotFound, rc)
 
 	// env
@@ -445,7 +445,7 @@ func TestNonValidRequest(t *testing.T) {
 	t2 := makeTestTx("request", "bob", payload)
 
 	// test
-	rc, _, _ = ExecuteRequest(t2, s)
+	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
 
 	// env
@@ -463,7 +463,7 @@ func TestNonValidRequest(t *testing.T) {
 	t3 := makeTestTx("request", "bob", payload)
 
 	// test
-	rc, _, _ = ExecuteRequest(t3, s)
+	rc, _, _ = t3.Execute(s)
 	assert.Equal(t, code.TxCodeSelfTransaction, rc)
 
 	// target
@@ -475,7 +475,7 @@ func TestNonValidRequest(t *testing.T) {
 	t4 := makeTestTx("request", "eve", payload)
 
 	// test
-	rc, _, _ = ExecuteRequest(t4, s)
+	rc, _, _ = t4.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 }
 
@@ -500,9 +500,9 @@ func TestValidRevoke(t *testing.T) {
 	t1 := makeTestTx("revoke", "alice", payload)
 
 	// test
-	rc, _ := CheckRevoke(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
-	rc, _, _ = ExecuteRevoke(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 }
 
@@ -534,10 +534,10 @@ func TestNonValidRevoke(t *testing.T) {
 	t2 := makeTestTx("revoke", "alice", payload)
 
 	// test
-	rc, _, _ := ExecuteRevoke(t1, s)
+	rc, _, _ := t1.Execute(s)
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
 
-	rc, _, _ = ExecuteRevoke(t2, s)
+	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeParcelNotFound, rc)
 }
 
@@ -610,10 +610,10 @@ func TestValidStake(t *testing.T) {
 	t1 := makeTestTx("stake", "alice", payload)
 
 	// test
-	rc, _ := CheckStake(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteStake(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 }
 
@@ -633,16 +633,16 @@ func TestNonValidStake(t *testing.T) {
 	t2 := makeTestTx("stake", "alice", payload)
 
 	// test
-	rc, _, _ := ExecuteStake(t1, s)
+	rc, _, _ := t1.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 
 	// env
 	s.SetBalanceUint64(eve.addr, 2000)
-	rc, _, _ = ExecuteStake(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 
 	// test
-	rc, _, _ = ExecuteStake(t2, s)
+	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
 }
 
@@ -664,10 +664,10 @@ func TestValidWithdraw(t *testing.T) {
 	t1 := makeTestTx("withdraw", "alice", payload)
 
 	// test
-	rc, _ := CheckWithdraw(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteWithdraw(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, new(types.Currency).Set(1000), &s.GetStake(alice.addr).Amount)
 
@@ -680,10 +680,10 @@ func TestValidWithdraw(t *testing.T) {
 	})
 
 	// test
-	rc, _ = CheckWithdraw(t1)
+	rc, _ = t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteWithdraw(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Nil(t, s.GetStake(alice.addr))
 	assert.NotNil(t, s.GetStake(bob.addr))
@@ -708,13 +708,13 @@ func TestNonValidWithdraw(t *testing.T) {
 	t2 := makeTestTx("withdraw", "alice", payload)
 
 	// test
-	rc, _, _ := ExecuteWithdraw(t1, s)
+	rc, _, _ := t1.Execute(s)
 	assert.Equal(t, code.TxCodeNoStake, rc)
 
 	// test
-	rc, _ = CheckWithdraw(t2)
+	rc, _ = t2.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
-	rc, _, _ = ExecuteWithdraw(t2, s)
+	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeLastValidator, rc)
 
 	// env
@@ -724,7 +724,7 @@ func TestNonValidWithdraw(t *testing.T) {
 	})
 
 	// test
-	rc, _, _ = ExecuteWithdraw(t2, s)
+	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeDelegateExists, rc)
 }
 
@@ -748,10 +748,10 @@ func TestValidDelegate(t *testing.T) {
 	t1 := makeTestTx("delegate", "bob", payload)
 
 	// test
-	rc, _ := CheckDelegate(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteDelegate(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, new(types.Currency).Set(1000), &s.GetDelegate(bob.addr).Amount)
 }
@@ -779,7 +779,7 @@ func TestNonValidDelegate(t *testing.T) {
 		To:     eve.addr,
 	})
 	t1 := makeTestTx("delegate", "eve", payload)
-	rc, _ := CheckDelegate(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeSelfTransaction, rc)
 
 	payload, _ = json.Marshal(DelegateParam{
@@ -787,11 +787,11 @@ func TestNonValidDelegate(t *testing.T) {
 		To:     alice.addr,
 	})
 	t1 = makeTestTx("delegate", "eve", payload)
-	rc, _, _ = ExecuteDelegate(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 
 	t1 = makeTestTx("delegate", "bob", payload)
-	rc, _, _ = ExecuteDelegate(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 
 	payload, _ = json.Marshal(DelegateParam{
@@ -799,7 +799,7 @@ func TestNonValidDelegate(t *testing.T) {
 		To:     eve.addr,
 	})
 	t1 = makeTestTx("delegate", "bob", payload)
-	rc, _, _ = ExecuteDelegate(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeMultipleDelegates, rc)
 
 	payload, _ = json.Marshal(DelegateParam{
@@ -807,7 +807,7 @@ func TestNonValidDelegate(t *testing.T) {
 		To:     bob.addr,
 	})
 	t1 = makeTestTx("delegate", "alice", payload)
-	rc, _, _ = ExecuteDelegate(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeNoStake, rc)
 }
 
@@ -831,10 +831,10 @@ func TestValidRetract(t *testing.T) {
 	})
 	t1 := makeTestTx("retract", "bob", payload)
 
-	rc, _ := CheckRetract(t1)
+	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteRetract(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, new(types.Currency).Set(100), &s.GetDelegate(bob.addr).Amount)
 
@@ -844,10 +844,10 @@ func TestValidRetract(t *testing.T) {
 	})
 	t1 = makeTestTx("retract", "bob", payload)
 
-	rc, _ = CheckRetract(t1)
+	rc, _ = t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteRetract(t1, s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, types.Zero, &s.GetDelegate(bob.addr).Amount)
 }
@@ -872,12 +872,12 @@ func TestNonValidRetract(t *testing.T) {
 	t1 := makeTestTx("retract", "eve", payload)
 	t2 := makeTestTx("retract", "bob", payload)
 
-	rc, _, _ := ExecuteRetract(t1, s)
+	rc, _, _ := t1.Execute(s)
 	assert.Equal(t, code.TxCodeDelegateNotFound, rc)
 
-	rc, _, _ = ExecuteRetract(t2, s)
+	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	rc, _, _ = ExecuteRetract(t2, s)
+	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 }

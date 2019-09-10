@@ -23,7 +23,14 @@ func parseDiscardParam(raw []byte) (DiscardParam, error) {
 	return param, nil
 }
 
-func CheckDiscard(t Tx) (uint32, string) {
+type TxDiscard struct {
+	TxBase
+	Param DiscardParam `json:"-"`
+}
+
+var _ Tx = &TxDiscard{}
+
+func (t *TxDiscard) Check() (uint32, string) {
 	// TOOD: check format
 	//txParam, err := parseDiscardParam(t.getPayload())
 	_, err := parseDiscardParam(t.getPayload())
@@ -34,7 +41,7 @@ func CheckDiscard(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func ExecuteDiscard(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxDiscard) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseDiscardParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

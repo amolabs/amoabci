@@ -22,7 +22,14 @@ func parseCancelParam(raw []byte) (CancelParam, error) {
 	return param, nil
 }
 
-func CheckCancel(t Tx) (uint32, string) {
+type TxCancel struct {
+	TxBase
+	Param CancelParam `json:"-"`
+}
+
+var _ Tx = &TxCancel{}
+
+func (t *TxCancel) Check() (uint32, string) {
 	// TODO: check parcel id format in the future
 	//txParam, err := parseCancelParam(t.getPayload())
 	_, err := parseCancelParam(t.getPayload())
@@ -33,7 +40,7 @@ func CheckCancel(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func ExecuteCancel(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxCancel) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseCancelParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

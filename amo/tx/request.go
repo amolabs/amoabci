@@ -26,7 +26,14 @@ func parseRequestParam(raw []byte) (RequestParam, error) {
 	return param, nil
 }
 
-func CheckRequest(t Tx) (uint32, string) {
+type TxRequest struct {
+	TxBase
+	Param RequestParam `json:"-"`
+}
+
+var _ Tx = &TxRequest{}
+
+func (t *TxRequest) Check() (uint32, string) {
 	// TOOD: check format
 	//txParam, err := parseRequestParam(t.Payload)
 	_, err := parseRequestParam(t.getPayload())
@@ -37,7 +44,7 @@ func CheckRequest(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func ExecuteRequest(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxRequest) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseRequestParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

@@ -23,7 +23,12 @@ func parseWithdrawParam(raw []byte) (WithdrawParam, error) {
 	return param, nil
 }
 
-func CheckWithdraw(t Tx) (uint32, string) {
+type TxWithdraw struct {
+	TxBase
+	Param WithdrawParam `json:"-"`
+}
+
+func (t *TxWithdraw) Check() (uint32, string) {
 	// TODO: check format
 	//txParam, err := parseWithdrawParam(t.Payload)
 	_, err := parseWithdrawParam(t.getPayload())
@@ -34,7 +39,7 @@ func CheckWithdraw(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func ExecuteWithdraw(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxWithdraw) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseWithdrawParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

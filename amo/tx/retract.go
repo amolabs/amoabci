@@ -23,7 +23,14 @@ func parseRetractParam(raw []byte) (RetractParam, error) {
 	return param, nil
 }
 
-func CheckRetract(t Tx) (uint32, string) {
+type TxRetract struct {
+	TxBase
+	Param RetractParam `json:"-"`
+}
+
+var _ Tx = &TxRetract{}
+
+func (t *TxRetract) Check() (uint32, string) {
 	_, err := parseRetractParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
@@ -32,7 +39,7 @@ func CheckRetract(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func ExecuteRetract(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxRetract) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseRetractParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

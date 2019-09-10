@@ -72,6 +72,66 @@ func classifyTx(base TxBase) Tx {
 			TxBase: base,
 			Param:  param,
 		}
+	case "stake":
+		param, _ := parseStakeParam(base.Payload)
+		t = &TxStake{
+			TxBase: base,
+			Param:  param,
+		}
+	case "withdraw":
+		param, _ := parseWithdrawParam(base.Payload)
+		t = &TxWithdraw{
+			TxBase: base,
+			Param:  param,
+		}
+	case "delegate":
+		param, _ := parseDelegateParam(base.Payload)
+		t = &TxDelegate{
+			TxBase: base,
+			Param:  param,
+		}
+	case "retract":
+		param, _ := parseRetractParam(base.Payload)
+		t = &TxRetract{
+			TxBase: base,
+			Param:  param,
+		}
+	case "register":
+		param, _ := parseRegisterParam(base.Payload)
+		t = &TxRegister{
+			TxBase: base,
+			Param:  param,
+		}
+	case "discard":
+		param, _ := parseDiscardParam(base.Payload)
+		t = &TxDiscard{
+			TxBase: base,
+			Param:  param,
+		}
+	case "request":
+		param, _ := parseRequestParam(base.Payload)
+		t = &TxRequest{
+			TxBase: base,
+			Param:  param,
+		}
+	case "cancel":
+		param, _ := parseCancelParam(base.Payload)
+		t = &TxCancel{
+			TxBase: base,
+			Param:  param,
+		}
+	case "grant":
+		param, _ := parseGrantParam(base.Payload)
+		t = &TxGrant{
+			TxBase: base,
+			Param:  param,
+		}
+	case "revoke":
+		param, _ := parseRevokeParam(base.Payload)
+		t = &TxRevoke{
+			TxBase: base,
+			Param:  param,
+		}
 	default:
 		t = &base
 	}
@@ -150,67 +210,16 @@ func (t *TxBase) Verify() bool {
 }
 
 func (t *TxBase) Check() (uint32, string) {
-	var rc uint32
-	var info string
+	rc := code.TxCodeUnknown
+	info := "unknown transaction type"
 
-	switch t.Type {
-	case "stake":
-		rc, info = CheckStake(t)
-	case "withdraw":
-		rc, info = CheckWithdraw(t)
-	case "delegate":
-		rc, info = CheckDelegate(t)
-	case "retract":
-		rc, info = CheckRetract(t)
-	case "register":
-		rc, info = CheckRegister(t)
-	case "request":
-		rc, info = CheckRequest(t)
-	case "cancel":
-		rc, info = CheckCancel(t)
-	case "grant":
-		rc, info = CheckGrant(t)
-	case "revoke":
-		rc, info = CheckRevoke(t)
-	case "discard":
-		rc, info = CheckDiscard(t)
-	default:
-		rc = code.TxCodeUnknown
-		info = "unknown transaction type"
-	}
 	return rc, info
 }
 
 func (t *TxBase) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
-	var rc uint32
-	var info string
-	var tags []tm.KVPair
-	switch t.Type {
-	case "stake":
-		rc, info, tags = ExecuteStake(t, store)
-	case "withdraw":
-		rc, info, tags = ExecuteWithdraw(t, store)
-	case "delegate":
-		rc, info, tags = ExecuteDelegate(t, store)
-	case "retract":
-		rc, info, tags = ExecuteRetract(t, store)
-	case "register":
-		rc, info, tags = ExecuteRegister(t, store)
-	case "request":
-		rc, info, tags = ExecuteRequest(t, store)
-	case "cancel":
-		rc, info, tags = ExecuteCancel(t, store)
-	case "grant":
-		rc, info, tags = ExecuteGrant(t, store)
-	case "revoke":
-		rc, info, tags = ExecuteRevoke(t, store)
-	case "discard":
-		rc, info, tags = ExecuteDiscard(t, store)
-	default:
-		rc = code.TxCodeUnknown
-		info = "unknown transaction type"
-		tags = nil
-	}
+	rc := code.TxCodeUnknown
+	info := "unknown transaction type"
+	tags := []tm.KVPair(nil)
 
 	return rc, info, tags
 }

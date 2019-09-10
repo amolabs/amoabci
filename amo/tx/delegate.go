@@ -26,7 +26,14 @@ func parseDelegateParam(raw []byte) (DelegateParam, error) {
 	return param, nil
 }
 
-func CheckDelegate(t Tx) (uint32, string) {
+type TxDelegate struct {
+	TxBase
+	Param DelegateParam `json:"-"`
+}
+
+var _ Tx = &TxDelegate{}
+
+func (t *TxDelegate) Check() (uint32, string) {
 	txParam, err := parseDelegateParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
@@ -41,7 +48,7 @@ func CheckDelegate(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func ExecuteDelegate(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxDelegate) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseDelegateParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

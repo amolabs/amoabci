@@ -27,7 +27,14 @@ func parseGrantParam(raw []byte) (GrantParam, error) {
 	return param, nil
 }
 
-func CheckGrant(t Tx) (uint32, string) {
+type TxGrant struct {
+	TxBase
+	Param GrantParam `json:"-"`
+}
+
+var _ Tx = &TxGrant{}
+
+func (t *TxGrant) Check() (uint32, string) {
 	txParam, err := parseGrantParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
@@ -42,7 +49,7 @@ func CheckGrant(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func ExecuteGrant(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseGrantParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

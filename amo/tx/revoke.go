@@ -25,8 +25,14 @@ func parseRevokeParam(raw []byte) (RevokeParam, error) {
 	return param, nil
 }
 
-// TODO: fix: use GetUsage
-func CheckRevoke(t Tx) (uint32, string) {
+type TxRevoke struct {
+	TxBase
+	Param RevokeParam `json:"-"`
+}
+
+var _ Tx = &TxRevoke{}
+
+func (t *TxRevoke) Check() (uint32, string) {
 	txParam, err := parseRevokeParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
@@ -41,7 +47,8 @@ func CheckRevoke(t Tx) (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func ExecuteRevoke(t Tx, store *store.Store) (uint32, string, []tm.KVPair) {
+// TODO: fix: use GetUsage
+func (t *TxRevoke) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseRevokeParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
