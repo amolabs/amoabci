@@ -17,6 +17,32 @@ import (
 
 const testRoot = "store_test"
 
+// utils
+
+func makeAccAddr(seed string) crypto.Address {
+	return p256.GenPrivKeyFromSecret([]byte(seed)).PubKey().Address()
+}
+
+func makeValAddr(seed string) crypto.Address {
+	priKey := ed25519.GenPrivKeyFromSecret([]byte(seed))
+	pubKey := priKey.PubKey().(ed25519.PubKeyEd25519)
+	return pubKey.Address()
+}
+
+func makeStake(seed string, amount uint64) *types.Stake {
+	valPriKey := ed25519.GenPrivKeyFromSecret([]byte(seed))
+	valPubKey := valPriKey.PubKey().(ed25519.PubKeyEd25519)
+	coins := new(types.Currency).Set(amount)
+
+	stake := types.Stake{
+		Validator: valPubKey,
+		Amount:    *coins,
+	}
+	return &stake
+}
+
+// setup and teardown
+
 func setUp(t *testing.T) {
 	err := cmn.EnsureDir(testRoot, 0700)
 	if err != nil {
@@ -30,6 +56,8 @@ func tearDown(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// tests
 
 func TestBalance(t *testing.T) {
 	s := NewStore(db.NewMemDB(), db.NewMemDB())
@@ -96,35 +124,34 @@ func TestUsage(t *testing.T) {
 }
 
 func TestStake(t *testing.T) {
+	// setup
 	s := NewStore(db.NewMemDB(), db.NewMemDB())
 
-	holder := p256.GenPrivKeyFromSecret([]byte("holder")).PubKey().Address()
-	valKey := ed25519.GenPrivKeyFromSecret([]byte("holder")).PubKey().(ed25519.PubKeyEd25519)
-	validator := valKey.Address()
-	stake := types.Stake{
-		Amount:    *new(types.Currency).Set(100),
-		Validator: valKey,
-	}
-	s.SetStake(holder, &stake)
+	stake1 := makeStake("val1", 100)
+	stake2 := makeStake("val2", 100)
+	s.SetStake(makeAccAddr("holder1"), stake1)
+	s.SetStake(makeAccAddr("holder2"), stake2)
 
-	holder2 := p256.GenPrivKeyFromSecret([]byte("holder2")).PubKey().Address()
-	valKey2 := ed25519.GenPrivKeyFromSecret([]byte("holder2")).PubKey().(ed25519.PubKeyEd25519)
-	validator2 := valKey2.Address()
-	stake2 := types.Stake{
-		Amount:    *new(types.Currency).Set(100),
-		Validator: valKey2,
-	}
-	s.SetStake(holder2, &stake2)
+	test := s.GetStake(makeAccAddr("nobody"))
+	assert.Nil(t, test)
+	test = s.GetStakeByValidator(makeValAddr("none"))
+	assert.Nil(t, test)
 
-	assert.NotNil(t, s.GetStake(holder))
-	assert.Equal(t, stake, *s.GetStake(holder))
-	assert.NotNil(t, s.GetStakeByValidator(validator))
-	assert.Equal(t, stake, *s.GetStakeByValidator(validator))
+	test = s.GetStake(makeAccAddr("holder1"))
+	assert.NotNil(t, test)
+	assert.Equal(t, stake1, test)
 
-	assert.NotNil(t, s.GetStake(holder2))
-	assert.Equal(t, stake2, *s.GetStake(holder2))
-	assert.NotNil(t, s.GetStakeByValidator(validator2))
-	assert.Equal(t, stake2, *s.GetStakeByValidator(validator2))
+	test = s.GetStakeByValidator(makeValAddr("val1"))
+	assert.NotNil(t, test)
+	assert.Equal(t, stake1, test)
+
+	test = s.GetStake(makeAccAddr("holder2"))
+	assert.NotNil(t, test)
+	assert.Equal(t, stake2, test)
+
+	test = s.GetStakeByValidator(makeValAddr("val2"))
+	assert.NotNil(t, test)
+	assert.Equal(t, stake2, test)
 }
 
 func TestDelegate(t *testing.T) {
