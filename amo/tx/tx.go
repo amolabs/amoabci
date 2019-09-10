@@ -3,7 +3,6 @@ package tx
 import (
 	"crypto/elliptic"
 	"encoding/json"
-	"math/big"
 
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -26,12 +25,8 @@ type Signature struct {
 	SigBytes tm.HexBytes     `json:"sig_bytes"`
 }
 
-func (s Signature) IsValid() bool {
-	return len(s.SigBytes) == p256.SignatureSize &&
-		c.IsOnCurve(new(big.Int).SetBytes(s.PubKey[1:33]), new(big.Int).SetBytes(s.PubKey[33:]))
-}
-
 type Tx interface {
+	// accessors
 	GetType() string
 	GetSender() crypto.Address
 	getNonce() tm.HexBytes
@@ -39,6 +34,7 @@ type Tx interface {
 	getSignature() Signature
 	getSigningBytes() []byte
 
+	// ops
 	Sign(privKey crypto.PrivKey) error
 	Verify() bool
 	Check() (uint32, string)
@@ -181,6 +177,8 @@ func (t *TxBase) getSigningBytes() []byte {
 	*/
 	return b
 }
+
+// ops
 
 func (t *TxBase) Sign(privKey crypto.PrivKey) error {
 	pubKey := privKey.PubKey()
