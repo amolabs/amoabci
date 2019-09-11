@@ -48,7 +48,7 @@ func FillGenesisState(s *store.Store, genState *GenAmoAppState) error {
 	for _, accStake := range genState.Stakes {
 		var val25519 ed25519.PubKeyEd25519
 		copy(val25519[:], accStake.Validator)
-		s.SetStake(accStake.Holder, &types.Stake{
+		s.SetUnlockedStake(accStake.Holder, &types.Stake{
 			Amount:    accStake.Amount,
 			Validator: val25519,
 		})

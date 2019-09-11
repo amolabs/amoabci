@@ -91,7 +91,7 @@ func getTestStore() *store.Store {
 	})
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -651,7 +651,7 @@ func TestValidWithdraw(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -674,7 +674,7 @@ func TestValidWithdraw(t *testing.T) {
 	// add more stakeholder to test stake deletion
 	//var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(bob.addr, &types.Stake{
+	s.SetUnlockedStake(bob.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -694,7 +694,7 @@ func TestNonValidWithdraw(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -733,7 +733,7 @@ func TestValidDelegate(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -761,12 +761,12 @@ func TestNonValidDelegate(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(eve.addr, &types.Stake{
+	s.SetUnlockedStake(eve.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -816,7 +816,7 @@ func TestValidRetract(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -859,7 +859,7 @@ func TestNonValidRetract(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})

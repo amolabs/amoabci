@@ -319,7 +319,7 @@ func TestQueryValidator(t *testing.T) {
 		Amount:    *new(types.Currency).Set(150),
 		Validator: validator,
 	}
-	app.store.SetStake(holder, &stake)
+	app.store.SetUnlockedStake(holder, &stake)
 
 	var req abci.RequestQuery
 	var res abci.ResponseQuery
@@ -472,7 +472,7 @@ func TestBlockReward(t *testing.T) {
 		Amount:    *new(types.Currency).Set(150),
 		Validator: validator,
 	}
-	app.store.SetStake(holder, &stake)
+	app.store.SetUnlockedStake(holder, &stake)
 
 	// delegated stake holders
 	daddr1 := p256.GenPrivKeyFromSecret([]byte("d1")).PubKey().Address()

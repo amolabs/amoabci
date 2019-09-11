@@ -52,7 +52,7 @@ func (t *TxWithdraw) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	if stake.Amount.Sub(&txParam.Amount).Sign() == -1 {
 		return code.TxCodeNotEnoughBalance, "not enough stake", nil
 	}
-	if err := store.SetStake(t.GetSender(), stake); err != nil {
+	if err := store.SetUnlockedStake(t.GetSender(), stake); err != nil {
 		switch err {
 		case code.TxErrBadParam:
 			return code.TxCodeBadParam, err.Error(), nil

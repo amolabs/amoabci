@@ -72,7 +72,7 @@ func (t *TxStake) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	} else {
 		return code.TxCodePermissionDenied, "validator key mismatch", nil
 	}
-	if err := store.SetStake(t.GetSender(), stake); err != nil {
+	if err := store.SetUnlockedStake(t.GetSender(), stake); err != nil {
 		switch err {
 		case code.TxErrBadParam:
 			return code.TxCodeBadParam, err.Error(), nil

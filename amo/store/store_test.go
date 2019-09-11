@@ -125,38 +125,147 @@ func TestUsage(t *testing.T) {
 
 func TestStake(t *testing.T) {
 	// setup
+	var err error
 	s := NewStore(db.NewMemDB(), db.NewMemDB())
 
+	holder1 := makeAccAddr("holder1")
+	holder2 := makeAccAddr("holder2")
+	val1 := makeValAddr("val1")
+	val2 := makeValAddr("val2")
 	stake1 := makeStake("val1", 100)
 	stake2 := makeStake("val2", 100)
-	s.SetStake(makeAccAddr("holder1"), stake1)
-	s.SetStake(makeAccAddr("holder2"), stake2)
+	stake10 := makeStake("val1", 0)
+	stake20 := makeStake("val2", 0)
 
-	test := s.GetStake(makeAccAddr("nobody"))
-	assert.Nil(t, test)
-	test = s.GetStakeByValidator(makeValAddr("none"))
-	assert.Nil(t, test)
+	stake := s.GetStake(makeAccAddr("nobody"))
+	assert.Nil(t, stake)
+	stake = s.GetStakeByValidator(makeValAddr("none"))
+	assert.Nil(t, stake)
 
-	test = s.GetStake(makeAccAddr("holder1"))
-	assert.NotNil(t, test)
-	assert.Equal(t, stake1, test)
+	err = s.SetUnlockedStake(holder1, stake1)
+	assert.NoError(t, err)
+	stake = s.GetStake(holder1)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake1, stake)
 
-	test = s.GetStakeByValidator(makeValAddr("val1"))
-	assert.NotNil(t, test)
-	assert.Equal(t, stake1, test)
+	err = s.SetUnlockedStake(holder2, stake1)
+	assert.Error(t, err) // conflict val1
 
-	test = s.GetStake(makeAccAddr("holder2"))
-	assert.NotNil(t, test)
-	assert.Equal(t, stake2, test)
+	err = s.SetUnlockedStake(holder2, stake2)
+	assert.NoError(t, err)
+	stake = s.GetStake(holder2)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake2, stake)
 
-	test = s.GetStakeByValidator(makeValAddr("val2"))
-	assert.NotNil(t, test)
-	assert.Equal(t, stake2, test)
+	stake = s.GetStakeByValidator(val1)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake1, stake)
+
+	stake = s.GetStakeByValidator(val2)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake2, stake)
+
+	err = s.SetUnlockedStake(holder1, stake10)
+	assert.NoError(t, err)
+	stake = s.GetStake(holder1)
+	assert.Nil(t, stake)
+
+	err = s.SetUnlockedStake(holder2, stake20)
+	assert.Error(t, err) // LastValidator error
+}
+
+func TestLockedStake(t *testing.T) {
+	// setup
+	var err error
+	s := NewStore(db.NewMemDB(), db.NewMemDB())
+
+	holder1 := makeAccAddr("holder1")
+	holder2 := makeAccAddr("holder2")
+	val1 := makeValAddr("val1")
+	//val2 := makeValAddr("val2")
+	stake11 := makeStake("val1", 100)
+	stake12 := makeStake("val1", 200)
+	stake13 := makeStake("val1", 300)
+	stake10 := makeStake("val1", 0)
+	stake2 := makeStake("val2", 100)
+
+	// basic interface test
+
+	stake := s.GetStake(holder1)
+	assert.Nil(t, stake)
+	stake = s.GetStakeByValidator(val1)
+	assert.Nil(t, stake)
+
+	//// test static case
+
+	err = s.SetLockedStake(holder1, stake11, 1)
+	assert.NoError(t, err)
+
+	err = s.SetLockedStake(holder2, stake11, 1)
+	assert.Error(t, err) // conflict: validator mismatch
+
+	err = s.SetLockedStake(holder1, stake2, 1)
+	assert.Error(t, err) // conflict: holder mismatch
+
+	stake = s.GetStake(holder1)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake11, stake)
+
+	stake = s.GetStakeByValidator(val1)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake11, stake)
+
+	err = s.SetLockedStake(holder1, stake11, 10)
+	assert.NoError(t, err)
+
+	// replace stake locked at height 10
+	err = s.SetLockedStake(holder1, stake12, 10)
+	assert.NoError(t, err)
+
+	stake = s.GetStake(holder1)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake13, stake)
+
+	// delete stake locked at height 10
+	err = s.SetLockedStake(holder1, stake10, 10)
+	assert.NoError(t, err)
+
+	stake = s.GetStake(holder1)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake11, stake)
+
+	// delete stake locked at height 1
+	// now all locked stakes have been deleted
+	err = s.SetLockedStake(holder1, stake10, 1)
+	assert.NoError(t, err)
+
+	stake = s.GetStake(holder1)
+	assert.Nil(t, stake)
+
+	//// test unlocking
+
+	err = s.SetLockedStake(holder1, stake11, 1)
+	err = s.SetLockedStake(holder1, stake11, 10)
+
+	stake = s.GetStake(holder1)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake12, stake)
+
+	// stakes locked at height under 2 (1 in this case) will be unlocked
+	s.UnlockStakes(holder1, 2)
+
+	stake = s.GetUnlockedStake(holder1)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake11, stake)
+
+	stake = s.GetStake(holder1)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake12, stake)
 }
 
 func TestDelegate(t *testing.T) {
 	s := NewStore(db.NewMemDB(), db.NewMemDB())
-	// staker will be the delegator of holders
+	// staker will be the delegatee of holders(delegators)
 	staker := p256.GenPrivKeyFromSecret([]byte("staker")).PubKey().Address()
 	valkey, _ := ed25519.GenPrivKeyFromSecret([]byte("val")).PubKey().(ed25519.PubKeyEd25519)
 	holder1 := p256.GenPrivKeyFromSecret([]byte("holder1")).PubKey().Address()
@@ -177,7 +286,7 @@ func TestDelegate(t *testing.T) {
 	// staker must have his own stake in order to be a delegator.
 	assert.Error(t, s.SetDelegate(holder1, delegate1))
 
-	s.SetStake(staker, &stake)
+	s.SetUnlockedStake(staker, &stake)
 	s.SetDelegate(holder1, delegate1)
 	s.SetDelegate(holder2, delegate2)
 
@@ -222,9 +331,9 @@ func TestVotingPowerCalc(t *testing.T) {
 	vals := s.GetValidators(100)
 	assert.Equal(t, 0, len(vals))
 
-	s.SetStake(newStake("1000000000000000000"))
-	s.SetStake(newStake("10000000000000000"))
-	s.SetStake(newStake("100000000000000000"))
+	s.SetUnlockedStake(newStake("1000000000000000000"))
+	s.SetUnlockedStake(newStake("10000000000000000"))
+	s.SetUnlockedStake(newStake("100000000000000000"))
 
 	vals = s.GetValidators(1)
 	assert.Equal(t, 1, len(vals))
@@ -238,22 +347,22 @@ func TestVotingPowerCalc(t *testing.T) {
 
 	// test voting power adjustment
 	s.Purge()
-	s.SetStake(newStake("1152921504606846975")) // 0xfffffffffffffff
+	s.SetUnlockedStake(newStake("1152921504606846975")) // 0xfffffffffffffff
 	vals = s.GetValidators(100)
 	assert.Equal(t, int64(0x7ffffffffffffff), vals[0].Power)
 
-	s.SetStake(newStake("1"))
+	s.SetUnlockedStake(newStake("1"))
 	vals = s.GetValidators(100)
 	// The second staker's power shall be adjusted to be zero,
 	// so it shall not be returned as valid validator.
 	assert.Equal(t, 1, len(vals))
 	assert.Equal(t, int64(0x7ffffffffffffff), vals[0].Power)
 
-	s.SetStake(newStake("47389214732891473289147321"))
-	s.SetStake(newStake("98327483195748293743892147"))
-	s.SetStake(newStake("64738214738918483219483177"))
-	s.SetStake(newStake("10239481297483914839120049"))
-	s.SetStake(newStake("10239481297483914839120049"))
+	s.SetUnlockedStake(newStake("47389214732891473289147321"))
+	s.SetUnlockedStake(newStake("98327483195748293743892147"))
+	s.SetUnlockedStake(newStake("64738214738918483219483177"))
+	s.SetUnlockedStake(newStake("10239481297483914839120049"))
+	s.SetUnlockedStake(newStake("10239481297483914839120049"))
 
 	var sum int64
 	vals = s.GetValidators(100)
@@ -265,9 +374,9 @@ func TestVotingPowerCalc(t *testing.T) {
 
 	//
 	s.Purge()
-	s.SetStake(newStake("10000000000000000000"))
-	s.SetStake(newStake("10000000000000000000"))
-	s.SetStake(newStake("10000000000000000000"))
+	s.SetUnlockedStake(newStake("10000000000000000000"))
+	s.SetUnlockedStake(newStake("10000000000000000000"))
+	s.SetUnlockedStake(newStake("10000000000000000000"))
 	sum = 0
 	vals = s.GetValidators(100)
 	for _, val := range vals {
@@ -277,9 +386,9 @@ func TestVotingPowerCalc(t *testing.T) {
 
 	//
 	s.Purge()
-	s.SetStake(newStake("1000000000000000000"))
-	s.SetStake(newStake("1000000000000000000"))
-	s.SetStake(newStake("1000000000000000000"))
+	s.SetUnlockedStake(newStake("1000000000000000000"))
+	s.SetUnlockedStake(newStake("1000000000000000000"))
+	s.SetUnlockedStake(newStake("1000000000000000000"))
 	sum = 0
 	vals = s.GetValidators(100)
 	for _, val := range vals {
