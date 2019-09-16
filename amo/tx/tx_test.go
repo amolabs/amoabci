@@ -37,13 +37,13 @@ var eve = newUser(p256.GenPrivKeyFromSecret([]byte("eve")))
 
 var parcelID = []cmn.HexBytes{
 	[]byte{0xA, 0xA, 0xA, 0xA},
-	[]byte{0xB, 0xB, 0xB, 0XB},
+	[]byte{0xB, 0xB, 0xB, 0xB},
 	[]byte{0x1, 0x1, 0x1, 0x1},
 }
 
 var custody = []cmn.HexBytes{
-	[]byte{0xC, 0xC, 0xC, 0XC},
-	[]byte{0xD, 0xD, 0xD, 0XD},
+	[]byte{0xC, 0xC, 0xC, 0xC},
+	[]byte{0xD, 0xD, 0xD, 0xD},
 	[]byte{0x2, 0x2, 0x2, 0x2},
 }
 
@@ -849,7 +849,9 @@ func TestValidRetract(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	assert.Equal(t, types.Zero, &s.GetDelegate(bob.addr).Amount)
+	assert.Nil(t, s.GetDelegate(bob.addr))
+
+	assert.Equal(t, new(types.Currency).Set(2000), &s.GetStake(alice.addr).Amount)
 }
 
 func TestNonValidRetract(t *testing.T) {
@@ -879,5 +881,5 @@ func TestNonValidRetract(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 
 	rc, _, _ = t2.Execute(s)
-	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+	assert.Equal(t, code.TxCodeDelegateNotFound, rc)
 }
