@@ -11,6 +11,7 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/db"
 
+	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/crypto/p256"
 )
@@ -201,11 +202,20 @@ func TestLockedStake(t *testing.T) {
 	err = s.SetLockedStake(holder1, stake11, 1)
 	assert.NoError(t, err)
 
+	// height does not matter here
 	err = s.SetLockedStake(holder2, stake11, 1)
-	assert.Error(t, err) // conflict: validator mismatch
+	// conflict: holder mismatch
+	assert.Equal(t, code.TxErrPermissionDenied, err)
 
+	// height does not matter here
 	err = s.SetLockedStake(holder1, stake2, 1)
-	assert.Error(t, err) // conflict: holder mismatch
+	// conflict: validator mismatch
+	assert.Equal(t, code.TxErrBadValidator, err)
+
+	// height DOES matter here
+	err = s.SetLockedStake(holder1, stake12, 1)
+	// conflict: height already taken
+	assert.Equal(t, code.TxErrHeightTaken, err)
 
 	stake = s.GetStake(holder1)
 	assert.NotNil(t, stake)
@@ -215,10 +225,6 @@ func TestLockedStake(t *testing.T) {
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake11, stake)
 
-	err = s.SetLockedStake(holder1, stake11, 10)
-	assert.NoError(t, err)
-
-	// replace stake locked at height 10
 	err = s.SetLockedStake(holder1, stake12, 10)
 	assert.NoError(t, err)
 
@@ -226,37 +232,26 @@ func TestLockedStake(t *testing.T) {
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake13, stake)
 
-	// delete stake locked at height 10
-	err = s.SetLockedStake(holder1, stake10, 10)
-	assert.NoError(t, err)
-
-	stake = s.GetStake(holder1)
+	stake = s.GetStakeByValidator(val1)
 	assert.NotNil(t, stake)
-	assert.Equal(t, stake11, stake)
-
-	// delete stake locked at height 1
-	// now all locked stakes have been deleted
-	err = s.SetLockedStake(holder1, stake10, 1)
-	assert.NoError(t, err)
-
-	stake = s.GetStake(holder1)
-	assert.Nil(t, stake)
+	assert.Equal(t, stake13, stake)
 
 	//// test unlocking
 
-	err = s.SetLockedStake(holder1, stake11, 1)
-	err = s.SetLockedStake(holder1, stake11, 10)
-
-	stake = s.GetStake(holder1)
-	assert.NotNil(t, stake)
-	assert.Equal(t, stake12, stake)
-
-	// stakes locked at height under 2 (1 in this case) will be unlocked
-	s.UnlockStakes(holder1, 2)
+	// stakes locked at height 1 will be unlocked
+	s.LoosenLockedStakes()
 
 	stake = s.GetUnlockedStake(holder1)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake11, stake)
+
+	stake = s.GetStake(holder1)
+	assert.NotNil(t, stake)
+	assert.Equal(t, stake13, stake)
+
+	// delete unlocked stake
+	err = s.SetUnlockedStake(holder1, stake10)
+	assert.NoError(t, err)
 
 	stake = s.GetStake(holder1)
 	assert.NotNil(t, stake)

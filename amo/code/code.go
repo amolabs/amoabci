@@ -14,6 +14,7 @@ const (
 	TxCodeMultipleDelegates
 	TxCodeDelegateNotFound
 	TxCodeNoStake
+	TxCodeHeightTaken
 	TxCodeBadValidator
 	TxCodeLastValidator
 	TxCodeDelegateExists

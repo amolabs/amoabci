@@ -17,6 +17,7 @@ var (
 	TxErrMultipleDelegates = errors.New("MultipleDelegates")
 	TxErrDelegateNotFound  = errors.New("DelegateNotFound")
 	TxErrNoStake           = errors.New("NoStake")
+	TxErrHeightTaken       = errors.New("HeightTaken")
 	TxErrBadValidator      = errors.New("BadValidator")
 	TxErrLastValidator     = errors.New("LastValidator")
 	TxErrDelegateExists    = errors.New("DelegateExists")
