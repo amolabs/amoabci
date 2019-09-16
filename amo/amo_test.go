@@ -319,7 +319,7 @@ func TestQueryValidator(t *testing.T) {
 		Amount:    *new(types.Currency).Set(150),
 		Validator: validator,
 	}
-	app.store.SetStake(holder, &stake)
+	app.store.SetUnlockedStake(holder, &stake)
 
 	var req abci.RequestQuery
 	var res abci.ResponseQuery
@@ -424,10 +424,27 @@ func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
 	return rawTx
 }
 
+func makeTxWithdraw(priv p256.PrivKeyP256, amount uint64) []byte {
+	param := tx.WithdrawParam{
+		Amount: *new(types.Currency).Set(amount),
+	}
+	payload, _ := json.Marshal(param)
+	_tx := tx.TxBase{
+		Type:    "withdraw",
+		Payload: payload,
+		Sender:  priv.PubKey().Address(),
+		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
+	}
+	_tx.Sign(priv)
+	rawTx, _ := json.Marshal(_tx)
+	return rawTx
+}
+
 func TestEndBlock(t *testing.T) {
 	app := NewAMOApp(tdb.NewMemDB(), tdb.NewMemDB(), nil)
 
 	// setup
+	tx.ConfigLockupPeriod = 1 // manipulate
 	priv1 := p256.GenPrivKeyFromSecret([]byte("staker1"))
 	app.store.SetBalance(priv1.PubKey().Address(), new(types.Currency).Set(500))
 	priv2 := p256.GenPrivKeyFromSecret([]byte("staker2"))
@@ -450,6 +467,11 @@ func TestEndBlock(t *testing.T) {
 	resDeliver = app.DeliverTx(rawTx)
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 
+	// deliver withdraw tx. this should fail
+	rawTx = makeTxWithdraw(priv2, 200)
+	resDeliver = app.DeliverTx(rawTx)
+	assert.Equal(t, code.TxCodeStakeLocked, resDeliver.Code)
+
 	// end block
 	endRequest := abci.RequestEndBlock{Height: 1}
 	validators := app.EndBlock(endRequest).ValidatorUpdates
@@ -457,6 +479,11 @@ func TestEndBlock(t *testing.T) {
 
 	assert.Equal(t, int64(200), validators[0].Power)
 	assert.Equal(t, int64(100), validators[1].Power)
+
+	// deliver withdraw tx. this should succeed now.
+	rawTx = makeTxWithdraw(priv2, 200)
+	resDeliver = app.DeliverTx(rawTx)
+	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 }
 
 func TestBlockReward(t *testing.T) {
@@ -472,7 +499,7 @@ func TestBlockReward(t *testing.T) {
 		Amount:    *new(types.Currency).Set(150),
 		Validator: validator,
 	}
-	app.store.SetStake(holder, &stake)
+	app.store.SetUnlockedStake(holder, &stake)
 
 	// delegated stake holders
 	daddr1 := p256.GenPrivKeyFromSecret([]byte("d1")).PubKey().Address()

@@ -13,11 +13,17 @@ import (
 )
 
 const (
-	NonceSize = 4
+	NonceSize           = 4
+	defaultLockupPeriod = uint64(1000000)
 )
 
 var (
 	c = elliptic.P256()
+)
+
+var (
+	// config values from the app
+	ConfigLockupPeriod = defaultLockupPeriod
 )
 
 type Signature struct {

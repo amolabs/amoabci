@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"math/big"
 
@@ -129,32 +130,135 @@ func (s Store) GetBalance(addr tm.Address) *types.Currency {
 }
 
 // Stake store
-func getStakeKey(holder []byte) []byte {
+func makeStakeKey(holder []byte) []byte {
 	return append(prefixStake, holder...)
 }
 
-func (s Store) SetStake(holder crypto.Address, stake *types.Stake) error {
-	b, err := json.Marshal(stake)
-	if err != nil {
-		return code.TxErrBadParam
+func makeLockedStakeKey(holder []byte, height int64) []byte {
+	hb := make([]byte, 8)
+	binary.BigEndian.PutUint64(hb, uint64(height))
+	dbKey := append(prefixStake, holder...)
+	dbKey = append(dbKey, hb...)
+	return dbKey
+}
+
+func splitLockedStakeKey(key []byte) (crypto.Address, int64) {
+	if len(key) != len(prefixStake)+crypto.AddressSize+8 {
+		return nil, 0
 	}
+	h := binary.BigEndian.Uint64(key[len(prefixStake)+crypto.AddressSize:])
+	return key[len(prefixStake) : len(prefixStake)+crypto.AddressSize], int64(h)
+}
+
+func (s Store) checkValidatorMatch(holder crypto.Address, stake *types.Stake) error {
+	// TODO: use s.GetHolderByValidator(stake.Validator)
 	prevHolder := s.indexValidator.Get(stake.Validator.Address())
 	if prevHolder != nil && !bytes.Equal(prevHolder, holder) {
 		return code.TxErrPermissionDenied
 	}
+	prevStake := s.GetStake(holder)
+	if prevStake != nil &&
+		!bytes.Equal(prevStake.Validator[:], stake.Validator[:]) {
+		return code.TxErrBadValidator
+	}
+	return nil
+}
 
+func (s Store) checkStakeDeletion(holder crypto.Address, stake *types.Stake, height int64) error {
 	if stake.Amount.Sign() == 0 {
-		// check if there is a delegate appointed to this stake
-		ds := s.GetDelegatesByDelegatee(holder)
-		if len(ds) > 0 {
-			return code.TxErrDelegateExists
+		whole := s.GetStake(holder)
+		if whole == nil {
+			// something wrong. but harmless for now.
+			return nil
 		}
+		var target *types.Stake
+		if height == 0 {
+			target = s.GetUnlockedStake(holder)
+		} else if height > 0 {
+			target = s.GetLockedStake(holder, height)
+		} else { // height must not be negative
+			return code.TxErrUnknown
+		}
+		whole.Amount.Sub(&target.Amount)
+		if whole.Amount.Sign() == 0 {
+			// whole stake for this holder goes to zero. need to check this is
+			// allowed.
 
-		// check if this is the last stake
-		ts := s.GetTopStakes(2)
-		if len(ts) == 1 { // requested 2 but got 1
-			return code.TxErrLastValidator
+			// check if there is a delegate appointed to this stake
+			ds := s.GetDelegatesByDelegatee(holder)
+			if len(ds) > 0 {
+				return code.TxErrDelegateExists
+			}
+
+			// check if this is the last stake
+			ts := s.GetTopStakes(2)
+			if len(ts) == 1 {
+				// requested 2 but got 1. it means this is the last validator.
+				return code.TxErrLastValidator
+			}
 		}
+	}
+
+	return nil
+}
+
+func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error {
+	b, err := json.Marshal(stake)
+	if err != nil {
+		return code.TxErrBadParam
+	}
+
+	// condition checks
+	err = s.checkValidatorMatch(holder, stake)
+	if err != nil {
+		return err
+	}
+	err = s.checkStakeDeletion(holder, stake, 0)
+	if err != nil {
+		return err
+	}
+
+	// clean up
+	es := s.GetEffStake(holder)
+	if es != nil {
+		before := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
+		if s.indexEffStake.Has(before) {
+			s.indexEffStake.Delete(before)
+		}
+	}
+	// update
+	if stake.Amount.Sign() == 0 {
+		s.stateDB.Delete(makeStakeKey(holder))
+		s.indexValidator.Delete(stake.Validator.Address())
+	} else {
+		s.stateDB.Set(makeStakeKey(holder), b)
+		s.indexValidator.Set(stake.Validator.Address(), holder)
+		after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
+		s.indexEffStake.Set(after, nil)
+	}
+
+	return nil
+}
+
+// SetLockedStake stores a stake locked at *height*. The stake's height is
+// decremented each time when LoosenLockedStakes is called.
+func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height int64) error {
+	b, err := json.Marshal(stake)
+	if err != nil {
+		return code.TxErrBadParam
+	}
+
+	// condition checks
+	err = s.checkValidatorMatch(holder, stake)
+	if err != nil {
+		return err
+	}
+	if s.GetLockedStake(holder, height) != nil {
+		return code.TxErrHeightTaken
+	}
+	err = s.checkStakeDeletion(holder, stake, height)
+	if err != nil {
+		return err
 	}
 
 	// clean up
@@ -168,16 +272,86 @@ func (s Store) SetStake(holder crypto.Address, stake *types.Stake) error {
 
 	// update
 	if stake.Amount.Sign() == 0 {
-		s.stateDB.Delete(getStakeKey(holder))
+		s.stateDB.Delete(makeLockedStakeKey(holder, height))
 		s.indexValidator.Delete(stake.Validator.Address())
 	} else {
-		s.stateDB.Set(getStakeKey(holder), b)
+		s.stateDB.Set(makeLockedStakeKey(holder, height), b)
 		s.indexValidator.Set(stake.Validator.Address(), holder)
 		after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
 		s.indexEffStake.Set(after, nil)
 	}
 
 	return nil
+}
+
+func (s Store) UnlockStakes(holder crypto.Address, height int64) {
+	start := makeLockedStakeKey(holder, 0)
+	end := makeLockedStakeKey(holder, height)
+	var itr db.Iterator = s.stateDB.Iterator(start, end)
+	defer itr.Close()
+
+	unlocked := s.GetUnlockedStake(holder)
+	for ; itr.Valid(); itr.Next() {
+		stake := new(types.Stake)
+		err := json.Unmarshal(itr.Value(), stake)
+		if err != nil {
+			// We cannot recover from this error.
+			// Since this function returns nothing, just skip this stake.
+			continue
+		}
+		s.stateDB.Delete(itr.Key())
+		if unlocked == nil {
+			unlocked = stake
+		} else {
+			unlocked.Amount.Add(&stake.Amount)
+		}
+	}
+	s.SetUnlockedStake(holder, unlocked)
+}
+
+func (s Store) LoosenLockedStakes() {
+	var itr db.Iterator = s.stateDB.Iterator(prefixStake, nil)
+	defer itr.Close()
+
+	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), prefixStake); itr.Next() {
+		if len(itr.Key()) == crypto.AddressSize {
+			// unlocked stake
+			continue
+		}
+		holder, height := splitLockedStakeKey(itr.Key())
+		if holder == nil || height <= 0 {
+			// db corruption detected. but we can do nothing here. just skip.
+			continue
+		}
+		stake := new(types.Stake)
+		err := json.Unmarshal(itr.Value(), stake)
+		if err != nil {
+			// We cannot recover from this error.
+			// Since this function returns nothing, just skip this stake.
+			continue
+		}
+
+		// let's update
+		s.stateDB.Delete(itr.Key())
+		height--
+		if height == 0 {
+			unlocked := s.GetUnlockedStake(holder)
+			if unlocked == nil {
+				unlocked = stake
+			} else {
+				unlocked.Amount.Add(&stake.Amount)
+			}
+			err := s.SetUnlockedStake(holder, unlocked)
+			if err != nil {
+				continue
+			}
+		} else {
+			err := s.SetLockedStake(holder, stake, height)
+			if err != nil {
+				continue
+			}
+		}
+	}
 }
 
 func makeEffStakeKey(amount types.Currency, holder crypto.Address) []byte {
@@ -189,7 +363,26 @@ func makeEffStakeKey(amount types.Currency, holder crypto.Address) []byte {
 }
 
 func (s Store) GetStake(holder crypto.Address) *types.Stake {
-	b := s.stateDB.Get(getStakeKey(holder))
+	stake := s.GetUnlockedStake(holder)
+
+	stakes := s.GetLockedStakes(holder)
+	for _, item := range stakes {
+		if stake == nil {
+			stake = item
+		} else {
+			// check db integrity
+			if !bytes.Equal(stake.Validator[:], item.Validator[:]) {
+				return nil
+			}
+			stake.Amount.Add(&item.Amount)
+		}
+	}
+
+	return stake
+}
+
+func (s Store) GetUnlockedStake(holder crypto.Address) *types.Stake {
+	b := s.stateDB.Get(makeStakeKey(holder))
 	if len(b) == 0 {
 		return nil
 	}
@@ -199,6 +392,42 @@ func (s Store) GetStake(holder crypto.Address) *types.Stake {
 		return nil
 	}
 	return &stake
+}
+
+func (s Store) GetLockedStake(holder crypto.Address, height int64) *types.Stake {
+	b := s.stateDB.Get(makeLockedStakeKey(holder, height))
+	if len(b) == 0 {
+		return nil
+	}
+	var stake types.Stake
+	err := json.Unmarshal(b, &stake)
+	if err != nil {
+		return nil
+	}
+	return &stake
+}
+
+func (s Store) GetLockedStakes(holder crypto.Address) []*types.Stake {
+	holderKey := makeStakeKey(holder)
+	start := makeLockedStakeKey(holder, 0)
+	var itr db.Iterator = s.stateDB.Iterator(start, nil)
+	defer itr.Close()
+
+	var stakes []*types.Stake
+	// XXX: This routine may be used to get all free and locked stakes for a
+	// holder. But, let's differentiate getUnlockedStake() and
+	// GetLockedStakes() for now.
+	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), holderKey); itr.Next() {
+		stake := new(types.Stake)
+		err := json.Unmarshal(itr.Value(), stake)
+		if err != nil {
+			// We cannot recover from this error
+			return nil
+		}
+		stakes = append(stakes, stake)
+	}
+
+	return stakes
 }
 
 func (s Store) GetStakeByValidator(addr crypto.Address) *types.Stake {

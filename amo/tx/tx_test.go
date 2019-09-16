@@ -91,7 +91,7 @@ func getTestStore() *store.Store {
 	})
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -603,8 +603,8 @@ func TestValidStake(t *testing.T) {
 
 	// target
 	param := StakeParam{
-		Amount:    *new(types.Currency).Set(2000),
 		Validator: cmn.RandBytes(32),
+		Amount:    *new(types.Currency).Set(2000),
 	}
 	payload, _ := json.Marshal(param)
 	t1 := makeTestTx("stake", "alice", payload)
@@ -624,8 +624,8 @@ func TestNonValidStake(t *testing.T) {
 
 	// target
 	param := StakeParam{
-		Amount:    *new(types.Currency).Set(2000),
 		Validator: cmn.RandBytes(32),
+		Amount:    *new(types.Currency).Set(2000),
 	}
 	payload, _ := json.Marshal(param)
 	t1 := makeTestTx("stake", "eve", payload)
@@ -651,7 +651,7 @@ func TestValidWithdraw(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -674,7 +674,7 @@ func TestValidWithdraw(t *testing.T) {
 	// add more stakeholder to test stake deletion
 	//var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(bob.addr, &types.Stake{
+	s.SetUnlockedStake(bob.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -694,7 +694,7 @@ func TestNonValidWithdraw(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -733,7 +733,7 @@ func TestValidDelegate(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -761,12 +761,12 @@ func TestNonValidDelegate(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(eve.addr, &types.Stake{
+	s.SetUnlockedStake(eve.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -816,7 +816,7 @@ func TestValidRetract(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -859,7 +859,7 @@ func TestNonValidRetract(t *testing.T) {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
-	s.SetStake(alice.addr, &types.Stake{
+	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
@@ -882,4 +882,55 @@ func TestNonValidRetract(t *testing.T) {
 
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeDelegateNotFound, rc)
+}
+
+func TestStakeLockup(t *testing.T) {
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetBalanceUint64(alice.addr, 3000)
+
+	// setup lock-up period config
+	ConfigLockupPeriod = 2
+
+	// deposit stake
+	stakeParam := StakeParam{
+		Validator: cmn.RandBytes(32),
+		Amount:    *new(types.Currency).Set(2000),
+	}
+	payload, _ := json.Marshal(stakeParam)
+	t1 := makeTestTx("stake", "alice", payload)
+	rc, _, _ := t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// withdraw stake
+	withdrawParam := WithdrawParam{
+		Amount: *new(types.Currency).Set(1000),
+	}
+	payload, _ = json.Marshal(withdrawParam)
+	t2 := makeTestTx("withdraw", "alice", payload)
+
+	// test
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeStakeLocked, rc)
+
+	// stake is locked at height 2. loosen 2 times.
+	s.LoosenLockedStakes()
+	s.LoosenLockedStakes()
+
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	stake := s.GetStake(makeTestAddress("alice"))
+	var val ed25519.PubKeyEd25519
+	copy(val[:], stakeParam.Validator)
+	assert.Equal(t, &types.Stake{
+		Validator: val,
+		Amount:    *new(types.Currency).Set(1000),
+	}, stake)
+
+	// TODO: test last validator error later
+	//rc, _, _ = t2.Execute(s)
+	//assert.Equal(t, code.TxCodeOK, rc)
+
+	//stake = s.GetStake(makeTestAddress("alice"))
+	//assert.Nil(t, stake)
 }

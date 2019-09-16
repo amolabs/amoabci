@@ -49,10 +49,18 @@ func (t *TxWithdraw) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	if stake == nil {
 		return code.TxCodeNoStake, "no stake", nil
 	}
+	// this is just for rich error reporting
 	if stake.Amount.Sub(&txParam.Amount).Sign() == -1 {
 		return code.TxCodeNotEnoughBalance, "not enough stake", nil
 	}
-	if err := store.SetStake(t.GetSender(), stake); err != nil {
+	// total stake for this account is enough for withdrawal, but not unlocked
+	// stake.
+	unlocked := store.GetUnlockedStake(t.GetSender())
+	if unlocked == nil || unlocked.Amount.Sub(&txParam.Amount).Sign() == -1 {
+		return code.TxCodeStakeLocked, "stake locked", nil
+	}
+
+	if err := store.SetUnlockedStake(t.GetSender(), unlocked); err != nil {
 		switch err {
 		case code.TxErrBadParam:
 			return code.TxCodeBadParam, err.Error(), nil
