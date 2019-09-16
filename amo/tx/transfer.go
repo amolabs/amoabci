@@ -2,6 +2,7 @@ package tx
 
 import (
 	"bytes"
+	"encoding/json"
 
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -11,37 +12,56 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-var _ Operation = Transfer{}
-
-type Transfer struct {
+type TransferParam struct {
 	To     crypto.Address `json:"to"`
 	Amount types.Currency `json:"amount"`
 }
 
-func (o Transfer) Check(store *store.Store, sender crypto.Address) uint32 {
-	// TODO: make util for checking address size
-	if len(o.To) != crypto.AddressSize {
-		return code.TxCodeBadParam
+func parseTransferParam(raw []byte) (TransferParam, error) {
+	var param TransferParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
 	}
-	fromBalance := store.GetBalance(sender)
-	if fromBalance.LessThan(&o.Amount) {
-		return code.TxCodeNotEnoughBalance
-	}
-	if bytes.Equal(sender, o.To) {
-		return code.TxCodeSelfTransaction
-	}
-	return code.TxCodeOK
+	return param, nil
 }
 
-func (o Transfer) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+type TxTransfer struct {
+	TxBase
+	Param TransferParam `json:"-"`
+}
+
+var _ Tx = &TxTransfer{}
+
+func (t *TxTransfer) Check() (uint32, string) {
+	txParam, err := parseTransferParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
-	fromBalance := store.GetBalance(sender)
-	toBalance := store.GetBalance(o.To)
-	fromBalance.Sub(&o.Amount)
-	toBalance.Add(&o.Amount)
-	store.SetBalance(sender, fromBalance)
-	store.SetBalance(o.To, toBalance)
-	return code.TxCodeOK, nil
+
+	if len(txParam.To) != crypto.AddressSize {
+		return code.TxCodeBadParam, "wrong recipient address size"
+	}
+	if bytes.Equal(t.GetSender(), txParam.To) {
+		return code.TxCodeSelfTransaction, "tried to transfer to self"
+	}
+	return code.TxCodeOK, "ok"
+}
+
+func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+	txParam, err := parseTransferParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	fromBalance := store.GetBalance(t.GetSender())
+	if fromBalance.LessThan(&txParam.Amount) {
+		return code.TxCodeNotEnoughBalance, "not enough balance", nil
+	}
+	toBalance := store.GetBalance(txParam.To)
+	fromBalance.Sub(&txParam.Amount)
+	toBalance.Add(&txParam.Amount)
+	store.SetBalance(t.GetSender(), fromBalance)
+	store.SetBalance(txParam.To, toBalance)
+	return code.TxCodeOK, "ok", nil
 }

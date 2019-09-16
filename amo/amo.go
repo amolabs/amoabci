@@ -39,7 +39,7 @@ const (
 )
 
 // Output are sorted by voting power.
-func valUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
+func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
 	sort.Slice(oldVals, func(i, j int) bool {
 		return bytes.Compare(oldVals[i].PubKey.Data, oldVals[j].PubKey.Data) < 0
 	})
@@ -219,8 +219,11 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	return res
 }
 
+// Invariant checks. Do not consider app's store.
+// - check signature
+// - check parameter format
 func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
-	message, op, _, err := tx.ParseTx(txBytes)
+	t, err := tx.ParseTx(txBytes)
 	if err != nil {
 		return abci.ResponseCheckTx{
 			Code:      code.TxCodeBadParam,
@@ -228,20 +231,25 @@ func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 			Codespace: "amo",
 		}
 	}
-	if !message.Verify() {
+	if !t.Verify() {
 		return abci.ResponseCheckTx{
 			Code:      code.TxCodeBadSignature,
 			Info:      "Signature verification failed",
 			Codespace: "amo",
 		}
 	}
+
+	rc, info := t.Check()
+
 	return abci.ResponseCheckTx{
-		Code: op.Check(app.store, message.Sender),
+		Code:      rc,
+		Info:      info,
+		Codespace: "amo",
 	}
 }
 
 func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
-	message, op, isStake, err := tx.ParseTx(txBytes)
+	t, err := tx.ParseTx(txBytes)
 	if err != nil {
 		return abci.ResponseDeliverTx{
 			Code:      code.TxCodeBadParam,
@@ -250,31 +258,28 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 		}
 	}
 
-	if !message.Verify() {
-		return abci.ResponseDeliverTx{
-			Code:      code.TxCodeBadSignature,
-			Info:      "Signature verification failed",
-			Codespace: "amo",
+	tags := []tm.KVPair{
+		{Key: []byte("tx.type"), Value: []byte(t.GetType())},
+		{Key: []byte("tx.sender"), Value: []byte(t.GetSender().String())},
+	}
+
+	rc, info, opTags := t.Execute(app.store)
+
+	// if the operation was not successful, change nothing
+	if rc == code.TxCodeOK {
+		if t.GetType() == "stake" || t.GetType() == "withdraw" ||
+			t.GetType() == "delegate" || t.GetType() == "retract" {
+			app.doValUpdate = true
 		}
+		app.state.Walk++
+		tags = append(tags, opTags...)
 	}
-	defTags := []tm.KVPair{
-		{Key: []byte("tx.type"), Value: []byte(message.Type)},
-		{Key: []byte("tx.sender"), Value: []byte(message.Sender.String())},
-	}
-	resCode, opTags := op.Execute(app.store, message.Sender)
-	if resCode != code.TxCodeOK {
-		return abci.ResponseDeliverTx{
-			Code: resCode,
-		}
-	}
-	if isStake {
-		app.doValUpdate = true
-	}
-	app.state.Walk++
-	tags := append(defTags, opTags...)
+
 	return abci.ResponseDeliverTx{
-		Code: resCode,
-		Tags: tags,
+		Code:      rc,
+		Info:      info,
+		Tags:      tags,
+		Codespace: "amo",
 	}
 }
 
@@ -283,7 +288,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	if app.doValUpdate {
 		app.doValUpdate = false
 		newVals := app.store.GetValidators(maxValidators)
-		res.ValidatorUpdates = valUpdates(app.oldVals, newVals)
+		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
 	}
 	// update appHash
 	// TODO: use merkle tree

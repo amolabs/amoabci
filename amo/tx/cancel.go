@@ -1,38 +1,61 @@
 package tx
 
 import (
-	"github.com/tendermint/tendermint/crypto"
+	"encoding/json"
+
 	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
 )
 
-var _ Operation = Cancel{}
-
-type Cancel struct {
+type CancelParam struct {
 	Target tm.HexBytes `json:"target"`
 }
 
-func (o Cancel) Check(store *store.Store, sender crypto.Address) uint32 {
-	request := store.GetRequest(sender, o.Target)
-	if request == nil {
-		return code.TxCodeRequestNotFound
+func parseCancelParam(raw []byte) (CancelParam, error) {
+	var param CancelParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
 	}
-	return code.TxCodeOK
+	return param, nil
 }
 
-func (o Cancel) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+type TxCancel struct {
+	TxBase
+	Param CancelParam `json:"-"`
+}
+
+var _ Tx = &TxCancel{}
+
+func (t *TxCancel) Check() (uint32, string) {
+	// TODO: check parcel id format in the future
+	//txParam, err := parseCancelParam(t.getPayload())
+	_, err := parseCancelParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
-	request := store.GetRequest(sender, o.Target)
-	store.DeleteRequest(sender, o.Target)
-	balance := store.GetBalance(sender)
+
+	return code.TxCodeOK, "ok"
+}
+
+func (t *TxCancel) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+	txParam, err := parseCancelParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	request := store.GetRequest(t.GetSender(), txParam.Target)
+	if request == nil {
+		return code.TxCodeRequestNotFound, "request not found", nil
+	}
+	store.DeleteRequest(t.GetSender(), txParam.Target)
+	balance := store.GetBalance(t.GetSender())
 	balance.Add(&request.Payment)
-	store.SetBalance(sender, balance)
+	store.SetBalance(t.GetSender(), balance)
 	tags := []tm.KVPair{
-		{Key: []byte("parcel.id"), Value: []byte(o.Target.String())},
+		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK, "ok", tags
 }

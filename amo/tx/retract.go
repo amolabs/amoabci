@@ -1,7 +1,8 @@
 package tx
 
 import (
-	"github.com/tendermint/tendermint/crypto"
+	"encoding/json"
+
 	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -9,34 +10,53 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-var _ Operation = Retract{}
-
-type Retract struct {
+type RetractParam struct {
 	Amount types.Currency `json:"amount"`
 }
 
-var zero = new(types.Currency).Set(0)
-
-func (o Retract) Check(store *store.Store, sender crypto.Address) uint32 {
-	delegate := store.GetDelegate(sender)
-	if delegate == nil {
-		return code.TxCodeDelegationNotExists
+func parseRetractParam(raw []byte) (RetractParam, error) {
+	var param RetractParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
 	}
-	if delegate.Amount.LessThan(&o.Amount) {
-		return code.TxCodeNotEnoughBalance
-	}
-	return code.TxCodeOK
+	return param, nil
 }
 
-func (o Retract) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+type TxRetract struct {
+	TxBase
+	Param RetractParam `json:"-"`
+}
+
+var _ Tx = &TxRetract{}
+
+func (t *TxRetract) Check() (uint32, string) {
+	_, err := parseRetractParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
-	delegate := store.GetDelegate(sender)
-	delegate.Amount.Sub(&o.Amount)
-	store.SetDelegate(sender, delegate)
-	balance := store.GetBalance(sender)
-	balance.Add(&o.Amount)
-	store.SetBalance(sender, balance)
-	return code.TxCodeOK, nil
+
+	return code.TxCodeOK, "ok"
+}
+
+func (t *TxRetract) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+	txParam, err := parseRetractParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	delegate := store.GetDelegate(t.GetSender())
+	if delegate == nil {
+		return code.TxCodeDelegateNotFound, "delegate not found", nil
+	}
+	if delegate.Amount.LessThan(&txParam.Amount) {
+		return code.TxCodeNotEnoughBalance, "not enough balance", nil
+	}
+
+	delegate.Amount.Sub(&txParam.Amount)
+	store.SetDelegate(t.GetSender(), delegate)
+	balance := store.GetBalance(t.GetSender())
+	balance.Add(&txParam.Amount)
+	store.SetBalance(t.GetSender(), balance)
+	return code.TxCodeOK, "ok", nil
 }

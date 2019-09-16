@@ -2,8 +2,8 @@ package tx
 
 import (
 	"bytes"
+	"encoding/json"
 
-	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -11,44 +11,69 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-var _ Operation = Request{}
-
-type Request struct {
+type RequestParam struct {
 	Target  tm.HexBytes    `json:"target"`
 	Payment types.Currency `json:"payment"`
 	// TODO: Extra info
 }
 
-func (o Request) Check(store *store.Store, sender crypto.Address) uint32 {
-	parcel := store.GetParcel(o.Target)
-	if parcel == nil {
-		return code.TxCodeParcelNotFound
+func parseRequestParam(raw []byte) (RequestParam, error) {
+	var param RequestParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
 	}
-	if bytes.Equal(parcel.Owner, sender) {
-		return code.TxCodeSelfTransaction
-	}
-	if store.GetUsage(sender, o.Target) != nil {
-		return code.TxCodeAlreadyGranted
-	}
-	if store.GetBalance(sender).LessThan(&o.Payment) {
-		return code.TxCodeNotEnoughBalance
-	}
-	return code.TxCodeOK
+	return param, nil
 }
 
-func (o Request) Execute(store *store.Store, sender crypto.Address) (uint32, []tm.KVPair) {
-	if resCode := o.Check(store, sender); resCode != code.TxCodeOK {
-		return resCode, nil
+type TxRequest struct {
+	TxBase
+	Param RequestParam `json:"-"`
+}
+
+var _ Tx = &TxRequest{}
+
+func (t *TxRequest) Check() (uint32, string) {
+	// TOOD: check format
+	//txParam, err := parseRequestParam(t.Payload)
+	_, err := parseRequestParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
-	balance := store.GetBalance(sender)
-	balance.Sub(&o.Payment)
-	store.SetBalance(sender, balance)
+
+	return code.TxCodeOK, "ok"
+}
+
+func (t *TxRequest) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+	txParam, err := parseRequestParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	parcel := store.GetParcel(txParam.Target)
+	if parcel == nil {
+		return code.TxCodeParcelNotFound, "parcel not found", nil
+	}
+	if store.GetUsage(t.GetSender(), txParam.Target) != nil {
+		return code.TxCodeAlreadyGranted, "request already granted", nil
+	}
+	if store.GetBalance(t.GetSender()).LessThan(&txParam.Payment) {
+		return code.TxCodeNotEnoughBalance, "not enough balance", nil
+	}
+	if bytes.Equal(parcel.Owner, t.GetSender()) {
+		// add new code for this
+		return code.TxCodeSelfTransaction, "requesting own parcel", nil
+	}
+
+	balance := store.GetBalance(t.GetSender())
+	balance.Sub(&txParam.Payment)
+	store.SetBalance(t.GetSender(), balance)
 	request := types.RequestValue{
-		Payment: o.Payment,
+		Payment: txParam.Payment,
 	}
-	store.SetRequest(sender, o.Target, &request)
+	store.SetRequest(t.GetSender(), txParam.Target, &request)
 	tags := []tm.KVPair{
-		{Key: []byte("parcel.id"), Value: []byte(o.Target.String())},
+		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}
-	return code.TxCodeOK, tags
+	return code.TxCodeOK, "ok", tags
 }

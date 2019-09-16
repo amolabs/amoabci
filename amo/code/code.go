@@ -12,11 +12,12 @@ const (
 	TxCodeBadSignature
 	TxCodeRequestNotFound
 	TxCodeMultipleDelegates
-	TxCodeDelegationNotExists
+	TxCodeDelegateNotFound
 	TxCodeNoStake
 	TxCodeBadValidator
 	TxCodeLastValidator
 	TxCodeDelegateExists
+	TxCodeUnknown
 )
 
 const (

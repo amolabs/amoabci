@@ -47,6 +47,25 @@ var custody = []cmn.HexBytes{
 	[]byte{0x2, 0x2, 0x2, 0x2},
 }
 
+func makeTestTx(txType string, seed string, payload []byte) Tx {
+	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
+	addr := privKey.PubKey().Address()
+	trans := TxBase{
+		Type:    txType,
+		Sender:  addr,
+		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
+		Payload: payload,
+	}
+	trans.Sign(privKey)
+	return classifyTx(trans)
+}
+
+func makeTestAddress(seed string) crypto.Address {
+	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
+	addr := privKey.PubKey().Address()
+	return addr
+}
+
 func getTestStore() *store.Store {
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 3000)
@@ -84,238 +103,551 @@ func getTestStore() *store.Store {
 }
 
 func TestParseTx(t *testing.T) {
+	bytes := []byte(`{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","nonce":"12345678","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"},"signature":{"pubkey":"0485FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B185FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B1EF1D55E9B1EF1D","sig_bytes":"FFFFFFFF"}}`)
+	var sender, nonce, tmp, sigbytes cmn.HexBytes
+	err := json.Unmarshal(
+		[]byte(`"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"`),
+		&sender,
+	)
+	assert.NoError(t, err)
+	err = json.Unmarshal(
+		[]byte(`"12345678"`),
+		&nonce,
+	)
+	assert.NoError(t, err)
+	err = json.Unmarshal(
+		[]byte(`"0485FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B185FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B1EF1D55E9B1EF1D"`),
+		&tmp,
+	)
+	assert.NoError(t, err)
+	var pubkey p256.PubKeyP256
+	copy(pubkey[:], tmp)
+	err = json.Unmarshal(
+		[]byte(`"FFFFFFFF"`),
+		&sigbytes,
+	)
+	assert.NoError(t, err)
+
+	var to crypto.Address
+	err = json.Unmarshal(
+		[]byte(`"218B954DF74E7267E72541CE99AB9F49C410DB96"`),
+		&to,
+	)
+	assert.NoError(t, err)
+
+	expected := &TxTransfer{
+		TxBase{
+			Type:    "transfer",
+			Sender:  sender,
+			Nonce:   nonce,
+			Payload: []byte(`{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}`),
+			Signature: Signature{
+				PubKey:   pubkey,
+				SigBytes: sigbytes,
+			},
+		},
+		TransferParam{
+			To:     to,
+			Amount: *new(types.Currency).Set(1000),
+		},
+	}
+	parsedTx, err := ParseTx(bytes)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, parsedTx)
+}
+
+func TestTxSignature(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("test1"))
 	to := p256.GenPrivKeyFromSecret([]byte("test2")).PubKey().Address()
-	transfer := Transfer{
+	transfer := TransferParam{
 		To:     to,
 		Amount: *new(types.Currency).Set(1000),
 	}
 	b, _ := json.Marshal(transfer)
-	message := Tx{
-		Type:    TxTransfer,
+	trnx := &TxBase{
+		Type:    "transfer",
 		Payload: b,
 		Sender:  from.PubKey().Address(),
 		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
 	}
-	sb := message.GetSigningBytes()
+	sb := trnx.getSigningBytes()
 	_sb := `{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","nonce":"12345678","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}}`
 	assert.Equal(t, _sb, string(sb))
-	err := message.Sign(from)
+	err := trnx.Sign(from)
 	if err != nil {
 		panic(err)
 	}
-	bMsg, _ := json.Marshal(message)
-	msg, op, _, err := ParseTx(bMsg)
-	assert.Nil(t, err)
-	assert.Equal(t, message, msg)
-	assert.Equal(t, &transfer, op)
-	assert.True(t, message.Verify())
+	assert.True(t, trnx.Verify())
 }
 
 func TestValidCancel(t *testing.T) {
-	s := getTestStore()
-	op := Cancel{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+	s.SetRequest(bob.addr, parcelID[0], &types.RequestValue{
+		Payment: *new(types.Currency).Set(100),
+	})
+
+	// target
+	param := CancelParam{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("cancel", "bob", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidCancel(t *testing.T) {
-	s := getTestStore()
-	op := Cancel{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+
+	// target
+	param := CancelParam{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeRequestNotFound, op.Check(s, eve.addr))
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("cancel", "eve", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeRequestNotFound, rc)
 }
 
 func TestValidDiscard(t *testing.T) {
-	s := getTestStore()
-	op := Discard{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+
+	// target
+	param := DiscardParam{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("discard", "alice", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidDiscard(t *testing.T) {
-	s := getTestStore()
-	NEOp := Discard{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+
+	// target
+	param := DiscardParam{
 		[]byte{0xFF, 0xFF, 0xFF, 0xEE},
 	}
-	PDOp := Discard{
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("discard", "alice", payload)
+
+	param = DiscardParam{
 		parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeParcelNotFound, NEOp.Check(s, alice.addr))
-	assert.Equal(t, code.TxCodePermissionDenied, PDOp.Check(s, eve.addr))
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("discard", "eve", payload)
+
+	// test
+	rc, _, _ := t1.Execute(s)
+	assert.Equal(t, code.TxCodeParcelNotFound, rc)
+
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
 }
 
 func TestValidGrant(t *testing.T) {
-	s := getTestStore()
-	op := Grant{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[1], &types.ParcelValue{
+		Owner:   bob.addr,
+		Custody: custody[1],
+	})
+	s.SetRequest(alice.addr, parcelID[1], &types.RequestValue{
+		Payment: *new(types.Currency).Set(100),
+	})
+
+	// target
+	param := GrantParam{
 		Target:  parcelID[1],
 		Grantee: alice.addr,
 		Custody: custody[1],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("grant", "bob", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidGrant(t *testing.T) {
-	s := getTestStore()
-	PDop := Grant{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+		Custody: custody[0],
+		Exp:     time.Now().UTC().Add(24 * time.Hour),
+	})
+
+	// target
+	param := GrantParam{
 		Target:  parcelID[0],
 		Grantee: eve.addr,
 		Custody: custody[0],
 	}
-	AEop := Grant{
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("grant", "eve", payload)
+
+	param = GrantParam{
 		Target:  parcelID[0],
 		Grantee: bob.addr,
 		Custody: custody[0],
 	}
-	assert.Equal(t, code.TxCodePermissionDenied, PDop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeAlreadyGranted, AEop.Check(s, alice.addr))
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("grant", "alice", payload)
+
+	// test
+	rc, _, _ := t1.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
 }
 
 func TestValidRegister(t *testing.T) {
-	s := getTestStore()
-	op := Register{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+
+	// target
+	param := RegisterParam{
 		Target:  parcelID[2],
 		Custody: custody[2],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("register", "alice", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidRegister(t *testing.T) {
-	s := getTestStore()
-	op := Register{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+
+	// target
+	param := RegisterParam{
 		Target:  parcelID[0],
 		Custody: custody[0],
 	}
-	assert.Equal(t, code.TxCodeAlreadyRegistered, op.Check(s, alice.addr))
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("register", "alice", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeAlreadyRegistered, rc)
 }
 
 func TestValidRequest(t *testing.T) {
-	s := getTestStore()
-	op := Request{
-		Target:  parcelID[1],
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetBalanceUint64(alice.addr, 200)
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   bob.addr,
+		Custody: custody[0],
+	})
+
+	// target
+	param := RequestParam{
+		Target:  parcelID[0],
 		Payment: *new(types.Currency).Set(200),
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("request", "alice", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidRequest(t *testing.T) {
+	// env
 	s := getTestStore()
-	TNop := Request{
+
+	// target
+	param := RequestParam{
 		Target:  []byte{0x0, 0x0, 0x0, 0x0},
 		Payment: *new(types.Currency).Set(100),
 	}
-	TAop := Request{
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("request", "eve", payload)
+
+	// test
+	rc, _, _ := t1.Execute(s)
+	assert.Equal(t, code.TxCodeParcelNotFound, rc)
+
+	// env
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+		Custody: custody[0],
+		Exp:     time.Now().UTC().Add(24 * time.Hour),
+	})
+
+	// target
+	param = RequestParam{
 		Target:  parcelID[0],
 		Payment: *new(types.Currency).Set(100),
 	}
-	STop := Request{
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("request", "bob", payload)
+
+	// test
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
+
+	// env
+	s.SetParcel(parcelID[1], &types.ParcelValue{
+		Owner:   bob.addr,
+		Custody: custody[1],
+	})
+
+	// target
+	param = RequestParam{
 		Target:  parcelID[1],
 		Payment: *new(types.Currency).Set(100),
 	}
-	NBop := Request{
+	payload, _ = json.Marshal(param)
+	t3 := makeTestTx("request", "bob", payload)
+
+	// test
+	rc, _, _ = t3.Execute(s)
+	assert.Equal(t, code.TxCodeSelfTransaction, rc)
+
+	// target
+	param = RequestParam{
 		Target:  parcelID[1],
 		Payment: *new(types.Currency).Set(100),
 	}
-	assert.Equal(t, code.TxCodeParcelNotFound, TNop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeAlreadyGranted, TAop.Check(s, bob.addr))
-	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, bob.addr))
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NBop.Check(s, eve.addr))
+	payload, _ = json.Marshal(param)
+	t4 := makeTestTx("request", "eve", payload)
+
+	// test
+	rc, _, _ = t4.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 }
 
 func TestValidRevoke(t *testing.T) {
-	s := getTestStore()
-	op := Revoke{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+		Custody: custody[0],
+		Exp:     time.Now().UTC().Add(24 * time.Hour),
+	})
+
+	// target
+	param := RevokeParam{
 		Grantee: bob.addr,
 		Target:  parcelID[0],
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("revoke", "alice", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidRevoke(t *testing.T) {
-	s := getTestStore()
-	PDop := Revoke{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:   alice.addr,
+		Custody: custody[0],
+	})
+	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+		Custody: custody[0],
+		Exp:     time.Now().UTC().Add(24 * time.Hour),
+	})
+
+	// target
+	param := RevokeParam{
 		Grantee: eve.addr,
 		Target:  parcelID[0],
 	}
-	TNop := Revoke{
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("revoke", "eve", payload)
+
+	param = RevokeParam{
 		Grantee: bob.addr,
 		Target:  parcelID[2],
 	}
-	assert.Equal(t, code.TxCodePermissionDenied, PDop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeParcelNotFound, TNop.Check(s, alice.addr))
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("revoke", "alice", payload)
+
+	// test
+	rc, _, _ := t1.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeParcelNotFound, rc)
 }
 
 func TestValidTransfer(t *testing.T) {
-	s := getTestStore()
-	op := Transfer{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetBalanceUint64(makeTestAddress("alice"), 1230)
+
+	// target
+	param := TransferParam{
 		To:     bob.addr,
 		Amount: *new(types.Currency).Set(1230),
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	trans := makeTestTx("transfer", "alice", payload)
+
+	// test
+	rc, _ := trans.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = trans.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidTransfer(t *testing.T) {
-	s := getTestStore()
-	BPop := Transfer{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+
+	// target
+	param := TransferParam{
 		To:     []byte("bob"),
 		Amount: *new(types.Currency).Set(1230),
 	}
-	NEop := Transfer{
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("transfer", "alice", payload)
+
+	param = TransferParam{
 		To:     bob.addr,
 		Amount: *new(types.Currency).Set(500),
 	}
-	STop := Transfer{
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("transfer", "bob", payload)
+
+	param = TransferParam{
 		To:     eve.addr,
 		Amount: *new(types.Currency).Set(10),
 	}
-	assert.Equal(t, code.TxCodeBadParam, BPop.Check(s, alice.addr))
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, eve.addr))
+	payload, _ = json.Marshal(param)
+	t3 := makeTestTx("transfer", "eve", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	rc, _ = t2.Check()
+	assert.Equal(t, code.TxCodeSelfTransaction, rc)
+	rc, _, _ = t3.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 }
 
 func TestValidStake(t *testing.T) {
-	s := getTestStore()
-	op := Stake{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetBalanceUint64(alice.addr, 3000)
+
+	// target
+	param := StakeParam{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: cmn.RandBytes(32),
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("stake", "alice", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidStake(t *testing.T) {
-	s := getTestStore()
-	NEop := Stake{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s.SetBalanceUint64(alice.addr, 3000)
+
+	// target
+	param := StakeParam{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: cmn.RandBytes(32),
 	}
-	BVop := Stake{
-		Amount:    *new(types.Currency).Set(500),
-		Validator: cmn.RandBytes(33),
-	}
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeBadValidator, BVop.Check(s, alice.addr))
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("stake", "eve", payload)
+
+	t2 := makeTestTx("stake", "alice", payload)
+
+	// test
+	rc, _, _ := t1.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	// env
+	s.SetBalanceUint64(eve.addr, 2000)
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// test
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
 }
 
 func TestValidWithdraw(t *testing.T) {
+	// env
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
@@ -324,12 +656,19 @@ func TestValidWithdraw(t *testing.T) {
 		Validator: k,
 	})
 
-	op := Withdraw{
+	// target
+	param := WithdrawParam{
 		Amount: *new(types.Currency).Set(1000),
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("withdraw", "alice", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, new(types.Currency).Set(1000), &s.GetStake(alice.addr).Amount)
 
 	// add more stakeholder to test stake deletion
@@ -340,17 +679,18 @@ func TestValidWithdraw(t *testing.T) {
 		Validator: k,
 	})
 
-	op = Withdraw{
-		Amount: *new(types.Currency).Set(1000),
-	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ = op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	// test
+	rc, _ = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Nil(t, s.GetStake(alice.addr))
+	assert.NotNil(t, s.GetStake(bob.addr))
 }
 
 func TestNonValidWithdraw(t *testing.T) {
-	// prepare
+	// env
 	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
@@ -359,94 +699,187 @@ func TestNonValidWithdraw(t *testing.T) {
 		Validator: k,
 	})
 
-	// test
-	op := Withdraw{
+	// target
+	param := WithdrawParam{
 		Amount: *new(types.Currency).Set(2000),
 	}
-	assert.Equal(t, code.TxCodeNotEnoughBalance, op.Check(s, eve.addr))
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("withdraw", "eve", payload)
+	t2 := makeTestTx("withdraw", "alice", payload)
 
 	// test
-	assert.Equal(t, code.TxCodeOK, op.Check(s, alice.addr))
-	resCode, _ := op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeLastValidator, resCode)
+	rc, _, _ := t1.Execute(s)
+	assert.Equal(t, code.TxCodeNoStake, rc)
 
-	// prepare
+	// test
+	rc, _ = t2.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeLastValidator, rc)
+
+	// env
 	s.SetDelegate(bob.addr, &types.Delegate{
 		Delegatee: alice.addr,
 		Amount:    *new(types.Currency).Set(500),
 	})
 
 	// test
-	resCode, _ = op.Execute(s, alice.addr)
-	assert.Equal(t, code.TxCodeDelegateExists, resCode)
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeDelegateExists, rc)
 }
 
 func TestValidDelegate(t *testing.T) {
-	s := getTestStore()
-	op := Delegate{
-		Amount: *new(types.Currency).Set(500),
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(alice.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+	s.SetBalanceUint64(bob.addr, 1000)
+
+	// target
+	param := DelegateParam{
+		Amount: *new(types.Currency).Set(1000),
 		To:     alice.addr,
 	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("delegate", "bob", payload)
+
+	// test
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, new(types.Currency).Set(1000), &s.GetDelegate(bob.addr).Amount)
 }
 
 func TestNonValidDelegate(t *testing.T) {
-	s := getTestStore()
-	STop := Delegate{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(alice.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(eve.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+	s.SetBalanceUint64(alice.addr, 1000)
+	s.SetBalanceUint64(bob.addr, 1000)
+
+	// test
+	payload, _ := json.Marshal(DelegateParam{
 		Amount: *new(types.Currency).Set(500),
 		To:     eve.addr,
-	}
-	NEop := Delegate{
+	})
+	t1 := makeTestTx("delegate", "eve", payload)
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeSelfTransaction, rc)
+
+	payload, _ = json.Marshal(DelegateParam{
 		Amount: *new(types.Currency).Set(500),
 		To:     alice.addr,
-	}
-	ADop := Delegate{
+	})
+	t1 = makeTestTx("delegate", "eve", payload)
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	t1 = makeTestTx("delegate", "bob", payload)
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	payload, _ = json.Marshal(DelegateParam{
 		Amount: *new(types.Currency).Set(500),
 		To:     eve.addr,
-	}
-	NSop := Delegate{
+	})
+	t1 = makeTestTx("delegate", "bob", payload)
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeMultipleDelegates, rc)
+
+	payload, _ = json.Marshal(DelegateParam{
 		Amount: *new(types.Currency).Set(500),
-		To:     eve.addr,
-	}
-	assert.Equal(t, code.TxCodeSelfTransaction, STop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeMultipleDelegates, ADop.Check(s, bob.addr))
-	assert.Equal(t, code.TxCodeNoStake, NSop.Check(s, alice.addr))
+		To:     bob.addr,
+	})
+	t1 = makeTestTx("delegate", "alice", payload)
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNoStake, rc)
 }
 
 func TestValidRetract(t *testing.T) {
-	s := getTestStore()
-	op := Retract{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(alice.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+	s.SetDelegate(bob.addr, &types.Delegate{
+		Delegatee: alice.addr,
+		Amount:    *new(types.Currency).Set(500),
+	})
+
+	// test
+	payload, _ := json.Marshal(RetractParam{
 		Amount: *new(types.Currency).Set(400),
-	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ := op.Execute(s, bob.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	})
+	t1 := makeTestTx("retract", "bob", payload)
+
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, new(types.Currency).Set(100), &s.GetDelegate(bob.addr).Amount)
 
-	op = Retract{
+	// test
+	payload, _ = json.Marshal(RetractParam{
 		Amount: *new(types.Currency).Set(100),
-	}
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	resCode, _ = op.Execute(s, bob.addr)
-	assert.Equal(t, code.TxCodeOK, resCode)
+	})
+	t1 = makeTestTx("retract", "bob", payload)
+
+	rc, _ = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Nil(t, s.GetDelegate(bob.addr))
 
 	assert.Equal(t, new(types.Currency).Set(2000), &s.GetStake(alice.addr).Amount)
 }
 
 func TestNonValidRetract(t *testing.T) {
-	s := getTestStore()
-	op := Retract{
+	// env
+	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	s.SetStake(alice.addr, &types.Stake{
+		Amount:    *new(types.Currency).Set(2000),
+		Validator: k,
+	})
+	s.SetDelegate(bob.addr, &types.Delegate{
+		Delegatee: alice.addr,
+		Amount:    *new(types.Currency).Set(500),
+	})
+
+	payload, _ := json.Marshal(RetractParam{
 		Amount: *new(types.Currency).Set(500),
-	}
-	NEop := Retract{
-		Amount: *new(types.Currency).Set(1000),
-	}
-	assert.Equal(t, code.TxCodeDelegationNotExists, op.Check(s, eve.addr))
-	assert.Equal(t, code.TxCodeOK, op.Check(s, bob.addr))
-	assert.Equal(t, code.TxCodeNotEnoughBalance, NEop.Check(s, bob.addr))
+	})
+	t1 := makeTestTx("retract", "eve", payload)
+	t2 := makeTestTx("retract", "bob", payload)
+
+	rc, _, _ := t1.Execute(s)
+	assert.Equal(t, code.TxCodeDelegateNotFound, rc)
+
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeDelegateNotFound, rc)
 }
