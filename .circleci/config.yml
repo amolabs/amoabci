@@ -41,11 +41,11 @@ jobs:
             make get_vendor_deps
             make test
             make TARGET=linux build
-            cp -f amocli $CIRCLE_WORKING_DIRECTORY/.circleci/DOCKER_testcli/amocli
+            cp -f amocli ~/project/.circleci/DOCKER_testcli/amocli
       - run:
           name: "build docker image"
           command: |
-            cd $CIRCLE_WORKING_DIRECTORY/.circleci
+            cd ~/project/.circleci
             docker build -t amolabs/testcli DOCKER_testcli
       - run:
           name: "save docker image"
