@@ -26,7 +26,6 @@ jobs:
   testcli:
     docker:
       - image: circleci/golang:1.12
-    working_directory: $HOME/src/github.com/amolabs/amoabci
     steps:
       - checkout
       - setup_remote_docker
@@ -40,11 +39,11 @@ jobs:
             make get_vendor_deps
             make test
             make TARGET=linux build
-            cp -f amocli $HOME/src/github.com/amolabs/amoabci/.circleci/DOCKER_testcli/amocli
+            cp -f amocli $CIRCLE_WORKING_DIRECTORY/.circleci/DOCKER_testcli/amocli
       - run:
           name: "build docker image"
           command: |
-            cd $HOME/src/github.com/amolabs/amoabci/.circleci
+            cd $CIRCLE_WORKING_DIRECTORY/.circleci
             docker build -t amolabs/testcli DOCKER_testcli
       - run:
           name: "save docker image"
@@ -57,7 +56,6 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.12
-    working_directory: $HOME/src/github.com/amolabs/amoabci
     steps:
       - checkout
       - setup_remote_docker
@@ -83,7 +81,6 @@ jobs:
       AMO100: 100000000000000000000
       CLIOPT: docker exec -it testcli amocli
       OPT: "--json --rpc=val1:26657"
-    working_directory: $HOME/src/github.com/amolabs/amoabci
     steps:
       - checkout
       - attach_workspace:
