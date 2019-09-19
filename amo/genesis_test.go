@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/libs/db"
+	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/types"
@@ -99,7 +99,7 @@ func TestParseGenesisStateBytes(t *testing.T) {
 }
 
 func TestFillGenesisState(t *testing.T) {
-	s := store.NewStore(db.NewMemDB(), db.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 
 	// first fill the test store with some values
 	addr1 := p256.GenPrivKey().PubKey().Address()

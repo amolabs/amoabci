@@ -13,8 +13,8 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
+	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo/code"
 	astore "github.com/amolabs/amoabci/amo/store"
@@ -111,8 +111,8 @@ type AMOApp struct {
 	config AMOAppConfig
 
 	// internal state
-	stateDB dbm.DB
-	indexDB dbm.DB
+	stateDB tmdb.DB
+	indexDB tmdb.DB
 	state   State
 	store   *astore.Store
 
@@ -123,15 +123,15 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(sdb dbm.DB, idb dbm.DB, l log.Logger) *AMOApp {
+func NewAMOApp(sdb tmdb.DB, idb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
 	if sdb == nil {
-		sdb = dbm.NewMemDB()
+		sdb = tmdb.NewMemDB()
 	}
 	if idb == nil {
-		idb = dbm.NewMemDB()
+		idb = tmdb.NewMemDB()
 	}
 	app := &AMOApp{
 		logger: l,
@@ -248,8 +248,8 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 // Invariant checks. Do not consider app's store.
 // - check signature
 // - check parameter format
-func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
-	t, err := tx.ParseTx(txBytes)
+func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
+	t, err := tx.ParseTx(req.Tx)
 	if err != nil {
 		return abci.ResponseCheckTx{
 			Code:      code.TxCodeBadParam,
@@ -274,8 +274,8 @@ func (app *AMOApp) CheckTx(txBytes []byte) abci.ResponseCheckTx {
 	}
 }
 
-func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
-	t, err := tx.ParseTx(txBytes)
+func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
+	t, err := tx.ParseTx(req.Tx)
 	if err != nil {
 		return abci.ResponseDeliverTx{
 			Code:      code.TxCodeBadParam,
@@ -302,9 +302,12 @@ func (app *AMOApp) DeliverTx(txBytes []byte) abci.ResponseDeliverTx {
 	}
 
 	return abci.ResponseDeliverTx{
-		Code:      rc,
-		Info:      info,
-		Tags:      tags,
+		Code: rc,
+		Info: info,
+		Events: []abci.Event{abci.Event{
+			Type:       "default",
+			Attributes: tags,
+		}},
 		Codespace: "amo",
 	}
 }
