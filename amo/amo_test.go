@@ -365,15 +365,15 @@ func TestSignedTransactionTest(t *testing.T) {
 	// not signed transaction
 	rawMsg, err := json.Marshal(msg)
 	assert.NoError(t, err)
-	assert.Equal(t, code.TxCodeBadSignature, app.CheckTx(rawMsg).Code)
+	assert.Equal(t, code.TxCodeBadSignature, app.CheckTx(abci.RequestCheckTx{Tx: rawMsg}).Code)
 
 	// signed transaction
 	err = msg.Sign(from)
 	assert.NoError(t, err)
 	rawMsg, err = json.Marshal(msg)
 	assert.NoError(t, err)
-	assert.Equal(t, code.TxCodeOK, app.CheckTx(rawMsg).Code)
-	assert.Equal(t, code.TxCodeOK, app.DeliverTx(rawMsg).Code)
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: rawMsg}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: rawMsg}).Code)
 }
 
 func TestFuncValUpdates(t *testing.T) {
@@ -456,20 +456,20 @@ func TestEndBlock(t *testing.T) {
 
 	// deliver stake tx
 	rawTx := makeTxStake(priv1, "val1", 100)
-	resDeliver := app.DeliverTx(rawTx)
+	resDeliver := app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 	rawTx = makeTxStake(priv2, "val1", 200)
-	resCheck := app.CheckTx(rawTx)
+	resCheck := app.CheckTx(abci.RequestCheckTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resCheck.Code)
-	resDeliver = app.DeliverTx(rawTx)
+	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodePermissionDenied, resDeliver.Code)
 	rawTx = makeTxStake(priv2, "val2", 200)
-	resDeliver = app.DeliverTx(rawTx)
+	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 
 	// deliver withdraw tx. this should fail
 	rawTx = makeTxWithdraw(priv2, 200)
-	resDeliver = app.DeliverTx(rawTx)
+	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeStakeLocked, resDeliver.Code)
 
 	// end block
@@ -482,7 +482,7 @@ func TestEndBlock(t *testing.T) {
 
 	// deliver withdraw tx. this should succeed now.
 	rawTx = makeTxWithdraw(priv2, 200)
-	resDeliver = app.DeliverTx(rawTx)
+	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 }
 
