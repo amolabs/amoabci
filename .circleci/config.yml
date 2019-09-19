@@ -37,7 +37,6 @@ jobs:
           name: "prepare to build docker image"
           command: |
             cd /go/src/github.com/amolabs/amo-client-go
-            make get_vendor_deps
             make test
             make TARGET=linux build
             cp -f amocli /go/src/github.com/amolabs/amoabci/.circleci/DOCKER_testcli/amocli
@@ -61,9 +60,6 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run:
-          name: "get vendor deps"
-          command: make get_vendor_deps
       - run:
           name: "run unit test"
           command: make test

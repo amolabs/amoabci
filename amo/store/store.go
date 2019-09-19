@@ -8,8 +8,8 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/libs/db"
 	tm "github.com/tendermint/tendermint/types"
+	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/types"
@@ -30,30 +30,30 @@ var (
 )
 
 type Store struct {
-	stateDB db.DB // DB for blockchain state: see protocol.md
-	indexDB db.DB
+	stateDB tmdb.DB // DB for blockchain state: see protocol.md
+	indexDB tmdb.DB
 	// search index for delegators:
 	// XXX: a delegatee can have multiple delegators
 	// key: delegatee address || delegator address
 	// value: nil
-	indexDelegator db.DB
+	indexDelegator tmdb.DB
 	// search index for validator:
 	// key: validator address
 	// value: holder address
-	indexValidator db.DB
+	indexValidator tmdb.DB
 	// ordered cache of effective stakes:
 	// key: effective stake (32 bytes) || stake holder address
 	// value: nil
-	indexEffStake db.DB
+	indexEffStake tmdb.DB
 }
 
-func NewStore(stateDB db.DB, indexDB db.DB) *Store {
+func NewStore(stateDB tmdb.DB, indexDB tmdb.DB) *Store {
 	return &Store{
 		stateDB:        stateDB,
 		indexDB:        indexDB,
-		indexDelegator: db.NewPrefixDB(indexDB, []byte("delegator")),
-		indexValidator: db.NewPrefixDB(indexDB, []byte("validator")),
-		indexEffStake:  db.NewPrefixDB(indexDB, []byte("effstake")),
+		indexDelegator: tmdb.NewPrefixDB(indexDB, []byte("delegator")),
+		indexValidator: tmdb.NewPrefixDB(indexDB, []byte("validator")),
+		indexEffStake:  tmdb.NewPrefixDB(indexDB, []byte("effstake")),
 	}
 }
 
@@ -63,7 +63,7 @@ func getBalanceKey(addr tm.Address) []byte {
 }
 
 func (s Store) Purge() error {
-	var itr db.Iterator
+	var itr tmdb.Iterator
 
 	// stateDB
 	itr = s.stateDB.Iterator([]byte{}, []byte(nil))
@@ -287,7 +287,7 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 func (s Store) UnlockStakes(holder crypto.Address, height int64) {
 	start := makeLockedStakeKey(holder, 0)
 	end := makeLockedStakeKey(holder, height)
-	var itr db.Iterator = s.stateDB.Iterator(start, end)
+	var itr tmdb.Iterator = s.stateDB.Iterator(start, end)
 	defer itr.Close()
 
 	unlocked := s.GetUnlockedStake(holder)
@@ -310,7 +310,7 @@ func (s Store) UnlockStakes(holder crypto.Address, height int64) {
 }
 
 func (s Store) LoosenLockedStakes() {
-	var itr db.Iterator = s.stateDB.Iterator(prefixStake, nil)
+	var itr tmdb.Iterator = s.stateDB.Iterator(prefixStake, nil)
 	defer itr.Close()
 
 	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), prefixStake); itr.Next() {
@@ -410,7 +410,7 @@ func (s Store) GetLockedStake(holder crypto.Address, height int64) *types.Stake 
 func (s Store) GetLockedStakes(holder crypto.Address) []*types.Stake {
 	holderKey := makeStakeKey(holder)
 	start := makeLockedStakeKey(holder, 0)
-	var itr db.Iterator = s.stateDB.Iterator(start, nil)
+	var itr tmdb.Iterator = s.stateDB.Iterator(start, nil)
 	defer itr.Close()
 
 	var stakes []*types.Stake
@@ -506,7 +506,7 @@ func (s Store) GetDelegateEx(holder crypto.Address) *types.DelegateEx {
 }
 
 func (s Store) GetDelegatesByDelegatee(delegatee crypto.Address) []*types.DelegateEx {
-	var itr db.Iterator = s.indexDelegator.Iterator(delegatee, nil)
+	var itr tmdb.Iterator = s.indexDelegator.Iterator(delegatee, nil)
 	defer itr.Close()
 
 	var delegates []*types.DelegateEx
@@ -530,7 +530,7 @@ func (s Store) GetEffStake(delegatee crypto.Address) *types.Stake {
 
 func (s Store) GetTopStakes(max uint64) []*types.Stake {
 	var stakes []*types.Stake
-	var itr db.Iterator = s.indexEffStake.ReverseIterator(nil, nil)
+	var itr tmdb.Iterator = s.indexEffStake.ReverseIterator(nil, nil)
 	var cnt uint64 = 0
 	for ; itr.Valid(); itr.Next() {
 		if cnt >= max {
