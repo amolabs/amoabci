@@ -31,7 +31,9 @@ jobs:
       - setup_remote_docker
       - run:
           name: "get amo-client-go from github repository"
-          command: go get -u -d github.com/amolabs/amo-client-go/cmd/amocli
+          command: |
+            cd /go/src
+            go get -u -d github.com/amolabs/amo-client-go/cmd/amocli
       - run:
           name: "prepare to build docker image"
           command: |
