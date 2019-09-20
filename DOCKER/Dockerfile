@@ -1,5 +1,35 @@
 # vim: set expandtab:
-FROM alpine:3.7
+
+#### builder image
+
+FROM golang:1.12-alpine3.9
+
+# tools
+RUN apk add bash git make gcc g++
+
+# libs
+RUN apk add snappy
+
+RUN mkdir /src
+WORKDIR /src
+
+# leveldb
+RUN wget https://github.com/google/leveldb/archive/v1.20.tar.gz
+RUN tar zxvf v1.20.tar.gz && make -C leveldb-1.20
+RUN cp -a leveldb-1.20/include/leveldb /usr/include/
+RUN cp -a leveldb-1.20/out-shared/libleveldb.so* /usr/lib/
+
+# tendermint
+RUN git clone -b v0.32.3 https://github.com/tendermint/tendermint
+RUN make -C tendermint get_tools && make -C tendermint build_c
+
+# amod
+COPY .. amod/
+RUN make build
+
+#### runner image
+
+FROM alpine:3.9
 
 ENV AMOHOME /amo
 ENV TMHOME /tendermint
@@ -7,7 +37,10 @@ ENV TMHOME /tendermint
 VOLUME [ $AMOHOME ]
 VOLUME [ $TMHOME ]
 
-COPY tendermint amod /usr/bin/
+#COPY tendermint amod /usr/bin/
+COPY --from=0 /usr/lib/libleveldb.so* /usr/lib/
+COPY --from=0 /src/tendermint/build/tendermint /usr/bin/
+COPY --from=0 /src/amod/amod /usr/bin/
 COPY run_node.sh config/* /
 
 WORKDIR /

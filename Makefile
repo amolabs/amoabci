@@ -58,7 +58,7 @@ test:
 tendermint:
 	-git clone https://github.com/tendermint/tendermint $(TMPATH)
 	cd $(TMPATH); git checkout v0.32.3
-	make -C $(TMPATH) tools
+	make -C $(TMPATH) get_tools
 	make -C $(TMPATH) build-linux
 	cp $(TMPATH)/build/tendermint ./
 
