@@ -2,7 +2,6 @@ package store
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"os"
 	"testing"
 	"time"
@@ -49,35 +48,12 @@ func makeStake(seed string, amount uint64) *types.Stake {
 	return &stake
 }
 
-func makeDummyTxs(t *testing.T) []dummyTx {
-	txs := make([]dummyTx, 3)
-
-	// transfer Tx
-	t1Key := getBalanceKey(makeAccAddr("t1"))
-	t1Value, err := json.Marshal(new(types.Currency).Set(1000))
-	assert.NoError(t, err)
-
-	txs[0].Key = t1Key
-	txs[0].Value = t1Value
-
-	// stake Tx
-	t2Key := makeStakeKey(makeAccAddr("t2"))
-	t2Value, err := json.Marshal(makeStake("t2", 1000))
-	assert.NoError(t, err)
-
-	txs[1].Key = t2Key
-	txs[1].Value = t2Value
-
-	// stake Tx
-
-	t3Key := makeStakeKey(makeAccAddr("t3"))
-	t3Value, err := json.Marshal(makeStake("t3", 1000))
-	assert.NoError(t, err)
-
-	txs[2].Key = t3Key
-	txs[2].Value = t3Value
-
-	return txs
+func makeParcel(seed string, custody []byte) *types.ParcelValue {
+	return &types.ParcelValue{
+		Owner:   makeAccAddr(seed),
+		Custody: custody,
+		Info:    []byte("dummy parcel"),
+	}
 }
 
 // setup and teardown
@@ -435,22 +411,37 @@ func TestMerkleTree(t *testing.T) {
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 
 	// make transactions to put into merkleTree
-	txs := makeDummyTxs(t)
+	//txs := makeDummyTxs(t)
 	eRootHash, err := hex.DecodeString("__hash_comes_here__")
 	assert.NoError(t, err)
 
-	for i := 0; i < len(txs); i++ {
-		s.SetMerkleTreeNode(txs[i].Key, txs[i].Value)
-	}
-
-	rRootHash := s.GetMerkleTreeRoot()
-
-	// compare expectedRootHash to resultRootHash
-	assert.Equal(t, eRootHash, rRootHash)
-
-	// test merkle tree verification
-	key := txs[0].Key
-	ok, err := s.VerifyMerkleTreeNode(key)
-	assert.NoError(t, err)
+	ok := s.merkleTree.isEmpty()
 	assert.True(t, ok)
+
+	t1acc := makeAccAddr("t1")
+	t1bal := new(types.Currency).Set(100)
+	t2acc := makeAccAddr("t2")
+	t2stake := makeStake("t2val", 100)
+	parcel := []byte{0xC, 0xC, 0xC, 0xC}
+	parcelVal := makeParcel("t3", []byte{0xA, 0xA, 0xA, 0xA})
+
+	s.SetBalance(t1acc, t1bal)
+	s.SetUnlockedStake(t2acc, t2stake)
+	s.SetParcel(parcel, parcelVal)
+
+	versions := s.merkleTree.AvailableVersions()
+	latestVersion := versions[len(versions)-1]
+
+	imt := s.merkleTree.GetImmutable(latestVersion)
+
+	// check if nodes are put into the merkle tree
+	assert.Equal(t, 3, imt.Size())
+
+	assert.True(t, imt.Has(getBalanceKey(t1acc)))
+	assert.True(t, imt.Has(makeStakeKey(t2acc)))
+	assert.True(t, imt.Has(getParcelKey(parcel)))
+
+	// compare expected root hash to generated one
+	rRootHash := s.GetMerkleTreeRoot()
+	assert.Equal(t, eRootHash, rRootHash)
 }
