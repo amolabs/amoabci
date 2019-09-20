@@ -440,27 +440,17 @@ func TestMerkleTree(t *testing.T) {
 	assert.NoError(t, err)
 
 	for i := 0; i < len(txs); i++ {
-		s.merkleTree.Set(txs[i].Key, txs[i].Value)
+		s.SetMerkleTreeNode(txs[i].Key, txs[i].Value)
 	}
 
-	rRootHash := s.merkleTree.Hash()
+	rRootHash := s.GetMerkleTreeRoot()
 
 	// compare expectedRootHash to resultRootHash
 	assert.Equal(t, eRootHash, rRootHash)
 
-	// test merkle proof
+	// test merkle tree verification
 	key := txs[0].Key
-	val, proof, err := s.merkleTree.GetWithProof(key)
+	ok, err := s.VerifyMerkleTreeNode(key)
 	assert.NoError(t, err)
-
-	assert.Equal(t, txs[0].Value, val)
-
-	err = proof.VerifyItem(key, val)
-	assert.Error(t, err) // Verifying item before calling Verify(root)
-
-	err = proof.Verify(rRootHash)
-	assert.NoError(t, err)
-
-	err = proof.VerifyIten(key, val)
-	assert.NoError(t, err)
+	assert.True(t, ok)
 }

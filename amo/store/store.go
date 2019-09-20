@@ -57,11 +57,6 @@ func NewStore(stateDB tmdb.DB, indexDB tmdb.DB) *Store {
 	}
 }
 
-// Balance store
-func getBalanceKey(addr tm.Address) []byte {
-	return append(prefixBalance, addr.Bytes()...)
-}
-
 func (s Store) Purge() error {
 	var itr tmdb.Iterator
 
@@ -96,6 +91,25 @@ func (s Store) Purge() error {
 	itr.Close()
 
 	return nil
+}
+
+// merkle tree related functions
+func (s Store) SetMerkleTreeNode(key, value []byte) {
+	//s.merkleTree.Set(key, value)
+}
+
+func (s Store) GetMerkleTreeRoot() []byte {
+	//return s.merkleTree.Hash()
+	return nil
+}
+
+func (s Store) VerifyMerkleTreeNode(key []byte) (bool, error) {
+	return true, nil
+}
+
+// Balance store
+func getBalanceKey(addr tm.Address) []byte {
+	return append(prefixBalance, addr.Bytes()...)
 }
 
 func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
