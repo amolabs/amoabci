@@ -1,6 +1,8 @@
 package store
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"os"
 	"testing"
 	"time"
@@ -17,6 +19,11 @@ import (
 )
 
 const testRoot = "store_test"
+
+type dummyTx struct {
+	Key   []byte
+	Value []byte
+}
 
 // utils
 
@@ -40,6 +47,37 @@ func makeStake(seed string, amount uint64) *types.Stake {
 		Amount:    *coins,
 	}
 	return &stake
+}
+
+func makeDummyTxs(t *testing.T) []dummyTx {
+	txs := make([]dummyTx, 3)
+
+	// transfer Tx
+	t1Key := getBalanceKey(makeAccAddr("t1"))
+	t1Value, err := json.Marshal(new(types.Currency).Set(1000))
+	assert.NoError(t, err)
+
+	txs[0].Key = t1Key
+	txs[0].Value = t1Value
+
+	// stake Tx
+	t2Key := makeStakeKey(makeAccAddr("t2"))
+	t2Value, err := json.Marshal(makeStake("t2", 1000))
+	assert.NoError(t, err)
+
+	txs[1].Key = t2Key
+	txs[1].Value = t2Value
+
+	// stake Tx
+
+	t3Key := makeStakeKey(makeAccAddr("t3"))
+	t3Value, err := json.Marshal(makeStake("t3", 1000))
+	assert.NoError(t, err)
+
+	txs[2].Key = t3Key
+	txs[2].Value = t3Value
+
+	return txs
 }
 
 // setup and teardown
@@ -390,4 +428,39 @@ func TestVotingPowerCalc(t *testing.T) {
 		sum += val.Power
 	}
 	assert.True(t, sum <= MaxTotalVotingPower)
+}
+
+func TestMerkleTree(t *testing.T) {
+	// suppose merkleTree is already defined in Store structure
+	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
+
+	// make transactions to put into merkleTree
+	txs := makeDummyTxs(t)
+	eRootHash, err := hex.DecodeString("__hash_comes_here__")
+	assert.NoError(t, err)
+
+	for i := 0; i < len(txs); i++ {
+		s.merkleTree.Set(txs[i].Key, txs[i].Value)
+	}
+
+	rRootHash := s.merkleTree.Hash()
+
+	// compare expectedRootHash to resultRootHash
+	assert.Equal(t, eRootHash, rRootHash)
+
+	// test merkle proof
+	key := txs[0].Key
+	val, proof, err := s.merkleTree.GetWithProof(key)
+	assert.NoError(t, err)
+
+	assert.Equal(t, txs[0].Value, val)
+
+	err = proof.VerifyItem(key, val)
+	assert.Error(t, err) // Verifying item before calling Verify(root)
+
+	err = proof.Verify(rRootHash)
+	assert.NoError(t, err)
+
+	err = proof.VerifyIten(key, val)
+	assert.NoError(t, err)
 }
