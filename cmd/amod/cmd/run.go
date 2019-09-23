@@ -33,11 +33,11 @@ func initApp() error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	appLogger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	// TODO: do not use hard-coded value. use value from configuration.
-	db, err := tmdb.NewCLevelDB("store", "data/state")
+	db, err := tmdb.NewCLevelDB("store", "data")
 	if err != nil {
 		return err
 	}
-	index, err := tmdb.NewCLevelDB("index", "data/index")
+	index, err := tmdb.NewCLevelDB("index", "data")
 	if err != nil {
 		return err
 	}
