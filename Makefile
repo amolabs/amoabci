@@ -37,7 +37,7 @@ install_c:
 	$(BUILDENV) go install -tags "cleveldb" ./cmd/amod
 
 test:
-	go test ./...
+	go test -tags "cleveldb" ./...
 
 docker:
 	docker build -t amolabs/amod .
