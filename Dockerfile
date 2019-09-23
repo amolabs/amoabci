@@ -24,8 +24,12 @@ RUN git clone -b v0.32.3 https://github.com/tendermint/tendermint
 RUN make -C tendermint get_tools && make -C tendermint build_c
 
 # amod
-COPY .. amod/
-RUN make build
+RUN mkdir -p amoabci
+COPY Makefile go.mod go.sum amoabci/
+COPY cmd amoabci/cmd
+COPY amo amoabci/amo
+COPY crypto amoabci/crypto
+RUN make -C amoabci build
 
 #### runner image
 
@@ -40,8 +44,8 @@ VOLUME [ $TMHOME ]
 #COPY tendermint amod /usr/bin/
 COPY --from=0 /usr/lib/libleveldb.so* /usr/lib/
 COPY --from=0 /src/tendermint/build/tendermint /usr/bin/
-COPY --from=0 /src/amod/amod /usr/bin/
-COPY run_node.sh config/* /
+COPY --from=0 /src/amoabci/amod /usr/bin/
+COPY DOCKER/run_node.sh config/* /
 
 WORKDIR /
 

@@ -22,7 +22,17 @@ build:
 	@echo "--> Building amo daemon (amod)"
 	$(BUILDENV) go build -tags "cleveldb" ./cmd/amod
 
+# compatibility target
+build_c:
+	@echo "--> Building amo daemon (amod)"
+	$(BUILDENV) go build -tags "cleveldb" ./cmd/amod
+
 install:
+	@echo "--> Installing amo daemon (amod)"
+	$(BUILDENV) go install -tags "cleveldb" ./cmd/amod
+
+# compatibility target
+install_c:
 	@echo "--> Installing amo daemon (amod)"
 	$(BUILDENV) go install -tags "cleveldb" ./cmd/amod
 
@@ -30,7 +40,7 @@ test:
 	go test ./...
 
 docker:
-	docker build -t amolabs/amod DOCKER
+	docker build -t amolabs/amod .
 
 clean:
 	rm -f amod
