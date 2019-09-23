@@ -60,6 +60,20 @@ func tearDown(t *testing.T) {
 
 // tests
 
+func TestPurge(t *testing.T) {
+	setUp(t)
+	defer tearDown(t)
+	sdb, err := tmdb.NewCLevelDB("state", testRoot)
+	idb, err := tmdb.NewCLevelDB("index", testRoot)
+	assert.NoError(t, err)
+
+	s := NewStore(sdb, idb)
+	assert.NotNil(t, s)
+
+	err = s.Purge()
+	assert.NoError(t, err)
+}
+
 func TestBalance(t *testing.T) {
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()

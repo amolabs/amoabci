@@ -66,7 +66,7 @@ func (s Store) Purge() error {
 	var itr tmdb.Iterator
 
 	// stateDB
-	itr = s.stateDB.Iterator([]byte{}, []byte(nil))
+	itr = s.stateDB.Iterator(nil, nil)
 
 	// TODO: cannot guarantee in multi-thread environment
 	// need some sync mechanism
@@ -81,7 +81,7 @@ func (s Store) Purge() error {
 	itr.Close()
 
 	// indexDB
-	itr = s.indexDB.Iterator([]byte{}, []byte(nil))
+	itr = s.indexDB.Iterator(nil, nil)
 
 	// TODO: cannot guarantee in multi-thread environment
 	// need some sync mechanism
