@@ -20,7 +20,7 @@ tags: $(GOSRCS)
 
 build:
 	@echo "--> Building amo daemon (amod)"
-	$(BUILDENV) go build -tags "cleveldb" ./cmd/amod
+	$(BUILDENV) go build ./cmd/amod
 
 # compatibility target
 build_c:
@@ -29,7 +29,7 @@ build_c:
 
 install:
 	@echo "--> Installing amo daemon (amod)"
-	$(BUILDENV) go install -tags "cleveldb" ./cmd/amod
+	$(BUILDENV) go install ./cmd/amod
 
 # compatibility target
 install_c:
@@ -37,6 +37,9 @@ install_c:
 	$(BUILDENV) go install -tags "cleveldb" ./cmd/amod
 
 test:
+	go test ./...
+
+test_c:
 	go test -tags "cleveldb" ./...
 
 docker:

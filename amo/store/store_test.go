@@ -63,8 +63,8 @@ func tearDown(t *testing.T) {
 func TestPurge(t *testing.T) {
 	setUp(t)
 	defer tearDown(t)
-	sdb, err := tmdb.NewCLevelDB("state", testRoot)
-	idb, err := tmdb.NewCLevelDB("index", testRoot)
+	sdb, err := NewDBProxy("state", testRoot)
+	idb, err := NewDBProxy("index", testRoot)
 	assert.NoError(t, err)
 
 	s := NewStore(sdb, idb)

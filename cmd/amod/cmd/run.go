@@ -7,9 +7,9 @@ import (
 	"github.com/tendermint/tendermint/abci/server"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
-	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo"
+	"github.com/amolabs/amoabci/amo/store"
 )
 
 /* Commands (expected hierarchy)
@@ -33,11 +33,11 @@ func initApp() error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	appLogger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	// TODO: do not use hard-coded value. use value from configuration.
-	db, err := tmdb.NewCLevelDB("store", "data")
+	db, err := store.NewDBProxy("store", "data")
 	if err != nil {
 		return err
 	}
-	index, err := tmdb.NewCLevelDB("index", "data")
+	index, err := store.NewDBProxy("index", "data")
 	if err != nil {
 		return err
 	}
