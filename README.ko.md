@@ -39,7 +39,7 @@ TBA
 AMO 블록체인을 위한 ABCI 앱을 실행하려면 같은 호스트에서
 [tendermint](https://github.com/tendermint/tendermint) 데몬이 실행되고 있어야
 한다. 따라서 tendermint를 먼저 설치하도록 한다. 현재 버전의 AMO ABCI 앱은
-tendermint v0.31.7이 필요하다.
+tendermint v0.32.3이 필요하다.
 
 다음 명령을 실행해서 tendermint 데몬을 설치한다:
 ```bash
@@ -48,7 +48,6 @@ cd $GOPATH/src/github.com/tendermint
 git clone https://github.com/tendermint/tendermint
 cd tendermint
 make get_tools
-make get_vendor_deps
 make install
 ```
 
@@ -60,7 +59,6 @@ cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
 make get_tools
-make get_vendor_deps
 make install
 ```
 
@@ -186,7 +184,6 @@ cd $GOPATH/src/github.com/tendermint
 git clone https://github.com/tendermint/tendermint
 cd tendermint
 make get_tools
-make get_vendor_deps
 make build-linux
 cp tendermint $GOPATH/src/github.com/amolabs/amoabci/
 ```
@@ -198,7 +195,6 @@ cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
 make get_tools
-make get_vendor_deps
 make docker
 ```
 이미지는 `amolabs/amod:latest`로 태그된다. 이 이미지는 `tendermint`와 `amod`를

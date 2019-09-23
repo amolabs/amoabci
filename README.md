@@ -39,7 +39,7 @@ requiring docker, you need install the following:
 ABCI app for AMO blockchain requires a
 [tendermint](https://github.com/tendermint/tendermint) daemon running in the
 same host. So, we need to install tendermint first. Current version of AMO ABCI
-app requires tendermint v0.31.7.
+app requires tendermint v0.32.3.
 
 Run the following commands to install tendermint daemon:
 ```bash
@@ -48,7 +48,6 @@ cd $GOPATH/src/github.com/tendermint
 git clone https://github.com/tendermint/tendermint
 cd tendermint
 make get_tools
-make get_vendor_deps
 make install
 ```
 
@@ -60,7 +59,6 @@ cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
 make get_tools
-make get_vendor_deps
 make install
 ```
 
@@ -188,7 +186,6 @@ git clone https://github.com/tendermint/tendermint
 cd tendermint
 git checkout v0.31.7
 make get_tools
-make get_vendor_deps
 make build-linux
 cp build/tendermint $GOPATH/src/github.com/amolabs/amoabci/
 ```
@@ -200,7 +197,6 @@ cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
 make get_tools
-make get_vendor_deps
 make docker
 ```
 The image will be tagged as `amolabs/amod:latest`. This image include both of
