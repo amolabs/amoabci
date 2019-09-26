@@ -126,7 +126,7 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(mdb tmdb.DB idb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(mdb tmdb.DB, sdb tmdb.DB, idb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
