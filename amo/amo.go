@@ -2,7 +2,6 @@ package amo
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -86,11 +85,12 @@ func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdate
 
 // TODO: use 2-stage state
 type State struct {
-	Walk        int64 `json:"-"` // TODO: remove this
-	height      int64 `json:"-"` // current block height
-	appHash     []byte
-	lastHeight  int64  `json:"last_height"`   // last completed block height
-	lastAppHash []byte `json:"last_app_hash"` // TODO: use merkle tree
+	//Walk          int64 `json:"-"` // TODO: remove this
+	merkleVersion int64 `json:"merkle_version"`
+	height        int64 `json:"-"` // current block height
+	appHash       []byte
+	lastHeight    int64  `json:"last_height"`   // last completed block height
+	lastAppHash   []byte `json:"last_app_hash"` // TODO: use merkle tree
 }
 
 type AMOAppConfig struct {
@@ -110,6 +110,9 @@ type AMOApp struct {
 	// app config
 	config AMOAppConfig
 
+	// internal mekrle tree
+	merkleDB tmdb.DB
+
 	// internal state
 	stateDB tmdb.DB
 	indexDB tmdb.DB
@@ -123,9 +126,12 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(sdb tmdb.DB, idb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(mdb tmdb.DB idb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
+	}
+	if mdb == nil {
+		mdb = tmdb.NewMemDB()
 	}
 	if sdb == nil {
 		sdb = tmdb.NewMemDB()
@@ -133,6 +139,7 @@ func NewAMOApp(sdb tmdb.DB, idb tmdb.DB, l log.Logger) *AMOApp {
 	if idb == nil {
 		idb = tmdb.NewMemDB()
 	}
+
 	app := &AMOApp{
 		logger: l,
 		config: AMOAppConfig{ // TODO: read from config file
@@ -143,9 +150,10 @@ func NewAMOApp(sdb tmdb.DB, idb tmdb.DB, l log.Logger) *AMOApp {
 			defaultTxReward,
 			defaultLockupPeriod,
 		},
-		stateDB: sdb,
-		indexDB: idb,
-		store:   astore.NewStore(sdb, idb),
+		merkleDB: mdb,
+		stateDB:  sdb,
+		indexDB:  idb,
+		store:    astore.NewStore(mdb, sdb, idb),
 	}
 	// TODO: use something more elegant
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
@@ -173,7 +181,7 @@ func (app *AMOApp) save() {
 
 func (app *AMOApp) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
 	return abci.ResponseInfo{
-		Data:             fmt.Sprintf("{\"walk\":%v}", app.state.Walk),
+		Data:             fmt.Sprintf("{\"merkle_version\":%v}", app.state.merkleVersion),
 		Version:          AMOAppVersion,
 		AppVersion:       AMOProtocolVersion,
 		LastBlockHeight:  app.state.lastHeight,
@@ -190,11 +198,23 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	if FillGenesisState(app.store, genAppState) != nil {
 		return abci.ResponseInitChain{}
 	}
-	app.state.Walk = 0 // TODO: Replace this with merkle tree
-	b := make([]byte, 8)
-	binary.PutVarint(b, app.state.Walk)
+
+	/*
+		app.state.Walk = 0 // TODO: Replace this with merkle tree
+		b := make([]byte, 8)
+		binary.PutVarint(b, app.state.Walk)
+		app.state.lastHeight = 0
+		app.state.lastAppHash = b
+	*/
+
+	hash, version, err := app.store.Save()
+	if err != nil {
+		return abci.ResponseInitChain{}
+	}
+
+	app.state.merkleVersion = version
 	app.state.lastHeight = 0
-	app.state.lastAppHash = b
+	app.state.lastAppHash = hash
 
 	app.save()
 	app.logger.Info("InitChain: new genesis app state applied.")
@@ -297,7 +317,6 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 			t.GetType() == "delegate" || t.GetType() == "retract" {
 			app.doValUpdate = true
 		}
-		app.state.Walk++
 		tags = append(tags, opTags...)
 	}
 
@@ -320,17 +339,35 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
 	}
 	app.store.LoosenLockedStakes()
+
 	// update appHash
-	// TODO: use merkle tree
-	app.state.appHash = make([]byte, 8)
-	binary.PutVarint(app.state.appHash, app.state.Walk)
+	hash := app.store.Root()
+	if hash == nil {
+		return abci.ResponseEndBlock{}
+	}
+
+	app.state.appHash = hash
+
 	return res
 }
 
 func (app *AMOApp) Commit() abci.ResponseCommit {
+	hash, version, err := app.store.Save()
+	if err != nil {
+		return abci.ResponseCommit{}
+	}
+
+	ok := bytes.Equal(hash, app.state.appHash)
+	if !ok {
+		return abci.ResponseCommit{}
+	}
+
+	app.state.merkleVersion = version
 	app.state.lastAppHash = app.state.appHash
 	app.state.lastHeight = app.state.height
+
 	app.save()
+
 	return abci.ResponseCommit{Data: app.state.lastAppHash}
 }
 
@@ -366,9 +403,6 @@ func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
 	tmp.Set(0) // subtotal for delegate holders
 	for _, d := range ds {
 		tmp2 = *partialReward(app.config.WeightDelegator, &d.Amount.Int, &wsum, &rTotal)
-		if !tmp2.Equals(new(types.Currency).Set(0)) {
-			app.state.Walk++
-		}
 		tmp.Add(&tmp2) // update subtotal
 		b := app.store.GetBalance(d.Delegator).Add(&tmp2)
 		app.store.SetBalance(d.Delegator, b) // update balance
@@ -376,9 +410,6 @@ func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
 			"delegate", hex.EncodeToString(d.Delegator), "reward", tmp2.Int64())
 	}
 	tmp2.Int.Sub(&rTotal.Int, &tmp.Int) // calc validator reward
-	if !tmp2.Equals(new(types.Currency).Set(0)) {
-		app.state.Walk++
-	}
 	b := app.store.GetBalance(staker).Add(&tmp2)
 	app.store.SetBalance(staker, b)
 	app.logger.Debug("Block reward",

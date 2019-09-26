@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"math/big"
 
+	"github.com/tendermint/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/types"
@@ -30,6 +32,9 @@ var (
 )
 
 type Store struct {
+	// merkle tree for blockchain state
+	merkleTree *iavl.MutableTree
+
 	stateDB tmdb.DB // DB for blockchain state: see protocol.md
 	indexDB tmdb.DB
 	// search index for delegators:
@@ -47,8 +52,9 @@ type Store struct {
 	indexEffStake tmdb.DB
 }
 
-func NewStore(stateDB tmdb.DB, indexDB tmdb.DB) *Store {
+func NewStore(merkleDB tmdb.DB, stateDB tmdb.DB, indexDB tmdb.DB) *Store {
 	return &Store{
+		merkleTree:     iavl.NewMutableTree(merkleDB, 10000),
 		stateDB:        stateDB,
 		indexDB:        indexDB,
 		indexDelegator: tmdb.NewPrefixDB(indexDB, []byte("delegator")),
@@ -58,7 +64,27 @@ func NewStore(stateDB tmdb.DB, indexDB tmdb.DB) *Store {
 }
 
 func (s Store) Purge() error {
-	var itr tmdb.Iterator
+	var (
+		itr tmdb.Iterator
+		err error
+	)
+
+	// merkleTree
+	s.merkleTree.Rollback()
+
+	// delete all available tree versions
+	versions := s.merkleTree.AvailableVersions()
+	for i := len(versions) - 1; i >= 0; i-- {
+		err = s.merkleTree.DeleteVersion(int64(versions[i]))
+		if err != nil {
+			return err
+		}
+	}
+
+	// check if merkle tree is really emptied
+	if !s.merkleTree.IsEmpty() {
+		return errors.New("couldn't purge merkle tree")
+	}
 
 	// stateDB
 	itr = s.stateDB.Iterator([]byte{}, []byte(nil))
@@ -94,16 +120,43 @@ func (s Store) Purge() error {
 }
 
 // merkle tree related functions
-func (s Store) SetMerkleTreeNode(key, value []byte) {
-	//s.merkleTree.Set(key, value)
-}
+// node(key, value) -> working tree
+func (s Store) Set(key, value []byte) error {
+	ok := s.merkleTree.Set(key, value)
+	if !ok {
+		return errors.New("couldn't set merkle tree node with key, value")
+	}
 
-func (s Store) GetMerkleTreeRoot() []byte {
-	//return s.merkleTree.Hash()
 	return nil
 }
 
-func (s Store) VerifyMerkleTreeNode(key []byte) (bool, error) {
+// working tree -> node(key, value)
+func (s Store) Get(key []byte) []byte {
+	_, value := s.merkleTree.Get(key)
+
+	return value
+}
+
+// working tree, delete node(key, value)
+func (s Store) Remove(key []byte) ([]byte, bool) {
+	return s.merkleTree.Remove(key)
+}
+
+// working tree >> saved tree
+func (s Store) Save() ([]byte, int64, error) {
+	return s.merkleTree.SaveVersion()
+}
+
+func (s Store) Root() []byte {
+	// Hash() : Hash returns the hash of the latest saved version of the tree,
+	// as returned by SaveVersion. If no versions have been saved, Hash returns nil.
+	//
+	// WorkingHash() : WorkingHash returns the hash of the current working tree.
+
+	return s.merkleTree.WorkingHash()
+}
+
+func (s Store) Verify(key []byte) (bool, error) {
 	return true, nil
 }
 
@@ -117,7 +170,7 @@ func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
 	if err != nil {
 		return err
 	}
-	s.stateDB.Set(getBalanceKey(addr), b)
+	s.Set(getBalanceKey(addr), b)
 	return nil
 }
 
@@ -126,13 +179,13 @@ func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) error {
 	if err != nil {
 		return err
 	}
-	s.stateDB.Set(getBalanceKey(addr), b)
+	s.Set(getBalanceKey(addr), b)
 	return nil
 }
 
 func (s Store) GetBalance(addr tm.Address) *types.Currency {
 	c := types.Currency{}
-	balance := s.stateDB.Get(getBalanceKey(addr))
+	balance := s.Get(getBalanceKey(addr))
 	if len(balance) == 0 {
 		return &c
 	}
@@ -242,10 +295,10 @@ func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error
 	}
 	// update
 	if stake.Amount.Sign() == 0 {
-		s.stateDB.Delete(makeStakeKey(holder))
+		s.Remove(makeStakeKey(holder))
 		s.indexValidator.Delete(stake.Validator.Address())
 	} else {
-		s.stateDB.Set(makeStakeKey(holder), b)
+		s.Set(makeStakeKey(holder), b)
 		s.indexValidator.Set(stake.Validator.Address(), holder)
 		after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
 		s.indexEffStake.Set(after, nil)
@@ -286,10 +339,10 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 
 	// update
 	if stake.Amount.Sign() == 0 {
-		s.stateDB.Delete(makeLockedStakeKey(holder, height))
+		s.Remove(makeLockedStakeKey(holder, height))
 		s.indexValidator.Delete(stake.Validator.Address())
 	} else {
-		s.stateDB.Set(makeLockedStakeKey(holder, height), b)
+		s.Set(makeLockedStakeKey(holder, height), b)
 		s.indexValidator.Set(stake.Validator.Address(), holder)
 		after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
 		s.indexEffStake.Set(after, nil)
@@ -301,52 +354,55 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 func (s Store) UnlockStakes(holder crypto.Address, height int64) {
 	start := makeLockedStakeKey(holder, 0)
 	end := makeLockedStakeKey(holder, height)
-	var itr tmdb.Iterator = s.stateDB.Iterator(start, end)
-	defer itr.Close()
 
 	unlocked := s.GetUnlockedStake(holder)
-	for ; itr.Valid(); itr.Next() {
+
+	s.merkleTree.IterateRangeInclusive(start, end, true, func(key []byte, value []byte, version int64) bool {
 		stake := new(types.Stake)
-		err := json.Unmarshal(itr.Value(), stake)
+		err := json.Unmarshal(value, stake)
 		if err != nil {
 			// We cannot recover from this error.
 			// Since this function returns nothing, just skip this stake.
-			continue
+			return false // same as 'continue'
 		}
-		s.stateDB.Delete(itr.Key())
+		s.Remove(key)
 		if unlocked == nil {
 			unlocked = stake
 		} else {
 			unlocked.Amount.Add(&stake.Amount)
 		}
-	}
+		return false
+	})
+
 	s.SetUnlockedStake(holder, unlocked)
 }
 
 func (s Store) LoosenLockedStakes() {
-	var itr tmdb.Iterator = s.stateDB.Iterator(prefixStake, nil)
-	defer itr.Close()
-
-	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), prefixStake); itr.Next() {
-		if len(itr.Key()) == crypto.AddressSize {
-			// unlocked stake
-			continue
+	s.merkleTree.IterateRangeInclusive(prefixStake, nil, true, func(key []byte, value []byte, version int64) bool {
+		if !bytes.HasPrefix(key, prefixStake) {
+			return false
 		}
-		holder, height := splitLockedStakeKey(itr.Key())
+
+		if len(key) == crypto.AddressSize {
+			// unlocked stake
+			return false // continue
+		}
+
+		holder, height := splitLockedStakeKey(key)
 		if holder == nil || height <= 0 {
 			// db corruption detected. but we can do nothing here. just skip.
-			continue
+			return false // continue
 		}
+
 		stake := new(types.Stake)
-		err := json.Unmarshal(itr.Value(), stake)
+		err := json.Unmarshal(value, stake)
 		if err != nil {
 			// We cannot recover from this error.
 			// Since this function returns nothing, just skip this stake.
-			continue
+			return false // continue
 		}
 
-		// let's update
-		s.stateDB.Delete(itr.Key())
+		s.Remove(key)
 		height--
 		if height == 0 {
 			unlocked := s.GetUnlockedStake(holder)
@@ -357,15 +413,16 @@ func (s Store) LoosenLockedStakes() {
 			}
 			err := s.SetUnlockedStake(holder, unlocked)
 			if err != nil {
-				continue
+				return false // continue
 			}
 		} else {
 			err := s.SetLockedStake(holder, stake, height)
 			if err != nil {
-				continue
+				return false // continue
 			}
 		}
-	}
+		return false
+	})
 }
 
 func makeEffStakeKey(amount types.Currency, holder crypto.Address) []byte {
@@ -396,7 +453,8 @@ func (s Store) GetStake(holder crypto.Address) *types.Stake {
 }
 
 func (s Store) GetUnlockedStake(holder crypto.Address) *types.Stake {
-	b := s.stateDB.Get(makeStakeKey(holder))
+	//b := s.stateDB.Get(makeStakeKey(holder))
+	b := s.Get(makeStakeKey(holder))
 	if len(b) == 0 {
 		return nil
 	}
@@ -409,7 +467,7 @@ func (s Store) GetUnlockedStake(holder crypto.Address) *types.Stake {
 }
 
 func (s Store) GetLockedStake(holder crypto.Address, height int64) *types.Stake {
-	b := s.stateDB.Get(makeLockedStakeKey(holder, height))
+	b := s.Get(makeLockedStakeKey(holder, height))
 	if len(b) == 0 {
 		return nil
 	}
@@ -424,22 +482,28 @@ func (s Store) GetLockedStake(holder crypto.Address, height int64) *types.Stake 
 func (s Store) GetLockedStakes(holder crypto.Address) []*types.Stake {
 	holderKey := makeStakeKey(holder)
 	start := makeLockedStakeKey(holder, 0)
-	var itr tmdb.Iterator = s.stateDB.Iterator(start, nil)
-	defer itr.Close()
 
 	var stakes []*types.Stake
 	// XXX: This routine may be used to get all free and locked stakes for a
 	// holder. But, let's differentiate getUnlockedStake() and
 	// GetLockedStakes() for now.
-	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), holderKey); itr.Next() {
+
+	s.merkleTree.IterateRangeInclusive(start, nil, false, func(key []byte, value []byte, version int64) bool {
+		if !bytes.HasPrefix(key, holderKey) {
+			return false
+		}
+
 		stake := new(types.Stake)
-		err := json.Unmarshal(itr.Value(), stake)
+		err := json.Unmarshal(value, stake)
 		if err != nil {
 			// We cannot recover from this error
-			return nil
+			return false
 		}
+
 		stakes = append(stakes, stake)
-	}
+
+		return false
+	})
 
 	return stakes
 }
@@ -481,10 +545,12 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 
 	// upadate
 	if delegate.Amount.Sign() == 0 {
-		s.stateDB.Delete(getDelegateKey(holder))
+		//s.stateDB.Delete(getDelegateKey(holder))
+		s.Remove(getDelegateKey(holder))
 		s.indexDelegator.Delete(append(delegate.Delegatee, holder...))
 	} else {
-		s.stateDB.Set(getDelegateKey(holder), b)
+		//s.stateDB.Set(getDelegateKey(holder), b)
+		s.Set(getDelegateKey(holder), b)
 		s.indexDelegator.Set(append(delegate.Delegatee, holder...), nil)
 	}
 
@@ -499,7 +565,8 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 }
 
 func (s Store) GetDelegate(holder crypto.Address) *types.Delegate {
-	b := s.stateDB.Get(getDelegateKey(holder))
+	//b := s.stateDB.Get(getDelegateKey(holder))
+	b := s.Get(getDelegateKey(holder))
 	if len(b) == 0 {
 		return nil
 	}
@@ -573,12 +640,14 @@ func (s Store) SetParcel(parcelID []byte, value *types.ParcelValue) error {
 	if err != nil {
 		return err
 	}
-	s.stateDB.Set(getParcelKey(parcelID), b)
+	// s.stateDB.Set(getParcelKey(parcelID), b)
+	s.Set(getParcelKey(parcelID), b)
 	return nil
 }
 
 func (s Store) GetParcel(parcelID []byte) *types.ParcelValue {
-	b := s.stateDB.Get(getParcelKey(parcelID))
+	// b := s.stateDB.Get(getParcelKey(parcelID))
+	b := s.Get(getParcelKey(parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -591,7 +660,8 @@ func (s Store) GetParcel(parcelID []byte) *types.ParcelValue {
 }
 
 func (s Store) DeleteParcel(parcelID []byte) {
-	s.stateDB.DeleteSync(getParcelKey(parcelID))
+	// s.stateDB.DeleteSync(getParcelKey(parcelID))
+	s.Remove(getParcelKey(parcelID))
 }
 
 // Request store
@@ -604,12 +674,14 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.Re
 	if err != nil {
 		return err
 	}
-	s.stateDB.Set(getRequestKey(buyer, parcelID), b)
+	// s.stateDB.Set(getRequestKey(buyer, parcelID), b)
+	s.Set(getRequestKey(buyer, parcelID), b)
 	return nil
 }
 
 func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *types.RequestValue {
-	b := s.stateDB.Get(getRequestKey(buyer, parcelID))
+	// b := s.stateDB.Get(getRequestKey(buyer, parcelID))
+	b := s.Get(getRequestKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -622,7 +694,8 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *types.RequestV
 }
 
 func (s Store) DeleteRequest(buyer crypto.Address, parcelID []byte) {
-	s.stateDB.DeleteSync(getRequestKey(buyer, parcelID))
+	// s.stateDB.DeleteSync(getRequestKey(buyer, parcelID))
+	s.Remove(getRequestKey(buyer, parcelID))
 }
 
 // Usage store
@@ -635,12 +708,14 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.Usag
 	if err != nil {
 		return err
 	}
-	s.stateDB.Set(getUsageKey(buyer, parcelID), b)
+	// s.stateDB.Set(getUsageKey(buyer, parcelID), b)
+	s.Set(getUsageKey(buyer, parcelID), b)
 	return nil
 }
 
 func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *types.UsageValue {
-	b := s.stateDB.Get(getUsageKey(buyer, parcelID))
+	// b := s.stateDB.Get(getUsageKey(buyer, parcelID))
+	b := s.Get(getUsageKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -653,7 +728,8 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *types.UsageValue
 }
 
 func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
-	s.stateDB.DeleteSync(getUsageKey(buyer, parcelID))
+	// s.stateDB.DeleteSync(getUsageKey(buyer, parcelID))
+	s.Remove(getUsageKey(buyer, parcelID))
 }
 
 func (s Store) GetValidators(max uint64) abci.ValidatorUpdates {

@@ -33,15 +33,19 @@ func initApp() error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	appLogger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	// TODO: do not use hard-coded value. use value from configuration.
-	db, err := tmdb.NewGoLevelDB("store", "data/state")
+	merkleDB, err := tmdb.NewGoLevelDB("merkle", "data/merkle")
 	if err != nil {
 		return err
 	}
-	index, err := tmdb.NewGoLevelDB("index", "data/index")
+	stateDB, err := tmdb.NewGoLevelDB("state", "data/state")
 	if err != nil {
 		return err
 	}
-	app := amo.NewAMOApp(db, index, appLogger.With("module", "abci-app"))
+	indexDB, err := tmdb.NewGoLevelDB("index", "data/index")
+	if err != nil {
+		return err
+	}
+	app := amo.NewAMOApp(merkleDB, stateDB, indexDB, appLogger.With("module", "abci-app"))
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
 	if err != nil {
 		return err

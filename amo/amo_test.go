@@ -19,8 +19,7 @@ import (
 )
 
 func TestInitChain(t *testing.T) {
-	db := tmdb.NewMemDB()
-	app := NewAMOApp(db, tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
 	res := app.InitChain(req)
@@ -36,8 +35,7 @@ func TestInitChain(t *testing.T) {
 }
 
 func TestQueryDefault(t *testing.T) {
-	db := tmdb.NewMemDB()
-	app := NewAMOApp(db, tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// query
 	req := abci.RequestQuery{}
@@ -47,8 +45,7 @@ func TestQueryDefault(t *testing.T) {
 }
 
 func TestQueryBalance(t *testing.T) {
-	db := tmdb.NewMemDB()
-	app := NewAMOApp(db, tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -93,8 +90,7 @@ func TestQueryBalance(t *testing.T) {
 }
 
 func TestQueryParcel(t *testing.T) {
-	db := tmdb.NewMemDB()
-	app := NewAMOApp(db, tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -148,8 +144,7 @@ func TestQueryParcel(t *testing.T) {
 }
 
 func TestQueryRequest(t *testing.T) {
-	db := tmdb.NewMemDB()
-	app := NewAMOApp(db, tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -227,8 +222,7 @@ func TestQueryRequest(t *testing.T) {
 }
 
 func TestQueryUsage(t *testing.T) {
-	db := tmdb.NewMemDB()
-	app := NewAMOApp(db, tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -306,7 +300,7 @@ func TestQueryUsage(t *testing.T) {
 }
 
 func TestQueryValidator(t *testing.T) {
-	app := NewAMOApp(nil, nil, nil)
+	app := NewAMOApp(nil, nil, nil, nil)
 
 	// stake holder
 	priv := ed25519.GenPrivKey()
@@ -345,8 +339,7 @@ func TestQueryValidator(t *testing.T) {
 func TestSignedTransactionTest(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
-	db := tmdb.NewMemDB()
-	app := NewAMOApp(db, tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
 	_tx := tx.TransferParam{
@@ -441,7 +434,7 @@ func makeTxWithdraw(priv p256.PrivKeyP256, amount uint64) []byte {
 }
 
 func TestEndBlock(t *testing.T) {
-	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// setup
 	tx.ConfigLockupPeriod = 1 // manipulate
@@ -458,11 +451,13 @@ func TestEndBlock(t *testing.T) {
 	rawTx := makeTxStake(priv1, "val1", 100)
 	resDeliver := app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
+
 	rawTx = makeTxStake(priv2, "val1", 200)
 	resCheck := app.CheckTx(abci.RequestCheckTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resCheck.Code)
 	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodePermissionDenied, resDeliver.Code)
+
 	rawTx = makeTxStake(priv2, "val2", 200)
 	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
@@ -488,7 +483,7 @@ func TestEndBlock(t *testing.T) {
 
 func TestBlockReward(t *testing.T) {
 	// setup
-	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// stake holder
 	priv := ed25519.GenPrivKey()
