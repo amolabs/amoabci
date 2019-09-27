@@ -3,10 +3,10 @@ package amo
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"sort"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -83,16 +83,6 @@ func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdate
 	return updates
 }
 
-// TODO: use 2-stage state
-type State struct {
-	//Walk          int64 `json:"-"` // TODO: remove this
-	merkleVersion int64 `json:"merkle_version"`
-	height        int64 `json:"-"` // current block height
-	appHash       []byte
-	lastHeight    int64  `json:"last_height"`   // last completed block height
-	lastAppHash   []byte `json:"last_app_hash"` // TODO: use merkle tree
-}
-
 type AMOAppConfig struct {
 	MaxValidators   uint64
 	WeightValidator int64
@@ -110,13 +100,16 @@ type AMOApp struct {
 	// app config
 	config AMOAppConfig
 
-	// internal mekrle tree
+	// internal database
 	merkleDB tmdb.DB
+	indexDB  tmdb.DB
+
+	// state related variables
+	stateFile *os.File
+	state     State
 
 	// internal state
 	stateDB tmdb.DB
-	indexDB tmdb.DB
-	state   State
 	store   *astore.Store
 
 	// runtime temporary variables
@@ -126,15 +119,12 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(mdb tmdb.DB, sdb tmdb.DB, idb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(stateFile *os.File, mdb tmdb.DB, idb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
 	if mdb == nil {
 		mdb = tmdb.NewMemDB()
-	}
-	if sdb == nil {
-		sdb = tmdb.NewMemDB()
 	}
 	if idb == nil {
 		idb = tmdb.NewMemDB()
@@ -150,11 +140,16 @@ func NewAMOApp(mdb tmdb.DB, sdb tmdb.DB, idb tmdb.DB, l log.Logger) *AMOApp {
 			defaultTxReward,
 			defaultLockupPeriod,
 		},
-		merkleDB: mdb,
-		stateDB:  sdb,
-		indexDB:  idb,
-		store:    astore.NewStore(mdb, sdb, idb),
+		stateFile: stateFile,
+		state:     State{},
+		merkleDB:  mdb,
+		indexDB:   idb,
+		store:     astore.NewStore(mdb, idb),
 	}
+
+	// necessary to initialize state.json file
+	app.save()
+
 	// TODO: use something more elegant
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
 	app.load()
@@ -162,30 +157,26 @@ func NewAMOApp(mdb tmdb.DB, sdb tmdb.DB, idb tmdb.DB, l log.Logger) *AMOApp {
 }
 
 func (app *AMOApp) load() {
-	stateBytes := app.stateDB.Get(stateKey)
-	if len(stateBytes) != 0 {
-		err := json.Unmarshal(stateBytes, &app.state)
-		if err != nil {
-			panic(err)
-		}
+	err := app.state.LoadFrom(app.stateFile)
+	if err != nil {
+		panic(err)
 	}
 }
 
 func (app *AMOApp) save() {
-	stateBytes, err := json.Marshal(app.state)
+	err := app.state.SaveTo(app.stateFile)
 	if err != nil {
 		panic(err)
 	}
-	app.stateDB.Set(stateKey, stateBytes)
 }
 
 func (app *AMOApp) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
 	return abci.ResponseInfo{
-		Data:             fmt.Sprintf("{\"merkle_version\":%v}", app.state.merkleVersion),
+		Data:             fmt.Sprintf("%x", app.state.LastAppHash),
 		Version:          AMOAppVersion,
 		AppVersion:       AMOProtocolVersion,
-		LastBlockHeight:  app.state.lastHeight,
-		LastBlockAppHash: app.state.lastAppHash,
+		LastBlockHeight:  app.state.LastHeight,
+		LastBlockAppHash: app.state.LastAppHash,
 	}
 }
 
@@ -199,25 +190,18 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		return abci.ResponseInitChain{}
 	}
 
-	/*
-		app.state.Walk = 0 // TODO: Replace this with merkle tree
-		b := make([]byte, 8)
-		binary.PutVarint(b, app.state.Walk)
-		app.state.lastHeight = 0
-		app.state.lastAppHash = b
-	*/
-
 	hash, version, err := app.store.Save()
 	if err != nil {
 		return abci.ResponseInitChain{}
 	}
 
-	app.state.merkleVersion = version
-	app.state.lastHeight = 0
-	app.state.lastAppHash = hash
+	app.state.MerkleVersion = version
+	app.state.LastHeight = 0
+	app.state.LastAppHash = hash
 
 	app.save()
 	app.logger.Info("InitChain: new genesis app state applied.")
+	app.logger.Info(fmt.Sprintf("%x", hash))
 
 	return abci.ResponseInitChain{
 		Validators: app.store.GetValidators(app.config.MaxValidators),
@@ -251,7 +235,7 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 }
 
 func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
-	app.state.height = req.Header.Height
+	app.state.Height = req.Header.Height
 	app.doValUpdate = false
 	app.oldVals = app.store.GetValidators(app.config.MaxValidators)
 
@@ -346,7 +330,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		return abci.ResponseEndBlock{}
 	}
 
-	app.state.appHash = hash
+	app.state.AppHash = hash
 
 	return res
 }
@@ -357,18 +341,18 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 		return abci.ResponseCommit{}
 	}
 
-	ok := bytes.Equal(hash, app.state.appHash)
+	ok := bytes.Equal(hash, app.state.AppHash)
 	if !ok {
 		return abci.ResponseCommit{}
 	}
 
-	app.state.merkleVersion = version
-	app.state.lastAppHash = app.state.appHash
-	app.state.lastHeight = app.state.height
+	app.state.MerkleVersion = version
+	app.state.LastAppHash = app.state.AppHash
+	app.state.LastHeight = app.state.Height
 
 	app.save()
 
-	return abci.ResponseCommit{Data: app.state.lastAppHash}
+	return abci.ResponseCommit{Data: app.state.LastAppHash}
 }
 
 /////////////////////////////////////

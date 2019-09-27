@@ -67,7 +67,7 @@ func makeTestAddress(seed string) crypto.Address {
 }
 
 func getTestStore() *store.Store {
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 3000)
 	s.SetBalanceUint64(bob.addr, 1000)
 	s.SetBalanceUint64(eve.addr, 50)
@@ -182,7 +182,7 @@ func TestTxSignature(t *testing.T) {
 
 func TestValidCancel(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:   alice.addr,
 		Custody: custody[0],
@@ -208,7 +208,7 @@ func TestValidCancel(t *testing.T) {
 
 func TestNonValidCancel(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 
 	// target
 	param := CancelParam{
@@ -227,7 +227,7 @@ func TestNonValidCancel(t *testing.T) {
 
 func TestValidDiscard(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:   alice.addr,
 		Custody: custody[0],
@@ -249,7 +249,7 @@ func TestValidDiscard(t *testing.T) {
 
 func TestNonValidDiscard(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:   alice.addr,
 		Custody: custody[0],
@@ -278,7 +278,7 @@ func TestNonValidDiscard(t *testing.T) {
 
 func TestValidGrant(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[1], &types.ParcelValue{
 		Owner:   bob.addr,
 		Custody: custody[1],
@@ -306,7 +306,7 @@ func TestValidGrant(t *testing.T) {
 
 func TestNonValidGrant(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:   alice.addr,
 		Custody: custody[0],
@@ -343,7 +343,7 @@ func TestNonValidGrant(t *testing.T) {
 
 func TestValidRegister(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 
 	// target
 	param := RegisterParam{
@@ -363,7 +363,7 @@ func TestValidRegister(t *testing.T) {
 
 func TestNonValidRegister(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:   alice.addr,
 		Custody: custody[0],
@@ -387,7 +387,7 @@ func TestNonValidRegister(t *testing.T) {
 
 func TestValidRequest(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 200)
 	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:   bob.addr,
@@ -481,7 +481,7 @@ func TestNonValidRequest(t *testing.T) {
 
 func TestValidRevoke(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:   alice.addr,
 		Custody: custody[0],
@@ -508,7 +508,7 @@ func TestValidRevoke(t *testing.T) {
 
 func TestNonValidRevoke(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:   alice.addr,
 		Custody: custody[0],
@@ -543,7 +543,7 @@ func TestNonValidRevoke(t *testing.T) {
 
 func TestValidTransfer(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(makeTestAddress("alice"), 1230)
 
 	// target
@@ -563,7 +563,7 @@ func TestValidTransfer(t *testing.T) {
 
 func TestNonValidTransfer(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 
 	// target
 	param := TransferParam{
@@ -598,7 +598,7 @@ func TestNonValidTransfer(t *testing.T) {
 
 func TestValidStake(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 3000)
 
 	// target
@@ -619,7 +619,7 @@ func TestValidStake(t *testing.T) {
 
 func TestNonValidStake(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 3000)
 
 	// target
@@ -648,7 +648,7 @@ func TestNonValidStake(t *testing.T) {
 
 func TestValidWithdraw(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
@@ -691,7 +691,7 @@ func TestValidWithdraw(t *testing.T) {
 
 func TestNonValidWithdraw(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
@@ -730,7 +730,7 @@ func TestNonValidWithdraw(t *testing.T) {
 
 func TestValidDelegate(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
@@ -758,7 +758,7 @@ func TestValidDelegate(t *testing.T) {
 
 func TestNonValidDelegate(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
@@ -813,7 +813,7 @@ func TestNonValidDelegate(t *testing.T) {
 
 func TestValidRetract(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
@@ -856,7 +856,7 @@ func TestValidRetract(t *testing.T) {
 
 func TestNonValidRetract(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
@@ -885,7 +885,7 @@ func TestNonValidRetract(t *testing.T) {
 }
 
 func TestStakeLockup(t *testing.T) {
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 3000)
 
 	// setup lock-up period config

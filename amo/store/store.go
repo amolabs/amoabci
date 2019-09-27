@@ -35,7 +35,6 @@ type Store struct {
 	// merkle tree for blockchain state
 	merkleTree *iavl.MutableTree
 
-	stateDB tmdb.DB // DB for blockchain state: see protocol.md
 	indexDB tmdb.DB
 	// search index for delegators:
 	// XXX: a delegatee can have multiple delegators
@@ -52,10 +51,9 @@ type Store struct {
 	indexEffStake tmdb.DB
 }
 
-func NewStore(merkleDB tmdb.DB, stateDB tmdb.DB, indexDB tmdb.DB) *Store {
+func NewStore(merkleDB tmdb.DB, indexDB tmdb.DB) *Store {
 	return &Store{
 		merkleTree:     iavl.NewMutableTree(merkleDB, 10000),
-		stateDB:        stateDB,
 		indexDB:        indexDB,
 		indexDelegator: tmdb.NewPrefixDB(indexDB, []byte("delegator")),
 		indexValidator: tmdb.NewPrefixDB(indexDB, []byte("validator")),
@@ -85,21 +83,6 @@ func (s Store) Purge() error {
 	if !s.merkleTree.IsEmpty() {
 		return errors.New("couldn't purge merkle tree")
 	}
-
-	// stateDB
-	itr = s.stateDB.Iterator([]byte{}, []byte(nil))
-
-	// TODO: cannot guarantee in multi-thread environment
-	// need some sync mechanism
-	for ; itr.Valid(); itr.Next() {
-		k := itr.Key()
-		// XXX: not sure if this will confuse the iterator
-		s.stateDB.Delete(k)
-	}
-
-	// TODO: need some method like s.stateDB.Size() to check if the DB has been
-	// really emptied.
-	itr.Close()
 
 	// indexDB
 	itr = s.indexDB.Iterator([]byte{}, []byte(nil))

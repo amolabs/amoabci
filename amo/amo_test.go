@@ -3,6 +3,8 @@ package amo
 import (
 	"encoding/hex"
 	"encoding/json"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,8 +20,25 @@ import (
 	"github.com/amolabs/amoabci/crypto/p256"
 )
 
+var tmpFile *os.File
+
+// setup and teardown
+func setUp(t *testing.T) {
+	file, err := ioutil.TempFile("", "state_*.json")
+	assert.NoError(t, err)
+
+	tmpFile = file
+}
+
+func tearDown(t *testing.T) {
+	err := os.Remove(tmpFile.Name())
+	assert.NoError(t, err)
+}
+
 func TestInitChain(t *testing.T) {
-	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	setUp(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
 	res := app.InitChain(req)
@@ -32,21 +51,27 @@ func TestInitChain(t *testing.T) {
 	assert.Equal(t, new(types.Currency).Set(100), app.store.GetBalance(addr))
 	//queryReq := abci.RequestQuery{}
 	//queryRes := app.Query(queryReq)
+
+	tearDown(t)
 }
 
 func TestQueryDefault(t *testing.T) {
-	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	setUp(t)
 
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	// query
 	req := abci.RequestQuery{}
 	req.Path = "/nostore"
 	res := app.Query(req)
 	assert.Equal(t, code.QueryCodeBadPath, res.Code)
+
+	tearDown(t)
 }
 
 func TestQueryBalance(t *testing.T) {
-	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	setUp(t)
 
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
 	addr := crypto.Address(addrbin)
@@ -87,10 +112,14 @@ func TestQueryBalance(t *testing.T) {
 	assert.Equal(t, []byte(jsonstr), res.Value)
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
+
+	tearDown(t)
 }
 
 func TestQueryParcel(t *testing.T) {
-	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	setUp(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -141,10 +170,14 @@ func TestQueryParcel(t *testing.T) {
 	assert.Equal(t, []byte(jsonstr), res.Value)
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
+
+	tearDown(t)
 }
 
 func TestQueryRequest(t *testing.T) {
-	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	setUp(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -219,10 +252,14 @@ func TestQueryRequest(t *testing.T) {
 	req = abci.RequestQuery{Path: "/request", Data: key}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeBadKey, res.Code)
+
+	tearDown(t)
 }
 
 func TestQueryUsage(t *testing.T) {
-	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	setUp(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -297,10 +334,14 @@ func TestQueryUsage(t *testing.T) {
 	req = abci.RequestQuery{Path: "/usage", Data: key}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeBadKey, res.Code)
+
+	tearDown(t)
 }
 
 func TestQueryValidator(t *testing.T) {
-	app := NewAMOApp(nil, nil, nil, nil)
+	setUp(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// stake holder
 	priv := ed25519.GenPrivKey()
@@ -334,12 +375,17 @@ func TestQueryValidator(t *testing.T) {
 	assert.Equal(t, []byte(jsonstr), res.Value)
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
+
+	tearDown(t)
 }
 
 func TestSignedTransactionTest(t *testing.T) {
+	setUp(t)
+
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
-	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
 	_tx := tx.TransferParam{
@@ -367,9 +413,13 @@ func TestSignedTransactionTest(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: rawMsg}).Code)
 	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: rawMsg}).Code)
+
+	tearDown(t)
 }
 
 func TestFuncValUpdates(t *testing.T) {
+	setUp(t)
+
 	val1 := abci.ValidatorUpdate{
 		PubKey: abci.PubKey{Type: "anything", Data: []byte("0001")},
 		Power:  1,
@@ -396,6 +446,8 @@ func TestFuncValUpdates(t *testing.T) {
 	assert.Equal(t, int64(3), updates[1].Power)
 	assert.Equal(t, int64(0), updates[2].Power)
 	assert.Equal(t, []byte("0001"), updates[2].PubKey.Data)
+
+	tearDown(t)
 }
 
 func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
@@ -434,7 +486,9 @@ func makeTxWithdraw(priv p256.PrivKeyP256, amount uint64) []byte {
 }
 
 func TestEndBlock(t *testing.T) {
-	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	setUp(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// setup
 	tx.ConfigLockupPeriod = 1 // manipulate
@@ -479,11 +533,15 @@ func TestEndBlock(t *testing.T) {
 	rawTx = makeTxWithdraw(priv2, 200)
 	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
+
+	tearDown(t)
 }
 
 func TestBlockReward(t *testing.T) {
 	// setup
-	app := NewAMOApp(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	setUp(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// stake holder
 	priv := ed25519.GenPrivKey()
@@ -537,4 +595,6 @@ func TestBlockReward(t *testing.T) {
 	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/3)))
 	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
 	assert.True(t, delta < 10 && delta > -10)
+
+	tearDown(t)
 }

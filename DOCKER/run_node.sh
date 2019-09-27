@@ -17,5 +17,5 @@ fi
 
 /usr/bin/tendermint init
 
-/usr/bin/amod run &
+/usr/bin/amod run --home=/amo &
 /usr/bin/tendermint node
