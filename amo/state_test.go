@@ -8,7 +8,8 @@ import (
 )
 
 func TestStateFile(t *testing.T) {
-	setUp(t)
+	setUpTest(t)
+	defer tearDownTest(t)
 
 	state := State{
 		MerkleVersion: int64(1),
@@ -30,6 +31,4 @@ func TestStateFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, state, stateToCompare)
-
-	tearDown(t)
 }
