@@ -85,7 +85,7 @@ func (s Store) Purge() error {
 	}
 
 	// indexDB
-	itr = s.indexDB.Iterator([]byte{}, []byte(nil))
+	itr = s.indexDB.Iterator(nil, nil)
 
 	// TODO: cannot guarantee in multi-thread environment
 	// need some sync mechanism

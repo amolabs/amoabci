@@ -28,7 +28,10 @@ TBA
 * [golang](https://golang.org/dl/)
   * 경우에 따라서 `GOPATH`와 `GOBIN` 환경변수를 수동으로 설정해 줘야 할 수
 	있다. 이후 더 진행하기 전에 이 변수들을 확인하도록 한다.
-* [golang/dep](https://golang.github.io/dep/docs/installation.html)
+* [leveldb](https://github.com/google/leveldb)
+  * Debian이나 Ubuntu 리눅수의 경우에는 `libleveldb-dev` 패키지를 설치한다.
+  * 컴파일하는 서버와 실행하는 서버가 다를 경우 실행하는 서버에는
+	`libleveldb1v5` 패키지를 설치한다.
 
 데몬 프로그램들을 docker 컨테이너에서 실행하거나 docker를 필요로 하는
 테스트들을 실행하기 위해서는 다음을 설치한다:
@@ -39,7 +42,7 @@ TBA
 AMO 블록체인을 위한 ABCI 앱을 실행하려면 같은 호스트에서
 [tendermint](https://github.com/tendermint/tendermint) 데몬이 실행되고 있어야
 한다. 따라서 tendermint를 먼저 설치하도록 한다. 현재 버전의 AMO ABCI 앱은
-tendermint v0.31.7이 필요하다.
+tendermint v0.32.3이 필요하다.
 
 다음 명령을 실행해서 tendermint 데몬을 설치한다:
 ```bash
@@ -48,8 +51,7 @@ cd $GOPATH/src/github.com/tendermint
 git clone https://github.com/tendermint/tendermint
 cd tendermint
 make get_tools
-make get_vendor_deps
-make install
+make install_c
 ```
 
 ### amod 설치
@@ -60,7 +62,6 @@ cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
 make get_tools
-make get_vendor_deps
 make install
 ```
 
@@ -186,7 +187,6 @@ cd $GOPATH/src/github.com/tendermint
 git clone https://github.com/tendermint/tendermint
 cd tendermint
 make get_tools
-make get_vendor_deps
 make build-linux
 cp tendermint $GOPATH/src/github.com/amolabs/amoabci/
 ```
@@ -198,7 +198,6 @@ cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
 make get_tools
-make get_vendor_deps
 make docker
 ```
 이미지는 `amolabs/amod:latest`로 태그된다. 이 이미지는 `tendermint`와 `amod`를

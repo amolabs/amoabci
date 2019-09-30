@@ -17,5 +17,8 @@ fi
 
 /usr/bin/tendermint init
 
-/usr/bin/amod run --home=/amo &
-/usr/bin/tendermint node
+# TODO: ensure directory
+mkdir -p /amo/data
+
+/usr/bin/amod --home=/amo run &
+/usr/bin/tendermint --home /tendermint node

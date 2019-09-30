@@ -7,6 +7,7 @@
 
 # Test binary, build with `go test -c`
 *.test
+*.prof
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
@@ -15,12 +16,9 @@
 vendor
 
 # output binary files
-/amocli
 /amod
-/tendermint
 
 # docker-related files
-DOCKER/amocli
 DOCKER/amod
 DOCKER/tendermint
 /docker-compose.yml

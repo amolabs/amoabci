@@ -28,7 +28,10 @@ To build from source, you need to install the followings:
 * [golang](https://golang.org/dl/)
   * In some cases, you need to set `GOPATH` and `GOBIN` environment variables
 	manually. Check these variables before you proceed.
-* [golang/dep](https://golang.github.io/dep/docs/installation.html)
+* [leveldb](https://github.com/google/leveldb)
+  * For Debian or Ubuntu linux, you can install `libleveldb-dev` package.
+  * In case you use different servers for building and production, install
+	`libleveldb1v5` package in the production server.
 
 If you want to run daemons in a docker container or execute some tests
 requiring docker, you need install the following:
@@ -39,7 +42,7 @@ requiring docker, you need install the following:
 ABCI app for AMO blockchain requires a
 [tendermint](https://github.com/tendermint/tendermint) daemon running in the
 same host. So, we need to install tendermint first. Current version of AMO ABCI
-app requires tendermint v0.31.7.
+app requires tendermint v0.32.3.
 
 Run the following commands to install tendermint daemon:
 ```bash
@@ -48,8 +51,7 @@ cd $GOPATH/src/github.com/tendermint
 git clone https://github.com/tendermint/tendermint
 cd tendermint
 make get_tools
-make get_vendor_deps
-make install
+make install_c
 ```
 
 ### Install amod
@@ -60,7 +62,6 @@ cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
 make get_tools
-make get_vendor_deps
 make install
 ```
 
@@ -188,7 +189,6 @@ git clone https://github.com/tendermint/tendermint
 cd tendermint
 git checkout v0.31.7
 make get_tools
-make get_vendor_deps
 make build-linux
 cp build/tendermint $GOPATH/src/github.com/amolabs/amoabci/
 ```
@@ -200,7 +200,6 @@ cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
 make get_tools
-make get_vendor_deps
 make docker
 ```
 The image will be tagged as `amolabs/amod:latest`. This image include both of

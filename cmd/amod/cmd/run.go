@@ -8,9 +8,9 @@ import (
 	"github.com/tendermint/tendermint/abci/server"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
-	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo"
+	"github.com/amolabs/amoabci/amo/store"
 )
 
 /* Commands (expected hierarchy)
@@ -61,17 +61,20 @@ func initApp(amoDirPath string) error {
 	if err != nil {
 		return err
 	}
+
 	// TODO: do not use hard-coded value. use value from configuration.
-	merkleDBDirPath := filepath.Join(amoDirPath, defaultDataDir, defaultMerkleDB)
-	merkleDB, err := tmdb.NewGoLevelDB(defaultMerkleDB, merkleDBDirPath)
+	dataDirPath := filepath.Join(amoDirPath, defaultDataDir)
+
+	merkleDB, err := store.NewDBProxy(defaultMerkleDB, dataDirPath)
 	if err != nil {
 		return err
 	}
-	indexDBDirPath := filepath.Join(amoDirPath, defaultDataDir, defaultIndexDB)
-	indexDB, err := tmdb.NewGoLevelDB(defaultIndexDB, indexDBDirPath)
+
+	indexDB, err := store.NewDBProxy(defaultIndexDB, dataDirPath)
 	if err != nil {
 		return err
 	}
+
 	app := amo.NewAMOApp(stateFile, merkleDB, indexDB, appLogger.With("module", "abci-app"))
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
 	if err != nil {
@@ -92,5 +95,5 @@ func initApp(amoDirPath string) error {
 }
 
 func init() {
-	runCmd.Flags().String("home", defaultAMODirPath, "AMO home directory")
+	// init here
 }
