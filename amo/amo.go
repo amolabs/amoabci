@@ -21,10 +21,6 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-var (
-	stateKey = []byte("stateKey") // TODO: remove this when applying merkle tree
-)
-
 const (
 	// versions
 	AMOAppVersion      = "v1.1.0-dev"

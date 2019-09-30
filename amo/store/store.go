@@ -104,7 +104,7 @@ func (s Store) Purge() error {
 
 // merkle tree related functions
 // node(key, value) -> working tree
-func (s Store) Set(key, value []byte) error {
+func (s Store) set(key, value []byte) error {
 	ok := s.merkleTree.Set(key, value)
 	if !ok {
 		return errors.New("couldn't set merkle tree node with key, value")
@@ -114,14 +114,14 @@ func (s Store) Set(key, value []byte) error {
 }
 
 // working tree -> node(key, value)
-func (s Store) Get(key []byte) []byte {
+func (s Store) get(key []byte) []byte {
 	_, value := s.merkleTree.Get(key)
 
 	return value
 }
 
 // working tree, delete node(key, value)
-func (s Store) Remove(key []byte) ([]byte, bool) {
+func (s Store) remove(key []byte) ([]byte, bool) {
 	return s.merkleTree.Remove(key)
 }
 
@@ -153,7 +153,7 @@ func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
 	if err != nil {
 		return err
 	}
-	s.Set(getBalanceKey(addr), b)
+	s.set(getBalanceKey(addr), b)
 	return nil
 }
 
@@ -162,13 +162,13 @@ func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) error {
 	if err != nil {
 		return err
 	}
-	s.Set(getBalanceKey(addr), b)
+	s.set(getBalanceKey(addr), b)
 	return nil
 }
 
 func (s Store) GetBalance(addr tm.Address) *types.Currency {
 	c := types.Currency{}
-	balance := s.Get(getBalanceKey(addr))
+	balance := s.get(getBalanceKey(addr))
 	if len(balance) == 0 {
 		return &c
 	}
@@ -278,10 +278,10 @@ func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error
 	}
 	// update
 	if stake.Amount.Sign() == 0 {
-		s.Remove(makeStakeKey(holder))
+		s.remove(makeStakeKey(holder))
 		s.indexValidator.Delete(stake.Validator.Address())
 	} else {
-		s.Set(makeStakeKey(holder), b)
+		s.set(makeStakeKey(holder), b)
 		s.indexValidator.Set(stake.Validator.Address(), holder)
 		after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
 		s.indexEffStake.Set(after, nil)
@@ -322,10 +322,10 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 
 	// update
 	if stake.Amount.Sign() == 0 {
-		s.Remove(makeLockedStakeKey(holder, height))
+		s.remove(makeLockedStakeKey(holder, height))
 		s.indexValidator.Delete(stake.Validator.Address())
 	} else {
-		s.Set(makeLockedStakeKey(holder, height), b)
+		s.set(makeLockedStakeKey(holder, height), b)
 		s.indexValidator.Set(stake.Validator.Address(), holder)
 		after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
 		s.indexEffStake.Set(after, nil)
@@ -348,7 +348,7 @@ func (s Store) UnlockStakes(holder crypto.Address, height int64) {
 			// Since this function returns nothing, just skip this stake.
 			return false // same as 'continue'
 		}
-		s.Remove(key)
+		s.remove(key)
 		if unlocked == nil {
 			unlocked = stake
 		} else {
@@ -385,7 +385,7 @@ func (s Store) LoosenLockedStakes() {
 			return false // continue
 		}
 
-		s.Remove(key)
+		s.remove(key)
 		height--
 		if height == 0 {
 			unlocked := s.GetUnlockedStake(holder)
@@ -437,7 +437,7 @@ func (s Store) GetStake(holder crypto.Address) *types.Stake {
 
 func (s Store) GetUnlockedStake(holder crypto.Address) *types.Stake {
 	//b := s.stateDB.Get(makeStakeKey(holder))
-	b := s.Get(makeStakeKey(holder))
+	b := s.get(makeStakeKey(holder))
 	if len(b) == 0 {
 		return nil
 	}
@@ -450,7 +450,7 @@ func (s Store) GetUnlockedStake(holder crypto.Address) *types.Stake {
 }
 
 func (s Store) GetLockedStake(holder crypto.Address, height int64) *types.Stake {
-	b := s.Get(makeLockedStakeKey(holder, height))
+	b := s.get(makeLockedStakeKey(holder, height))
 	if len(b) == 0 {
 		return nil
 	}
@@ -529,11 +529,11 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 	// upadate
 	if delegate.Amount.Sign() == 0 {
 		//s.stateDB.Delete(getDelegateKey(holder))
-		s.Remove(getDelegateKey(holder))
+		s.remove(getDelegateKey(holder))
 		s.indexDelegator.Delete(append(delegate.Delegatee, holder...))
 	} else {
 		//s.stateDB.Set(getDelegateKey(holder), b)
-		s.Set(getDelegateKey(holder), b)
+		s.set(getDelegateKey(holder), b)
 		s.indexDelegator.Set(append(delegate.Delegatee, holder...), nil)
 	}
 
@@ -549,7 +549,7 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 
 func (s Store) GetDelegate(holder crypto.Address) *types.Delegate {
 	//b := s.stateDB.Get(getDelegateKey(holder))
-	b := s.Get(getDelegateKey(holder))
+	b := s.get(getDelegateKey(holder))
 	if len(b) == 0 {
 		return nil
 	}
@@ -624,13 +624,13 @@ func (s Store) SetParcel(parcelID []byte, value *types.ParcelValue) error {
 		return err
 	}
 	// s.stateDB.Set(getParcelKey(parcelID), b)
-	s.Set(getParcelKey(parcelID), b)
+	s.set(getParcelKey(parcelID), b)
 	return nil
 }
 
 func (s Store) GetParcel(parcelID []byte) *types.ParcelValue {
 	// b := s.stateDB.Get(getParcelKey(parcelID))
-	b := s.Get(getParcelKey(parcelID))
+	b := s.get(getParcelKey(parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -644,7 +644,7 @@ func (s Store) GetParcel(parcelID []byte) *types.ParcelValue {
 
 func (s Store) DeleteParcel(parcelID []byte) {
 	// s.stateDB.DeleteSync(getParcelKey(parcelID))
-	s.Remove(getParcelKey(parcelID))
+	s.remove(getParcelKey(parcelID))
 }
 
 // Request store
@@ -658,13 +658,13 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.Re
 		return err
 	}
 	// s.stateDB.Set(getRequestKey(buyer, parcelID), b)
-	s.Set(getRequestKey(buyer, parcelID), b)
+	s.set(getRequestKey(buyer, parcelID), b)
 	return nil
 }
 
 func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *types.RequestValue {
 	// b := s.stateDB.Get(getRequestKey(buyer, parcelID))
-	b := s.Get(getRequestKey(buyer, parcelID))
+	b := s.get(getRequestKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -678,7 +678,7 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *types.RequestV
 
 func (s Store) DeleteRequest(buyer crypto.Address, parcelID []byte) {
 	// s.stateDB.DeleteSync(getRequestKey(buyer, parcelID))
-	s.Remove(getRequestKey(buyer, parcelID))
+	s.remove(getRequestKey(buyer, parcelID))
 }
 
 // Usage store
@@ -692,13 +692,13 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.Usag
 		return err
 	}
 	// s.stateDB.Set(getUsageKey(buyer, parcelID), b)
-	s.Set(getUsageKey(buyer, parcelID), b)
+	s.set(getUsageKey(buyer, parcelID), b)
 	return nil
 }
 
 func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *types.UsageValue {
 	// b := s.stateDB.Get(getUsageKey(buyer, parcelID))
-	b := s.Get(getUsageKey(buyer, parcelID))
+	b := s.get(getUsageKey(buyer, parcelID))
 	if len(b) == 0 {
 		return nil
 	}
@@ -712,7 +712,7 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *types.UsageValue
 
 func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
 	// s.stateDB.DeleteSync(getUsageKey(buyer, parcelID))
-	s.Remove(getUsageKey(buyer, parcelID))
+	s.remove(getUsageKey(buyer, parcelID))
 }
 
 func (s Store) GetValidators(max uint64) abci.ValidatorUpdates {

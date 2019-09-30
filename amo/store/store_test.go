@@ -452,16 +452,16 @@ func TestMutableTree(t *testing.T) {
 	key := []byte("alice")
 	value := []byte("1")
 
-	s.Set(key, value)
+	s.set(key, value)
 	assert.True(t, s.merkleTree.Has(key))
-	assert.NotEqual(t, []byte("2"), s.Get(key))
-	assert.Equal(t, value, s.Get(key))
+	assert.NotEqual(t, []byte("2"), s.get(key))
+	assert.Equal(t, value, s.get(key))
 
-	s.Remove(key)
+	s.remove(key)
 	assert.False(t, s.merkleTree.Has(key))
-	assert.Nil(t, s.Get(key))
+	assert.Nil(t, s.get(key))
 
-	s.Set(key, value)
+	s.set(key, value)
 	assert.True(t, s.merkleTree.Has(key))
 
 	workingHash := s.Root()
