@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/hex"
 	"os"
 	"testing"
 	"time"
@@ -17,6 +18,11 @@ import (
 )
 
 const testRoot = "store_test"
+
+type dummyTx struct {
+	Key   []byte
+	Value []byte
+}
 
 // utils
 
@@ -40,6 +46,14 @@ func makeStake(seed string, amount uint64) *types.Stake {
 		Amount:    *coins,
 	}
 	return &stake
+}
+
+func makeParcel(seed string, custody []byte) *types.ParcelValue {
+	return &types.ParcelValue{
+		Owner:   makeAccAddr(seed),
+		Custody: custody,
+		Info:    []byte("dummy parcel"),
+	}
 }
 
 // setup and teardown
@@ -404,4 +418,71 @@ func TestVotingPowerCalc(t *testing.T) {
 		sum += val.Power
 	}
 	assert.True(t, sum <= MaxTotalVotingPower)
+}
+
+func TestMerkleTree(t *testing.T) {
+	// suppose merkleTree is already defined in Store structure
+	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
+
+	// make transactions to put into merkleTree
+	hash := "8019daa70792ac5db4f4418add9d7504c8c4d63b06f8bbea02cc4bfbbd2f77fe"
+	expectedHash, err := hex.DecodeString(hash)
+	assert.NoError(t, err)
+
+	ok := s.merkleTree.IsEmpty()
+	assert.True(t, ok)
+
+	t1acc := makeAccAddr("t1")
+	t1bal := new(types.Currency).Set(100)
+	t2acc := makeAccAddr("t2")
+	t2stake := makeStake("t2val", 100)
+	parcel := []byte{0xC, 0xC, 0xC, 0xC}
+	parcelVal := makeParcel("t3", []byte{0xA, 0xA, 0xA, 0xA})
+
+	s.SetBalance(t1acc, t1bal)
+	s.SetUnlockedStake(t2acc, t2stake)
+	s.SetParcel(parcel, parcelVal)
+
+	resultHash, version, err := s.Save()
+	assert.NoError(t, err)
+
+	imt, err := s.merkleTree.GetImmutable(version)
+	assert.NoError(t, err)
+
+	// check if nodes are put into the merkle tree
+	assert.Equal(t, int64(3), imt.Size())
+
+	assert.True(t, imt.Has(getBalanceKey(t1acc)))
+	assert.True(t, imt.Has(makeStakeKey(t2acc)))
+	assert.True(t, imt.Has(getParcelKey(parcel)))
+
+	// compare expected root hash to generated one
+	assert.Equal(t, expectedHash, resultHash)
+}
+
+func TestMutableTree(t *testing.T) {
+	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
+
+	key := []byte("alice")
+	value := []byte("1")
+
+	s.set(key, value)
+	assert.True(t, s.merkleTree.Has(key))
+	assert.NotEqual(t, []byte("2"), s.get(key))
+	assert.Equal(t, value, s.get(key))
+
+	s.remove(key)
+	assert.False(t, s.merkleTree.Has(key))
+	assert.Nil(t, s.get(key))
+
+	s.set(key, value)
+	assert.True(t, s.merkleTree.Has(key))
+
+	workingHash := s.Root()
+
+	savedHash, version, err := s.Save()
+	assert.NoError(t, err)
+
+	assert.Equal(t, int64(1), version)
+	assert.Equal(t, workingHash, savedHash)
 }

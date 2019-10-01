@@ -19,6 +19,6 @@ fi
 
 # TODO: ensure directory
 mkdir -p /amo/data
-# TODO: take homedir argument
-cd /amo && /usr/bin/amod run &
+
+/usr/bin/amod --home=/amo run &
 /usr/bin/tendermint --home /tendermint node
