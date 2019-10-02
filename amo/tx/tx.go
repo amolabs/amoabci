@@ -17,6 +17,11 @@ const (
 	defaultLockupPeriod = uint64(1000000)
 )
 
+const (
+	fromStage    = true
+	notFromStage = false
+)
+
 var (
 	c = elliptic.P256()
 )

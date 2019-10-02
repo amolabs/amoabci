@@ -34,6 +34,13 @@ const (
 	defaultLockupPeriod    = uint64(1000000)
 )
 
+// merkle tree's get() func related constant variable
+// to limit the scope of the function
+const (
+	fromStage    = true
+	notFromStage = false
+)
+
 // Output are sorted by voting power.
 func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
 	sort.Slice(oldVals, func(i, j int) bool {
@@ -200,7 +207,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	app.logger.Info(fmt.Sprintf("%x", hash))
 
 	return abci.ResponseInitChain{
-		Validators: app.store.GetValidators(app.config.MaxValidators),
+		Validators: app.store.GetValidators(app.config.MaxValidators, fromStage),
 	}
 }
 
@@ -233,10 +240,10 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.state.Height = req.Header.Height
 	app.doValUpdate = false
-	app.oldVals = app.store.GetValidators(app.config.MaxValidators)
+	app.oldVals = app.store.GetValidators(app.config.MaxValidators, fromStage)
 
 	proposer := req.Header.GetProposerAddress()
-	staker := app.store.GetHolderByValidator(proposer)
+	staker := app.store.GetHolderByValidator(proposer, fromStage)
 	numTxs := req.Header.GetNumTxs()
 
 	// XXX no means to convey error to res
@@ -315,10 +322,10 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	if app.doValUpdate {
 		app.doValUpdate = false
-		newVals := app.store.GetValidators(app.config.MaxValidators)
+		newVals := app.store.GetValidators(app.config.MaxValidators, fromStage)
 		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
 	}
-	app.store.LoosenLockedStakes()
+	app.store.LoosenLockedStakes(fromStage)
 
 	// update appHash
 	hash := app.store.Root()
@@ -337,6 +344,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 		return abci.ResponseCommit{}
 	}
 
+	// check if there are no state changes between EndBlock() and Commit()
 	ok := bytes.Equal(hash, app.state.AppHash)
 	if !ok {
 		return abci.ResponseCommit{}
@@ -354,11 +362,11 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 /////////////////////////////////////
 
 func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
-	stake := app.store.GetStake(staker)
+	stake := app.store.GetStake(staker, fromStage)
 	if stake == nil {
 		return errors.New("No stake, no reward.")
 	}
-	ds := app.store.GetDelegatesByDelegatee(staker)
+	ds := app.store.GetDelegatesByDelegatee(staker, fromStage)
 
 	var tmp, tmp2 types.Currency
 
@@ -384,13 +392,13 @@ func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
 	for _, d := range ds {
 		tmp2 = *partialReward(app.config.WeightDelegator, &d.Amount.Int, &wsum, &rTotal)
 		tmp.Add(&tmp2) // update subtotal
-		b := app.store.GetBalance(d.Delegator).Add(&tmp2)
+		b := app.store.GetBalance(d.Delegator, fromStage).Add(&tmp2)
 		app.store.SetBalance(d.Delegator, b) // update balance
 		app.logger.Debug("Block reward",
 			"delegate", hex.EncodeToString(d.Delegator), "reward", tmp2.Int64())
 	}
 	tmp2.Int.Sub(&rTotal.Int, &tmp.Int) // calc validator reward
-	b := app.store.GetBalance(staker).Add(&tmp2)
+	b := app.store.GetBalance(staker, fromStage).Add(&tmp2)
 	app.store.SetBalance(staker, b)
 	app.logger.Debug("Block reward",
 		"proposer", hex.EncodeToString(staker)[:20], "reward", tmp2.Int64())

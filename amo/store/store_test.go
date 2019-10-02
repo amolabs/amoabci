@@ -93,7 +93,7 @@ func TestBalance(t *testing.T) {
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	balance := new(types.Currency).Set(1000)
 	s.SetBalance(testAddr, balance)
-	assert.Equal(t, balance, s.GetBalance(testAddr))
+	assert.Equal(t, balance, s.GetBalance(testAddr, fromStage))
 }
 
 func TestParcel(t *testing.T) {
@@ -107,7 +107,7 @@ func TestParcel(t *testing.T) {
 	}
 	parcelID := cmn.RandBytes(32)
 	s.SetParcel(parcelID, &parcelInput)
-	parcelOutput := s.GetParcel(parcelID)
+	parcelOutput := s.GetParcel(parcelID, fromStage)
 	assert.Equal(t, parcelInput, *parcelOutput)
 	t.Log(parcelInput)
 	t.Log(*parcelOutput)
@@ -124,7 +124,7 @@ func TestRequest(t *testing.T) {
 		Exp:     exp,
 	}
 	s.SetRequest(testAddr, parcelID, &requestInput)
-	requestOutput := s.GetRequest(testAddr, parcelID)
+	requestOutput := s.GetRequest(testAddr, parcelID, fromStage)
 	assert.Equal(t, requestInput.Payment, (*requestOutput).Payment)
 	assert.Equal(t, requestInput.Exp.Unix(), (*requestOutput).Exp.Unix())
 	assert.False(t, requestOutput.IsExpired())
@@ -144,7 +144,7 @@ func TestUsage(t *testing.T) {
 		Exp:     exp,
 	}
 	s.SetUsage(testAddr, parcelID, &usageInput)
-	usageOutput := s.GetUsage(testAddr, parcelID)
+	usageOutput := s.GetUsage(testAddr, parcelID, fromStage)
 	assert.Equal(t, usageInput.Custody, (*usageOutput).Custody)
 	assert.Equal(t, usageInput.Exp.Unix(), (*usageOutput).Exp.Unix())
 	assert.False(t, usageOutput.IsExpired())
@@ -166,14 +166,14 @@ func TestStake(t *testing.T) {
 	stake10 := makeStake("val1", 0)
 	stake20 := makeStake("val2", 0)
 
-	stake := s.GetStake(makeAccAddr("nobody"))
+	stake := s.GetStake(makeAccAddr("nobody"), fromStage)
 	assert.Nil(t, stake)
-	stake = s.GetStakeByValidator(makeValAddr("none"))
+	stake = s.GetStakeByValidator(makeValAddr("none"), fromStage)
 	assert.Nil(t, stake)
 
 	err = s.SetUnlockedStake(holder1, stake1)
 	assert.NoError(t, err)
-	stake = s.GetStake(holder1)
+	stake = s.GetStake(holder1, fromStage)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake1, stake)
 
@@ -182,21 +182,21 @@ func TestStake(t *testing.T) {
 
 	err = s.SetUnlockedStake(holder2, stake2)
 	assert.NoError(t, err)
-	stake = s.GetStake(holder2)
+	stake = s.GetStake(holder2, fromStage)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake2, stake)
 
-	stake = s.GetStakeByValidator(val1)
+	stake = s.GetStakeByValidator(val1, fromStage)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake1, stake)
 
-	stake = s.GetStakeByValidator(val2)
+	stake = s.GetStakeByValidator(val2, fromStage)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake2, stake)
 
 	err = s.SetUnlockedStake(holder1, stake10)
 	assert.NoError(t, err)
-	stake = s.GetStake(holder1)
+	stake = s.GetStake(holder1, fromStage)
 	assert.Nil(t, stake)
 
 	err = s.SetUnlockedStake(holder2, stake20)
@@ -220,9 +220,9 @@ func TestLockedStake(t *testing.T) {
 
 	// basic interface test
 
-	stake := s.GetStake(holder1)
+	stake := s.GetStake(holder1, fromStage)
 	assert.Nil(t, stake)
-	stake = s.GetStakeByValidator(val1)
+	stake = s.GetStakeByValidator(val1, fromStage)
 	assert.Nil(t, stake)
 
 	//// test static case
@@ -245,35 +245,35 @@ func TestLockedStake(t *testing.T) {
 	// conflict: height already taken
 	assert.Equal(t, code.TxErrHeightTaken, err)
 
-	stake = s.GetStake(holder1)
+	stake = s.GetStake(holder1, fromStage)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake11, stake)
 
-	stake = s.GetStakeByValidator(val1)
+	stake = s.GetStakeByValidator(val1, fromStage)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake11, stake)
 
 	err = s.SetLockedStake(holder1, stake12, 10)
 	assert.NoError(t, err)
 
-	stake = s.GetStake(holder1)
+	stake = s.GetStake(holder1, fromStage)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake13, stake)
 
-	stake = s.GetStakeByValidator(val1)
+	stake = s.GetStakeByValidator(val1, fromStage)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake13, stake)
 
 	//// test unlocking
 
 	// stakes locked at height 1 will be unlocked
-	s.LoosenLockedStakes()
+	s.LoosenLockedStakes(fromStage)
 
-	stake = s.GetUnlockedStake(holder1)
+	stake = s.GetUnlockedStake(holder1, fromStage)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake11, stake)
 
-	stake = s.GetStake(holder1)
+	stake = s.GetStake(holder1, fromStage)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake13, stake)
 
@@ -281,7 +281,7 @@ func TestLockedStake(t *testing.T) {
 	err = s.SetUnlockedStake(holder1, stake10)
 	assert.NoError(t, err)
 
-	stake = s.GetStake(holder1)
+	stake = s.GetStake(holder1, fromStage)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake12, stake)
 }
@@ -313,11 +313,11 @@ func TestDelegate(t *testing.T) {
 	s.SetDelegate(holder1, delegate1)
 	s.SetDelegate(holder2, delegate2)
 
-	assert.Equal(t, delegate1, s.GetDelegate(holder1))
-	assert.Equal(t, delegate2, s.GetDelegate(holder2))
+	assert.Equal(t, delegate1, s.GetDelegate(holder1, fromStage))
+	assert.Equal(t, delegate2, s.GetDelegate(holder2, fromStage))
 
 	// test delegator search index
-	ds := s.GetDelegatesByDelegatee(staker)
+	ds := s.GetDelegatesByDelegatee(staker, fromStage)
 	assert.Equal(t, 2, len(ds))
 	assert.Equal(t, delegate1, ds[0].Delegate)
 	assert.Equal(t, delegate2, ds[1].Delegate)
@@ -327,13 +327,13 @@ func TestDelegate(t *testing.T) {
 	es.Add(&delegate1.Amount)
 	es.Add(&delegate2.Amount)
 	assert.Equal(t, *new(types.Currency).Set(303), es)
-	es = s.GetEffStake(staker).Amount
+	es = s.GetEffStake(staker, fromStage).Amount
 	assert.Equal(t, *new(types.Currency).Set(303), es)
 
 	// test effective stake cache
-	ts := s.GetTopStakes(10)
+	ts := s.GetTopStakes(10, fromStage)
 	assert.Equal(t, 1, len(ts))
-	assert.Equal(t, s.GetEffStake(staker), ts[0])
+	assert.Equal(t, s.GetEffStake(staker, fromStage), ts[0])
 }
 
 func newStake(amount string) (crypto.Address, *types.Stake) {
@@ -351,18 +351,18 @@ func newStake(amount string) (crypto.Address, *types.Stake) {
 func TestVotingPowerCalc(t *testing.T) {
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB())
 
-	vals := s.GetValidators(100)
+	vals := s.GetValidators(100, fromStage)
 	assert.Equal(t, 0, len(vals))
 
 	s.SetUnlockedStake(newStake("1000000000000000000"))
 	s.SetUnlockedStake(newStake("10000000000000000"))
 	s.SetUnlockedStake(newStake("100000000000000000"))
 
-	vals = s.GetValidators(1)
+	vals = s.GetValidators(1, fromStage)
 	assert.Equal(t, 1, len(vals))
 	assert.Equal(t, int64(500000000000000000), vals[0].Power)
 
-	vals = s.GetValidators(100)
+	vals = s.GetValidators(100, fromStage)
 	assert.Equal(t, 3, len(vals))
 	assert.Equal(t, int64(500000000000000000), vals[0].Power)
 	assert.Equal(t, int64(50000000000000000), vals[1].Power)
@@ -371,11 +371,11 @@ func TestVotingPowerCalc(t *testing.T) {
 	// test voting power adjustment
 	s.Purge()
 	s.SetUnlockedStake(newStake("1152921504606846975")) // 0xfffffffffffffff
-	vals = s.GetValidators(100)
+	vals = s.GetValidators(100, fromStage)
 	assert.Equal(t, int64(0x7ffffffffffffff), vals[0].Power)
 
 	s.SetUnlockedStake(newStake("1"))
-	vals = s.GetValidators(100)
+	vals = s.GetValidators(100, fromStage)
 	// The second staker's power shall be adjusted to be zero,
 	// so it shall not be returned as valid validator.
 	assert.Equal(t, 1, len(vals))
@@ -388,7 +388,7 @@ func TestVotingPowerCalc(t *testing.T) {
 	s.SetUnlockedStake(newStake("10239481297483914839120049"))
 
 	var sum int64
-	vals = s.GetValidators(100)
+	vals = s.GetValidators(100, fromStage)
 	for _, val := range vals {
 		sum += val.Power
 	}
@@ -401,7 +401,7 @@ func TestVotingPowerCalc(t *testing.T) {
 	s.SetUnlockedStake(newStake("10000000000000000000"))
 	s.SetUnlockedStake(newStake("10000000000000000000"))
 	sum = 0
-	vals = s.GetValidators(100)
+	vals = s.GetValidators(100, fromStage)
 	for _, val := range vals {
 		sum += val.Power
 	}
@@ -413,7 +413,7 @@ func TestVotingPowerCalc(t *testing.T) {
 	s.SetUnlockedStake(newStake("1000000000000000000"))
 	s.SetUnlockedStake(newStake("1000000000000000000"))
 	sum = 0
-	vals = s.GetValidators(100)
+	vals = s.GetValidators(100, fromStage)
 	for _, val := range vals {
 		sum += val.Power
 	}
@@ -468,20 +468,26 @@ func TestMutableTree(t *testing.T) {
 
 	s.set(key, value)
 	assert.True(t, s.merkleTree.Has(key))
-	assert.NotEqual(t, []byte("2"), s.get(key))
-	assert.Equal(t, value, s.get(key))
+	assert.NotEqual(t, []byte("2"), s.get(key, fromStage))
+	assert.Equal(t, value, s.get(key, fromStage))
 
 	s.remove(key)
 	assert.False(t, s.merkleTree.Has(key))
-	assert.Nil(t, s.get(key))
+	assert.Nil(t, s.get(key, fromStage))
 
 	s.set(key, value)
 	assert.True(t, s.merkleTree.Has(key))
+
+	// value should be nil as key, value is not saved yet
+	assert.Nil(t, s.get(key, notFromStage))
 
 	workingHash := s.Root()
 
 	savedHash, version, err := s.Save()
 	assert.NoError(t, err)
+
+	// value should not be nil as key, value is saved already
+	assert.NotNil(t, s.get(key, notFromStage))
 
 	assert.Equal(t, int64(1), version)
 	assert.Equal(t, workingHash, savedHash)

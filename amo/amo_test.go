@@ -49,7 +49,7 @@ func TestInitChain(t *testing.T) {
 	// TODO: run series of app.Query() to check the genesis state
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
 	addr := crypto.Address(addrbin)
-	assert.Equal(t, new(types.Currency).Set(100), app.store.GetBalance(addr))
+	assert.Equal(t, new(types.Currency).Set(100), app.store.GetBalance(addr, fromStage))
 	//queryReq := abci.RequestQuery{}
 	//queryRes := app.Query(queryReq)
 }
@@ -76,6 +76,9 @@ func TestQueryBalance(t *testing.T) {
 	addr := crypto.Address(addrbin)
 	queryjson, _ := json.Marshal(addr)
 	app.store.SetBalanceUint64(addr, 100)
+
+	_, _, err := app.store.Save()
+	assert.NoError(t, err)
 
 	_addrbin, _ := hex.DecodeString("FFECB223B976F27D77B0E03E95602DABCC28D876")
 	_addr := crypto.Address(_addrbin)
@@ -134,6 +137,9 @@ func TestQueryParcel(t *testing.T) {
 
 	app.store.SetParcel(parcelID, &parcel)
 
+	_, _, err := app.store.Save()
+	assert.NoError(t, err)
+
 	wrongParcelID := cmn.HexBytes(cmn.RandBytes(32))
 	wrongParcelID[31] = 0xBB
 	_queryjson, _ := json.Marshal(wrongParcelID)
@@ -187,6 +193,9 @@ func TestQueryRequest(t *testing.T) {
 	}
 
 	app.store.SetRequest(addr, parcelID, &request)
+
+	_, _, err := app.store.Save()
+	assert.NoError(t, err)
 
 	wrongParcelID := cmn.RandBytes(32)
 	wrongParcelID[31] = 0xBB
@@ -269,6 +278,9 @@ func TestQueryUsage(t *testing.T) {
 
 	app.store.SetUsage(addr, parcelID, &usage)
 
+	_, _, err := app.store.Save()
+	assert.NoError(t, err)
+
 	wrongParcelID := cmn.RandBytes(32)
 	wrongParcelID[31] = 0xBB
 	wrongAddr := p256.GenPrivKey().PubKey().Address()
@@ -349,7 +361,11 @@ func TestQueryValidator(t *testing.T) {
 		Amount:    *new(types.Currency).Set(150),
 		Validator: validator,
 	}
+
 	app.store.SetUnlockedStake(holder, &stake)
+
+	_, _, err := app.store.Save()
+	assert.NoError(t, err)
 
 	var req abci.RequestQuery
 	var res abci.ResponseQuery
@@ -381,6 +397,9 @@ func TestSignedTransactionTest(t *testing.T) {
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
+
+	_, _, err := app.store.Save()
+	assert.NoError(t, err)
 
 	_tx := tx.TransferParam{
 		To:     p256.GenPrivKeyFromSecret([]byte("bob")).PubKey().Address(),
@@ -489,6 +508,10 @@ func TestEndBlock(t *testing.T) {
 	priv2 := p256.GenPrivKeyFromSecret([]byte("staker2"))
 	app.store.SetBalance(priv2.PubKey().Address(), new(types.Currency).Set(500))
 
+	// immitate initChain() function call
+	_, _, err := app.store.Save()
+	assert.NoError(t, err)
+
 	// begin block
 	blkRequest := abci.RequestBeginBlock{}
 	app.BeginBlock(blkRequest) // we need this
@@ -543,6 +566,7 @@ func TestBlockReward(t *testing.T) {
 		Amount:    *new(types.Currency).Set(150),
 		Validator: validator,
 	}
+
 	app.store.SetUnlockedStake(holder, &stake)
 
 	// delegated stake holders
@@ -572,17 +596,17 @@ func TestBlockReward(t *testing.T) {
 	var delta int64
 	var bal, ass *types.Currency
 
-	bal = app.store.GetBalance(holder)
+	bal = app.store.GetBalance(holder, fromStage)
 	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/2)))
 	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
 	assert.True(t, delta < 10 && delta > -10)
 
-	bal = app.store.GetBalance(daddr1)
+	bal = app.store.GetBalance(daddr1, fromStage)
 	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/6)))
 	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
 	assert.True(t, delta < 10 && delta > -10)
 
-	bal = app.store.GetBalance(daddr2)
+	bal = app.store.GetBalance(daddr2, fromStage)
 	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/3)))
 	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
 	assert.True(t, delta < 10 && delta > -10)

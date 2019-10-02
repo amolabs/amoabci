@@ -53,13 +53,13 @@ func (t *TxStake) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	balance := store.GetBalance(t.GetSender())
+	balance := store.GetBalance(t.GetSender(), fromStage)
 	if balance.LessThan(&txParam.Amount) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 
 	balance.Sub(&txParam.Amount)
-	stake := store.GetStake(t.GetSender())
+	stake := store.GetStake(t.GetSender(), fromStage)
 	if stake == nil {
 		var k ed25519.PubKeyEd25519
 		copy(k[:], txParam.Validator)

@@ -12,6 +12,13 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
+// MERKLE TREE SCOPE (IMPORTANT)
+// Query related funcs must get data from saved tree
+// NOT from working tree as the users or clients
+// SHOULD see the data which are already commited by validators
+// So, it is mandatory to use 'notFromStage' const variable
+// for querying data from merkle tree
+
 func queryBalance(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Code = code.QueryCodeNoKey
@@ -25,7 +32,7 @@ func queryBalance(store *store.Store, queryData []byte) (res abci.ResponseQuery)
 		return
 	}
 
-	bal := store.GetBalance(addr)
+	bal := store.GetBalance(addr, notFromStage)
 	jsonstr, _ := json.Marshal(bal)
 	res.Log = string(jsonstr)
 	// XXX: tendermint will convert this using base64 encoding
@@ -49,14 +56,14 @@ func queryStake(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	stake := store.GetStake(addr)
+	stake := store.GetStake(addr, notFromStage)
 	if stake == nil {
 		res.Code = code.QueryCodeNoMatch
 	} else {
 		res.Code = code.QueryCodeOK
 	}
 
-	stakeEx := types.StakeEx{stake, store.GetDelegatesByDelegatee(addr)}
+	stakeEx := types.StakeEx{stake, store.GetDelegatesByDelegatee(addr, notFromStage)}
 	jsonstr, _ := json.Marshal(stakeEx)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
@@ -78,7 +85,7 @@ func queryDelegate(store *store.Store, queryData []byte) (res abci.ResponseQuery
 		return
 	}
 
-	delegate := store.GetDelegate(addr)
+	delegate := store.GetDelegate(addr, notFromStage)
 	if delegate == nil {
 		res.Code = code.QueryCodeNoMatch
 	} else {
@@ -106,7 +113,7 @@ func queryValidator(store *store.Store, queryData []byte) (res abci.ResponseQuer
 		return
 	}
 
-	holder := store.GetHolderByValidator(addr)
+	holder := store.GetHolderByValidator(addr, notFromStage)
 	jsonstr, _ := json.Marshal(crypto.Address(holder))
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
@@ -130,7 +137,7 @@ func queryParcel(store *store.Store, queryData []byte) (res abci.ResponseQuery) 
 		return
 	}
 
-	parcel := store.GetParcel(id)
+	parcel := store.GetParcel(id, notFromStage)
 	if parcel == nil {
 		res.Code = code.QueryCodeNoMatch
 	} else {
@@ -174,7 +181,7 @@ func queryRequest(store *store.Store, queryData []byte) (res abci.ResponseQuery)
 	// TODO: parse parcel id
 	parcelID := keyMap["target"]
 
-	request := store.GetRequest(addr, parcelID)
+	request := store.GetRequest(addr, parcelID, notFromStage)
 	if request == nil {
 		res.Code = code.QueryCodeNoMatch
 	} else {
@@ -218,7 +225,7 @@ func queryUsage(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	// TODO: parse parcel id
 	parcelID := keyMap["target"]
 
-	usage := store.GetUsage(addr, parcelID)
+	usage := store.GetUsage(addr, parcelID, notFromStage)
 	if usage == nil {
 		res.Code = code.QueryCodeNoMatch
 	} else {

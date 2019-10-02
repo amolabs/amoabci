@@ -49,7 +49,7 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	if store.GetParcel(txParam.Target) != nil {
+	if store.GetParcel(txParam.Target, fromStage) != nil {
 		return code.TxCodeAlreadyRegistered, "parcel already registered", nil
 	}
 

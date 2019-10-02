@@ -54,11 +54,11 @@ func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	fromBalance := store.GetBalance(t.GetSender())
+	fromBalance := store.GetBalance(t.GetSender(), fromStage)
 	if fromBalance.LessThan(&txParam.Amount) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
-	toBalance := store.GetBalance(txParam.To)
+	toBalance := store.GetBalance(txParam.To, fromStage)
 	fromBalance.Sub(&txParam.Amount)
 	toBalance.Add(&txParam.Amount)
 	store.SetBalance(t.GetSender(), fromBalance)
