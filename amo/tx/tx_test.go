@@ -669,7 +669,7 @@ func TestValidWithdraw(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	assert.Equal(t, new(types.Currency).Set(1000), &s.GetStake(alice.addr).Amount)
+	assert.Equal(t, new(types.Currency).Set(1000), &s.GetStake(alice.addr, false).Amount)
 
 	// add more stakeholder to test stake deletion
 	//var k ed25519.PubKeyEd25519
@@ -685,8 +685,8 @@ func TestValidWithdraw(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	assert.Nil(t, s.GetStake(alice.addr))
-	assert.NotNil(t, s.GetStake(bob.addr))
+	assert.Nil(t, s.GetStake(alice.addr, false))
+	assert.NotNil(t, s.GetStake(bob.addr, false))
 }
 
 func TestNonValidWithdraw(t *testing.T) {
@@ -753,7 +753,7 @@ func TestValidDelegate(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	assert.Equal(t, new(types.Currency).Set(1000), &s.GetDelegate(bob.addr).Amount)
+	assert.Equal(t, new(types.Currency).Set(1000), &s.GetDelegate(bob.addr, false).Amount)
 }
 
 func TestNonValidDelegate(t *testing.T) {
@@ -836,7 +836,7 @@ func TestValidRetract(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	assert.Equal(t, new(types.Currency).Set(100), &s.GetDelegate(bob.addr).Amount)
+	assert.Equal(t, new(types.Currency).Set(100), &s.GetDelegate(bob.addr, false).Amount)
 
 	// test
 	payload, _ = json.Marshal(RetractParam{
@@ -849,9 +849,9 @@ func TestValidRetract(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	assert.Nil(t, s.GetDelegate(bob.addr))
+	assert.Nil(t, s.GetDelegate(bob.addr, false))
 
-	assert.Equal(t, new(types.Currency).Set(2000), &s.GetStake(alice.addr).Amount)
+	assert.Equal(t, new(types.Currency).Set(2000), &s.GetStake(alice.addr, false).Amount)
 }
 
 func TestNonValidRetract(t *testing.T) {
@@ -913,13 +913,13 @@ func TestStakeLockup(t *testing.T) {
 	assert.Equal(t, code.TxCodeStakeLocked, rc)
 
 	// stake is locked at height 2. loosen 2 times.
-	s.LoosenLockedStakes()
-	s.LoosenLockedStakes()
+	s.LoosenLockedStakes(false)
+	s.LoosenLockedStakes(false)
 
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	stake := s.GetStake(makeTestAddress("alice"))
+	stake := s.GetStake(makeTestAddress("alice"), false)
 	var val ed25519.PubKeyEd25519
 	copy(val[:], stakeParam.Validator)
 	assert.Equal(t, &types.Stake{

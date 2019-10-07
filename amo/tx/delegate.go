@@ -54,18 +54,18 @@ func (t *TxDelegate) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	balance := store.GetBalance(t.GetSender())
+	balance := store.GetBalance(t.GetSender(), false)
 	if balance.LessThan(&txParam.Amount) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 	balance.Sub(&txParam.Amount)
 
-	stake := store.GetStake(txParam.To)
+	stake := store.GetStake(txParam.To, false)
 	if stake == nil || stake.Amount.Equals(types.Zero) {
 		return code.TxCodeNoStake, "no stake", nil
 	}
 
-	delegate := store.GetDelegate(t.GetSender())
+	delegate := store.GetDelegate(t.GetSender(), false)
 	if delegate == nil {
 		delegate = &types.Delegate{
 			Delegatee: txParam.To,

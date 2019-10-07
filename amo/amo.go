@@ -200,7 +200,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	app.logger.Info(fmt.Sprintf("%x", hash))
 
 	return abci.ResponseInitChain{
-		Validators: app.store.GetValidators(app.config.MaxValidators),
+		Validators: app.store.GetValidators(app.config.MaxValidators, false),
 	}
 }
 
@@ -233,10 +233,10 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.state.Height = req.Header.Height
 	app.doValUpdate = false
-	app.oldVals = app.store.GetValidators(app.config.MaxValidators)
+	app.oldVals = app.store.GetValidators(app.config.MaxValidators, false)
 
 	proposer := req.Header.GetProposerAddress()
-	staker := app.store.GetHolderByValidator(proposer)
+	staker := app.store.GetHolderByValidator(proposer, false)
 	numTxs := req.Header.GetNumTxs()
 
 	// XXX no means to convey error to res
@@ -315,10 +315,10 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	if app.doValUpdate {
 		app.doValUpdate = false
-		newVals := app.store.GetValidators(app.config.MaxValidators)
+		newVals := app.store.GetValidators(app.config.MaxValidators, false)
 		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
 	}
-	app.store.LoosenLockedStakes()
+	app.store.LoosenLockedStakes(false)
 
 	// update appHash
 	hash := app.store.Root()
@@ -337,6 +337,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 		return abci.ResponseCommit{}
 	}
 
+	// check if there are no state changes between EndBlock() and Commit()
 	ok := bytes.Equal(hash, app.state.AppHash)
 	if !ok {
 		return abci.ResponseCommit{}
@@ -354,11 +355,11 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 /////////////////////////////////////
 
 func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
-	stake := app.store.GetStake(staker)
+	stake := app.store.GetStake(staker, false)
 	if stake == nil {
 		return errors.New("No stake, no reward.")
 	}
-	ds := app.store.GetDelegatesByDelegatee(staker)
+	ds := app.store.GetDelegatesByDelegatee(staker, false)
 
 	var tmp, tmp2 types.Currency
 
@@ -384,13 +385,13 @@ func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
 	for _, d := range ds {
 		tmp2 = *partialReward(app.config.WeightDelegator, &d.Amount.Int, &wsum, &rTotal)
 		tmp.Add(&tmp2) // update subtotal
-		b := app.store.GetBalance(d.Delegator).Add(&tmp2)
+		b := app.store.GetBalance(d.Delegator, false).Add(&tmp2)
 		app.store.SetBalance(d.Delegator, b) // update balance
 		app.logger.Debug("Block reward",
 			"delegate", hex.EncodeToString(d.Delegator), "reward", tmp2.Int64())
 	}
 	tmp2.Int.Sub(&rTotal.Int, &tmp.Int) // calc validator reward
-	b := app.store.GetBalance(staker).Add(&tmp2)
+	b := app.store.GetBalance(staker, false).Add(&tmp2)
 	app.store.SetBalance(staker, b)
 	app.logger.Debug("Block reward",
 		"proposer", hex.EncodeToString(staker)[:20], "reward", tmp2.Int64())

@@ -107,7 +107,7 @@ func TestFillGenesisState(t *testing.T) {
 	s.SetBalance(addr1, new(types.Currency).Set(10))
 	s.SetBalance(addr2, new(types.Currency).Set(20))
 
-	assert.Equal(t, new(types.Currency).Set(10), s.GetBalance(addr1))
+	assert.Equal(t, new(types.Currency).Set(10), s.GetBalance(addr1, false))
 
 	genState, err := ParseGenesisStateBytes([]byte(t0json))
 	// this will purge previous data and fill with newly provided genesis state
@@ -115,12 +115,12 @@ func TestFillGenesisState(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check if the store has been purged prior to fill with genesis state
-	assert.Equal(t, new(types.Currency).Set(0), s.GetBalance(addr1))
-	assert.Equal(t, new(types.Currency).Set(0), s.GetBalance(addr2))
+	assert.Equal(t, new(types.Currency).Set(0), s.GetBalance(addr1, false))
+	assert.Equal(t, new(types.Currency).Set(0), s.GetBalance(addr2, false))
 
 	// check if the genesis state is filled correctly
 	addr0, _ := hex.DecodeString(addr0Json)
-	assert.Equal(t, new(types.Currency).Set(100), s.GetBalance(addr0))
+	assert.Equal(t, new(types.Currency).Set(100), s.GetBalance(addr0, false))
 
 	///////////////////////////////
 	// genesis with stakes
@@ -128,11 +128,11 @@ func TestFillGenesisState(t *testing.T) {
 	assert.NoError(t, err)
 	err = FillGenesisState(s, genState)
 	assert.NoError(t, err)
-	stake := s.GetStake(addr0)
+	stake := s.GetStake(addr0, false)
 	assert.NotNil(t, stake)
 	assert.Equal(t, new(types.Currency).Set(100), &stake.Amount)
 	valBytes, _ := hex.DecodeString(valBytesHex)
 	assert.Equal(t, valBytes, []byte(stake.Validator[:]))
 	valAddr, _ := hex.DecodeString(valAddrJson)
-	assert.Equal(t, addr0, s.GetHolderByValidator(valAddr))
+	assert.Equal(t, addr0, s.GetHolderByValidator(valAddr, false))
 }

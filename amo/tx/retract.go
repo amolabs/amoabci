@@ -45,7 +45,7 @@ func (t *TxRetract) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	delegate := store.GetDelegate(t.GetSender())
+	delegate := store.GetDelegate(t.GetSender(), false)
 	if delegate == nil {
 		return code.TxCodeDelegateNotFound, "delegate not found", nil
 	}
@@ -55,7 +55,7 @@ func (t *TxRetract) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 
 	delegate.Amount.Sub(&txParam.Amount)
 	store.SetDelegate(t.GetSender(), delegate)
-	balance := store.GetBalance(t.GetSender())
+	balance := store.GetBalance(t.GetSender(), false)
 	balance.Add(&txParam.Amount)
 	store.SetBalance(t.GetSender(), balance)
 	return code.TxCodeOK, "ok", nil

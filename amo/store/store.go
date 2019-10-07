@@ -102,7 +102,15 @@ func (s Store) Purge() error {
 	return nil
 }
 
-// merkle tree related functions
+// MERKLE TREE SCOPE
+// set -> working tree node (ONLY)
+// get(committed: true)  -> the latest saved tree node
+// 	  (committed: false) -> working tree node
+
+// MERKLE TREE WORKFLOW
+// set 	: working tree
+// save : working tree -> saved tree
+
 // node(key, value) -> working tree
 func (s Store) set(key, value []byte) error {
 	ok := s.merkleTree.Set(key, value)
@@ -113,10 +121,19 @@ func (s Store) set(key, value []byte) error {
 	return nil
 }
 
-// working tree -> node(key, value)
-func (s Store) get(key []byte) []byte {
-	_, value := s.merkleTree.Get(key)
+// { working tree || saved tree } -> node(key, value)
+func (s Store) get(key []byte, committed bool) []byte {
+	if !committed {
+		_, value := s.merkleTree.Get(key)
+		return value
+	}
 
+	latestVersion, err := s.getLatestVersion()
+	if err != nil {
+		return nil
+	}
+
+	_, value := s.merkleTree.GetVersioned(key, latestVersion)
 	return value
 }
 
@@ -131,6 +148,7 @@ func (s Store) Save() ([]byte, int64, error) {
 }
 
 func (s Store) Root() []byte {
+	// NOTES
 	// Hash() : Hash returns the hash of the latest saved version of the tree,
 	// as returned by SaveVersion. If no versions have been saved, Hash returns nil.
 	//
@@ -141,6 +159,33 @@ func (s Store) Root() []byte {
 
 func (s Store) Verify(key []byte) (bool, error) {
 	return true, nil
+}
+
+func (s Store) getLatestVersion() (int64, error) {
+	versions := s.merkleTree.AvailableVersions()
+	if len(versions) == 0 {
+		return int64(0), errors.New("no available versions exist")
+	}
+
+	return int64(versions[len(versions)-1]), nil
+}
+
+func (s Store) getImmutableTree(committed bool) (*iavl.ImmutableTree, error) {
+	if !committed {
+		return s.merkleTree.ImmutableTree, nil
+	}
+
+	latestVersion, err := s.getLatestVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	imt, err := s.merkleTree.GetImmutable(latestVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	return imt, nil
 }
 
 // Balance store
@@ -166,9 +211,9 @@ func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) error {
 	return nil
 }
 
-func (s Store) GetBalance(addr tm.Address) *types.Currency {
+func (s Store) GetBalance(addr tm.Address, committed bool) *types.Currency {
 	c := types.Currency{}
-	balance := s.get(getBalanceKey(addr))
+	balance := s.get(getBalanceKey(addr), committed)
 	if len(balance) == 0 {
 		return &c
 	}
@@ -206,7 +251,7 @@ func (s Store) checkValidatorMatch(holder crypto.Address, stake *types.Stake) er
 	if prevHolder != nil && !bytes.Equal(prevHolder, holder) {
 		return code.TxErrPermissionDenied
 	}
-	prevStake := s.GetStake(holder)
+	prevStake := s.GetStake(holder, false)
 	if prevStake != nil &&
 		!bytes.Equal(prevStake.Validator[:], stake.Validator[:]) {
 		return code.TxErrBadValidator
@@ -216,16 +261,16 @@ func (s Store) checkValidatorMatch(holder crypto.Address, stake *types.Stake) er
 
 func (s Store) checkStakeDeletion(holder crypto.Address, stake *types.Stake, height int64) error {
 	if stake.Amount.Sign() == 0 {
-		whole := s.GetStake(holder)
+		whole := s.GetStake(holder, false)
 		if whole == nil {
 			// something wrong. but harmless for now.
 			return nil
 		}
 		var target *types.Stake
 		if height == 0 {
-			target = s.GetUnlockedStake(holder)
+			target = s.GetUnlockedStake(holder, false)
 		} else if height > 0 {
-			target = s.GetLockedStake(holder, height)
+			target = s.GetLockedStake(holder, height, false)
 		} else { // height must not be negative
 			return code.TxErrUnknown
 		}
@@ -235,13 +280,13 @@ func (s Store) checkStakeDeletion(holder crypto.Address, stake *types.Stake, hei
 			// allowed.
 
 			// check if there is a delegate appointed to this stake
-			ds := s.GetDelegatesByDelegatee(holder)
+			ds := s.GetDelegatesByDelegatee(holder, false)
 			if len(ds) > 0 {
 				return code.TxErrDelegateExists
 			}
 
 			// check if this is the last stake
-			ts := s.GetTopStakes(2)
+			ts := s.GetTopStakes(2, false)
 			if len(ts) == 1 {
 				// requested 2 but got 1. it means this is the last validator.
 				return code.TxErrLastValidator
@@ -269,9 +314,9 @@ func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error
 	}
 
 	// clean up
-	es := s.GetEffStake(holder)
+	es := s.GetEffStake(holder, false)
 	if es != nil {
-		before := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
+		before := makeEffStakeKey(s.GetEffStake(holder, false).Amount, holder)
 		if s.indexEffStake.Has(before) {
 			s.indexEffStake.Delete(before)
 		}
@@ -283,7 +328,7 @@ func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error
 	} else {
 		s.set(makeStakeKey(holder), b)
 		s.indexValidator.Set(stake.Validator.Address(), holder)
-		after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
+		after := makeEffStakeKey(s.GetEffStake(holder, false).Amount, holder)
 		s.indexEffStake.Set(after, nil)
 	}
 
@@ -303,7 +348,7 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 	if err != nil {
 		return err
 	}
-	if s.GetLockedStake(holder, height) != nil {
+	if s.GetLockedStake(holder, height, false) != nil {
 		return code.TxErrHeightTaken
 	}
 	err = s.checkStakeDeletion(holder, stake, height)
@@ -312,9 +357,9 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 	}
 
 	// clean up
-	es := s.GetEffStake(holder)
+	es := s.GetEffStake(holder, false)
 	if es != nil {
-		before := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
+		before := makeEffStakeKey(s.GetEffStake(holder, false).Amount, holder)
 		if s.indexEffStake.Has(before) {
 			s.indexEffStake.Delete(before)
 		}
@@ -327,20 +372,25 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 	} else {
 		s.set(makeLockedStakeKey(holder, height), b)
 		s.indexValidator.Set(stake.Validator.Address(), holder)
-		after := makeEffStakeKey(s.GetEffStake(holder).Amount, holder)
+		after := makeEffStakeKey(s.GetEffStake(holder, false).Amount, holder)
 		s.indexEffStake.Set(after, nil)
 	}
 
 	return nil
 }
 
-func (s Store) UnlockStakes(holder crypto.Address, height int64) {
+func (s Store) UnlockStakes(holder crypto.Address, height int64, committed bool) {
 	start := makeLockedStakeKey(holder, 0)
 	end := makeLockedStakeKey(holder, height)
 
-	unlocked := s.GetUnlockedStake(holder)
+	unlocked := s.GetUnlockedStake(holder, committed)
 
-	s.merkleTree.IterateRangeInclusive(start, end, true, func(key []byte, value []byte, version int64) bool {
+	imt, err := s.getImmutableTree(committed)
+	if err != nil {
+		return
+	}
+
+	imt.IterateRangeInclusive(start, end, true, func(key []byte, value []byte, version int64) bool {
 		stake := new(types.Stake)
 		err := json.Unmarshal(value, stake)
 		if err != nil {
@@ -356,12 +406,16 @@ func (s Store) UnlockStakes(holder crypto.Address, height int64) {
 		}
 		return false
 	})
-
 	s.SetUnlockedStake(holder, unlocked)
 }
 
-func (s Store) LoosenLockedStakes() {
-	s.merkleTree.IterateRangeInclusive(prefixStake, nil, true, func(key []byte, value []byte, version int64) bool {
+func (s Store) LoosenLockedStakes(committed bool) {
+	imt, err := s.getImmutableTree(committed)
+	if err != nil {
+		return
+	}
+
+	imt.IterateRangeInclusive(prefixStake, nil, true, func(key []byte, value []byte, version int64) bool {
 		if !bytes.HasPrefix(key, prefixStake) {
 			return false
 		}
@@ -388,7 +442,7 @@ func (s Store) LoosenLockedStakes() {
 		s.remove(key)
 		height--
 		if height == 0 {
-			unlocked := s.GetUnlockedStake(holder)
+			unlocked := s.GetUnlockedStake(holder, committed)
 			if unlocked == nil {
 				unlocked = stake
 			} else {
@@ -416,10 +470,10 @@ func makeEffStakeKey(amount types.Currency, holder crypto.Address) []byte {
 	return key
 }
 
-func (s Store) GetStake(holder crypto.Address) *types.Stake {
-	stake := s.GetUnlockedStake(holder)
+func (s Store) GetStake(holder crypto.Address, committed bool) *types.Stake {
+	stake := s.GetUnlockedStake(holder, committed)
 
-	stakes := s.GetLockedStakes(holder)
+	stakes := s.GetLockedStakes(holder, committed)
 	for _, item := range stakes {
 		if stake == nil {
 			stake = item
@@ -435,9 +489,8 @@ func (s Store) GetStake(holder crypto.Address) *types.Stake {
 	return stake
 }
 
-func (s Store) GetUnlockedStake(holder crypto.Address) *types.Stake {
-	//b := s.stateDB.Get(makeStakeKey(holder))
-	b := s.get(makeStakeKey(holder))
+func (s Store) GetUnlockedStake(holder crypto.Address, committed bool) *types.Stake {
+	b := s.get(makeStakeKey(holder), committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -449,8 +502,8 @@ func (s Store) GetUnlockedStake(holder crypto.Address) *types.Stake {
 	return &stake
 }
 
-func (s Store) GetLockedStake(holder crypto.Address, height int64) *types.Stake {
-	b := s.get(makeLockedStakeKey(holder, height))
+func (s Store) GetLockedStake(holder crypto.Address, height int64, committed bool) *types.Stake {
+	b := s.get(makeLockedStakeKey(holder, height), committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -462,7 +515,7 @@ func (s Store) GetLockedStake(holder crypto.Address, height int64) *types.Stake 
 	return &stake
 }
 
-func (s Store) GetLockedStakes(holder crypto.Address) []*types.Stake {
+func (s Store) GetLockedStakes(holder crypto.Address, committed bool) []*types.Stake {
 	holderKey := makeStakeKey(holder)
 	start := makeLockedStakeKey(holder, 0)
 
@@ -471,7 +524,12 @@ func (s Store) GetLockedStakes(holder crypto.Address) []*types.Stake {
 	// holder. But, let's differentiate getUnlockedStake() and
 	// GetLockedStakes() for now.
 
-	s.merkleTree.IterateRangeInclusive(start, nil, false, func(key []byte, value []byte, version int64) bool {
+	imt, err := s.getImmutableTree(committed)
+	if err != nil {
+		return nil
+	}
+
+	imt.IterateRangeInclusive(start, nil, false, func(key []byte, value []byte, version int64) bool {
 		if !bytes.HasPrefix(key, holderKey) {
 			return false
 		}
@@ -491,15 +549,15 @@ func (s Store) GetLockedStakes(holder crypto.Address) []*types.Stake {
 	return stakes
 }
 
-func (s Store) GetStakeByValidator(addr crypto.Address) *types.Stake {
-	holder := s.GetHolderByValidator(addr)
+func (s Store) GetStakeByValidator(addr crypto.Address, committed bool) *types.Stake {
+	holder := s.GetHolderByValidator(addr, committed)
 	if holder == nil {
 		return nil
 	}
-	return s.GetStake(holder)
+	return s.GetStake(holder, committed)
 }
 
-func (s Store) GetHolderByValidator(addr crypto.Address) []byte {
+func (s Store) GetHolderByValidator(addr crypto.Address, committed bool) []byte {
 	return s.indexValidator.Get(addr)
 }
 
@@ -515,7 +573,7 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 		return code.TxErrBadParam
 	}
 	// before state update
-	es := s.GetEffStake(delegate.Delegatee)
+	es := s.GetEffStake(delegate.Delegatee, false)
 	if es == nil {
 		return code.TxErrNoStake
 	}
@@ -528,17 +586,15 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 
 	// upadate
 	if delegate.Amount.Sign() == 0 {
-		//s.stateDB.Delete(getDelegateKey(holder))
 		s.remove(getDelegateKey(holder))
 		s.indexDelegator.Delete(append(delegate.Delegatee, holder...))
 	} else {
-		//s.stateDB.Set(getDelegateKey(holder), b)
 		s.set(getDelegateKey(holder), b)
 		s.indexDelegator.Set(append(delegate.Delegatee, holder...), nil)
 	}
 
 	after := makeEffStakeKey(
-		s.GetEffStake(delegate.Delegatee).Amount,
+		s.GetEffStake(delegate.Delegatee, false).Amount,
 		delegate.Delegatee,
 	)
 
@@ -547,9 +603,8 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 	return nil
 }
 
-func (s Store) GetDelegate(holder crypto.Address) *types.Delegate {
-	//b := s.stateDB.Get(getDelegateKey(holder))
-	b := s.get(getDelegateKey(holder))
+func (s Store) GetDelegate(holder crypto.Address, committed bool) *types.Delegate {
+	b := s.get(getDelegateKey(holder), committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -561,38 +616,38 @@ func (s Store) GetDelegate(holder crypto.Address) *types.Delegate {
 	return &delegate
 }
 
-func (s Store) GetDelegateEx(holder crypto.Address) *types.DelegateEx {
-	delegate := s.GetDelegate(holder)
+func (s Store) GetDelegateEx(holder crypto.Address, committed bool) *types.DelegateEx {
+	delegate := s.GetDelegate(holder, committed)
 	if delegate == nil {
 		return nil
 	}
 	return &types.DelegateEx{holder, delegate}
 }
 
-func (s Store) GetDelegatesByDelegatee(delegatee crypto.Address) []*types.DelegateEx {
+func (s Store) GetDelegatesByDelegatee(delegatee crypto.Address, committed bool) []*types.DelegateEx {
 	var itr tmdb.Iterator = s.indexDelegator.Iterator(delegatee, nil)
 	defer itr.Close()
 
 	var delegates []*types.DelegateEx
 	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), delegatee); itr.Next() {
 		delegator := itr.Key()[len(delegatee):]
-		delegates = append(delegates, s.GetDelegateEx(delegator))
+		delegates = append(delegates, s.GetDelegateEx(delegator, committed))
 	}
 	return delegates
 }
 
-func (s Store) GetEffStake(delegatee crypto.Address) *types.Stake {
-	stake := s.GetStake(delegatee)
+func (s Store) GetEffStake(delegatee crypto.Address, committed bool) *types.Stake {
+	stake := s.GetStake(delegatee, committed)
 	if stake == nil {
 		return nil
 	}
-	for _, d := range s.GetDelegatesByDelegatee(delegatee) {
+	for _, d := range s.GetDelegatesByDelegatee(delegatee, committed) {
 		stake.Amount.Add(&d.Amount)
 	}
 	return stake
 }
 
-func (s Store) GetTopStakes(max uint64) []*types.Stake {
+func (s Store) GetTopStakes(max uint64, committed bool) []*types.Stake {
 	var stakes []*types.Stake
 	var itr tmdb.Iterator = s.indexEffStake.ReverseIterator(nil, nil)
 	var cnt uint64 = 0
@@ -604,7 +659,7 @@ func (s Store) GetTopStakes(max uint64) []*types.Stake {
 		var amount types.Currency
 		amount.SetBytes(key[:32])
 		holder := key[32:]
-		stake := s.GetStake(holder)
+		stake := s.GetStake(holder, committed)
 		stake.Amount = amount
 		stakes = append(stakes, stake)
 		cnt++
@@ -623,14 +678,12 @@ func (s Store) SetParcel(parcelID []byte, value *types.ParcelValue) error {
 	if err != nil {
 		return err
 	}
-	// s.stateDB.Set(getParcelKey(parcelID), b)
 	s.set(getParcelKey(parcelID), b)
 	return nil
 }
 
-func (s Store) GetParcel(parcelID []byte) *types.ParcelValue {
-	// b := s.stateDB.Get(getParcelKey(parcelID))
-	b := s.get(getParcelKey(parcelID))
+func (s Store) GetParcel(parcelID []byte, committed bool) *types.ParcelValue {
+	b := s.get(getParcelKey(parcelID), committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -643,7 +696,6 @@ func (s Store) GetParcel(parcelID []byte) *types.ParcelValue {
 }
 
 func (s Store) DeleteParcel(parcelID []byte) {
-	// s.stateDB.DeleteSync(getParcelKey(parcelID))
 	s.remove(getParcelKey(parcelID))
 }
 
@@ -657,14 +709,12 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.Re
 	if err != nil {
 		return err
 	}
-	// s.stateDB.Set(getRequestKey(buyer, parcelID), b)
 	s.set(getRequestKey(buyer, parcelID), b)
 	return nil
 }
 
-func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *types.RequestValue {
-	// b := s.stateDB.Get(getRequestKey(buyer, parcelID))
-	b := s.get(getRequestKey(buyer, parcelID))
+func (s Store) GetRequest(buyer crypto.Address, parcelID []byte, committed bool) *types.RequestValue {
+	b := s.get(getRequestKey(buyer, parcelID), committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -677,7 +727,6 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte) *types.RequestV
 }
 
 func (s Store) DeleteRequest(buyer crypto.Address, parcelID []byte) {
-	// s.stateDB.DeleteSync(getRequestKey(buyer, parcelID))
 	s.remove(getRequestKey(buyer, parcelID))
 }
 
@@ -691,14 +740,12 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.Usag
 	if err != nil {
 		return err
 	}
-	// s.stateDB.Set(getUsageKey(buyer, parcelID), b)
 	s.set(getUsageKey(buyer, parcelID), b)
 	return nil
 }
 
-func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *types.UsageValue {
-	// b := s.stateDB.Get(getUsageKey(buyer, parcelID))
-	b := s.get(getUsageKey(buyer, parcelID))
+func (s Store) GetUsage(buyer crypto.Address, parcelID []byte, committed bool) *types.UsageValue {
+	b := s.get(getUsageKey(buyer, parcelID), committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -711,13 +758,12 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte) *types.UsageValue
 }
 
 func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
-	// s.stateDB.DeleteSync(getUsageKey(buyer, parcelID))
 	s.remove(getUsageKey(buyer, parcelID))
 }
 
-func (s Store) GetValidators(max uint64) abci.ValidatorUpdates {
+func (s Store) GetValidators(max uint64, committed bool) abci.ValidatorUpdates {
 	var vals abci.ValidatorUpdates
-	stakes := s.GetTopStakes(max)
+	stakes := s.GetTopStakes(max, committed)
 	adjFactor := calcAdjustFactor(stakes)
 	for _, stake := range stakes {
 		key := abci.PubKey{ // TODO
