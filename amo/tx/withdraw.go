@@ -45,7 +45,7 @@ func (t *TxWithdraw) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	stake := store.GetStake(t.GetSender(), fromStage)
+	stake := store.GetStake(t.GetSender(), false)
 	if stake == nil {
 		return code.TxCodeNoStake, "no stake", nil
 	}
@@ -55,7 +55,7 @@ func (t *TxWithdraw) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	}
 	// total stake for this account is enough for withdrawal, but not unlocked
 	// stake.
-	unlocked := store.GetUnlockedStake(t.GetSender(), fromStage)
+	unlocked := store.GetUnlockedStake(t.GetSender(), false)
 	if unlocked == nil || unlocked.Amount.Sub(&txParam.Amount).Sign() == -1 {
 		return code.TxCodeStakeLocked, "stake locked", nil
 	}
@@ -74,7 +74,7 @@ func (t *TxWithdraw) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 			return code.TxCodeUnknown, err.Error(), nil
 		}
 	}
-	balance := store.GetBalance(t.GetSender(), fromStage)
+	balance := store.GetBalance(t.GetSender(), false)
 	balance.Add(&txParam.Amount)
 	store.SetBalance(t.GetSender(), balance)
 	return code.TxCodeOK, "ok", nil

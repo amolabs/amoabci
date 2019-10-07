@@ -46,12 +46,12 @@ func (t *TxCancel) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	request := store.GetRequest(t.GetSender(), txParam.Target, fromStage)
+	request := store.GetRequest(t.GetSender(), txParam.Target, false)
 	if request == nil {
 		return code.TxCodeRequestNotFound, "request not found", nil
 	}
 	store.DeleteRequest(t.GetSender(), txParam.Target)
-	balance := store.GetBalance(t.GetSender(), fromStage)
+	balance := store.GetBalance(t.GetSender(), false)
 	balance.Add(&request.Payment)
 	store.SetBalance(t.GetSender(), balance)
 	tags := []tm.KVPair{

@@ -55,23 +55,23 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	parcel := store.GetParcel(txParam.Target, fromStage)
+	parcel := store.GetParcel(txParam.Target, false)
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
 	if !bytes.Equal(parcel.Owner, t.GetSender()) {
 		return code.TxCodePermissionDenied, "parcel not owned", nil
 	}
-	if store.GetUsage(txParam.Grantee, txParam.Target, fromStage) != nil {
+	if store.GetUsage(txParam.Grantee, txParam.Target, false) != nil {
 		return code.TxCodeAlreadyGranted, "parcel already granted", nil
 	}
-	request := store.GetRequest(txParam.Grantee, txParam.Target, fromStage)
+	request := store.GetRequest(txParam.Grantee, txParam.Target, false)
 	if request == nil {
 		return code.TxCodeRequestNotFound, "request not found", nil
 	}
 
 	store.DeleteRequest(txParam.Grantee, txParam.Target)
-	balance := store.GetBalance(t.GetSender(), fromStage)
+	balance := store.GetBalance(t.GetSender(), false)
 	balance.Add(&request.Payment)
 	store.SetBalance(t.GetSender(), balance)
 	usage := types.UsageValue{

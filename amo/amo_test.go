@@ -49,7 +49,7 @@ func TestInitChain(t *testing.T) {
 	// TODO: run series of app.Query() to check the genesis state
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
 	addr := crypto.Address(addrbin)
-	assert.Equal(t, new(types.Currency).Set(100), app.store.GetBalance(addr, fromStage))
+	assert.Equal(t, new(types.Currency).Set(100), app.store.GetBalance(addr, false))
 	//queryReq := abci.RequestQuery{}
 	//queryRes := app.Query(queryReq)
 }
@@ -596,17 +596,17 @@ func TestBlockReward(t *testing.T) {
 	var delta int64
 	var bal, ass *types.Currency
 
-	bal = app.store.GetBalance(holder, fromStage)
+	bal = app.store.GetBalance(holder, false)
 	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/2)))
 	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
 	assert.True(t, delta < 10 && delta > -10)
 
-	bal = app.store.GetBalance(daddr1, fromStage)
+	bal = app.store.GetBalance(daddr1, false)
 	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/6)))
 	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
 	assert.True(t, delta < 10 && delta > -10)
 
-	bal = app.store.GetBalance(daddr2, fromStage)
+	bal = app.store.GetBalance(daddr2, false)
 	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/3)))
 	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
 	assert.True(t, delta < 10 && delta > -10)
