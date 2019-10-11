@@ -10,7 +10,6 @@ import (
 	"sort"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 	tmdb "github.com/tendermint/tm-db"
@@ -105,12 +104,16 @@ type AMOApp struct {
 	state     State
 
 	// internal state
-	stateDB tmdb.DB
-	store   *astore.Store
+	store *astore.Store
 
 	// runtime temporary variables
 	doValUpdate bool
 	oldVals     abci.ValidatorUpdates
+
+	// fee related variables
+	staker          []byte
+	feeAccumulated  types.Currency
+	numDeliveredTxs int64
 }
 
 var _ abci.Application = (*AMOApp)(nil)
@@ -236,11 +239,10 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	app.oldVals = app.store.GetValidators(app.config.MaxValidators, false)
 
 	proposer := req.Header.GetProposerAddress()
-	staker := app.store.GetHolderByValidator(proposer, false)
-	numTxs := req.Header.GetNumTxs()
 
-	// XXX no means to convey error to res
-	app.DistributeReward(staker, numTxs)
+	app.staker = app.store.GetHolderByValidator(proposer, false)
+	app.feeAccumulated = *new(types.Currency).Set(0)
+	app.numDeliveredTxs = int64(0)
 
 	return res
 }
@@ -287,17 +289,37 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	tags := []tm.KVPair{
 		{Key: []byte("tx.type"), Value: []byte(t.GetType())},
 		{Key: []byte("tx.sender"), Value: []byte(t.GetSender().String())},
+		{Key: []byte("tx.fee"), Value: []byte(t.GetFee().String())},
 	}
+
+	fee := t.GetFee()
+	balance := app.store.GetBalance(t.GetSender(), false)
+
+	if balance.LessThan(&fee) {
+		return abci.ResponseDeliverTx{
+			Code:      code.TxCodeNotEnoughBalance,
+			Info:      "not enough balance to pay fee",
+			Codespace: "amo",
+		}
+	}
+
+	app.store.SetBalance(t.GetSender(), balance.Sub(&fee))
+	app.feeAccumulated.Add(&fee)
 
 	rc, info, opTags := t.Execute(app.store)
 
-	// if the operation was not successful, change nothing
+	// if the operation was not successful,
+	// change nothing and rollback the fee
 	if rc == code.TxCodeOK {
 		if t.GetType() == "stake" || t.GetType() == "withdraw" ||
 			t.GetType() == "delegate" || t.GetType() == "retract" {
 			app.doValUpdate = true
 		}
 		tags = append(tags, opTags...)
+		app.numDeliveredTxs += 1
+	} else {
+		app.feeAccumulated.Sub(&fee)
+		app.store.SetBalance(t.GetSender(), balance)
 	}
 
 	return abci.ResponseDeliverTx{
@@ -313,6 +335,9 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 
 // TODO: use req.Height
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
+	// XXX no means to convey error to res
+	app.DistributeIncentive()
+
 	if app.doValUpdate {
 		app.doValUpdate = false
 		newVals := app.store.GetValidators(app.config.MaxValidators, false)
@@ -354,22 +379,28 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 
 /////////////////////////////////////
 
-func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
-	stake := app.store.GetStake(staker, false)
+func (app *AMOApp) DistributeIncentive() error {
+	stake := app.store.GetStake(app.staker, false)
 	if stake == nil {
 		return errors.New("No stake, no reward.")
 	}
-	ds := app.store.GetDelegatesByDelegatee(staker, false)
+	ds := app.store.GetDelegatesByDelegatee(app.staker, false)
 
 	var tmp, tmp2 types.Currency
+	var incentive, rTotal, rTx types.Currency
+
+	// reward = BlkReward + TxReward * numDeliveredTxs
+	// incentive = reward + fee
 
 	// total reward
-	var rTotal, rTx types.Currency
 	rTotal.Set(app.config.BlkReward)
 	rTx.Set(app.config.TxReward)
-	tmp.SetInt64(numTxs)
+	tmp.SetInt64(app.numDeliveredTxs)
 	tmp.Mul(&tmp.Int, &rTx.Int)
 	rTotal.Add(&tmp)
+
+	incentive.Set(0)
+	incentive.Add(rTotal.Add(&app.feeAccumulated))
 
 	// weighted sum
 	var wsum, w big.Int
@@ -383,18 +414,18 @@ func (app *AMOApp) DistributeReward(staker crypto.Address, numTxs int64) error {
 	// individual rewards
 	tmp.Set(0) // subtotal for delegate holders
 	for _, d := range ds {
-		tmp2 = *partialReward(app.config.WeightDelegator, &d.Amount.Int, &wsum, &rTotal)
+		tmp2 = *partialReward(app.config.WeightDelegator, &d.Amount.Int, &wsum, &incentive)
 		tmp.Add(&tmp2) // update subtotal
 		b := app.store.GetBalance(d.Delegator, false).Add(&tmp2)
 		app.store.SetBalance(d.Delegator, b) // update balance
 		app.logger.Debug("Block reward",
 			"delegate", hex.EncodeToString(d.Delegator), "reward", tmp2.Int64())
 	}
-	tmp2.Int.Sub(&rTotal.Int, &tmp.Int) // calc validator reward
-	b := app.store.GetBalance(staker, false).Add(&tmp2)
-	app.store.SetBalance(staker, b)
+	tmp2.Int.Sub(&incentive.Int, &tmp.Int) // calc validator reward
+	b := app.store.GetBalance(app.staker, false).Add(&tmp2)
+	app.store.SetBalance(app.staker, b)
 	app.logger.Debug("Block reward",
-		"proposer", hex.EncodeToString(staker)[:20], "reward", tmp2.Int64())
+		"proposer", hex.EncodeToString(app.staker), "reward", tmp2.Int64())
 
 	return nil
 }

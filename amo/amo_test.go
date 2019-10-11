@@ -412,6 +412,7 @@ func TestSignedTransactionTest(t *testing.T) {
 		Payload: payload,
 		Sender:  from.PubKey().Address(),
 		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:     *new(types.Currency).Set(0),
 	}
 
 	// not signed transaction
@@ -473,6 +474,25 @@ func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
 		Payload: payload,
 		Sender:  priv.PubKey().Address(),
 		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:     *new(types.Currency).Set(0),
+	}
+	_tx.Sign(priv)
+	rawTx, _ := json.Marshal(_tx)
+	return rawTx
+}
+
+func makeTxDelegate(priv p256.PrivKeyP256, to crypto.Address, amount uint64) []byte {
+	param := tx.DelegateParam{
+		To:     to,
+		Amount: *new(types.Currency).Set(amount),
+	}
+	payload, _ := json.Marshal(param)
+	_tx := tx.TxBase{
+		Type:    "delegate",
+		Payload: payload,
+		Sender:  priv.PubKey().Address(),
+		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:     *new(types.Currency).Set(0),
 	}
 	_tx.Sign(priv)
 	rawTx, _ := json.Marshal(_tx)
@@ -489,6 +509,7 @@ func makeTxWithdraw(priv p256.PrivKeyP256, amount uint64) []byte {
 		Payload: payload,
 		Sender:  priv.PubKey().Address(),
 		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:     *new(types.Currency).Set(0),
 	}
 	_tx.Sign(priv)
 	rawTx, _ := json.Marshal(_tx)
@@ -557,56 +578,54 @@ func TestBlockReward(t *testing.T) {
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
-	// stake holder
-	priv := ed25519.GenPrivKey()
-	validator, _ := priv.PubKey().(ed25519.PubKeyEd25519)
-	addrbin, _ := hex.DecodeString("BCECB223B976F27D77B0E03E95602DABCC28D876")
-	holder := crypto.Address(addrbin)
+	validator, _ := ed25519.GenPrivKey().PubKey().(ed25519.PubKeyEd25519)
+
+	sPriv := p256.GenPrivKeyFromSecret([]byte("stake"))
+	d1Priv := p256.GenPrivKeyFromSecret([]byte("delegate1"))
+	d2Priv := p256.GenPrivKeyFromSecret([]byte("delegate2"))
+
+	app.store.SetBalance(d1Priv.PubKey().Address(), new(types.Currency).Set(100))
+	app.store.SetBalance(d2Priv.PubKey().Address(), new(types.Currency).Set(200))
+
 	stake := types.Stake{
 		Amount:    *new(types.Currency).Set(150),
 		Validator: validator,
 	}
+	app.store.SetUnlockedStake(sPriv.PubKey().Address(), &stake)
 
-	app.store.SetUnlockedStake(holder, &stake)
-
-	// delegated stake holders
-	daddr1 := p256.GenPrivKeyFromSecret([]byte("d1")).PubKey().Address()
-	daddr2 := p256.GenPrivKeyFromSecret([]byte("d2")).PubKey().Address()
-	delegate1 := types.Delegate{
-		Delegatee: holder,
-		Amount:    *new(types.Currency).Set(100),
-	}
-	delegate2 := types.Delegate{
-		Delegatee: holder,
-		Amount:    *new(types.Currency).Set(200),
-	}
-	app.store.SetDelegate(daddr1, &delegate1)
-	app.store.SetDelegate(daddr2, &delegate2)
-
-	// execute
-	req := abci.RequestBeginBlock{
+	reqBeginBlock := abci.RequestBeginBlock{
 		Header: abci.Header{
-			NumTxs:          2,
 			ProposerAddress: validator.Address(),
 		},
 	}
-	_ = app.BeginBlock(req)
+	_ = app.BeginBlock(reqBeginBlock)
+
+	rawTx := makeTxDelegate(d1Priv, sPriv.PubKey().Address(), 100)
+	resDeliver := app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
+	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
+
+	rawTx = makeTxDelegate(d2Priv, sPriv.PubKey().Address(), 200)
+	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
+	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
+
+	reqEndBlock := abci.RequestEndBlock{Height: 1}
+	app.EndBlock(reqEndBlock)
 
 	// check distributed rewards
 	var delta int64
 	var bal, ass *types.Currency
 
-	bal = app.store.GetBalance(holder, false)
+	bal = app.store.GetBalance(sPriv.PubKey().Address(), false)
 	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/2)))
 	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
 	assert.True(t, delta < 10 && delta > -10)
 
-	bal = app.store.GetBalance(daddr1, false)
+	bal = app.store.GetBalance(d1Priv.PubKey().Address(), false)
 	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/6)))
 	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
 	assert.True(t, delta < 10 && delta > -10)
 
-	bal = app.store.GetBalance(daddr2, false)
+	bal = app.store.GetBalance(d2Priv.PubKey().Address(), false)
 	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/3)))
 	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
 	assert.True(t, delta < 10 && delta > -10)

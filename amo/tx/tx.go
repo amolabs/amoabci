@@ -9,6 +9,7 @@ import (
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/crypto/p256"
 )
 
@@ -35,6 +36,7 @@ type Tx interface {
 	// accessors
 	GetType() string
 	GetSender() crypto.Address
+	GetFee() types.Currency
 	getNonce() tm.HexBytes
 	getPayload() json.RawMessage
 	getSignature() Signature
@@ -54,6 +56,7 @@ type TxBase struct {
 	Sender    crypto.Address  `json:"sender"`
 	Nonce     tm.HexBytes     `json:"nonce"`
 	Payload   json.RawMessage `json:"payload"` // TODO: change to txparam
+	Fee       types.Currency  `json:"fee"`
 	Signature Signature       `json:"signature"`
 }
 
@@ -62,6 +65,7 @@ type TxToSign struct {
 	Sender    crypto.Address  `json:"sender"`
 	Nonce     tm.HexBytes     `json:"nonce"`
 	Payload   json.RawMessage `json:"payload"`
+	Fee       types.Currency  `json:"fee"`
 	Signature Signature       `json:"-"`
 }
 
@@ -159,6 +163,10 @@ func (t *TxBase) GetType() string {
 
 func (t *TxBase) GetSender() crypto.Address {
 	return t.Sender
+}
+
+func (t *TxBase) GetFee() types.Currency {
+	return t.Fee
 }
 
 func (t *TxBase) getNonce() tm.HexBytes {
