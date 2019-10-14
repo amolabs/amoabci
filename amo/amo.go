@@ -289,7 +289,6 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	tags := []tm.KVPair{
 		{Key: []byte("tx.type"), Value: []byte(t.GetType())},
 		{Key: []byte("tx.sender"), Value: []byte(t.GetSender().String())},
-		{Key: []byte("tx.fee"), Value: []byte(t.GetFee().String())},
 	}
 
 	fee := t.GetFee()

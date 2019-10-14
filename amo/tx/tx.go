@@ -55,8 +55,8 @@ type TxBase struct {
 	Type      string          `json:"type"`
 	Sender    crypto.Address  `json:"sender"`
 	Nonce     tm.HexBytes     `json:"nonce"`
-	Payload   json.RawMessage `json:"payload"` // TODO: change to txparam
 	Fee       types.Currency  `json:"fee"`
+	Payload   json.RawMessage `json:"payload"` // TODO: change to txparam
 	Signature Signature       `json:"signature"`
 }
 
@@ -64,8 +64,8 @@ type TxToSign struct {
 	Type      string          `json:"type"`
 	Sender    crypto.Address  `json:"sender"`
 	Nonce     tm.HexBytes     `json:"nonce"`
-	Payload   json.RawMessage `json:"payload"`
 	Fee       types.Currency  `json:"fee"`
+	Payload   json.RawMessage `json:"payload"`
 	Signature Signature       `json:"-"`
 }
 
