@@ -44,11 +44,18 @@ func BenchmarkCheckTransferTx(b *testing.B) {
 	assert.NoError(b, err)
 	assert.NotNil(b, sdb)
 	defer sdb.Close()
-	idb, err := store.NewDBProxy("index", benchTest)
+
+	idxdb, err := store.NewDBProxy("index", benchTest)
 	assert.NoError(b, err)
-	assert.NotNil(b, idb)
-	defer idb.Close()
-	app := NewAMOApp(tmpFile, sdb, idb, nil)
+	assert.NotNil(b, idxdb)
+	defer idxdb.Close()
+
+	incdb, err := store.NewDBProxy("incentive", benchTest)
+	assert.NoError(b, err)
+	assert.NotNil(b, incdb)
+	defer incdb.Close()
+
+	app := NewAMOApp(tmpFile, sdb, idxdb, incdb, nil)
 
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 	//app.store.SetBalanceUint64(from.PubKey().Address(), 1000000000)
@@ -83,11 +90,18 @@ func BenchmarkDeliverTransferTx(b *testing.B) {
 	assert.NoError(b, err)
 	assert.NotNil(b, sdb)
 	defer sdb.Close()
-	idb, err := store.NewDBProxy("index", benchTest)
+
+	idxdb, err := store.NewDBProxy("index", benchTest)
 	assert.NoError(b, err)
-	assert.NotNil(b, idb)
-	defer idb.Close()
-	app := NewAMOApp(tmpFile, sdb, idb, nil)
+	assert.NotNil(b, idxdb)
+	defer idxdb.Close()
+
+	incdb, err := store.NewDBProxy("incentive", benchTest)
+	assert.NoError(b, err)
+	assert.NotNil(b, incdb)
+	defer incdb.Close()
+
+	app := NewAMOApp(tmpFile, sdb, idxdb, incdb, nil)
 
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 	app.store.SetBalanceUint64(from.PubKey().Address(), 1000000000)

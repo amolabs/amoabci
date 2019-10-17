@@ -21,9 +21,11 @@ import (
 var (
 	defaultAMODir = ".amo"
 
-	defaultDataDir  = "data"
-	defaultMerkleDB = "merkle"
-	defaultIndexDB  = "index"
+	defaultDataDir = "data"
+
+	defaultMerkleDB    = "merkle"
+	defaultIndexDB     = "index"
+	defaultIncentiveDB = "incentive"
 
 	defaultStateFile = "state.json"
 
@@ -75,7 +77,17 @@ func initApp(amoDirPath string) error {
 		return err
 	}
 
-	app := amo.NewAMOApp(stateFile, merkleDB, indexDB, appLogger.With("module", "abci-app"))
+	incentiveDB, err := store.NewDBProxy(defaultIncentiveDB, dataDirPath)
+	if err != nil {
+		return err
+	}
+
+	app := amo.NewAMOApp(
+		stateFile,
+		merkleDB, indexDB, incentiveDB,
+		appLogger.With("module", "abci-app"),
+	)
+
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
 	if err != nil {
 		return err

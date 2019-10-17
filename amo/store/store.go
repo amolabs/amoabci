@@ -20,6 +20,8 @@ import (
 const (
 	// division by 2 is for safeguarding. tendermint code is not so safe.
 	MaxTotalVotingPower = tm.MaxTotalVotingPower / 2
+
+	merkleTreeCacheSize = 10000
 )
 
 var (
@@ -29,6 +31,10 @@ var (
 	prefixParcel   = []byte("parcel:")
 	prefixRequest  = []byte("request:")
 	prefixUsage    = []byte("usage:")
+
+	prefixIndexDelegator = []byte("delegator")
+	prefixIndexValidator = []byte("validator")
+	prefixIndexEffStake  = []byte("effstake")
 )
 
 type Store struct {
@@ -49,15 +55,30 @@ type Store struct {
 	// key: effective stake (32 bytes) || stake holder address
 	// value: nil
 	indexEffStake tmdb.DB
+
+	incentiveDB tmdb.DB
+	// search incentive for block height-first:
+	// key: block height || stake holder address
+	// value: incentive amount
+	incentiveHeight tmdb.DB
+	// search incentive for address-first:
+	// key: stake holder addres || block height
+	// value: incentive amount
+	incentiveAddress tmdb.DB
 }
 
-func NewStore(merkleDB tmdb.DB, indexDB tmdb.DB) *Store {
+func NewStore(merkleDB, indexDB, incentiveDB tmdb.DB) *Store {
 	return &Store{
-		merkleTree:     iavl.NewMutableTree(merkleDB, 10000),
+		merkleTree: iavl.NewMutableTree(merkleDB, merkleTreeCacheSize),
+
 		indexDB:        indexDB,
-		indexDelegator: tmdb.NewPrefixDB(indexDB, []byte("delegator")),
-		indexValidator: tmdb.NewPrefixDB(indexDB, []byte("validator")),
-		indexEffStake:  tmdb.NewPrefixDB(indexDB, []byte("effstake")),
+		indexDelegator: tmdb.NewPrefixDB(indexDB, prefixIndexDelegator),
+		indexValidator: tmdb.NewPrefixDB(indexDB, prefixIndexValidator),
+		indexEffStake:  tmdb.NewPrefixDB(indexDB, prefixIndexEffStake),
+
+		incentiveDB:      incentiveDB,
+		incentiveHeight:  tmdb.NewPrefixDB(incentiveDB, prefixIncentiveHeight),
+		incentiveAddress: tmdb.NewPrefixDB(incentiveDB, prefixIncentiveAddress),
 	}
 }
 
@@ -86,7 +107,7 @@ func (s Store) Purge() error {
 
 	// indexDB
 	itr = s.indexDB.Iterator(nil, nil)
-
+	defer itr.Close()
 	// TODO: cannot guarantee in multi-thread environment
 	// need some sync mechanism
 	for ; itr.Valid(); itr.Next() {
@@ -97,7 +118,15 @@ func (s Store) Purge() error {
 
 	// TODO: need some method like s.stateDB.Size() to check if the DB has been
 	// really emptied.
-	itr.Close()
+
+	// incentiveDB
+	itr = s.incentiveDB.Iterator(nil, nil)
+	defer itr.Close()
+
+	for ; itr.Valid(); itr.Next() {
+		k := itr.Key()
+		s.incentiveDB.Delete(k)
+	}
 
 	return nil
 }
@@ -631,7 +660,11 @@ func (s Store) GetDelegatesByDelegatee(delegatee crypto.Address, committed bool)
 	var delegates []*types.DelegateEx
 	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), delegatee); itr.Next() {
 		delegator := itr.Key()[len(delegatee):]
-		delegates = append(delegates, s.GetDelegateEx(delegator, committed))
+		delegateEx := s.GetDelegateEx(delegator, committed)
+		if delegateEx == nil {
+			continue
+		}
+		delegates = append(delegates, delegateEx)
 	}
 	return delegates
 }

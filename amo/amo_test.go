@@ -39,7 +39,7 @@ func TestInitChain(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
 	res := app.InitChain(req)
@@ -58,7 +58,7 @@ func TestQueryDefault(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	// query
 	req := abci.RequestQuery{}
 	req.Path = "/nostore"
@@ -70,7 +70,7 @@ func TestQueryBalance(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
 	addr := crypto.Address(addrbin)
@@ -120,7 +120,7 @@ func TestQueryParcel(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -180,7 +180,7 @@ func TestQueryRequest(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -264,7 +264,7 @@ func TestQueryUsage(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -348,7 +348,7 @@ func TestQueryValidator(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// stake holder
 	priv := ed25519.GenPrivKey()
@@ -394,7 +394,7 @@ func TestSignedTransactionTest(t *testing.T) {
 
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
@@ -520,7 +520,7 @@ func TestEndBlock(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// setup
 	tx.ConfigLockupPeriod = 1 // manipulate
@@ -571,34 +571,48 @@ func TestEndBlock(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 }
 
-func TestBlockReward(t *testing.T) {
+func DivCurrency(origin *types.Currency, divisor *types.Currency) *types.Currency {
+	return new(types.Currency).Set(origin.Div(&origin.Int, &divisor.Int).Uint64())
+}
+
+func TestIncentive(t *testing.T) {
 	// setup
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	validator, _ := ed25519.GenPrivKey().PubKey().(ed25519.PubKeyEd25519)
 
-	sPriv := p256.GenPrivKeyFromSecret([]byte("stake"))
 	d1Priv := p256.GenPrivKeyFromSecret([]byte("delegate1"))
 	d2Priv := p256.GenPrivKeyFromSecret([]byte("delegate2"))
+	sPriv := p256.GenPrivKeyFromSecret([]byte("stake"))
 
-	app.store.SetBalance(d1Priv.PubKey().Address(), new(types.Currency).Set(100))
-	app.store.SetBalance(d2Priv.PubKey().Address(), new(types.Currency).Set(200))
+	app.store.SetBalance(d1Priv.PubKey().Address(), new(types.Currency).Set(200))
+	app.store.SetBalance(d2Priv.PubKey().Address(), new(types.Currency).Set(400))
+	app.store.SetBalance(sPriv.PubKey().Address(), new(types.Currency).Set(150))
 
 	stake := types.Stake{
 		Amount:    *new(types.Currency).Set(150),
 		Validator: validator,
 	}
-	app.store.SetUnlockedStake(sPriv.PubKey().Address(), &stake)
 
-	reqBeginBlock := abci.RequestBeginBlock{
+	app.store.SetUnlockedStake(sPriv.PubKey().Address(), &stake)
+	app.store.Save()
+
+	// to ignore last three digits
+	divisor := new(types.Currency).Set(1000)
+
+	bald1 := app.store.GetBalance(d1Priv.PubKey().Address(), true)
+	bald2 := app.store.GetBalance(d2Priv.PubKey().Address(), true)
+	bals := app.store.GetBalance(sPriv.PubKey().Address(), true)
+
+	app.BeginBlock(abci.RequestBeginBlock{
 		Header: abci.Header{
 			ProposerAddress: validator.Address(),
+			Height:          1,
 		},
-	}
-	_ = app.BeginBlock(reqBeginBlock)
+	})
 
 	rawTx := makeTxDelegate(d1Priv, sPriv.PubKey().Address(), 100)
 	resDeliver := app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
@@ -608,25 +622,60 @@ func TestBlockReward(t *testing.T) {
 	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 
-	reqEndBlock := abci.RequestEndBlock{Height: 1}
-	app.EndBlock(reqEndBlock)
+	app.EndBlock(abci.RequestEndBlock{Height: 1})
 
-	// check distributed rewards
-	var delta int64
-	var bal, ass *types.Currency
+	app.Commit()
 
-	bal = app.store.GetBalance(sPriv.PubKey().Address(), false)
-	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/2)))
-	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
-	assert.True(t, delta < 10 && delta > -10)
+	// check incentive records
+	bir := app.store.GetBlockIncentiveRecords(1)
+	assert.Equal(t, 1, len(bir))
 
-	bal = app.store.GetBalance(d1Priv.PubKey().Address(), false)
-	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/6)))
-	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
-	assert.True(t, delta < 10 && delta > -10)
+	bals = app.store.GetBalance(sPriv.PubKey().Address(), true).Sub(bals)
 
-	bal = app.store.GetBalance(d2Priv.PubKey().Address(), false)
-	ass = new(types.Currency).Set(uint64(types.OneAMOUint64 * float64(0.2/3)))
-	delta = bal.Int.Sub(&bal.Int, &ass.Int).Int64()
-	assert.True(t, delta < 10 && delta > -10)
+	bir[0].Amount = DivCurrency(bir[0].Amount, divisor)
+	bals = DivCurrency(bals, divisor)
+
+	assert.Equal(t, bir[0].Amount, bals)
+
+	bald1 = app.store.GetBalance(d1Priv.PubKey().Address(), true)
+	bald2 = app.store.GetBalance(d2Priv.PubKey().Address(), true)
+	bals = app.store.GetBalance(sPriv.PubKey().Address(), true)
+
+	app.BeginBlock(abci.RequestBeginBlock{
+		Header: abci.Header{
+			ProposerAddress: validator.Address(),
+			Height:          2,
+		},
+	})
+
+	rawTx = makeTxDelegate(d1Priv, sPriv.PubKey().Address(), 100)
+	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
+	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
+
+	rawTx = makeTxDelegate(d2Priv, sPriv.PubKey().Address(), 200)
+	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
+	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 2})
+
+	app.Commit()
+
+	bir = app.store.GetBlockIncentiveRecords(2)
+	assert.Equal(t, 3, len(bir))
+
+	bald1 = app.store.GetBalance(d1Priv.PubKey().Address(), true).Sub(bald1)
+	bald2 = app.store.GetBalance(d2Priv.PubKey().Address(), true).Sub(bald2)
+	bals = app.store.GetBalance(sPriv.PubKey().Address(), true).Sub(bals)
+
+	bir[0].Amount = DivCurrency(bir[0].Amount, divisor)
+	bir[1].Amount = DivCurrency(bir[1].Amount, divisor)
+	bir[2].Amount = DivCurrency(bir[2].Amount, divisor)
+
+	bald1 = DivCurrency(bald1, divisor)
+	bald2 = DivCurrency(bald2, divisor)
+	bals = DivCurrency(bals, divisor)
+
+	assert.Equal(t, bir[0].Amount, bald1)
+	assert.Equal(t, bir[1].Amount, bald2)
+	assert.Equal(t, bir[2].Amount, bals)
 }

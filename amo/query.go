@@ -2,6 +2,7 @@ package amo
 
 import (
 	"encoding/json"
+	"strconv"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
@@ -13,13 +14,13 @@ import (
 )
 
 // MERKLE TREE SCOPE (IMPORTANT)
-// Query related funcs must get data from committed(saved) tree
-// NOT from working tree as the users or clients
-// SHOULD see the data which are already commited by validators
-// So, it is mandatory to use 'true' for 'committed' arg input
-// to query data from merkle tree
+//   Query related funcs must get data from committed(saved) tree
+//   NOT from working tree as the users or clients
+//   SHOULD see the data which are already commited by validators
+//   So, it is mandatory to use 'true' for 'committed' arg input
+//   to query data from merkle tree
 
-func queryBalance(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
+func queryBalance(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Code = code.QueryCodeNoKey
 		return
@@ -32,7 +33,7 @@ func queryBalance(store *store.Store, queryData []byte) (res abci.ResponseQuery)
 		return
 	}
 
-	bal := store.GetBalance(addr, true)
+	bal := s.GetBalance(addr, true)
 	jsonstr, _ := json.Marshal(bal)
 	res.Log = string(jsonstr)
 	// XXX: tendermint will convert this using base64 encoding
@@ -43,7 +44,7 @@ func queryBalance(store *store.Store, queryData []byte) (res abci.ResponseQuery)
 	return
 }
 
-func queryStake(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
+func queryStake(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Code = code.QueryCodeNoKey
 		return
@@ -56,14 +57,14 @@ func queryStake(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	stake := store.GetStake(addr, true)
+	stake := s.GetStake(addr, true)
 	if stake == nil {
 		res.Code = code.QueryCodeNoMatch
 	} else {
 		res.Code = code.QueryCodeOK
 	}
 
-	stakeEx := types.StakeEx{stake, store.GetDelegatesByDelegatee(addr, true)}
+	stakeEx := types.StakeEx{stake, s.GetDelegatesByDelegatee(addr, true)}
 	jsonstr, _ := json.Marshal(stakeEx)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
@@ -72,7 +73,7 @@ func queryStake(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	return
 }
 
-func queryDelegate(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
+func queryDelegate(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Code = code.QueryCodeNoKey
 		return
@@ -85,7 +86,7 @@ func queryDelegate(store *store.Store, queryData []byte) (res abci.ResponseQuery
 		return
 	}
 
-	delegate := store.GetDelegate(addr, true)
+	delegate := s.GetDelegate(addr, true)
 	if delegate == nil {
 		res.Code = code.QueryCodeNoMatch
 	} else {
@@ -100,7 +101,7 @@ func queryDelegate(store *store.Store, queryData []byte) (res abci.ResponseQuery
 	return
 }
 
-func queryValidator(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
+func queryValidator(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Code = code.QueryCodeNoKey
 		return
@@ -113,7 +114,7 @@ func queryValidator(store *store.Store, queryData []byte) (res abci.ResponseQuer
 		return
 	}
 
-	holder := store.GetHolderByValidator(addr, true)
+	holder := s.GetHolderByValidator(addr, true)
 	jsonstr, _ := json.Marshal(crypto.Address(holder))
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
@@ -123,7 +124,7 @@ func queryValidator(store *store.Store, queryData []byte) (res abci.ResponseQuer
 	return
 }
 
-func queryParcel(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
+func queryParcel(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Code = code.QueryCodeNoKey
 		return
@@ -137,7 +138,7 @@ func queryParcel(store *store.Store, queryData []byte) (res abci.ResponseQuery) 
 		return
 	}
 
-	parcel := store.GetParcel(id, true)
+	parcel := s.GetParcel(id, true)
 	if parcel == nil {
 		res.Code = code.QueryCodeNoMatch
 	} else {
@@ -152,7 +153,7 @@ func queryParcel(store *store.Store, queryData []byte) (res abci.ResponseQuery) 
 	return
 }
 
-func queryRequest(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
+func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Code = code.QueryCodeNoKey
 		return
@@ -181,7 +182,7 @@ func queryRequest(store *store.Store, queryData []byte) (res abci.ResponseQuery)
 	// TODO: parse parcel id
 	parcelID := keyMap["target"]
 
-	request := store.GetRequest(addr, parcelID, true)
+	request := s.GetRequest(addr, parcelID, true)
 	if request == nil {
 		res.Code = code.QueryCodeNoMatch
 	} else {
@@ -196,7 +197,7 @@ func queryRequest(store *store.Store, queryData []byte) (res abci.ResponseQuery)
 	return
 }
 
-func queryUsage(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
+func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Code = code.QueryCodeNoKey
 		return
@@ -225,7 +226,7 @@ func queryUsage(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	// TODO: parse parcel id
 	parcelID := keyMap["target"]
 
-	usage := store.GetUsage(addr, parcelID, true)
+	usage := s.GetUsage(addr, parcelID, true)
 	if usage == nil {
 		res.Code = code.QueryCodeNoMatch
 	} else {
@@ -233,6 +234,113 @@ func queryUsage(store *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	}
 
 	jsonstr, _ := json.Marshal(usage)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Key = queryData
+
+	return
+}
+
+func queryBlockIncentives(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	var (
+		incentives []store.IncentiveInfo
+		height     int64
+	)
+
+	if len(queryData) == 0 {
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	err := json.Unmarshal(queryData, &height)
+	if err != nil {
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	incentives = s.GetBlockIncentiveRecords(height)
+	if len(incentives) == 0 {
+		res.Code = code.QueryCodeNoMatch
+		return
+	}
+
+	jsonstr, _ := json.Marshal(incentives)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Key = queryData
+
+	return
+}
+
+func queryAddressIncentives(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	var (
+		incentives []store.IncentiveInfo
+		address    crypto.Address
+	)
+
+	if len(queryData) == 0 {
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	err := json.Unmarshal(queryData, &address)
+	if err != nil {
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	incentives = s.GetAddressIncentiveRecords(address)
+	if len(incentives) == 0 {
+		res.Code = code.QueryCodeNoMatch
+		return
+	}
+
+	jsonstr, _ := json.Marshal(incentives)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Key = queryData
+
+	return
+}
+
+func queryIncentive(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	var (
+		incentive store.IncentiveInfo
+		height    int64
+		address   crypto.Address
+	)
+
+	if len(queryData) == 0 {
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	keyMap := make(map[string]tm.HexBytes)
+	err := json.Unmarshal(queryData, &keyMap)
+	if err != nil {
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+	if _, ok := keyMap["height"]; !ok {
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+	if _, ok := keyMap["address"]; !ok {
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	height, err = strconv.ParseInt(string(keyMap["height"]), 10, 64)
+	if err != nil {
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	address = keyMap["address"]
+
+	incentive = s.GetIncentiveRecord(height, address)
+
+	jsonstr, _ := json.Marshal(incentive)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
 	res.Key = queryData
