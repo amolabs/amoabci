@@ -2,6 +2,7 @@ package amo
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -22,6 +23,7 @@ import (
 
 func queryBalance(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
@@ -29,6 +31,7 @@ func queryBalance(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	var addr crypto.Address
 	err := json.Unmarshal(queryData, &addr)
 	if err != nil {
+		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
@@ -46,6 +49,7 @@ func queryBalance(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 
 func queryStake(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
@@ -53,21 +57,23 @@ func queryStake(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	var addr crypto.Address
 	err := json.Unmarshal(queryData, &addr)
 	if err != nil {
+		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
 	stake := s.GetStake(addr, true)
 	if stake == nil {
+		res.Log = "error: no stake"
 		res.Code = code.QueryCodeNoMatch
-	} else {
-		res.Code = code.QueryCodeOK
+		return
 	}
 
 	stakeEx := types.StakeEx{stake, s.GetDelegatesByDelegatee(addr, true)}
 	jsonstr, _ := json.Marshal(stakeEx)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
 	res.Key = queryData
 
 	return
@@ -75,6 +81,7 @@ func queryStake(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 
 func queryDelegate(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
@@ -82,20 +89,22 @@ func queryDelegate(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	var addr crypto.Address
 	err := json.Unmarshal(queryData, &addr)
 	if err != nil {
+		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
 	delegate := s.GetDelegate(addr, true)
 	if delegate == nil {
+		res.Log = "error: no delegate"
 		res.Code = code.QueryCodeNoMatch
-	} else {
-		res.Code = code.QueryCodeOK
+		return
 	}
 
 	jsonstr, _ := json.Marshal(delegate)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
 	res.Key = queryData
 
 	return
@@ -103,6 +112,7 @@ func queryDelegate(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 
 func queryValidator(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
@@ -110,6 +120,7 @@ func queryValidator(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	var addr crypto.Address
 	err := json.Unmarshal(queryData, &addr)
 	if err != nil {
+		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
@@ -126,6 +137,7 @@ func queryValidator(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 
 func queryParcel(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
@@ -134,20 +146,22 @@ func queryParcel(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	var id tm.HexBytes
 	err := json.Unmarshal(queryData, &id)
 	if err != nil {
+		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
 	parcel := s.GetParcel(id, true)
 	if parcel == nil {
+		res.Log = "error: no parcel"
 		res.Code = code.QueryCodeNoMatch
-	} else {
-		res.Code = code.QueryCodeOK
+		return
 	}
 
 	jsonstr, _ := json.Marshal(parcel)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
 	res.Key = queryData
 
 	return
@@ -155,6 +169,7 @@ func queryParcel(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 
 func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
@@ -162,19 +177,23 @@ func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	keyMap := make(map[string]tm.HexBytes)
 	err := json.Unmarshal(queryData, &keyMap)
 	if err != nil {
+		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 	if _, ok := keyMap["buyer"]; !ok {
+		res.Log = "error: buyer is missing"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 	if _, ok := keyMap["target"]; !ok {
+		res.Log = "error: target is missing"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 	addr := crypto.Address(keyMap["buyer"])
 	if len(addr) != crypto.AddressSize {
+		res.Log = "error: not avaiable address"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
@@ -184,14 +203,15 @@ func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 
 	request := s.GetRequest(addr, parcelID, true)
 	if request == nil {
+		res.Log = "error: no request"
 		res.Code = code.QueryCodeNoMatch
-	} else {
-		res.Code = code.QueryCodeOK
+		return
 	}
 
 	jsonstr, _ := json.Marshal(request)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
 	res.Key = queryData
 
 	return
@@ -199,6 +219,7 @@ func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 
 func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
@@ -206,19 +227,23 @@ func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	keyMap := make(map[string]tm.HexBytes)
 	err := json.Unmarshal(queryData, &keyMap)
 	if err != nil {
+		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 	if _, ok := keyMap["buyer"]; !ok {
+		res.Log = "error: buyer is missing"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 	if _, ok := keyMap["target"]; !ok {
+		res.Log = "error: target is missing"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 	addr := crypto.Address(keyMap["buyer"])
 	if len(addr) != crypto.AddressSize {
+		res.Log = "error: not avaiable address"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
@@ -228,14 +253,15 @@ func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 
 	usage := s.GetUsage(addr, parcelID, true)
 	if usage == nil {
+		res.Log = "error: no usage"
 		res.Code = code.QueryCodeNoMatch
-	} else {
-		res.Code = code.QueryCodeOK
+		return
 	}
 
 	jsonstr, _ := json.Marshal(usage)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
 	res.Key = queryData
 
 	return
@@ -244,22 +270,33 @@ func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 func queryBlockIncentives(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	var (
 		incentives []store.IncentiveInfo
+		tmp        string
 		height     int64
 	)
 
 	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
 
-	err := json.Unmarshal(queryData, &height)
+	err := json.Unmarshal(queryData, &tmp)
 	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	height, err = strconv.ParseInt(tmp, 10, 64)
+	if err != nil {
+		res.Log = "error: cannot convert string to int64"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
 
 	incentives = s.GetBlockIncentiveRecords(height)
 	if len(incentives) == 0 {
+		res.Log = fmt.Sprintf("no match: %d", height)
 		res.Code = code.QueryCodeNoMatch
 		return
 	}
@@ -267,6 +304,7 @@ func queryBlockIncentives(s *store.Store, queryData []byte) (res abci.ResponseQu
 	jsonstr, _ := json.Marshal(incentives)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
 	res.Key = queryData
 
 	return
@@ -279,18 +317,21 @@ func queryAddressIncentives(s *store.Store, queryData []byte) (res abci.Response
 	)
 
 	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
 
 	err := json.Unmarshal(queryData, &address)
 	if err != nil {
+		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
 
 	incentives = s.GetAddressIncentiveRecords(address)
 	if len(incentives) == 0 {
+		res.Log = "error: no incentives"
 		res.Code = code.QueryCodeNoMatch
 		return
 	}
@@ -298,6 +339,7 @@ func queryAddressIncentives(s *store.Store, queryData []byte) (res abci.Response
 	jsonstr, _ := json.Marshal(incentives)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
 	res.Key = queryData
 
 	return
@@ -305,44 +347,52 @@ func queryAddressIncentives(s *store.Store, queryData []byte) (res abci.Response
 
 func queryIncentive(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	var (
-		incentive store.IncentiveInfo
-		height    int64
-		address   crypto.Address
+		incentives []store.IncentiveInfo
+		height     int64
+		address    crypto.Address
 	)
 
 	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
 		return
 	}
 
-	keyMap := make(map[string]tm.HexBytes)
+	keyMap := make(map[string]string)
 	err := json.Unmarshal(queryData, &keyMap)
 	if err != nil {
+		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 	if _, ok := keyMap["height"]; !ok {
+		res.Log = "error: height is missing"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 	if _, ok := keyMap["address"]; !ok {
+		res.Log = "error: address is missing"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
 	height, err = strconv.ParseInt(string(keyMap["height"]), 10, 64)
 	if err != nil {
+		res.Log = fmt.Sprintf("error: cannot convert %s", keyMap["height"])
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
-	address = keyMap["address"]
+	address = tm.HexBytes(keyMap["address"])
 
-	incentive = s.GetIncentiveRecord(height, address)
+	incentive := s.GetIncentiveRecord(height, address)
 
-	jsonstr, _ := json.Marshal(incentive)
+	incentives = append(incentives, incentive)
+
+	jsonstr, _ := json.Marshal(incentives)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
 	res.Key = queryData
 
 	return

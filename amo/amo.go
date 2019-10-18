@@ -239,7 +239,8 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 		resQuery.Code = code.QueryCodeBadPath
 	}
 
-	app.logger.Debug("Query: "+reqQuery.Path, "query_data", reqQuery.Data)
+	app.logger.Debug("Query: "+reqQuery.Path, "query_data", reqQuery.Data,
+		"query_response", resQuery.GetLog())
 
 	return resQuery
 }

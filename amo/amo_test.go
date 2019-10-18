@@ -163,8 +163,8 @@ func TestQueryParcel(t *testing.T) {
 	req = abci.RequestQuery{Path: "/parcel", Data: []byte(_queryjson)}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
-	assert.Equal(t, []byte("null"), res.Value)
-	assert.Equal(t, "null", res.Log)
+	assert.Equal(t, []byte(nil), res.Value)
+	assert.Equal(t, "error: no parcel", res.Log)
 
 	// query
 	req = abci.RequestQuery{Path: "/parcel", Data: queryjson}
@@ -223,14 +223,14 @@ func TestQueryRequest(t *testing.T) {
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeBadKey, res.Code)
 	assert.Nil(t, res.Value)
-	assert.Len(t, res.Log, 0)
+	assert.Equal(t, "error: unmarshal", res.Log)
 
 	jsonstr, _ = json.Marshal(parcelID)
 	req = abci.RequestQuery{Path: "/request", Data: jsonstr}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeBadKey, res.Code)
 	assert.Nil(t, res.Value)
-	assert.Len(t, res.Log, 0)
+	assert.Equal(t, "error: unmarshal", res.Log)
 
 	var keyMap = map[string]cmn.HexBytes{
 		"buyer":  addr,
@@ -307,14 +307,14 @@ func TestQueryUsage(t *testing.T) {
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeBadKey, res.Code)
 	assert.Nil(t, res.Value)
-	assert.Len(t, res.Log, 0)
+	assert.Equal(t, "error: unmarshal", res.Log)
 
 	jsonstr, _ = json.Marshal(parcelID)
 	req = abci.RequestQuery{Path: "/usage", Data: jsonstr}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeBadKey, res.Code)
 	assert.Nil(t, res.Value)
-	assert.Len(t, res.Log, 0)
+	assert.Equal(t, "error: unmarshal", res.Log)
 
 	var keyMap = map[string]cmn.HexBytes{
 		"buyer":  addr,

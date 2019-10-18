@@ -130,15 +130,25 @@ func (s Store) GetIncentiveRecord(height int64, address crypto.Address) Incentiv
 }
 
 func makeHeightFirstKey(height int64, address crypto.Address) []byte {
+	key := make([]byte, 8+20) // 64-bit height + 20-byte address
+
 	hb := make([]byte, 8)
 	binary.BigEndian.PutUint64(hb, uint64(height))
-	key := append(hb, address...)
+
+	copy(key[8-len(hb):], hb)
+	copy(key[8:], address)
+
 	return key
 }
 
 func makeAddressFirstKey(address crypto.Address, height int64) []byte {
+	key := make([]byte, 20+8) // 20-byte address + 64-bit height
+
 	hb := make([]byte, 8)
 	binary.BigEndian.PutUint64(hb, uint64(height))
-	key := append(address, hb...)
+
+	copy(key[20-len(address):], address)
+	copy(key[20:], hb)
+
 	return key
 }
