@@ -3,6 +3,7 @@ package amo
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -358,34 +359,33 @@ func queryIncentive(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	keyMap := make(map[string]string)
-	err := json.Unmarshal(queryData, &keyMap)
+	var keys struct {
+		Height  string         `json:"height"`
+		Address crypto.Address `json:"address"`
+	}
+
+	err := json.Unmarshal(queryData, &keys)
 	if err != nil {
 		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
-	if _, ok := keyMap["height"]; !ok {
-		res.Log = "error: height is missing"
-		res.Code = code.QueryCodeBadKey
-		return
-	}
-	if _, ok := keyMap["address"]; !ok {
-		res.Log = "error: address is missing"
-		res.Code = code.QueryCodeBadKey
-		return
-	}
 
-	height, err = strconv.ParseInt(string(keyMap["height"]), 10, 64)
+	height, err = strconv.ParseInt(keys.Height, 10, 64)
 	if err != nil {
-		res.Log = fmt.Sprintf("error: cannot convert %s", keyMap["height"])
+		res.Log = fmt.Sprintf("error: cannot convert %s", keys.Height)
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
-	address = tm.HexBytes(keyMap["address"])
+	address = keys.Address
 
 	incentive := s.GetIncentiveRecord(height, address)
+	if reflect.DeepEqual(incentive, store.IncentiveInfo{}) {
+		res.Log = "error: no incentives"
+		res.Code = code.QueryCodeNoMatch
+		return
+	}
 
 	incentives = append(incentives, incentive)
 

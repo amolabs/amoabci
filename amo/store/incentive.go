@@ -117,8 +117,18 @@ func (s Store) GetAddressIncentiveRecords(address crypto.Address) []IncentiveInf
 
 func (s Store) GetIncentiveRecord(height int64, address crypto.Address) IncentiveInfo {
 	ba := makeHeightFirstKey(height, address)
-	amount, err := new(types.Currency).SetBytes(s.incentiveHeight.Get(ba))
+
+	value := s.incentiveHeight.Get(ba)
+	if value == nil {
+		return IncentiveInfo{}
+	}
+
+	amount, err := new(types.Currency).SetBytes(value)
 	if err != nil {
+		return IncentiveInfo{}
+	}
+
+	if amount.Equals(new(types.Currency).Set(0)) {
 		return IncentiveInfo{}
 	}
 
