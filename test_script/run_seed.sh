@@ -22,7 +22,7 @@ out=$(docker-compose up -d seed)
 if [ $? -ne 0 ]; then fail $out; fi
 
 echo "wait for node to fully wakeup"
-sleep 1s
+sleep 3s
 
 echo "get val1's tendermint node addr"
 out=$(docker exec -it seed tendermint show_node_id | tr -d '\015' | tr -d '^@')

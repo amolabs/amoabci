@@ -40,3 +40,4 @@ TAGS
 *.tmp
 testdata/
 testaddr.sh
+*.tar.gz

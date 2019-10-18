@@ -27,5 +27,5 @@ do
 	if [ $? -ne 0 ]; then fail $out; fi
     
     echo "wait for node to fully wakeup"
-    sleep 1s
+    sleep 3s
 done
