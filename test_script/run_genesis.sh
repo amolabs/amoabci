@@ -1,5 +1,14 @@
 #!/bin/bash
 
+check_rpc_status() {
+	printf "wait for val1 node(entry point) to fully wake up "
+	until $(curl --output /dev/null --silent --head --fail http://localhost:26657); do
+    	printf "."
+    	sleep 0.5 
+	done
+	printf " it is fully up!\n"
+}
+
 fail() {
 	echo "test failed"
 	echo $1
@@ -27,8 +36,7 @@ if [ $? -ne 0 ]; then fail $out; fi
 out=$(docker-compose up -d val1)
 if [ $? -ne 0 ]; then fail $out; fi
 
-echo "wait for node to fully wakeup"
-sleep 3s
+check_rpc_status
 
 echo "get val1's tendermint node addr"
 out=$(docker exec -it val1 tendermint show_node_id | tr -d '\015' | tr -d '^@')

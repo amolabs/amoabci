@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"sort"
 
 	"github.com/tendermint/tendermint/crypto"
 	tmdb "github.com/tendermint/tm-db"
@@ -32,7 +31,7 @@ func (s Store) AddIncentiveRecord(height int64, address crypto.Address, amount *
 		return errors.New("address is nil")
 	}
 
-	if amount.BitLen() == 0 {
+	if amount.Equals(new(types.Currency).Set(0)) {
 		return errors.New("reward amount's bit length is 0")
 	}
 
@@ -74,10 +73,6 @@ func (s Store) GetBlockIncentiveRecords(height int64) []IncentiveInfo {
 		incentives = append(incentives, incentive)
 	}
 
-	sort.Slice(incentives, func(i, j int) bool {
-		return incentives[i].Amount.LessThan(incentives[j].Amount)
-	})
-
 	return incentives
 }
 
@@ -107,10 +102,6 @@ func (s Store) GetAddressIncentiveRecords(address crypto.Address) []IncentiveInf
 
 		incentives = append(incentives, incentive)
 	}
-
-	sort.Slice(incentives, func(i, j int) bool {
-		return incentives[i].BlockHeight < incentives[j].BlockHeight
-	})
 
 	return incentives
 }

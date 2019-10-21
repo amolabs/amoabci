@@ -1,6 +1,7 @@
 package store
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,15 +40,21 @@ func TestIncentiveRecord(t *testing.T) {
 	blockIncentiveRecords := s.GetBlockIncentiveRecords(1)
 	assert.Equal(t, 2, len(blockIncentiveRecords))
 
-	// sorting test by amount
+	sort.Slice(blockIncentiveRecords, func(i, j int) bool {
+		return blockIncentiveRecords[i].Amount.LessThan(blockIncentiveRecords[j].Amount)
+	})
+
 	assert.Equal(t, incentives[0], blockIncentiveRecords[0])
 	assert.Equal(t, incentives[1], blockIncentiveRecords[1])
 
-	//.GetAddressIncentiveRecords Test
+	// GetAddressIncentiveRecords Test
 	addressIncentiveRecords := s.GetAddressIncentiveRecords(makeAccAddr("acc2"))
 	assert.Equal(t, 2, len(addressIncentiveRecords))
 
-	// sorting test by blockHeight
+	sort.Slice(addressIncentiveRecords, func(i, j int) bool {
+		return addressIncentiveRecords[i].BlockHeight < addressIncentiveRecords[j].BlockHeight
+	})
+
 	assert.Equal(t, incentives[1], addressIncentiveRecords[0])
 	assert.Equal(t, incentives[4], addressIncentiveRecords[1])
 

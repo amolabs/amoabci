@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -662,6 +663,10 @@ func TestIncentive(t *testing.T) {
 
 	bir = app.store.GetBlockIncentiveRecords(2)
 	assert.Equal(t, 3, len(bir))
+
+	sort.Slice(bir, func(i, j int) bool {
+		return bir[i].Amount.LessThan(bir[j].Amount)
+	})
 
 	bald1 = app.store.GetBalance(d1Priv.PubKey().Address(), true).Sub(bald1)
 	bald2 = app.store.GetBalance(d2Priv.PubKey().Address(), true).Sub(bald2)
