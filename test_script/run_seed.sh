@@ -1,5 +1,14 @@
 #!/bin/bash
 
+check_docker_status() {
+	printf "wait for %s	to fully wake up " $1
+	until [ $(docker inspect -f {{.State.Running}} $1) == "true" ]; do
+		printf "."
+		sleep 0.1
+	done
+	printf " it is fully up!\n"
+}
+
 fail() {
 	echo "test failed"
 	echo $1
@@ -21,8 +30,7 @@ if [ $? -ne 0 ]; then fail $out; fi
 out=$(docker-compose up -d seed)
 if [ $? -ne 0 ]; then fail $out; fi
 
-echo "wait for node to fully wakeup"
-sleep 1s
+check_docker_status "seed"
 
 echo "get val1's tendermint node addr"
 out=$(docker exec -it seed tendermint show_node_id | tr -d '\015' | tr -d '^@')

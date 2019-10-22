@@ -4,7 +4,7 @@ COPY amocli /usr/bin/
 
 WORKDIR /
 
-RUN apk add --no-cache bash bc
+RUN apk add --no-cache bash bc curl
 
 ENTRYPOINT [ "/bin/sh", "-c" ]
 

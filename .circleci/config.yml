@@ -81,8 +81,10 @@ jobs:
     environment:
       NODENUM: 6
       AMO100: 100000000000000000000
-      CLIOPT: docker exec -it testcli amocli
-      OPT: "--json --rpc=val1:26657"
+      CLI: docker exec -it testcli amocli
+      CLIOPT: "--json --rpc=val1:26657"
+      CURL: docker exec -it testcli curl
+      CURLOPT: "val1:26657"
     steps:
       - checkout
       - attach_workspace:

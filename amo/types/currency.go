@@ -62,6 +62,17 @@ func (c *Currency) SetString(x string, base int) (*Currency, error) {
 	return c, nil
 }
 
+func (c *Currency) SetBytes(x []byte) (*Currency, error) {
+	i := c.Int.SetBytes(x)
+	if isTooBig(i) {
+		return nil, fmt.Errorf("Currency supports up to 32 bytes")
+	}
+	*c = Currency{
+		Int: *i,
+	}
+	return c, nil
+}
+
 func (c Currency) String() string {
 	return c.Text(10)
 }

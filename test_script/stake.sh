@@ -27,12 +27,12 @@ do
 	if [ $? -ne 0 ]; then fail $out; fi
 
 	echo "stake to tval$i: $(bc <<< "$AMOUNT / $AMO1") AMO"
-	out=$($CLIOPT tx stake $OPT --user tval$i $out "$AMOUNT")
+	out=$($CLI tx stake $CLIOPT --user tval$i $out "$AMOUNT")
 	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 	if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 	echo "delegate from tdel$i to tval$i: $(bc <<< "$AMOUNT / $AMO1") AMO"
-	out=$($CLIOPT tx delegate $OPT --user tdel$i "${!addr}" "$AMOUNT")
+	out=$($CLI tx delegate $CLIOPT --user tdel$i "${!addr}" "$AMOUNT")
 	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 	if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 done

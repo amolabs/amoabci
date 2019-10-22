@@ -2,6 +2,15 @@
 
 NODENUM=$1
 
+check_docker_status() {
+	printf "wait for %s	to fully wake up " $1
+	until [ $(docker inspect -f {{.State.Running}} $1) == "true" ]; do
+		printf "."
+		sleep 0.1
+	done
+	printf " it is fully up!\n"
+}
+
 fail() {
 	echo "test failed"
 	echo $1
@@ -25,7 +34,6 @@ do
 
 	out=$(docker-compose up -d val$i)
 	if [ $? -ne 0 ]; then fail $out; fi
-    
-    echo "wait for node to fully wakeup"
-    sleep 1s
+
+	check_docker_status "val$i"
 done

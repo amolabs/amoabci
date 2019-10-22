@@ -96,8 +96,9 @@ type AMOApp struct {
 	config AMOAppConfig
 
 	// internal database
-	merkleDB tmdb.DB
-	indexDB  tmdb.DB
+	merkleDB    tmdb.DB
+	indexDB     tmdb.DB
+	incentiveDB tmdb.DB
 
 	// state related variables
 	stateFile *os.File
@@ -118,15 +119,18 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(stateFile *os.File, mdb tmdb.DB, idb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
 	if mdb == nil {
 		mdb = tmdb.NewMemDB()
 	}
-	if idb == nil {
-		idb = tmdb.NewMemDB()
+	if idxdb == nil {
+		idxdb = tmdb.NewMemDB()
+	}
+	if incdb == nil {
+		incdb = tmdb.NewMemDB()
 	}
 
 	app := &AMOApp{
@@ -139,11 +143,12 @@ func NewAMOApp(stateFile *os.File, mdb tmdb.DB, idb tmdb.DB, l log.Logger) *AMOA
 			defaultTxReward,
 			defaultLockupPeriod,
 		},
-		stateFile: stateFile,
-		state:     State{},
-		merkleDB:  mdb,
-		indexDB:   idb,
-		store:     astore.NewStore(mdb, idb),
+		stateFile:   stateFile,
+		state:       State{},
+		merkleDB:    mdb,
+		indexDB:     idxdb,
+		incentiveDB: incdb,
+		store:       astore.NewStore(mdb, idxdb, incdb),
 	}
 
 	// necessary to initialize state.json file
@@ -224,11 +229,18 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 		resQuery = queryRequest(app.store, reqQuery.Data)
 	case "/usage":
 		resQuery = queryUsage(app.store, reqQuery.Data)
+	case "/inc_block":
+		resQuery = queryBlockIncentives(app.store, reqQuery.Data)
+	case "/inc_address":
+		resQuery = queryAddressIncentives(app.store, reqQuery.Data)
+	case "/inc":
+		resQuery = queryIncentive(app.store, reqQuery.Data)
 	default:
 		resQuery.Code = code.QueryCodeBadPath
 	}
 
-	app.logger.Debug("Query: "+reqQuery.Path, "query_data", reqQuery.Data)
+	app.logger.Debug("Query: "+reqQuery.Path, "query_data", reqQuery.Data,
+		"query_response", resQuery.GetLog())
 
 	return resQuery
 }
@@ -379,11 +391,11 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 /////////////////////////////////////
 
 func (app *AMOApp) DistributeIncentive() error {
-	stake := app.store.GetStake(app.staker, false)
+	stake := app.store.GetStake(app.staker, true)
 	if stake == nil {
 		return errors.New("No stake, no reward.")
 	}
-	ds := app.store.GetDelegatesByDelegatee(app.staker, false)
+	ds := app.store.GetDelegatesByDelegatee(app.staker, true)
 
 	var tmp, tmp2 types.Currency
 	var incentive, rTotal, rTx types.Currency
@@ -416,13 +428,15 @@ func (app *AMOApp) DistributeIncentive() error {
 		tmp2 = *partialReward(app.config.WeightDelegator, &d.Amount.Int, &wsum, &incentive)
 		tmp.Add(&tmp2) // update subtotal
 		b := app.store.GetBalance(d.Delegator, false).Add(&tmp2)
-		app.store.SetBalance(d.Delegator, b) // update balance
+		app.store.SetBalance(d.Delegator, b)                               // update balance
+		app.store.AddIncentiveRecord(app.state.Height, d.Delegator, &tmp2) // update incentive record
 		app.logger.Debug("Block reward",
 			"delegate", hex.EncodeToString(d.Delegator), "reward", tmp2.Int64())
 	}
 	tmp2.Int.Sub(&incentive.Int, &tmp.Int) // calc validator reward
 	b := app.store.GetBalance(app.staker, false).Add(&tmp2)
-	app.store.SetBalance(app.staker, b)
+	app.store.SetBalance(app.staker, b)                               // update balance
+	app.store.AddIncentiveRecord(app.state.Height, app.staker, &tmp2) // update incentive record
 	app.logger.Debug("Block reward",
 		"proposer", hex.EncodeToString(app.staker), "reward", tmp2.Int64())
 
