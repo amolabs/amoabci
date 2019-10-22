@@ -13,7 +13,7 @@ fail() {
 for ((i=1; i<=NODENUM; i++))
 do
     addr=tdel$i
-	out=$($CLIOPT query delegate $OPT ${!addr})
+	out=$($CLI query delegate $CLIOPT ${!addr})
 	if [ $? -ne 0 ]; then fail $out; fi
 	echo "delegate of tdel$i: "$out
 done

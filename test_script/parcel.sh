@@ -19,37 +19,37 @@ fail() {
 }
 
 echo "faucet transfer coin to tu2: 1 AMO"
-out=$($CLIOPT tx transfer $OPT --user tgenesis "$tu2" "$AMO1" | sed 's/\^\@//g')
+out=$($CLI tx transfer $CLIOPT --user tgenesis "$tu2" "$AMO1" | sed 's/\^\@//g')
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu1 register p1"
-out=$($CLIOPT tx register $OPT --user tu1 "$P1" "$CUSTODY" | sed 's/\^\@//g')
+out=$($CLI tx register $CLIOPT --user tu1 "$P1" "$CUSTODY" | sed 's/\^\@//g')
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu1 discard p1"
-out=$($CLIOPT tx discard $OPT --user tu1 "$P1" | sed 's/\^\@//g')
+out=$($CLI tx discard $CLIOPT --user tu1 "$P1" | sed 's/\^\@//g')
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu1 register p1"
-out=$($CLIOPT tx register $OPT --user tu1 "$P1" "$CUSTODY" | sed 's/\^\@//g')
+out=$($CLI tx register $CLIOPT --user tu1 "$P1" "$CUSTODY" | sed 's/\^\@//g')
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu2 request p1 with 1 AMO"
-out=$($CLIOPT tx request $OPT --user tu2 "$P1" "$AMO1" | sed 's/\^\@//g')
+out=$($CLI tx request $CLIOPT --user tu2 "$P1" "$AMO1" | sed 's/\^\@//g')
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu1 grant tu2 on p1, collect 1 AMO"
-out=$($CLIOPT tx grant $OPT --user tu1 "$P1" "$tu2" "$CUSTODY" | sed 's/\^\@//g')
+out=$($CLI tx grant $CLIOPT --user tu1 "$P1" "$tu2" "$CUSTODY" | sed 's/\^\@//g')
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
 echo "tu1 revoke grant given to tu2 on p1"
-out=$($CLIOPT tx revoke $OPT --user tu1 "$P1" "$tu2" | sed 's/\^\@//g')
+out=$($CLI tx revoke $CLIOPT --user tu1 "$P1" "$tu2" | sed 's/\^\@//g')
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 

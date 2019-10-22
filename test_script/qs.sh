@@ -13,7 +13,7 @@ fail() {
 for ((i=1; i<=NODENUM; i++))
 do
     addr=tval$i
-	out=$($CLIOPT query stake $OPT ${!addr})
+	out=$($CLI query stake $CLIOPT ${!addr})
 	if [ $? -ne 0 ]; then fail $out; fi
 	echo "stake of tval$i: "$out
 done

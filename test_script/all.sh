@@ -24,8 +24,10 @@ if [ ! -f docker-compose.yml.in ]; then
 fi
 cp -f docker-compose.yml.in docker-compose.yml
 
-export CLIOPT=amocli
-export OPT="--json"
+export CLI=amocli
+export CLIOPT="--json"
+export CURL=curl
+export CURLOPT="localhost:26657" 
 
 ROOT=$(dirname $0)
 DATAROOT=$PWD/testdata

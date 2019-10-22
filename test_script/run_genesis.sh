@@ -2,7 +2,7 @@
 
 check_rpc_status() {
 	printf "wait for val1 node(entry point) to fully wake up "
-	until $(curl --output /dev/null --silent --head --fail http://localhost:26657); do
+	until $($CURL --output /dev/null --silent --head --fail $CURLOPT); do
     	printf "."
     	sleep 0.5 
 	done
