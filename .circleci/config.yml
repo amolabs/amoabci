@@ -38,7 +38,6 @@ jobs:
           name: "prepare to build docker image"
           command: |
             cd /go/src/github.com/amolabs/amo-client-go
-            make get_vendor_deps
             make test
             make TARGET=linux build
             cp -f amocli ~/project/.circleci/DOCKER_testcli/amocli
