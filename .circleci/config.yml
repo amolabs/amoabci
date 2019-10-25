@@ -32,12 +32,12 @@ jobs:
       - run:
           name: "get amo-client-go from github repository"
           command: |
-            cd /go/src
+            cd ~
             git clone https://github.com/amolabs/amo-client-go
       - run:
           name: "prepare to build docker image"
           command: |
-            cd /go/src/amo-client-go
+            cd ~/amo-client-go
             make test
             make TARGET=linux build
             cp -f amocli ~/project/.circleci/DOCKER_testcli/amocli
