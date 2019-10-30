@@ -462,61 +462,6 @@ func TestFuncValUpdates(t *testing.T) {
 	assert.Equal(t, []byte("0001"), updates[2].PubKey.Data)
 }
 
-func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
-	validator, _ := ed25519.GenPrivKeyFromSecret([]byte(val)).
-		PubKey().(ed25519.PubKeyEd25519)
-	param := tx.StakeParam{
-		Amount:    *new(types.Currency).Set(amount),
-		Validator: validator[:],
-	}
-	payload, _ := json.Marshal(param)
-	_tx := tx.TxBase{
-		Type:    "stake",
-		Payload: payload,
-		Sender:  priv.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
-		Fee:     *new(types.Currency).Set(0),
-	}
-	_tx.Sign(priv)
-	rawTx, _ := json.Marshal(_tx)
-	return rawTx
-}
-
-func makeTxDelegate(priv p256.PrivKeyP256, to crypto.Address, amount uint64) []byte {
-	param := tx.DelegateParam{
-		To:     to,
-		Amount: *new(types.Currency).Set(amount),
-	}
-	payload, _ := json.Marshal(param)
-	_tx := tx.TxBase{
-		Type:    "delegate",
-		Payload: payload,
-		Sender:  priv.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
-		Fee:     *new(types.Currency).Set(0),
-	}
-	_tx.Sign(priv)
-	rawTx, _ := json.Marshal(_tx)
-	return rawTx
-}
-
-func makeTxWithdraw(priv p256.PrivKeyP256, amount uint64) []byte {
-	param := tx.WithdrawParam{
-		Amount: *new(types.Currency).Set(amount),
-	}
-	payload, _ := json.Marshal(param)
-	_tx := tx.TxBase{
-		Type:    "withdraw",
-		Payload: payload,
-		Sender:  priv.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
-		Fee:     *new(types.Currency).Set(0),
-	}
-	_tx.Sign(priv)
-	rawTx, _ := json.Marshal(_tx)
-	return rawTx
-}
-
 func TestEndBlock(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
@@ -683,4 +628,163 @@ func TestIncentive(t *testing.T) {
 	assert.Equal(t, bir[0].Amount, bald1)
 	assert.Equal(t, bir[1].Amount, bald2)
 	assert.Equal(t, bir[2].Amount, bals)
+}
+
+func TestIncentiveNoTouch(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	// setup
+	validator, _ := ed25519.GenPrivKeyFromSecret([]byte("test")).
+		PubKey().(ed25519.PubKeyEd25519)
+	priv := p256.GenPrivKeyFromSecret([]byte("test"))
+
+	app.store.SetLockedStake(priv.PubKey().Address(),
+		&types.Stake{Validator: validator, Amount: *new(types.Currency).Set(500)}, 1)
+
+	_, _, err := app.store.Save()
+	assert.NoError(t, err)
+
+	prevBalance := app.store.GetBalance(priv.PubKey().Address(), true)
+
+	prevHash, _, err := app.store.Save()
+	assert.NoError(t, err)
+
+	err = app.DistributeIncentive()
+	assert.NoError(t, err)
+
+	balance := app.store.GetBalance(priv.PubKey().Address(), true)
+
+	hash, _, err := app.store.Save()
+	assert.NoError(t, err)
+
+	assert.Equal(t, prevBalance, balance)
+	assert.Equal(t, prevHash, hash)
+}
+
+func TestEmptyBlock(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	// setup
+	tx.ConfigLockupPeriod = 2 // manipulate
+	//	validator, _ := ed25519.GenPrivKeyFromSecret([]byte("test")).
+	//		PubKey().(ed25519.PubKeyEd25519)
+	priv := p256.GenPrivKeyFromSecret([]byte("test"))
+
+	app.store.SetBalance(priv.PubKey().Address(), new(types.Currency).Set(500))
+
+	// init chain
+	app.InitChain(abci.RequestInitChain{})
+
+	// begin block
+	app.BeginBlock(abci.RequestBeginBlock{})
+
+	rawTx := makeTxStake(priv, "test", 500)
+	app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
+
+	// end block
+	app.EndBlock(abci.RequestEndBlock{})
+
+	// commit
+	app.Commit()
+
+	stakes := app.store.GetLockedStakes(makeTestAddress("test"), true)
+	assert.Equal(t, 1, len(stakes))
+
+	// get hash to compare
+	prevHash := app.state.LastAppHash
+
+	// simulate no txs to process in this block
+	app.BeginBlock(abci.RequestBeginBlock{})
+	app.EndBlock(abci.RequestEndBlock{})
+	app.Commit()
+
+	// get hash to compare
+	hash := app.state.LastAppHash
+
+	// should not equal as the stake lock-up remains
+	assert.NotEqual(t, prevHash, hash)
+
+	// stake lock-up should end here
+	stakes = app.store.GetLockedStakes(makeTestAddress("test"), true)
+	assert.Equal(t, 0, len(stakes))
+
+	prevHash = app.state.LastAppHash
+
+	// simulate no txs to process in this block
+	app.BeginBlock(abci.RequestBeginBlock{})
+	app.EndBlock(abci.RequestEndBlock{})
+	app.Commit()
+
+	// get hash to compare
+	hash = app.state.LastAppHash
+
+	// should equal as the stake lock-up ends
+	assert.Equal(t, prevHash, hash)
+}
+
+func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
+	validator, _ := ed25519.GenPrivKeyFromSecret([]byte(val)).
+		PubKey().(ed25519.PubKeyEd25519)
+	param := tx.StakeParam{
+		Amount:    *new(types.Currency).Set(amount),
+		Validator: validator[:],
+	}
+	payload, _ := json.Marshal(param)
+	_tx := tx.TxBase{
+		Type:    "stake",
+		Payload: payload,
+		Sender:  priv.PubKey().Address(),
+		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:     *new(types.Currency).Set(0),
+	}
+	_tx.Sign(priv)
+	rawTx, _ := json.Marshal(_tx)
+	return rawTx
+}
+
+func makeTxDelegate(priv p256.PrivKeyP256, to crypto.Address, amount uint64) []byte {
+	param := tx.DelegateParam{
+		To:     to,
+		Amount: *new(types.Currency).Set(amount),
+	}
+	payload, _ := json.Marshal(param)
+	_tx := tx.TxBase{
+		Type:    "delegate",
+		Payload: payload,
+		Sender:  priv.PubKey().Address(),
+		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:     *new(types.Currency).Set(0),
+	}
+	_tx.Sign(priv)
+	rawTx, _ := json.Marshal(_tx)
+	return rawTx
+}
+
+func makeTxWithdraw(priv p256.PrivKeyP256, amount uint64) []byte {
+	param := tx.WithdrawParam{
+		Amount: *new(types.Currency).Set(amount),
+	}
+	payload, _ := json.Marshal(param)
+	_tx := tx.TxBase{
+		Type:    "withdraw",
+		Payload: payload,
+		Sender:  priv.PubKey().Address(),
+		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:     *new(types.Currency).Set(0),
+	}
+	_tx.Sign(priv)
+	rawTx, _ := json.Marshal(_tx)
+	return rawTx
+}
+
+func makeTestAddress(seed string) crypto.Address {
+	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
+	addr := privKey.PubKey().Address()
+	return addr
 }

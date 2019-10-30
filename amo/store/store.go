@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/tendermint/iavl"
@@ -223,6 +224,16 @@ func getBalanceKey(addr tm.Address) []byte {
 }
 
 func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
+	zero := new(types.Currency).Set(0)
+	if balance.Equals(zero) {
+		// just ignore setting zero balance
+		return nil
+	}
+
+	if balance.LessThan(zero) {
+		return fmt.Errorf("unavailable amount: %s", balance.String())
+	}
+
 	b, err := json.Marshal(balance)
 	if err != nil {
 		return err

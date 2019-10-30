@@ -207,6 +207,61 @@ func TestStake(t *testing.T) {
 	assert.Error(t, err) // LastValidator error
 }
 
+func TestImmutableStake(t *testing.T) {
+	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+
+	// setup
+	holder1 := makeAccAddr("holder1")
+	//val1 := makeValAddr("val1")
+	stake11 := makeStake("val1", 100)
+	stake12 := makeStake("val1", 200)
+	stake13 := makeStake("val1", 300)
+
+	err := s.SetLockedStake(holder1, stake11, 1)
+	assert.Nil(t, err)
+	err = s.SetLockedStake(holder1, stake12, 2)
+	assert.Nil(t, err)
+	err = s.SetLockedStake(holder1, stake13, 3)
+	assert.Nil(t, err)
+
+	_, _, err = s.Save()
+	assert.NoError(t, err)
+
+	stakes := s.GetLockedStakes(holder1, true)
+	assert.Equal(t, 3, len(stakes))
+
+	s.LoosenLockedStakes(false)
+	_, _, err = s.Save()
+	assert.NoError(t, err)
+
+	stakes = s.GetLockedStakes(holder1, true)
+	assert.Equal(t, 2, len(stakes))
+
+	s.LoosenLockedStakes(false)
+	_, _, err = s.Save()
+	assert.NoError(t, err)
+
+	stakes = s.GetLockedStakes(holder1, true)
+	assert.Equal(t, 1, len(stakes))
+
+	s.LoosenLockedStakes(false)
+	_, _, err = s.Save()
+	assert.NoError(t, err)
+
+	stakes = s.GetLockedStakes(holder1, true)
+	assert.Equal(t, 0, len(stakes))
+
+	s.LoosenLockedStakes(false)
+	prevHash, _, err := s.Save()
+	assert.NoError(t, err)
+
+	s.LoosenLockedStakes(false)
+	hash, _, err := s.Save()
+	assert.NoError(t, err)
+
+	assert.Equal(t, prevHash, hash)
+}
+
 func TestLockedStake(t *testing.T) {
 	// setup
 	var err error
