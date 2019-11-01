@@ -33,6 +33,24 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	if err != nil {
 		return nil, err
 	}
+	if genState.Config.MaxValidators == 0 {
+		genState.Config.MaxValidators = defaultMaxValidators
+	}
+	if genState.Config.WeightValidator == 0 {
+		genState.Config.WeightValidator = defaultWeightValidator
+	}
+	if genState.Config.WeightDelegator == 0 {
+		genState.Config.WeightDelegator = defaultWeightDelegator
+	}
+	if genState.Config.BlkReward == 0 {
+		genState.Config.BlkReward = defaultBlkReward
+	}
+	if genState.Config.TxReward == 0 {
+		genState.Config.TxReward = defaultTxReward
+	}
+	if genState.Config.LockupPeriod == 0 {
+		genState.Config.LockupPeriod = defaultLockupPeriod
+	}
 	return &genState, nil
 }
 
@@ -42,10 +60,23 @@ func FillGenesisState(s *store.Store, genState *GenAmoAppState) error {
 		return err
 	}
 
+	// app config
+	// TODO: use reflect package
+	b, err := json.Marshal(genState.Config)
+	if err != nil {
+		return err
+	}
+	err = s.SetAppConfig(b)
+	if err != nil {
+		return err
+	}
+
+	// balances
 	for _, accBal := range genState.Balances {
 		s.SetBalance(accBal.Owner, &accBal.Amount)
 	}
 
+	// stakes
 	for _, accStake := range genState.Stakes {
 		var val25519 ed25519.PubKeyEd25519
 		copy(val25519[:], accStake.Validator)

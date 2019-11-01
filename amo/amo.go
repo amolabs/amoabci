@@ -3,6 +3,7 @@ package amo
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -190,22 +191,6 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	if err != nil {
 		return abci.ResponseInitChain{}
 	}
-	// forward genesis app config
-	if genAppState.Config.MaxValidators != 0 {
-		app.config.MaxValidators = genAppState.Config.MaxValidators
-	}
-	if genAppState.Config.WeightValidator != 0 {
-		app.config.WeightValidator = genAppState.Config.WeightValidator
-	}
-	if genAppState.Config.WeightDelegator != 0 {
-		app.config.WeightDelegator = genAppState.Config.WeightDelegator
-	}
-	if genAppState.Config.BlkReward != 0 {
-		app.config.BlkReward = genAppState.Config.BlkReward
-	}
-	if genAppState.Config.LockupPeriod != 0 {
-		app.config.LockupPeriod = genAppState.Config.LockupPeriod
-	}
 	// fill state db
 	if FillGenesisState(app.store, genAppState) != nil {
 		return abci.ResponseInitChain{}
@@ -220,6 +205,20 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	app.state.LastHeight = 0
 	app.state.LastAppHash = hash
 
+	// apply config
+	b := app.store.GetAppConfig()
+	if b == nil {
+		app.config = AMOAppConfig{
+			MaxValidators:   defaultMaxValidators,
+			WeightValidator: defaultWeightValidator,
+			WeightDelegator: defaultWeightDelegator,
+			BlkReward:       defaultBlkReward,
+			TxReward:        defaultTxReward,
+			LockupPeriod:    defaultLockupPeriod,
+		}
+	} else {
+		json.Unmarshal(b, &app.config)
+	}
 	app.save()
 	app.logger.Info("InitChain: new genesis app state applied.")
 	app.logger.Info(fmt.Sprintf("%x", hash))

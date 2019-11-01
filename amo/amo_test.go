@@ -36,25 +36,6 @@ func tearDownTest(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestInitChain(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	req := abci.RequestInitChain{}
-	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
-	res := app.InitChain(req)
-	// TODO: need to check the contents of the response
-	assert.Equal(t, abci.ResponseInitChain{}, res)
-
-	// TODO: run series of app.Query() to check the genesis state
-	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
-	addr := crypto.Address(addrbin)
-	assert.Equal(t, new(types.Currency).Set(100), app.store.GetBalance(addr, false))
-	//queryReq := abci.RequestQuery{}
-	//queryRes := app.Query(queryReq)
-}
-
 func TestAppConfig(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
@@ -75,6 +56,25 @@ func TestAppConfig(t *testing.T) {
 	assert.Equal(t, defaultBlkReward, app.config.BlkReward)
 	assert.Equal(t, defaultTxReward, app.config.TxReward)
 	assert.Equal(t, uint64(2), app.config.LockupPeriod)
+}
+
+func TestInitChain(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	req := abci.RequestInitChain{}
+	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
+	res := app.InitChain(req)
+	// TODO: need to check the contents of the response
+	assert.Equal(t, abci.ResponseInitChain{}, res)
+
+	// TODO: run series of app.Query() to check the genesis state
+	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
+	addr := crypto.Address(addrbin)
+	assert.Equal(t, new(types.Currency).Set(100), app.store.GetBalance(addr, false))
+	//queryReq := abci.RequestQuery{}
+	//queryRes := app.Query(queryReq)
 }
 
 func TestQueryDefault(t *testing.T) {
