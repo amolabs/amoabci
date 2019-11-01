@@ -3,6 +3,7 @@ package amo
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -79,12 +80,12 @@ func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdate
 }
 
 type AMOAppConfig struct {
-	MaxValidators   uint64
-	WeightValidator int64
-	WeightDelegator int64
-	BlkReward       uint64
-	TxReward        uint64
-	LockupPeriod    uint64
+	MaxValidators   uint64 `json:"max_validators"`
+	WeightValidator int64  `json:"weight_validator"`
+	WeightDelegator int64  `json:"weight_delegator"`
+	BlkReward       uint64 `json:"blk_reward"`
+	TxReward        uint64 `json:"tx_reward"`
+	LockupPeriod    uint64 `json:"lockup_period"`
 }
 
 type AMOApp struct {
@@ -104,7 +105,7 @@ type AMOApp struct {
 	stateFile *os.File
 	state     State
 
-	// internal state
+	// abstraction of internal DBs to the outer world
 	store *astore.Store
 
 	// runtime temporary variables
@@ -190,6 +191,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	if err != nil {
 		return abci.ResponseInitChain{}
 	}
+	// fill state db
 	if FillGenesisState(app.store, genAppState) != nil {
 		return abci.ResponseInitChain{}
 	}
@@ -203,6 +205,20 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	app.state.LastHeight = 0
 	app.state.LastAppHash = hash
 
+	// apply config
+	b := app.store.GetAppConfig()
+	if b == nil {
+		app.config = AMOAppConfig{
+			MaxValidators:   defaultMaxValidators,
+			WeightValidator: defaultWeightValidator,
+			WeightDelegator: defaultWeightDelegator,
+			BlkReward:       defaultBlkReward,
+			TxReward:        defaultTxReward,
+			LockupPeriod:    defaultLockupPeriod,
+		}
+	} else {
+		json.Unmarshal(b, &app.config)
+	}
 	app.save()
 	app.logger.Info("InitChain: new genesis app state applied.")
 	app.logger.Info(fmt.Sprintf("%x", hash))
@@ -383,6 +399,20 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	app.state.LastAppHash = app.state.AppHash
 	app.state.LastHeight = app.state.Height
 
+	// apply config
+	b := app.store.GetAppConfig()
+	if b == nil {
+		app.config = AMOAppConfig{
+			MaxValidators:   defaultMaxValidators,
+			WeightValidator: defaultWeightValidator,
+			WeightDelegator: defaultWeightDelegator,
+			BlkReward:       defaultBlkReward,
+			TxReward:        defaultTxReward,
+			LockupPeriod:    defaultLockupPeriod,
+		}
+	} else {
+		json.Unmarshal(b, &app.config)
+	}
 	app.save()
 
 	return abci.ResponseCommit{Data: app.state.LastAppHash}

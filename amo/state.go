@@ -6,13 +6,12 @@ import (
 	"os"
 )
 
-// TODO: use 2-stage state
 type State struct {
 	MerkleVersion int64  `json:"merkle_version"`
 	Height        int64  `json:"height"` // current block height
 	AppHash       []byte `json:"app_hash"`
-	LastHeight    int64  `json:"last_height"`   // last completed block height
-	LastAppHash   []byte `json:"last_app_hash"` // TODO: use merkle tree
+	LastHeight    int64  `json:"last_height"` // last completed block height
+	LastAppHash   []byte `json:"last_app_hash"`
 }
 
 func (s *State) LoadFrom(f *os.File) error {

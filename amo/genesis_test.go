@@ -110,6 +110,7 @@ func TestFillGenesisState(t *testing.T) {
 	assert.Equal(t, new(types.Currency).Set(10), s.GetBalance(addr1, false))
 
 	genState, err := ParseGenesisStateBytes([]byte(t0json))
+	assert.NoError(t, err)
 	// this will purge previous data and fill with newly provided genesis state
 	err = FillGenesisState(s, genState)
 	assert.NoError(t, err)
