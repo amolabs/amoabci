@@ -399,6 +399,20 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	app.state.LastAppHash = app.state.AppHash
 	app.state.LastHeight = app.state.Height
 
+	// apply config
+	b := app.store.GetAppConfig()
+	if b == nil {
+		app.config = AMOAppConfig{
+			MaxValidators:   defaultMaxValidators,
+			WeightValidator: defaultWeightValidator,
+			WeightDelegator: defaultWeightDelegator,
+			BlkReward:       defaultBlkReward,
+			TxReward:        defaultTxReward,
+			LockupPeriod:    defaultLockupPeriod,
+		}
+	} else {
+		json.Unmarshal(b, &app.config)
+	}
 	app.save()
 
 	return abci.ResponseCommit{Data: app.state.LastAppHash}
