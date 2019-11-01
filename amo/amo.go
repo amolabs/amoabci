@@ -79,12 +79,12 @@ func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdate
 }
 
 type AMOAppConfig struct {
-	MaxValidators   uint64
-	WeightValidator int64
-	WeightDelegator int64
-	BlkReward       uint64
-	TxReward        uint64
-	LockupPeriod    uint64
+	MaxValidators   uint64 `json:"max_validators"`
+	WeightValidator int64  `json:"weight_validator"`
+	WeightDelegator int64  `json:"weight_delegator"`
+	BlkReward       uint64 `json:"blk_reward"`
+	TxReward        uint64 `json:"tx_reward"`
+	LockupPeriod    uint64 `json:"lockup_period"`
 }
 
 type AMOApp struct {
@@ -104,7 +104,7 @@ type AMOApp struct {
 	stateFile *os.File
 	state     State
 
-	// internal state
+	// abstraction of internal DBs to the outer world
 	store *astore.Store
 
 	// runtime temporary variables
@@ -190,6 +190,23 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	if err != nil {
 		return abci.ResponseInitChain{}
 	}
+	// forward genesis app config
+	if genAppState.Config.MaxValidators != 0 {
+		app.config.MaxValidators = genAppState.Config.MaxValidators
+	}
+	if genAppState.Config.WeightValidator != 0 {
+		app.config.WeightValidator = genAppState.Config.WeightValidator
+	}
+	if genAppState.Config.WeightDelegator != 0 {
+		app.config.WeightDelegator = genAppState.Config.WeightDelegator
+	}
+	if genAppState.Config.BlkReward != 0 {
+		app.config.BlkReward = genAppState.Config.BlkReward
+	}
+	if genAppState.Config.LockupPeriod != 0 {
+		app.config.LockupPeriod = genAppState.Config.LockupPeriod
+	}
+	// fill state db
 	if FillGenesisState(app.store, genAppState) != nil {
 		return abci.ResponseInitChain{}
 	}

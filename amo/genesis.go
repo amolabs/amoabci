@@ -11,6 +11,7 @@ import (
 )
 
 type GenAmoAppState struct {
+	Config   AMOAppConfig    `json:"config"`
 	Balances []GenAccBalance `json:"balances"`
 	Stakes   []GenAccStake   `json:"stakes"`
 }

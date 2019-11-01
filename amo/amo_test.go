@@ -55,6 +55,28 @@ func TestInitChain(t *testing.T) {
 	//queryRes := app.Query(queryReq)
 }
 
+func TestAppConfig(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	// test genesis app config
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	req := abci.RequestInitChain{}
+	req.AppStateBytes = []byte(
+		`{ "config": { "max_validators": 10, "lockup_period": 2 } }`)
+	res := app.InitChain(req)
+	// TODO: need to check the contents of the response
+	assert.Equal(t, abci.ResponseInitChain{}, res)
+
+	// check
+	assert.Equal(t, uint64(10), app.config.MaxValidators)
+	assert.Equal(t, defaultWeightValidator, app.config.WeightValidator)
+	assert.Equal(t, defaultWeightDelegator, app.config.WeightDelegator)
+	assert.Equal(t, defaultBlkReward, app.config.BlkReward)
+	assert.Equal(t, defaultTxReward, app.config.TxReward)
+	assert.Equal(t, uint64(2), app.config.LockupPeriod)
+}
+
 func TestQueryDefault(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
