@@ -283,6 +283,7 @@ func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 	if err != nil {
 		return abci.ResponseCheckTx{
 			Code:      code.TxCodeBadParam,
+			Log:       err.Error(),
 			Info:      err.Error(),
 			Codespace: "amo",
 		}
@@ -309,6 +310,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	if err != nil {
 		return abci.ResponseDeliverTx{
 			Code:      code.TxCodeBadParam,
+			Log:       err.Error(),
 			Info:      err.Error(),
 			Codespace: "amo",
 		}
