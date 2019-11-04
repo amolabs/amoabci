@@ -50,7 +50,7 @@ bench:
 	cd amo/store; $(PROFCMD)
 
 docker:
-	tar zcf amoabci-docker.tar.gz Makefile go.mod go.sum cmd amo crypto Dockerfile DOCKER
+	COPYFILE_DISABLE=true tar zcf amoabci-docker.tar.gz Makefile go.mod go.sum cmd amo crypto Dockerfile DOCKER
 	docker build -t amolabs/amod - < amoabci-docker.tar.gz
 
 clean:
