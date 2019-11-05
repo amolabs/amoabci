@@ -484,6 +484,101 @@ func TestFuncValUpdates(t *testing.T) {
 	assert.Equal(t, []byte("0001"), updates[2].PubKey.Data)
 }
 
+func TestPenaltyEvidence(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	// setup
+	//
+	// node composition
+	// val1 - staker1
+	// val2 - staker2
+	// val3 - staker3 (convict)
+	//      - delegator1
+	//      - delegator2
+
+	val1, _ := ed25519.GenPrivKeyFromSecret([]byte("val1")).PubKey().(ed25519.PubKeyEd25519)
+	staker1 := p256.GenPrivKeyFromSecret([]byte("staker1"))
+	app.store.SetBalance(staker1.PubKey().Address(), new(types.Currency).Set(500))
+	app.store.SetUnlockedStake(staker1.PubKey().Address(), &types.Stake{
+		Amount:    *new(types.Currency).Set(500),
+		Validator: val1,
+	})
+
+	val2, _ := ed25519.GenPrivKeyFromSecret([]byte("val2")).PubKey().(ed25519.PubKeyEd25519)
+	staker2 := p256.GenPrivKeyFromSecret([]byte("staker2"))
+	app.store.SetBalance(staker2.PubKey().Address(), new(types.Currency).Set(500))
+	app.store.SetUnlockedStake(staker2.PubKey().Address(), &types.Stake{
+		Amount:    *new(types.Currency).Set(500),
+		Validator: val2,
+	})
+
+	val3, _ := ed25519.GenPrivKeyFromSecret([]byte("val3")).PubKey().(ed25519.PubKeyEd25519)
+	staker3 := p256.GenPrivKeyFromSecret([]byte("staker3"))
+	app.store.SetBalance(staker3.PubKey().Address(), new(types.Currency).Set(500))
+	app.store.SetUnlockedStake(staker3.PubKey().Address(), &types.Stake{
+		Amount:    *new(types.Currency).Set(500),
+		Validator: val3,
+	})
+
+	delegator1 := p256.GenPrivKeyFromSecret([]byte("delegator1"))
+	app.store.SetBalance(delegator1.PubKey().Address(), new(types.Currency).Set(500))
+	app.store.SetDelegate(delegator1.PubKey().Address(), &types.Delegate{
+		Amount:    *new(types.Currency).Set(500),
+		Delegatee: staker3.PubKey().Address(),
+	})
+
+	delegator2 := p256.GenPrivKeyFromSecret([]byte("delegator2"))
+	app.store.SetBalance(delegator2.PubKey().Address(), new(types.Currency).Set(500))
+	app.store.SetDelegate(delegator2.PubKey().Address(), &types.Delegate{
+		Amount:    *new(types.Currency).Set(500),
+		Delegatee: staker3.PubKey().Address(),
+	})
+
+	app.store.Save()
+
+	// imitate target convict: val3 - proposer
+	evidences := []abci.Evidence{}
+	evidences = append(evidences, abci.Evidence{
+		Validator: abci.Validator{Address: val3.Address()},
+		Height:    int64(2),
+	})
+
+	// dummy votes
+	votes := abci.LastCommitInfo{}
+
+	// before effective stake
+	staker1bes := app.store.GetEffStake(staker1.PubKey().Address(), false)
+	staker2bes := app.store.GetEffStake(staker2.PubKey().Address(), false)
+	staker3bes := app.store.GetEffStake(staker3.PubKey().Address(), false)
+
+	// expected implementation:
+	// func PenalizeConvicts(evidences []abci.Evidence, votes abci.LastCommitInfo)
+	err := app.PenalizeConvicts(evidences, votes)
+	assert.NoError(err)
+
+	// after effective stake
+	staker1aes := app.store.GetEffStake(staker1.PubKey().Address(), false)
+	staker2aes := app.store.GetEffStake(staker2.PubKey().Address(), false)
+	staker3aes := app.store.GetEffStake(staker3.PubKey().Address(), false)
+
+	// slashing effective stake calculation
+	// - proposer: ces = es * (1 - m1)
+	// - voter: ces = es * (1 - m2)
+
+	// candidate effective stake
+	staker1ces := new(types.Currency).Mul(staker1bes.Amount, 1-app.PenaltyRatioM2)
+	staker2ces := new(types.Currency).Mul(staker2bes.Amount, 1-app.PenaltyRatioM2)
+	staker3ces := new(types.Currency).Mul(staker3bes.Amount, 1-app.PenaltyRatioM1)
+
+	// compare
+	assert.Equal(t, staker1ces, staker1aes)
+	assert.Equal(t, staker2ces, staker2aes)
+	assert.Equal(t, staker3ces, staker3aes)
+}
+
 func TestEndBlock(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
