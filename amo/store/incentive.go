@@ -32,7 +32,7 @@ func (s Store) AddIncentiveRecord(height int64, address crypto.Address, amount *
 	}
 
 	if amount.Equals(new(types.Currency).Set(0)) {
-		return errors.New("reward amount's bit length is 0")
+		return errors.New("ignore recording 0 value")
 	}
 
 	baKey := makeHeightFirstKey(height, address)

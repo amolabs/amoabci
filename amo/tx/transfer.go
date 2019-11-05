@@ -63,5 +63,8 @@ func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	toBalance.Add(&txParam.Amount)
 	store.SetBalance(t.GetSender(), fromBalance)
 	store.SetBalance(txParam.To, toBalance)
-	return code.TxCodeOK, "ok", nil
+	tags := []tm.KVPair{
+		{Key: []byte("tx.recp"), Value: []byte(txParam.To.String())},
+	}
+	return code.TxCodeOK, "ok", tags
 }

@@ -206,6 +206,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	app.state.LastAppHash = hash
 
 	// apply config
+	// TODO: need to do something to make it better
 	b := app.store.GetAppConfig()
 	if b == nil {
 		app.config = AMOAppConfig{
@@ -219,9 +220,9 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	} else {
 		json.Unmarshal(b, &app.config)
 	}
+	tx.ConfigLockupPeriod = app.config.LockupPeriod
 	app.save()
 	app.logger.Info("InitChain: new genesis app state applied.")
-	app.logger.Info(fmt.Sprintf("%x", hash))
 
 	return abci.ResponseInitChain{
 		Validators: app.store.GetValidators(app.config.MaxValidators, false),
@@ -291,6 +292,7 @@ func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 	if !t.Verify() {
 		return abci.ResponseCheckTx{
 			Code:      code.TxCodeBadSignature,
+			Log:       "Signature verification failed",
 			Info:      "Signature verification failed",
 			Codespace: "amo",
 		}
@@ -300,6 +302,7 @@ func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 
 	return abci.ResponseCheckTx{
 		Code:      rc,
+		Log:       info,
 		Info:      info,
 		Codespace: "amo",
 	}
@@ -327,6 +330,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	if balance.LessThan(&fee) {
 		return abci.ResponseDeliverTx{
 			Code:      code.TxCodeNotEnoughBalance,
+			Log:       "not enough balance to pay fee",
 			Info:      "not enough balance to pay fee",
 			Codespace: "amo",
 		}
@@ -353,6 +357,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 
 	return abci.ResponseDeliverTx{
 		Code: rc,
+		Log:  info,
 		Info: info,
 		Events: []abci.Event{abci.Event{
 			Type:       "default",
@@ -372,6 +377,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		newVals := app.store.GetValidators(app.config.MaxValidators, false)
 		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
 	}
+
 	app.store.LoosenLockedStakes(false)
 
 	// update appHash
@@ -402,6 +408,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	app.state.LastHeight = app.state.Height
 
 	// apply config
+	// TODO: need to do something to make it better
 	b := app.store.GetAppConfig()
 	if b == nil {
 		app.config = AMOAppConfig{
@@ -415,6 +422,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	} else {
 		json.Unmarshal(b, &app.config)
 	}
+	tx.ConfigLockupPeriod = app.config.LockupPeriod
 	app.save()
 
 	return abci.ResponseCommit{Data: app.state.LastAppHash}
@@ -444,6 +452,11 @@ func (app *AMOApp) DistributeIncentive() error {
 
 	incentive.Set(0)
 	incentive.Add(rTotal.Add(&app.feeAccumulated))
+
+	// ignore 0 incentive
+	if incentive.Equals(new(types.Currency).Set(0)) {
+		return nil
+	}
 
 	// weighted sum
 	var wsum, w big.Int
