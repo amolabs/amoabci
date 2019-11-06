@@ -98,6 +98,11 @@ func TestBalance(t *testing.T) {
 	balance := new(types.Currency).Set(1000)
 	s.SetBalance(testAddr, balance)
 	assert.Equal(t, balance, s.GetBalance(testAddr, false))
+
+	// setting 0 balance should return error
+	balance = balance.Set(0)
+	err := s.SetBalance(testAddr, balance)
+	assert.Error(t, err)
 }
 
 func TestParcel(t *testing.T) {

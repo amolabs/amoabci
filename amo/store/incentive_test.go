@@ -21,13 +21,20 @@ func TestIncentiveRecord(t *testing.T) {
 
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 
+	// unavailable height
 	err := s.AddIncentiveRecord(-1, makeAccAddr("test"), new(types.Currency).Set(1))
 	assert.Error(t, err)
 
+	// missing address
 	err = s.AddIncentiveRecord(1, nil, new(types.Currency).Set(1))
 	assert.Error(t, err)
 
+	// unavailable currency
 	err = s.AddIncentiveRecord(-1, makeAccAddr("test"), new(types.Currency))
+	assert.Error(t, err)
+
+	// 0 incentive
+	err = s.AddIncentiveRecord(1, makeAccAddr("test"), new(types.Currency).Set(0))
 	assert.Error(t, err)
 
 	// set incentives
@@ -36,7 +43,7 @@ func TestIncentiveRecord(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	//.GetBlockIncentiveRecords Test
+	// GetBlockIncentiveRecords Test
 	blockIncentiveRecords := s.GetBlockIncentiveRecords(1)
 	assert.Equal(t, 2, len(blockIncentiveRecords))
 

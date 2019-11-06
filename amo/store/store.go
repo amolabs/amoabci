@@ -225,9 +225,10 @@ func getBalanceKey(addr tm.Address) []byte {
 
 func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
 	zero := new(types.Currency).Set(0)
+
+	// just ignore setting zero balance
 	if balance.Equals(zero) {
-		// just ignore setting zero balance
-		return nil
+		return fmt.Errorf("ignore setting %s balance", balance.String())
 	}
 
 	if balance.LessThan(zero) {
@@ -243,6 +244,11 @@ func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
 }
 
 func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) error {
+	// just ignore setting zero balance
+	if balance == uint64(0) {
+		return nil
+	}
+
 	b, err := json.Marshal(new(types.Currency).Set(balance))
 	if err != nil {
 		return err
@@ -460,7 +466,7 @@ func (s Store) LoosenLockedStakes(committed bool) {
 			return false
 		}
 
-		if len(key) == crypto.AddressSize {
+		if len(key) == len(prefixStake)+crypto.AddressSize {
 			// unlocked stake
 			return false // continue
 		}
