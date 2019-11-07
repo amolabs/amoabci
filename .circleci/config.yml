@@ -133,6 +133,9 @@ jobs:
           name: "distribute coins"
           command: ./test_script/distribute.sh 1 "$NODENUM" 100000000000000000000
       - run:
+          name: "delegate coins"
+          command: ./test_script/delegate.sh 1 "$NODENUM" 100000000000000000000
+      - run:
           name: "run parcel related transactions"
           command: ./test_script/parcel.sh
       - run:

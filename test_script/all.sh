@@ -78,6 +78,9 @@ $ROOT/withdraw.sh 2 "$NODENUM" "$AMO100" "stake locked"
 echo "distribute coins"
 $ROOT/distribute.sh 1 "$NODENUM" "$AMO100"
 
+echo "delegate coins"
+$ROOT/delegate.sh 1 "$NODENUM" "$AMO100"
+
 echo "parcel related transactions"
 $ROOT/parcel.sh
 
