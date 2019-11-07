@@ -25,16 +25,10 @@ for ((i=FROM; i<=NODENUM; i++))
 do
     printf "withdraw val$i: $(bc <<< "$AMOUNT / $AMO1") AMO - "
 
-    # to prevent crash when no stake
-    if [ "$i" -eq "$NODENUM" ]; then
-		out=$($CLI tx withdraw $CLIOPT --user tval$i "$AMO1")
-		h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
-		if [ -z "$h" -o "$h" != "$RESULT" ]; then fail $out; fi
-    else
-		out=$($CLI tx withdraw $CLIOPT --user tval$i "$AMOUNT")
-		h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
-		if [ -z "$h" -o "$h" != "$RESULT" ]; then fail $out; fi
-    fi
+	out=$($CLI tx withdraw $CLIOPT --user tval$i "$AMOUNT")
+	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+	if [ -z "$h" -o "$h" != "$RESULT" ]; then fail $out; fi
+
 	printf "$h\n"
 done
 

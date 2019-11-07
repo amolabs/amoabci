@@ -128,7 +128,7 @@ jobs:
           command: ./test_script/stake.sh 2 "$NODENUM" 100000000000000000000
       - run:
           name: "withdraw staked coins should FAIL"
-          command: ./test_script/withdraw.sh 2 "$NODENUM" 100000000000000000000
+          command: ./test_script/withdraw.sh 2 "$NODENUM" 100000000000000000000 "stake locked"
       - run:
           name: "distribute coins"
           command: ./test_script/distribute.sh 1 "$NODENUM" 100000000000000000000
@@ -140,7 +140,7 @@ jobs:
           command: ./test_script/retract.sh 1 "$NODENUM" 100000000000000000000
       - run:
           name: "withdraw stakes coins shoud SUCCEED"
-          command: ./test_script/withdraw.sh 2 "$NODENUM" 100000000000000000000
+          command: ./test_script/withdraw.sh 2 "$NODENUM" 100000000000000000000 "ok"
     
   deploy:
     docker:
