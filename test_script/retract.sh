@@ -22,17 +22,9 @@ $ROOT/qd.sh "$NODENUM"
 
 for ((i=FROM; i<=NODENUM; i++))
 do
-    addr=tval$i
-    out=$(docker exec -it val$i tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
-	if [ $? -ne 0 ]; then fail $out; fi
-
-	echo "stake to tval$i: $(bc <<< "$AMOUNT / $AMO1") AMO"
-	out=$($CLI tx stake $CLIOPT --user tval$i $out "$AMOUNT")
+    echo "retract del$i: $(bc <<< "$AMOUNT / $AMO1") AMO"
+	out=$($CLI tx retract $CLIOPT --user tdel$i "$AMOUNT")
 	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 	if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 done
-
-$ROOT/qb.sh "$NODENUM"
-$ROOT/qs.sh "$NODENUM"
-$ROOT/qd.sh "$NODENUM"
 

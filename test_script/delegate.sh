@@ -26,8 +26,8 @@ do
     out=$(docker exec -it val$i tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
 	if [ $? -ne 0 ]; then fail $out; fi
 
-	echo "stake to tval$i: $(bc <<< "$AMOUNT / $AMO1") AMO"
-	out=$($CLI tx stake $CLIOPT --user tval$i $out "$AMOUNT")
+	echo "delegate from tdel$i to tval$i: $(bc <<< "$AMOUNT / $AMO1") AMO"
+	out=$($CLI tx delegate $CLIOPT --user tdel$i "${!addr}" "$AMOUNT")
 	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 	if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 done

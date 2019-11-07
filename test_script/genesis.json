@@ -29,7 +29,7 @@
   ],
   "app_state": {
 	"config": {
-		"lockup_period": 100
+        "lockup_period": 10 
 	},
     "balances": [
       {
