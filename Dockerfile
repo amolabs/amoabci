@@ -15,9 +15,9 @@ WORKDIR /src
 
 # leveldb
 RUN wget https://github.com/google/leveldb/archive/v1.20.tar.gz
-RUN tar zxvf v1.20.tar.gz && make -C leveldb-1.20
+RUN tar zxvf v1.20.tar.gz 
 RUN cp -a leveldb-1.20/include/leveldb /usr/include/
-RUN cp -a leveldb-1.20/out-shared/libleveldb.so* /usr/lib/
+COPY contrib/leveldb/bin/libleveldb.so* /usr/lib/ 
 
 # tendermint
 RUN git clone -b v0.32.7 https://github.com/tendermint/tendermint
