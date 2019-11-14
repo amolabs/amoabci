@@ -528,14 +528,16 @@ func (app *AMOApp) PenalizeConvicts(evidences []abci.Evidence) error {
 func (app *AMOApp) penalize(validator crypto.Address, ratio float64) {
 	zeroAmount := new(types.Currency).Set(0)
 
-	vs := app.store.GetStake(validator, true) // validator's stake
+	holder := app.store.GetHolderByValidator(validator, true)
+
+	vs := app.store.GetStake(holder, true) // validator's stake
 	if vs == nil {
 		return
 	}
 
-	ds := app.store.GetDelegatesByDelegatee(validator, true) // delegators' stake
+	ds := app.store.GetDelegatesByDelegatee(holder, true) // delegators' stake
 
-	es := app.store.GetEffStake(validator, true)
+	es := app.store.GetEffStake(holder, true)
 	esf := new(big.Float).SetInt(&es.Amount.Int)
 	prf := new(big.Float).SetFloat64(ratio)
 
@@ -572,10 +574,10 @@ func (app *AMOApp) penalize(validator crypto.Address, ratio float64) {
 			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmp2.Int64())
 	}
 	tmp2.Int.Sub(&penalty.Int, &tmp.Int) // calc voter(validator) penalty
-	app.store.SlashStakes(validator, tmp2, true)
+	app.store.SlashStakes(holder, tmp2, true)
 
 	app.logger.Debug("Evidence penalty",
-		"validator", hex.EncodeToString(validator), "penalty", tmp2.Int64())
+		"validator", hex.EncodeToString(holder), "penalty", tmp2.Int64())
 }
 
 /////////////////////////////////////

@@ -525,7 +525,7 @@ func TestPenaltyEvidence(t *testing.T) {
 	// imitate target convict: val - validator
 	evidences := []abci.Evidence{}
 	evidences = append(evidences, abci.Evidence{
-		Validator: abci.Validator{Address: staker.PubKey().Address()},
+		Validator: abci.Validator{Address: val.Address()},
 		Height:    int64(2),
 	})
 
