@@ -304,11 +304,6 @@ func TestLockedStake(t *testing.T) {
 	// conflict: validator mismatch
 	assert.Equal(t, code.TxErrBadValidator, err)
 
-	// height DOES matter here
-	err = s.SetLockedStake(holder1, stake12, 1)
-	// conflict: height already taken
-	assert.Equal(t, code.TxErrHeightTaken, err)
-
 	stake = s.GetStake(holder1, false)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake11, stake)
@@ -348,6 +343,74 @@ func TestLockedStake(t *testing.T) {
 	stake = s.GetStake(holder1, false)
 	assert.NotNil(t, stake)
 	assert.Equal(t, stake12, stake)
+}
+
+func TestSlashStakes(t *testing.T) {
+	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+
+	holder := makeAccAddr("holder")
+
+	unlockedStake := makeStake("val", 200)
+	lockedStake1 := makeStake("val", 200)
+	lockedStake2 := makeStake("val", 200)
+
+	slashAmount := *new(types.Currency).Set(100)
+
+	// set stakes (unlocked stake, locked stake)
+	s.SetUnlockedStake(holder, unlockedStake)
+	s.SetLockedStake(holder, lockedStake1, 1)
+	s.SetLockedStake(holder, lockedStake2, 2)
+
+	ts := s.GetStake(holder, false)
+	assert.Equal(t, *new(types.Currency).Set(600), ts.Amount)
+
+	// begin of slashing stakes
+	s.SlashStakes(holder, slashAmount, false)
+	ts = s.GetStake(holder, false)
+	assert.Equal(t, *new(types.Currency).Set(500), ts.Amount)
+
+	// unlocked stake SHOULD get slashed FIRST
+	uls := s.GetUnlockedStake(holder, false)
+	assert.Equal(t, *new(types.Currency).Set(100), uls.Amount)
+	ls := s.GetLockedStake(holder, 1, false)
+	assert.Equal(t, *new(types.Currency).Set(200), ls.Amount)
+	ls = s.GetLockedStake(holder, 2, false)
+	assert.Equal(t, *new(types.Currency).Set(200), ls.Amount)
+
+	// then, locked stakes SHOULD get slashed
+	s.SlashStakes(holder, slashAmount, false)
+	ts = s.GetStake(holder, false)
+	assert.Equal(t, *new(types.Currency).Set(400), ts.Amount)
+
+	uls = s.GetUnlockedStake(holder, false)
+	assert.Nil(t, uls)
+	ls = s.GetLockedStake(holder, 1, false)
+	assert.Equal(t, *new(types.Currency).Set(200), ls.Amount)
+	ls = s.GetLockedStake(holder, 2, false)
+	assert.Equal(t, *new(types.Currency).Set(200), ls.Amount)
+
+	s.SlashStakes(holder, slashAmount, false)
+	ts = s.GetStake(holder, false)
+	assert.Equal(t, *new(types.Currency).Set(300), ts.Amount)
+
+	uls = s.GetUnlockedStake(holder, false)
+	assert.Nil(t, uls)
+	ls = s.GetLockedStake(holder, 1, false)
+	assert.Equal(t, *new(types.Currency).Set(100), ls.Amount)
+	ls = s.GetLockedStake(holder, 2, false)
+	assert.Equal(t, *new(types.Currency).Set(200), ls.Amount)
+
+	// slash rest of stakes
+	s.SlashStakes(holder, ts.Amount, false)
+	ts = s.GetStake(holder, false)
+	assert.Nil(t, ts)
+
+	uls = s.GetUnlockedStake(holder, false)
+	assert.Nil(t, uls)
+	ls = s.GetLockedStake(holder, 1, false)
+	assert.Nil(t, ls)
+	ls = s.GetLockedStake(holder, 2, false)
+	assert.Nil(t, ls)
 }
 
 func TestDelegate(t *testing.T) {

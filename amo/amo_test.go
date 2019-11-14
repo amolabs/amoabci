@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"sort"
 	"testing"
@@ -482,6 +483,79 @@ func TestFuncValUpdates(t *testing.T) {
 	assert.Equal(t, int64(3), updates[1].Power)
 	assert.Equal(t, int64(0), updates[2].Power)
 	assert.Equal(t, []byte("0001"), updates[2].PubKey.Data)
+}
+
+func TestPenaltyEvidence(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	// setup
+	//
+	// node composition
+	// val - staker (convict)
+	//     - delegator1
+	//     - delegator2
+
+	val, _ := ed25519.GenPrivKeyFromSecret([]byte("val")).PubKey().(ed25519.PubKeyEd25519)
+	staker := p256.GenPrivKeyFromSecret([]byte("staker"))
+	app.store.SetBalance(staker.PubKey().Address(), new(types.Currency).Set(1000))
+	app.store.SetUnlockedStake(staker.PubKey().Address(), &types.Stake{
+		Amount:    *new(types.Currency).Set(1000),
+		Validator: val,
+	})
+
+	delegator1 := p256.GenPrivKeyFromSecret([]byte("delegator1"))
+	app.store.SetBalance(delegator1.PubKey().Address(), new(types.Currency).Set(500))
+	app.store.SetDelegate(delegator1.PubKey().Address(), &types.Delegate{
+		Amount:    *new(types.Currency).Set(500),
+		Delegatee: staker.PubKey().Address(),
+	})
+
+	delegator2 := p256.GenPrivKeyFromSecret([]byte("delegator2"))
+	app.store.SetBalance(delegator2.PubKey().Address(), new(types.Currency).Set(500))
+	app.store.SetDelegate(delegator2.PubKey().Address(), &types.Delegate{
+		Amount:    *new(types.Currency).Set(500),
+		Delegatee: staker.PubKey().Address(),
+	})
+
+	app.store.Save()
+
+	// imitate target convict: val - validator
+	evidences := []abci.Evidence{}
+	evidences = append(evidences, abci.Evidence{
+		Validator: abci.Validator{Address: val.Address()},
+		Height:    int64(2),
+	})
+
+	// before effective stake
+	stakerbes := app.store.GetEffStake(staker.PubKey().Address(), false)
+	stakerbesf := new(big.Float).SetInt(&stakerbes.Amount.Int)
+
+	app.PenalizeConvicts(evidences)
+
+	// after effective stake
+	stakeraes := app.store.GetEffStake(staker.PubKey().Address(), false)
+	stakeraesf := new(big.Float).SetInt(&stakeraes.Amount.Int)
+
+	// slashing effective stake calculation
+	// ces = bes * (1 - m)
+	prf := new(big.Float).SetFloat64(app.config.PenaltyRatioM)
+	tmpf := new(big.Float).SetInt64(1)
+	tmpf.Sub(tmpf, prf)
+
+	// candidate effective stake
+	stakercesf := stakerbesf.Mul(stakerbesf, tmpf)
+
+	// to ignore last three digits
+	divisor := new(big.Float).SetInt64(1000)
+
+	ces, _ := new(big.Float).Quo(stakercesf, divisor).Int64()
+	aes, _ := new(big.Float).Quo(stakeraesf, divisor).Int64()
+
+	// compare aes == ces
+	assert.Equal(t, ces, aes)
 }
 
 func TestEndBlock(t *testing.T) {

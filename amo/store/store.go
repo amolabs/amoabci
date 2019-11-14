@@ -394,9 +394,6 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 	if err != nil {
 		return err
 	}
-	if s.GetLockedStake(holder, height, false) != nil {
-		return code.TxErrHeightTaken
-	}
 	err = s.checkStakeDeletion(holder, stake, height)
 	if err != nil {
 		return err
@@ -423,6 +420,65 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 	}
 
 	return nil
+}
+
+func (s Store) SlashStakes(holder crypto.Address, amount types.Currency, committed bool) {
+	zeroAmount := new(types.Currency).Set(0)
+
+	total := s.GetStake(holder, committed)
+	if total == nil {
+		return
+	}
+
+	unlockedStake := s.GetUnlockedStake(holder, committed)
+	lockedStakes, heights := s.GetLockedStakesWithHeight(holder, committed)
+
+	// slash until amount gets 0
+	// slash unlockedStake first, then lockedStakes
+
+	if unlockedStake != nil {
+		switch amount.Cmp(&unlockedStake.Amount.Int) {
+		case -1: // amount < unlockedStake.Amount
+			unlockedStake.Amount.Sub(&amount)
+			amount.Set(0)
+		case 0: // amount == unlockedStake.Amount
+			unlockedStake.Amount.Set(0)
+			amount.Set(0)
+		case 1: // amount > unlockedStake.Amount
+			unlockedStake.Amount.Set(0)
+			amount.Sub(&unlockedStake.Amount)
+		}
+
+		s.SetUnlockedStake(holder, unlockedStake)
+
+		// check end of slash
+		if amount.Equals(zeroAmount) {
+			return
+		}
+	}
+
+	// from height(close to unlocked) to EOA
+	for i := len(lockedStakes) - 1; i >= 0; i-- {
+		lockedStake := lockedStakes[i]
+		height := heights[i]
+		switch amount.Cmp(&lockedStake.Amount.Int) {
+		case -1: // amount < lockedStake.Amount
+			lockedStake.Amount.Sub(&amount)
+			amount.Set(0)
+		case 0: // amount == lockedStake.Amount
+			lockedStake.Amount.Set(0)
+			amount.Set(0)
+		case 1: // amount > lockedStake.Amount
+			lockedStake.Amount.Set(0)
+			amount.Sub(&lockedStake.Amount)
+		}
+
+		s.SetLockedStake(holder, lockedStake, height)
+
+		if amount.Equals(zeroAmount) {
+			break
+		}
+	}
 }
 
 func (s Store) UnlockStakes(holder crypto.Address, height int64, committed bool) {
@@ -595,6 +651,42 @@ func (s Store) GetLockedStakes(holder crypto.Address, committed bool) []*types.S
 	return stakes
 }
 
+func (s Store) GetLockedStakesWithHeight(holder crypto.Address, committed bool) ([]*types.Stake, []int64) {
+	holderKey := makeStakeKey(holder)
+	start := makeLockedStakeKey(holder, 0)
+
+	var (
+		stakes  []*types.Stake
+		heights []int64
+	)
+
+	imt, err := s.getImmutableTree(committed)
+	if err != nil {
+		return nil, nil
+	}
+
+	imt.IterateRangeInclusive(start, nil, false, func(key []byte, value []byte, version int64) bool {
+		if !bytes.HasPrefix(key, holderKey) {
+			return false
+		}
+
+		stake := new(types.Stake)
+		err := json.Unmarshal(value, stake)
+		if err != nil {
+			// We cannot recover from this error
+			return false
+		}
+
+		height := binary.BigEndian.Uint64(key[len(prefixStake)+len(holder):])
+
+		stakes = append(stakes, stake)
+		heights = append(heights, int64(height))
+
+		return false
+	})
+
+	return stakes, heights
+}
 func (s Store) GetStakeByValidator(addr crypto.Address, committed bool) *types.Stake {
 	holder := s.GetHolderByValidator(addr, committed)
 	if holder == nil {
