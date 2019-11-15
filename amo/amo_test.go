@@ -16,6 +16,7 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	tmdb "github.com/tendermint/tm-db"
 
+	"github.com/amolabs/amoabci/amo/blockchain"
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/tx"
 	"github.com/amolabs/amoabci/amo/types"
@@ -529,11 +530,13 @@ func TestPenaltyEvidence(t *testing.T) {
 		Height:    int64(2),
 	})
 
+	app.BeginBlock(abci.RequestBeginBlock{ByzantineValidators: evidences})
+
 	// before effective stake
 	stakerbes := app.store.GetEffStake(staker.PubKey().Address(), false)
 	stakerbesf := new(big.Float).SetInt(&stakerbes.Amount.Int)
 
-	app.PenalizeConvicts(evidences)
+	app.EndBlock(abci.RequestEndBlock{})
 
 	// after effective stake
 	stakeraes := app.store.GetEffStake(staker.PubKey().Address(), false)
@@ -542,6 +545,119 @@ func TestPenaltyEvidence(t *testing.T) {
 	// slashing effective stake calculation
 	// ces = bes * (1 - m)
 	prf := new(big.Float).SetFloat64(app.config.PenaltyRatioM)
+	tmpf := new(big.Float).SetInt64(1)
+	tmpf.Sub(tmpf, prf)
+
+	// candidate effective stake
+	stakercesf := stakerbesf.Mul(stakerbesf, tmpf)
+
+	// to ignore last three digits
+	divisor := new(big.Float).SetInt64(1000)
+
+	ces, _ := new(big.Float).Quo(stakercesf, divisor).Int64()
+	aes, _ := new(big.Float).Quo(stakeraesf, divisor).Int64()
+
+	// compare aes == ces
+	assert.Equal(t, ces, aes)
+}
+
+func TestPenaltyLazyValidators(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	app.lazinessCounter = blockchain.NewLazinessCounter(int64(4), float64(0.5))
+
+	// setup
+	//
+	// node composition
+	// val - staker (convict)
+	//     - delegator1
+	//     - delegator2
+
+	val, _ := ed25519.GenPrivKeyFromSecret([]byte("val")).PubKey().(ed25519.PubKeyEd25519)
+	staker := p256.GenPrivKeyFromSecret([]byte("staker"))
+	app.store.SetBalance(staker.PubKey().Address(), new(types.Currency).Set(1000))
+	app.store.SetUnlockedStake(staker.PubKey().Address(), &types.Stake{
+		Amount:    *new(types.Currency).Set(1000),
+		Validator: val,
+	})
+
+	delegator1 := p256.GenPrivKeyFromSecret([]byte("delegator1"))
+	app.store.SetBalance(delegator1.PubKey().Address(), new(types.Currency).Set(500))
+	app.store.SetDelegate(delegator1.PubKey().Address(), &types.Delegate{
+		Amount:    *new(types.Currency).Set(500),
+		Delegatee: staker.PubKey().Address(),
+	})
+
+	delegator2 := p256.GenPrivKeyFromSecret([]byte("delegator2"))
+	app.store.SetBalance(delegator2.PubKey().Address(), new(types.Currency).Set(500))
+	app.store.SetDelegate(delegator2.PubKey().Address(), &types.Delegate{
+		Amount:    *new(types.Currency).Set(500),
+		Delegatee: staker.PubKey().Address(),
+	})
+
+	app.store.Save()
+
+	lastCommitInfo := abci.LastCommitInfo{
+		Votes: []abci.VoteInfo{
+			{
+				Validator: abci.Validator{
+					Address: val.Address(),
+				},
+				SignedLastBlock: false,
+			},
+		},
+	}
+
+	// before effective stake
+	stakerbes := app.store.GetEffStake(staker.PubKey().Address(), false)
+	stakerbesf := new(big.Float).SetInt(&stakerbes.Amount.Int)
+
+	app.BeginBlock(abci.RequestBeginBlock{LastCommitInfo: lastCommitInfo})
+	app.EndBlock(abci.RequestEndBlock{})
+	// lazinessCounter height -> 1
+	// 				   candidates -> val: 1
+
+	app.BeginBlock(abci.RequestBeginBlock{LastCommitInfo: lastCommitInfo})
+	app.EndBlock(abci.RequestEndBlock{})
+	// lazinessCounter height -> 2
+	// 				   candidates -> val: 2
+
+	lastCommitInfo = abci.LastCommitInfo{
+		Votes: []abci.VoteInfo{
+			{
+				Validator: abci.Validator{
+					Address: val.Address(),
+				},
+				SignedLastBlock: true,
+			},
+		},
+	}
+
+	app.BeginBlock(abci.RequestBeginBlock{LastCommitInfo: lastCommitInfo})
+	app.EndBlock(abci.RequestEndBlock{})
+	// lazinessCounter height -> 3
+	// 				   candidates -> val: 2
+
+	app.BeginBlock(abci.RequestBeginBlock{LastCommitInfo: lastCommitInfo})
+	app.EndBlock(abci.RequestEndBlock{})
+	// lazinessCounter height -> 4
+	// 				   candidates -> val: 2
+
+	app.BeginBlock(abci.RequestBeginBlock{LastCommitInfo: lastCommitInfo})
+	app.EndBlock(abci.RequestEndBlock{})
+	// lazinessCounter height -> 1
+	// 				   candidates -> nil
+
+	// after effective stake
+	stakeraes := app.store.GetEffStake(staker.PubKey().Address(), false)
+	stakeraesf := new(big.Float).SetInt(&stakeraes.Amount.Int)
+
+	// slashing effective stake calculation
+	// ces = bes * (1 - m)
+	prf := new(big.Float).SetFloat64(app.config.PenaltyRatioL)
 	tmpf := new(big.Float).SetInt64(1)
 	tmpf.Sub(tmpf, prf)
 
@@ -748,7 +864,15 @@ func TestIncentiveNoTouch(t *testing.T) {
 	prevHash, _, err := app.store.Save()
 	assert.NoError(t, err)
 
-	err = app.DistributeIncentive()
+	err = blockchain.DistributeIncentive(
+		app.store,
+		app.logger,
+		app.config.WeightValidator, app.config.WeightDelegator,
+		app.config.BlkReward, app.config.TxReward,
+		app.state.Height, app.numDeliveredTxs,
+		app.staker,
+		app.feeAccumulated,
+	)
 	assert.NoError(t, err)
 
 	balance := app.store.GetBalance(priv.PubKey().Address(), true)

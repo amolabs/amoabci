@@ -2,11 +2,8 @@ package amo
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"math/big"
 	"os"
 	"sort"
 
@@ -16,6 +13,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	tmdb "github.com/tendermint/tm-db"
 
+	"github.com/amolabs/amoabci/amo/blockchain"
 	"github.com/amolabs/amoabci/amo/code"
 	astore "github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/tx"
@@ -37,6 +35,9 @@ const (
 	// TODO: not fixed default ratios yet
 	defaultPenaltyRatioM = float64(0.3)
 	defaultPenaltyRatioL = float64(0.3)
+
+	defaultLazinessCounterSize  = int64(300)
+	defaultLazinessCounterRatio = float64(0.8)
 
 	defaultLockupPeriod = uint64(1000000)
 )
@@ -97,6 +98,9 @@ type AMOAppConfig struct {
 	PenaltyRatioM float64 `json:"penalty_ratio_m"` // malicious validator
 	PenaltyRatioL float64 `json:"penalty_ratio_l"` // lazy validators
 
+	LazinessCounterSize  int64   `json:"laziness_counter_size"`
+	LazinessCounterRatio float64 `json:"laziness_counter_ratio"`
+
 	LockupPeriod uint64 `json:"lockup_period"`
 }
 
@@ -129,7 +133,10 @@ type AMOApp struct {
 	feeAccumulated  types.Currency
 	numDeliveredTxs int64
 
-	PendingEvidences []abci.Evidence
+	pendingEvidences      []abci.Evidence
+	pendingLazyValidators []crypto.Address
+
+	lazinessCounter blockchain.LazinessCounter
 }
 
 var _ abci.Application = (*AMOApp)(nil)
@@ -158,6 +165,8 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb tmdb.DB, l log.Logger) *AMO
 			defaultTxReward,
 			defaultPenaltyRatioM,
 			defaultPenaltyRatioL,
+			defaultLazinessCounterSize,
+			defaultLazinessCounterRatio,
 			defaultLockupPeriod,
 		},
 		stateFile:   stateFile,
@@ -174,6 +183,12 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb tmdb.DB, l log.Logger) *AMO
 	// TODO: use something more elegant
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
 	app.load()
+
+	app.lazinessCounter = blockchain.NewLazinessCounter(
+		app.config.LazinessCounterSize,
+		app.config.LazinessCounterRatio,
+	)
+
 	return app
 }
 
@@ -226,14 +241,16 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	b := app.store.GetAppConfig()
 	if b == nil {
 		app.config = AMOAppConfig{
-			MaxValidators:   defaultMaxValidators,
-			WeightValidator: defaultWeightValidator,
-			WeightDelegator: defaultWeightDelegator,
-			BlkReward:       defaultBlkReward,
-			TxReward:        defaultTxReward,
-			PenaltyRatioM:   defaultPenaltyRatioM,
-			PenaltyRatioL:   defaultPenaltyRatioL,
-			LockupPeriod:    defaultLockupPeriod,
+			MaxValidators:        defaultMaxValidators,
+			WeightValidator:      defaultWeightValidator,
+			WeightDelegator:      defaultWeightDelegator,
+			BlkReward:            defaultBlkReward,
+			TxReward:             defaultTxReward,
+			PenaltyRatioM:        defaultPenaltyRatioM,
+			PenaltyRatioL:        defaultPenaltyRatioL,
+			LazinessCounterSize:  defaultLazinessCounterSize,
+			LazinessCounterRatio: defaultLazinessCounterRatio,
+			LockupPeriod:         defaultLockupPeriod,
 		}
 	} else {
 		json.Unmarshal(b, &app.config)
@@ -291,7 +308,8 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	app.feeAccumulated = *new(types.Currency).Set(0)
 	app.numDeliveredTxs = int64(0)
 
-	app.PendingEvidences = req.GetByzantineValidators()
+	app.pendingEvidences = req.GetByzantineValidators()
+	app.pendingLazyValidators = app.lazinessCounter.Investigate(req.GetLastCommitInfo())
 
 	return res
 }
@@ -390,7 +408,15 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 // TODO: use req.Height
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	// XXX no means to convey error to res
-	app.DistributeIncentive()
+	blockchain.DistributeIncentive(
+		app.store,
+		app.logger,
+		app.config.WeightValidator, app.config.WeightDelegator,
+		app.config.BlkReward, app.config.TxReward,
+		app.state.Height, app.numDeliveredTxs,
+		app.staker,
+		app.feeAccumulated,
+	)
 
 	if app.doValUpdate {
 		app.doValUpdate = false
@@ -400,7 +426,14 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 
 	app.store.LoosenLockedStakes(false)
 
-	app.PenalizeConvicts(app.PendingEvidences)
+	blockchain.PenalizeConvicts(
+		app.store,
+		app.logger,
+		app.pendingEvidences,
+		app.pendingLazyValidators,
+		app.config.WeightValidator, app.config.WeightDelegator,
+		app.config.PenaltyRatioM, app.config.PenaltyRatioL,
+	)
 
 	// update appHash
 	hash := app.store.Root()
@@ -450,150 +483,4 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	app.save()
 
 	return abci.ResponseCommit{Data: app.state.LastAppHash}
-}
-
-/////////////////////////////////////
-
-func (app *AMOApp) DistributeIncentive() error {
-	stake := app.store.GetStake(app.staker, true)
-	if stake == nil {
-		return errors.New("No stake, no reward.")
-	}
-	ds := app.store.GetDelegatesByDelegatee(app.staker, true)
-
-	var tmp, tmp2 types.Currency
-	var incentive, rTotal, rTx types.Currency
-
-	// reward = BlkReward + TxReward * numDeliveredTxs
-	// incentive = reward + fee
-
-	// total reward
-	rTotal.Set(app.config.BlkReward)
-	rTx.Set(app.config.TxReward)
-	tmp.SetInt64(app.numDeliveredTxs)
-	tmp.Mul(&tmp.Int, &rTx.Int)
-	rTotal.Add(&tmp)
-
-	incentive.Set(0)
-	incentive.Add(rTotal.Add(&app.feeAccumulated))
-
-	// ignore 0 incentive
-	if incentive.Equals(new(types.Currency).Set(0)) {
-		return nil
-	}
-
-	// weighted sum
-	var wsum, w big.Int
-	w.SetInt64(app.config.WeightValidator)
-	wsum.Mul(&w, &stake.Amount.Int)
-	w.SetInt64(app.config.WeightDelegator)
-	for _, d := range ds {
-		tmp.Mul(&w, &d.Amount.Int)
-		wsum.Add(&wsum, &tmp.Int)
-	}
-	// individual rewards
-	tmp.Set(0) // subtotal for delegate holders
-	for _, d := range ds {
-		tmp2 = *partialAmount(app.config.WeightDelegator, &d.Amount.Int, &wsum, &incentive)
-		tmp.Add(&tmp2) // update subtotal
-		b := app.store.GetBalance(d.Delegator, false).Add(&tmp2)
-		app.store.SetBalance(d.Delegator, b)                               // update balance
-		app.store.AddIncentiveRecord(app.state.Height, d.Delegator, &tmp2) // update incentive record
-		app.logger.Debug("Block reward",
-			"delegator", hex.EncodeToString(d.Delegator), "reward", tmp2.Int64())
-	}
-	tmp2.Int.Sub(&incentive.Int, &tmp.Int) // calc validator reward
-	b := app.store.GetBalance(app.staker, false).Add(&tmp2)
-	app.store.SetBalance(app.staker, b)                               // update balance
-	app.store.AddIncentiveRecord(app.state.Height, app.staker, &tmp2) // update incentive record
-	app.logger.Debug("Block reward",
-		"proposer", hex.EncodeToString(app.staker), "reward", tmp2.Int64())
-
-	return nil
-}
-
-// Convicts consist of
-// - Malicious Validator: M
-// - Lazy Validator: L
-
-func (app *AMOApp) PenalizeConvicts(evidences []abci.Evidence) error {
-	// handle evidences
-	for _, evidence := range evidences {
-		validator := evidence.GetValidator().Address
-		app.penalize(validator, app.config.PenaltyRatioM)
-	}
-	return nil
-}
-
-func (app *AMOApp) penalize(validator crypto.Address, ratio float64) {
-	zeroAmount := new(types.Currency).Set(0)
-
-	holder := app.store.GetHolderByValidator(validator, true)
-
-	vs := app.store.GetStake(holder, true) // validator's stake
-	if vs == nil {
-		return
-	}
-
-	ds := app.store.GetDelegatesByDelegatee(holder, true) // delegators' stake
-
-	es := app.store.GetEffStake(holder, true)
-	esf := new(big.Float).SetInt(&es.Amount.Int)
-	prf := new(big.Float).SetFloat64(ratio)
-
-	penalty := types.Currency{}
-	pf := esf.Mul(esf, prf) // penalty = effStake * penaltyRatio
-	pf.Int(&penalty.Int)
-
-	// weighted sum
-	var (
-		wsum, w   big.Int
-		tmp, tmp2 types.Currency
-	)
-	w.SetInt64(app.config.WeightValidator)
-	wsum.Mul(&w, &vs.Amount.Int)
-	w.SetInt64(app.config.WeightDelegator)
-	for _, d := range ds {
-		tmp.Mul(&w, &d.Amount.Int)
-		wsum.Add(&wsum, &tmp.Int)
-	}
-
-	// individual penalties for delegators
-	tmp.Set(0) // subtotal for delegate holders
-	for _, d := range ds {
-		tmp2 = *partialAmount(app.config.WeightDelegator, &d.Amount.Int, &wsum, &penalty)
-		tmp.Add(&tmp2) // update subtotal
-		d.Delegate.Amount.Sub(&tmp2)
-
-		if d.Delegate.Amount.LessThan(zeroAmount) {
-			d.Delegate.Amount.Set(0)
-		}
-
-		app.store.SetDelegate(d.Delegator, d.Delegate)
-		app.logger.Debug("Evidence penalty",
-			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmp2.Int64())
-	}
-	tmp2.Int.Sub(&penalty.Int, &tmp.Int) // calc voter(validator) penalty
-	app.store.SlashStakes(holder, tmp2, true)
-
-	app.logger.Debug("Evidence penalty",
-		"validator", hex.EncodeToString(holder), "penalty", tmp2.Int64())
-}
-
-/////////////////////////////////////
-
-// r = (weight * stake / total) * base
-// TODO: eliminate ambiguity in float computation
-func partialAmount(weight int64, stake, total *big.Int, base *types.Currency) *types.Currency {
-	var wf, t1f, t2f big.Float
-	wf.SetInt64(weight)
-	t1f.SetInt(stake)
-	t1f.Mul(&wf, &t1f)
-	t2f.SetInt(total)
-	t1f.Quo(&t1f, &t2f)
-	t2f.SetInt(&base.Int)
-	t1f.Mul(&t1f, &t2f)
-	r := types.Currency{}
-	t1f.Int(&r.Int)
-	return &r
 }

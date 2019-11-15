@@ -1,4 +1,4 @@
-package types
+package blockchain
 
 import (
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -17,9 +17,9 @@ type LazinessCounter struct {
 	Size       int64          `json:"size"`
 }
 
-func NewLazinessCounter(size int64, ratio float64) *LazinessCounter {
-	return &LazinessCounter{
-		Candidates: make(map[Address]int64),
+func NewLazinessCounter(size int64, ratio float64) LazinessCounter {
+	return LazinessCounter{
+		Candidates: make(LazyValidators),
 		Height:     int64(0),
 		Ratio:      ratio,
 		Size:       size,
@@ -48,7 +48,7 @@ func (lc *LazinessCounter) Investigate(commitInfo abci.LastCommitInfo) []crypto.
 }
 
 func (lc *LazinessCounter) add(validator abci.Validator) {
-	address := Address{}
+	var address Address
 	copy(address[:], validator.Address)
 
 	_, exists := lc.Candidates[address]
@@ -60,13 +60,14 @@ func (lc *LazinessCounter) add(validator abci.Validator) {
 }
 
 func (lc *LazinessCounter) get() []crypto.Address {
-	lazyValidators := []crypto.Address{}
+	lazyValidators := make([]crypto.Address, 0, len(lc.Candidates))
 	limit := int64(float64(lc.Size) * lc.Ratio)
 
 	// copy data
 	for key, value := range lc.Candidates {
 		if value >= limit {
-			lazyValidators = append(lazyValidators, crypto.Address(key[:]))
+			lazyValidator := key // copy of a key array by value
+			lazyValidators = append(lazyValidators, lazyValidator[:])
 		}
 	}
 
