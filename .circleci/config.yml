@@ -115,6 +115,9 @@ jobs:
           name: "stake for val1"
           command: ./test_script/stake.sh 1 1 100000000000000000000
       - run:
+          name: "tu1 stake to non-existing validator for downtime(lazy validstors) penalty test"
+          command: ./test_script/penalty_trap.sh
+      - run:
           name: "bootstrap seed node"
           command: ./test_script/run_seed.sh
       - run:
