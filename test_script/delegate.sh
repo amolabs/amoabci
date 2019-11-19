@@ -14,8 +14,6 @@ fail() {
 	exit -1
 }
 
-$ROOT/qb.sh "$NODENUM"
-$ROOT/qs.sh "$NODENUM"
 $ROOT/qd.sh "$NODENUM"
 
 . testaddr.sh
@@ -32,7 +30,5 @@ do
 	if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 done
 
-$ROOT/qb.sh "$NODENUM"
-$ROOT/qs.sh "$NODENUM"
 $ROOT/qd.sh "$NODENUM"
 

@@ -75,9 +75,6 @@ stake_height=$(get_block_height)
 echo "[should FAIL] withdraw staked coins for val2, val3, val4, val5, val6"
 $ROOT/withdraw.sh 2 "$NODENUM" "$AMO100" "stake locked"
 
-echo "distribute coins"
-$ROOT/distribute.sh 1 "$NODENUM" "$AMO100"
-
 echo "delegate coins"
 $ROOT/delegate.sh 1 "$NODENUM" "$AMO100"
 
@@ -92,3 +89,6 @@ check_block_height "$stake_height"
 
 echo "[shoud SUCCEED] withdraw staked coins for val2, val3, val4, val5, val6"
 $ROOT/withdraw.sh 2 "$NODENUM" "$AMO100" "ok"
+
+echo "tu1's stake SHOULD be 1 mote"
+$ROOT/penalty_check.sh

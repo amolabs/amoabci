@@ -16,6 +16,9 @@ $ROOT/distribute.sh 1 1 "$AMO100"
 #echo "stake for val1"
 $ROOT/stake.sh 1 1 "$AMO100"
 
+echo "tu1 stake to non-existing validator for downtime(lazy validstors) penalty test"
+$ROOT/penalty_trap.sh
+
 #echo "bootstrap seed node"
 $ROOT/run_seed.sh
 

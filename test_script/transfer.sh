@@ -5,7 +5,7 @@ NODENUM=$1
 AMOUNT=1000
 
 . testaddr.sh
-. $(dirname $0)/qb.sh "$NODENUM"
+. $(dirname $0)/qb.sh 
 
 for ((i=1; i<=NODENUM; i++))
 do

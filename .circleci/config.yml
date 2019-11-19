@@ -142,8 +142,12 @@ jobs:
           name: "retract delegated coins"
           command: ./test_script/retract.sh 1 "$NODENUM" 100000000000000000000
       - run:
-          name: "withdraw stakes coins shoud SUCCEED"
+          name: "withdraw stakes coins should SUCCEED"
           command: ./test_script/withdraw.sh 2 "$NODENUM" 100000000000000000000 "ok"
+      - run:
+          name: "tu1's stake should be 1 mote"
+          command: ./test_script/penalty_check.sh 
+
     
   deploy:
     docker:
