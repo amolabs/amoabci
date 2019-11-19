@@ -29,7 +29,11 @@
   ],
   "app_state": {
 	"config": {
-        "lockup_period": 30 
+		"penalty_ratio_m": 0.5,
+		"penalty_ratio_l": 0.5,
+		"laziness_counter_size": 10,
+		"laziness_counter_ratio": 0.5,
+        "lockup_period": 30
 	},
     "balances": [
       {

@@ -66,9 +66,12 @@ type Store struct {
 	// key: stake holder addres || block height
 	// value: incentive amount
 	incentiveAddress tmdb.DB
+
+	// lazinessCounter database
+	lazinessCounterDB tmdb.DB
 }
 
-func NewStore(merkleDB, indexDB, incentiveDB tmdb.DB) *Store {
+func NewStore(merkleDB, indexDB, incentiveDB, lazinessCounterDB tmdb.DB) *Store {
 	return &Store{
 		merkleTree: iavl.NewMutableTree(merkleDB, merkleTreeCacheSize),
 
@@ -80,6 +83,8 @@ func NewStore(merkleDB, indexDB, incentiveDB tmdb.DB) *Store {
 		incentiveDB:      incentiveDB,
 		incentiveHeight:  tmdb.NewPrefixDB(incentiveDB, prefixIncentiveHeight),
 		incentiveAddress: tmdb.NewPrefixDB(incentiveDB, prefixIncentiveAddress),
+
+		lazinessCounterDB: lazinessCounterDB,
 	}
 }
 
@@ -127,6 +132,14 @@ func (s Store) Purge() error {
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
 		s.incentiveDB.Delete(k)
+	}
+
+	// lazinessCounterDB
+	itr = s.lazinessCounterDB.Iterator(nil, nil)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		k := itr.Key()
+		s.lazinessCounterDB.Delete(k)
 	}
 
 	return nil
@@ -461,6 +474,7 @@ func (s Store) SlashStakes(holder crypto.Address, amount types.Currency, committ
 	for i := len(lockedStakes) - 1; i >= 0; i-- {
 		lockedStake := lockedStakes[i]
 		height := heights[i]
+
 		switch amount.Cmp(&lockedStake.Amount.Int) {
 		case -1: // amount < lockedStake.Amount
 			lockedStake.Amount.Sub(&amount)
@@ -677,7 +691,7 @@ func (s Store) GetLockedStakesWithHeight(holder crypto.Address, committed bool) 
 			return false
 		}
 
-		height := binary.BigEndian.Uint64(key[len(prefixStake)+len(holder):])
+		height := binary.BigEndian.Uint64(key[len(prefixStake)+crypto.AddressSize:])
 
 		stakes = append(stakes, stake)
 		heights = append(heights, int64(height))

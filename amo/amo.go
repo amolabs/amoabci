@@ -113,9 +113,10 @@ type AMOApp struct {
 	config AMOAppConfig
 
 	// internal database
-	merkleDB    tmdb.DB
-	indexDB     tmdb.DB
-	incentiveDB tmdb.DB
+	merkleDB       tmdb.DB
+	indexDB        tmdb.DB
+	incentiveDB    tmdb.DB
+	groupCounterDB tmdb.DB
 
 	// state related variables
 	stateFile *os.File
@@ -141,7 +142,7 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -153,6 +154,9 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb tmdb.DB, l log.Logger) *AMO
 	}
 	if incdb == nil {
 		incdb = tmdb.NewMemDB()
+	}
+	if gcdb == nil {
+		gcdb = tmdb.NewMemDB()
 	}
 
 	app := &AMOApp{
@@ -169,12 +173,14 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb tmdb.DB, l log.Logger) *AMO
 			defaultLazinessCounterRatio,
 			defaultLockupPeriod,
 		},
-		stateFile:   stateFile,
-		state:       State{},
-		merkleDB:    mdb,
-		indexDB:     idxdb,
-		incentiveDB: incdb,
-		store:       astore.NewStore(mdb, idxdb, incdb),
+		stateFile:      stateFile,
+		state:          State{},
+		merkleDB:       mdb,
+		indexDB:        idxdb,
+		incentiveDB:    incdb,
+		groupCounterDB: gcdb,
+
+		store: astore.NewStore(mdb, idxdb, incdb, gcdb),
 	}
 
 	// necessary to initialize state.json file
@@ -185,6 +191,9 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb tmdb.DB, l log.Logger) *AMO
 	app.load()
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
+		app.store,
+		app.state.LastHeight,
+		app.state.CounterDue,
 		app.config.LazinessCounterSize,
 		app.config.LazinessCounterRatio,
 	)
@@ -256,6 +265,15 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		json.Unmarshal(b, &app.config)
 	}
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
+
+	app.lazinessCounter = blockchain.NewLazinessCounter(
+		app.store,
+		app.state.LastHeight,
+		app.state.CounterDue,
+		app.config.LazinessCounterSize,
+		app.config.LazinessCounterRatio,
+	)
+
 	app.save()
 	app.logger.Info("InitChain: new genesis app state applied.")
 
@@ -309,7 +327,7 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	app.numDeliveredTxs = int64(0)
 
 	app.pendingEvidences = req.GetByzantineValidators()
-	app.pendingLazyValidators = app.lazinessCounter.Investigate(req.GetLastCommitInfo())
+	app.pendingLazyValidators, app.state.CounterDue = app.lazinessCounter.Investigate(app.state.Height, req.GetLastCommitInfo())
 
 	return res
 }

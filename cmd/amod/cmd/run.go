@@ -23,9 +23,10 @@ var (
 
 	defaultDataDir = "data"
 
-	defaultMerkleDB    = "merkle"
-	defaultIndexDB     = "index"
-	defaultIncentiveDB = "incentive"
+	defaultMerkleDB       = "merkle"
+	defaultIndexDB        = "index"
+	defaultIncentiveDB    = "incentive"
+	defaultGroupCounterDB = "group_counter"
 
 	defaultStateFile = "state.json"
 
@@ -82,9 +83,14 @@ func initApp(amoDirPath string) error {
 		return err
 	}
 
+	groupCounterDB, err := store.NewDBProxy(defaultGroupCounterDB, dataDirPath)
+	if err != nil {
+		return err
+	}
+
 	app := amo.NewAMOApp(
 		stateFile,
-		merkleDB, indexDB, incentiveDB,
+		merkleDB, indexDB, incentiveDB, groupCounterDB,
 		appLogger.With("module", "abci-app"),
 	)
 

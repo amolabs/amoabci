@@ -7,10 +7,14 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
+	tmdb "github.com/tendermint/tm-db"
+
+	"github.com/amolabs/amoabci/amo/store"
 )
 
 func TestLazinessCounter(t *testing.T) {
-	lc := NewLazinessCounter(4, 0.5)
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	lc := NewLazinessCounter(s, 0, 0, 4, 0.5)
 
 	val1 := abci.Validator{Address: makeTestAddress([]byte("val1"))}
 	val2 := abci.Validator{Address: makeTestAddress([]byte("val2"))}
@@ -24,8 +28,9 @@ func TestLazinessCounter(t *testing.T) {
 		},
 	}
 
-	lv := lc.Investigate(lastCommitInfo)
+	lv, due := lc.Investigate(1, lastCommitInfo)
 	assert.Nil(t, lv)
+	assert.Equal(t, int64(4), due)
 	// height -> 1
 	// candidates -> val1: 1
 
@@ -37,7 +42,7 @@ func TestLazinessCounter(t *testing.T) {
 		},
 	}
 
-	lv = lc.Investigate(lastCommitInfo)
+	lv, due = lc.Investigate(2, lastCommitInfo)
 	assert.Nil(t, lv)
 	// height -> 2
 	// candidates -> val1: 1
@@ -51,11 +56,14 @@ func TestLazinessCounter(t *testing.T) {
 		},
 	}
 
-	lv = lc.Investigate(lastCommitInfo)
+	lv, due = lc.Investigate(3, lastCommitInfo)
 	assert.Nil(t, lv)
 	// height -> 3
 	// candidates -> val1: 2
 	//               val2: 2
+
+	// imitate down of amod
+	lc_new := NewLazinessCounter(s, 3, due, 4, 0.5)
 
 	lastCommitInfo = abci.LastCommitInfo{
 		Votes: []abci.VoteInfo{
@@ -65,7 +73,7 @@ func TestLazinessCounter(t *testing.T) {
 		},
 	}
 
-	lv = lc.Investigate(lastCommitInfo)
+	lv, due = lc_new.Investigate(4, lastCommitInfo)
 	assert.Nil(t, lv)
 	// height -> 4
 	// candidates -> val1: 2
@@ -79,15 +87,14 @@ func TestLazinessCounter(t *testing.T) {
 		},
 	}
 
-	lv = lc.Investigate(lastCommitInfo)
-	// height -> 1
+	lv, due = lc_new.Investigate(5, lastCommitInfo)
+	// height -> 5
 	// candidates -> val3: 1
 
+	assert.Equal(t, int64(8), due)
 	assert.Equal(t, 2, len(lv))
-	assert.Equal(t, val1.Address, lv[0].Bytes())
-	assert.Equal(t, val2.Address, lv[1].Bytes())
 
-	lv = lc.get()
+	lv = lc_new.get()
 
 	assert.Equal(t, 0, len(lv))
 }
