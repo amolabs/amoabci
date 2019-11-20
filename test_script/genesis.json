@@ -28,13 +28,13 @@
     }
   ],
   "app_state": {
-	"config": {
-		"penalty_ratio_m": 0.5,
-		"penalty_ratio_l": 0.5,
-		"laziness_counter_size": 4, 
-		"laziness_counter_ratio": 0.5,
+    "config": {
+        "penalty_ratio_m": 0.5,
+        "penalty_ratio_l": 0.5,
+        "laziness_counter_size": 4, 
+        "laziness_counter_ratio": 0.5,
         "lockup_period": 20 
-	},
+    },
     "balances": [
       {
         "owner": "45FF7A090F423BEE319D2BF140B1BA772C04C44B",
