@@ -43,7 +43,7 @@ func TestAppConfig(t *testing.T) {
 	defer tearDownTest(t)
 
 	// test genesis app config
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(
 		`{ "config": { "max_validators": 10, "lockup_period": 2 } }`)
@@ -64,7 +64,7 @@ func TestInitChain(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
 	res := app.InitChain(req)
@@ -83,7 +83,7 @@ func TestQueryDefault(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	// query
 	req := abci.RequestQuery{}
 	req.Path = "/nostore"
@@ -95,7 +95,7 @@ func TestQueryBalance(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
 	addr := crypto.Address(addrbin)
@@ -145,7 +145,7 @@ func TestQueryParcel(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -205,7 +205,7 @@ func TestQueryRequest(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -289,7 +289,7 @@ func TestQueryUsage(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -373,7 +373,7 @@ func TestQueryValidator(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// stake holder
 	priv := ed25519.GenPrivKey()
@@ -419,7 +419,7 @@ func TestSignedTransactionTest(t *testing.T) {
 
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
@@ -490,7 +490,7 @@ func TestPenaltyEvidence(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// setup
 	//
@@ -565,9 +565,15 @@ func TestPenaltyLazyValidators(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
-	app.lazinessCounter = blockchain.NewLazinessCounter(int64(4), float64(0.5))
+	app.lazinessCounter = blockchain.NewLazinessCounter(
+		app.store,
+		app.state.Height,
+		app.state.CounterDue,
+		int64(4),
+		float64(0.5),
+	)
 
 	// setup
 	//
@@ -615,12 +621,18 @@ func TestPenaltyLazyValidators(t *testing.T) {
 	stakerbes := app.store.GetEffStake(staker.PubKey().Address(), false)
 	stakerbesf := new(big.Float).SetInt(&stakerbes.Amount.Int)
 
-	app.BeginBlock(abci.RequestBeginBlock{LastCommitInfo: lastCommitInfo})
+	app.BeginBlock(abci.RequestBeginBlock{
+		Header:         abci.Header{Height: 1},
+		LastCommitInfo: lastCommitInfo,
+	})
 	app.EndBlock(abci.RequestEndBlock{})
 	// lazinessCounter height -> 1
 	// 				   candidates -> val: 1
 
-	app.BeginBlock(abci.RequestBeginBlock{LastCommitInfo: lastCommitInfo})
+	app.BeginBlock(abci.RequestBeginBlock{
+		Header:         abci.Header{Height: 2},
+		LastCommitInfo: lastCommitInfo,
+	})
 	app.EndBlock(abci.RequestEndBlock{})
 	// lazinessCounter height -> 2
 	// 				   candidates -> val: 2
@@ -636,19 +648,28 @@ func TestPenaltyLazyValidators(t *testing.T) {
 		},
 	}
 
-	app.BeginBlock(abci.RequestBeginBlock{LastCommitInfo: lastCommitInfo})
+	app.BeginBlock(abci.RequestBeginBlock{
+		Header:         abci.Header{Height: 3},
+		LastCommitInfo: lastCommitInfo,
+	})
 	app.EndBlock(abci.RequestEndBlock{})
 	// lazinessCounter height -> 3
 	// 				   candidates -> val: 2
 
-	app.BeginBlock(abci.RequestBeginBlock{LastCommitInfo: lastCommitInfo})
+	app.BeginBlock(abci.RequestBeginBlock{
+		Header:         abci.Header{Height: 4},
+		LastCommitInfo: lastCommitInfo,
+	})
 	app.EndBlock(abci.RequestEndBlock{})
 	// lazinessCounter height -> 4
 	// 				   candidates -> val: 2
 
-	app.BeginBlock(abci.RequestBeginBlock{LastCommitInfo: lastCommitInfo})
+	app.BeginBlock(abci.RequestBeginBlock{
+		Header:         abci.Header{Height: 5},
+		LastCommitInfo: lastCommitInfo,
+	})
 	app.EndBlock(abci.RequestEndBlock{})
-	// lazinessCounter height -> 1
+	// lazinessCounter height -> 5
 	// 				   candidates -> nil
 
 	// after effective stake
@@ -678,7 +699,7 @@ func TestEndBlock(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// setup
 	tx.ConfigLockupPeriod = 1 // manipulate
@@ -738,7 +759,7 @@ func TestIncentive(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	validator, _ := ed25519.GenPrivKey().PubKey().(ed25519.PubKeyEd25519)
 
@@ -846,7 +867,7 @@ func TestIncentiveNoTouch(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// setup
 	validator, _ := ed25519.GenPrivKeyFromSecret([]byte("test")).
@@ -888,7 +909,7 @@ func TestEmptyBlock(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// setup
 	tx.ConfigLockupPeriod = 2 // manipulate

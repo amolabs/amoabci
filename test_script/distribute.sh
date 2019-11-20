@@ -14,7 +14,7 @@ fail() {
 	exit -1
 }
 
-$ROOT/qb.sh "$NODENUM"
+$ROOT/qb.sh 
 . testaddr.sh
 
 for ((i=FROM; i<=NODENUM; i++)); do
@@ -43,5 +43,5 @@ out=$($CLI tx transfer $CLIOPT --user tgenesis "$tu2" "$AMOUNT")
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
-$ROOT/qb.sh "$NODENUM"
+$ROOT/qb.sh 
 

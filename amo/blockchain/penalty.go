@@ -33,7 +33,7 @@ func PenalizeConvicts(
 		penalize(
 			store, logger,
 			weightValidator, weightDelegator,
-			validator, penaltyRatioM,
+			validator, penaltyRatioM, "Evidence Penalty",
 		)
 	}
 
@@ -42,7 +42,7 @@ func PenalizeConvicts(
 		penalize(
 			store, logger,
 			weightValidator, weightDelegator,
-			lazyValidator, penaltyRatioL,
+			lazyValidator, penaltyRatioL, "Downtime Penalty",
 		)
 	}
 
@@ -56,20 +56,21 @@ func penalize(
 	weightValidator, weightDelegator int64,
 	validator crypto.Address,
 	ratio float64,
+	penaltyType string,
 ) {
 
 	zeroAmount := new(types.Currency).Set(0)
 
-	holder := store.GetHolderByValidator(validator, true)
+	holder := store.GetHolderByValidator(validator, false)
 
-	vs := store.GetStake(holder, true) // validator's stake
+	vs := store.GetStake(holder, false) // validator's stake
 	if vs == nil {
 		return
 	}
 
-	ds := store.GetDelegatesByDelegatee(holder, true) // delegators' stake
+	ds := store.GetDelegatesByDelegatee(holder, false) // delegators' stake
 
-	es := store.GetEffStake(holder, true)
+	es := store.GetEffStake(holder, false)
 	esf := new(big.Float).SetInt(&es.Amount.Int)
 	prf := new(big.Float).SetFloat64(ratio)
 
@@ -102,12 +103,12 @@ func penalize(
 		}
 
 		store.SetDelegate(d.Delegator, d.Delegate)
-		logger.Debug("Evidence penalty",
+		logger.Debug(penaltyType,
 			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmp2.Int64())
 	}
 	tmp2.Int.Sub(&penalty.Int, &tmp.Int) // calc voter(validator) penalty
-	store.SlashStakes(holder, tmp2, true)
+	store.SlashStakes(holder, tmp2, false)
 
-	logger.Debug("Evidence penalty",
+	logger.Debug(penaltyType,
 		"validator", hex.EncodeToString(holder), "penalty", tmp2.Int64())
 }

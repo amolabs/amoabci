@@ -3,52 +3,87 @@ package blockchain
 import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+
+	"github.com/amolabs/amoabci/amo/store"
 )
 
 type (
-	Address        [crypto.AddressSize]byte
-	LazyValidators map[Address]int64
+	Address        = store.Address
+	LazyValidators = store.LazyValidators
 )
 
 type LazinessCounter struct {
-	Candidates LazyValidators `json:"lazy_validators"`
+	store *store.Store
+
+	Candidates LazyValidators `json:"lazy_validators"` // stored on store
 	Height     int64          `json:"height"`
-	Ratio      float64        `json:"ratio"`
-	Size       int64          `json:"size"`
+
+	Due   int64   `json:"due"`   // from state
+	Size  int64   `json:"size"`  // from config
+	Ratio float64 `json:"ratio"` // from config
 }
 
-func NewLazinessCounter(size int64, ratio float64) LazinessCounter {
-	return LazinessCounter{
-		Candidates: make(LazyValidators),
-		Height:     int64(0),
-		Ratio:      ratio,
-		Size:       size,
+// LazinessCounter
+// - height: 0, due: 0, size: 4, ratio: 0.8 -> due: 4, limit: 3.2
+//
+// 0   4   8
+// |---|---|--->
+//  1234
+//  OXXX(3) => Gotcha!
+//      5678
+//      XOOX(2) => No prob!
+//          ...
+
+func NewLazinessCounter(store *store.Store, height, due, size int64, ratio float64) LazinessCounter {
+	if due == 0 {
+		due = height + size
 	}
+
+	lc := LazinessCounter{
+		store:  store,
+		Height: height,
+		Due:    due,
+		Size:   size,
+		Ratio:  ratio,
+	}
+
+	lc.Candidates = lc.store.GetGroupCounter()
+
+	return lc
 }
 
-func (lc *LazinessCounter) Investigate(commitInfo abci.LastCommitInfo) []crypto.Address {
+func (lc *LazinessCounter) Investigate(height int64, commitInfo abci.LastCommitInfo) ([]crypto.Address, int64) {
 	var lazyValidators []crypto.Address
-
-	votes := commitInfo.GetVotes()
 
 	if lc.checkEnd() {
 		lazyValidators = lc.get()
 		lc.purge()
+		lc.Due = lc.Height + lc.Size
 	}
 
+	votes := commitInfo.GetVotes()
 	for _, vote := range votes {
 		if !vote.GetSignedLastBlock() {
-			lc.add(vote.GetValidator())
+			validator := vote.GetValidator()
+			lc.add(validator)
 		}
 	}
 
-	lc.Height += 1
+	// update height
+	lc.Height = height
 
-	return lazyValidators
+	// to decrease db set overload
+	if len(votes) > 0 {
+		lc.store.SetGroupCounter(lc.Candidates)
+	}
+
+	return lazyValidators, lc.Due
 }
 
 func (lc *LazinessCounter) add(validator abci.Validator) {
 	var address Address
+
+	// convert slice to array
 	copy(address[:], validator.Address)
 
 	_, exists := lc.Candidates[address]
@@ -79,11 +114,11 @@ func (lc *LazinessCounter) purge() {
 		delete(lc.Candidates, key)
 	}
 
-	lc.Height = 0
+	lc.store.PurgeGroupCounter()
 }
 
 func (lc *LazinessCounter) checkEnd() bool {
-	if lc.Height == lc.Size {
+	if lc.Height == lc.Due {
 		return true
 	}
 	return false
