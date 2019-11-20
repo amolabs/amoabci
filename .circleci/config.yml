@@ -6,7 +6,7 @@
 # - val1, val2, val3, val4, val5, val6
 # (total 7 nodes)
 #
-# << peeer dependency >>
+# << peer dependency >>
 # - val1 <- seed
 # - seed <- val2, val3, val4, val5, val6
 #
@@ -102,8 +102,7 @@ jobs:
       - run:
           name: "run testcli docker image"
           command: docker-compose up -d testcli
-      - run:
-          name: "generate testcli test key set"
+      - run: name: "generate testcli test key set"
           command: ./test_script/gen_key.sh "$NODENUM"
       - run:
           name: "bootstrap genesis node"
@@ -115,7 +114,7 @@ jobs:
           name: "stake for val1"
           command: ./test_script/stake.sh 1 1 100000000000000000000
       - run:
-          name: "tu1 stake to non-existing validator for downtime(lazy validstors) penalty test"
+          name: "tu1 stake to non-existing validator for downtime penalty test"
           command: ./test_script/penalty_trap.sh
       - run:
           name: "bootstrap seed node"
@@ -132,9 +131,6 @@ jobs:
       - run:
           name: "withdraw staked coins should FAIL"
           command: ./test_script/withdraw.sh 2 "$NODENUM" 100000000000000000000 "stake locked"
-      - run:
-          name: "distribute coins"
-          command: ./test_script/distribute.sh 1 "$NODENUM" 100000000000000000000
       - run:
           name: "delegate coins"
           command: ./test_script/delegate.sh 1 "$NODENUM" 100000000000000000000

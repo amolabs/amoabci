@@ -8,7 +8,19 @@ fail() {
 	exit -1
 }
 
-out=$($CLI tx stake $CLIOPT --user tu1 qQLA6Z0GDGYWzsxSbzQocmeFcCgSkc6cK9fY+M2YiOc= 10000)
+. testaddr.sh
+addr=tu1
+val="qQLA6Z0GDGYWzsxSbzQocmeFcCgSkc6cK9fY+M2YiOc="
+
+out=$($CLI query stake $CLIOPT ${!addr})
+if [ $? -ne 0 ]; then fail $out; fi
+echo "stake of tu1: "$out
+
+echo "stake to tu1: 10000 MOTE"
+out=$($CLI tx stake $CLIOPT --user tu1 $val 10000)
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 
+out=$($CLI query stake $CLIOPT ${!addr})
+if [ $? -ne 0 ]; then fail $out; fi
+echo "stake of tu1: "$out
