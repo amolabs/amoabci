@@ -102,7 +102,8 @@ jobs:
       - run:
           name: "run testcli docker image"
           command: docker-compose up -d testcli
-      - run: name: "generate testcli test key set"
+      - run: 
+          name: "generate testcli test key set"
           command: ./test_script/gen_key.sh "$NODENUM"
       - run:
           name: "bootstrap genesis node"
