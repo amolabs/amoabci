@@ -22,6 +22,16 @@ import (
 //   So, it is mandatory to use 'true' for 'committed' arg input
 //   to query data from merkle tree
 
+func queryAppConfig(config AMOAppConfig) (res abci.ResponseQuery) {
+	jsonstr, _ := json.Marshal(config)
+	res.Log = string(jsonstr)
+	res.Key = []byte("app_config")
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+
+	return
+}
+
 func queryBalance(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Log = "error: no query_data"

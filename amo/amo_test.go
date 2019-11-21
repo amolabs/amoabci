@@ -91,6 +91,27 @@ func TestQueryDefault(t *testing.T) {
 	assert.Equal(t, code.QueryCodeBadPath, res.Code)
 }
 
+func TestQueryAppConfig(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	config := app.config
+
+	var (
+		req     abci.RequestQuery
+		res     abci.ResponseQuery
+		jsonstr []byte
+	)
+
+	req = abci.RequestQuery{Path: "/app_config"}
+	res = app.Query(req)
+
+	jsonstr, _ = json.Marshal(config)
+
+	assert.Equal(t, jsonstr, res.GetValue())
+}
+
 func TestQueryBalance(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
