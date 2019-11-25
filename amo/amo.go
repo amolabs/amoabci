@@ -285,6 +285,8 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 // TODO: return proof also
 func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuery) {
 	switch reqQuery.Path {
+	case "/app_config":
+		resQuery = queryAppConfig(app.config)
 	case "/balance":
 		resQuery = queryBalance(app.store, reqQuery.Data)
 	case "/stake":
