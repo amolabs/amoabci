@@ -441,6 +441,7 @@ func TestSignedTransactionTest(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app.blockBindingManager.Update()
 
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
@@ -454,11 +455,12 @@ func TestSignedTransactionTest(t *testing.T) {
 	payload, err := json.Marshal(_tx)
 	assert.NoError(t, err)
 	msg := tx.TxBase{
-		Type:    "transfer",
-		Payload: payload,
-		Sender:  from.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
-		Fee:     *new(types.Currency).Set(0),
+		Type:       "transfer",
+		Payload:    payload,
+		Sender:     from.PubKey().Address(),
+		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:        *new(types.Currency).Set(0),
+		LastHeight: 1,
 	}
 
 	// not signed transaction
@@ -721,6 +723,7 @@ func TestEndBlock(t *testing.T) {
 	defer tearDownTest(t)
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app.blockBindingManager.Update()
 
 	// setup
 	tx.ConfigLockupPeriod = 1 // manipulate
@@ -999,11 +1002,12 @@ func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
 	}
 	payload, _ := json.Marshal(param)
 	_tx := tx.TxBase{
-		Type:    "stake",
-		Payload: payload,
-		Sender:  priv.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
-		Fee:     *new(types.Currency).Set(0),
+		Type:       "stake",
+		Payload:    payload,
+		Sender:     priv.PubKey().Address(),
+		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:        *new(types.Currency).Set(0),
+		LastHeight: 1,
 	}
 	_tx.Sign(priv)
 	rawTx, _ := json.Marshal(_tx)
@@ -1017,11 +1021,12 @@ func makeTxDelegate(priv p256.PrivKeyP256, to crypto.Address, amount uint64) []b
 	}
 	payload, _ := json.Marshal(param)
 	_tx := tx.TxBase{
-		Type:    "delegate",
-		Payload: payload,
-		Sender:  priv.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
-		Fee:     *new(types.Currency).Set(0),
+		Type:       "delegate",
+		Payload:    payload,
+		Sender:     priv.PubKey().Address(),
+		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:        *new(types.Currency).Set(0),
+		LastHeight: 1,
 	}
 	_tx.Sign(priv)
 	rawTx, _ := json.Marshal(_tx)

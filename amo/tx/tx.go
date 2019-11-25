@@ -37,6 +37,7 @@ type Tx interface {
 	GetType() string
 	GetSender() crypto.Address
 	GetFee() types.Currency
+	GetLastHeight() int64
 	getNonce() tm.HexBytes
 	getPayload() json.RawMessage
 	getSignature() Signature
@@ -52,21 +53,23 @@ type Tx interface {
 var _ Tx = &TxBase{}
 
 type TxBase struct {
-	Type      string          `json:"type"`
-	Sender    crypto.Address  `json:"sender"`
-	Nonce     tm.HexBytes     `json:"nonce"`
-	Fee       types.Currency  `json:"fee"`
-	Payload   json.RawMessage `json:"payload"` // TODO: change to txparam
-	Signature Signature       `json:"signature"`
+	Type       string          `json:"type"`
+	Sender     crypto.Address  `json:"sender"`
+	Nonce      tm.HexBytes     `json:"nonce"`
+	Fee        types.Currency  `json:"fee"`
+	LastHeight int64           `json:"last_height"`
+	Payload    json.RawMessage `json:"payload"` // TODO: change to txparam
+	Signature  Signature       `json:"signature"`
 }
 
 type TxToSign struct {
-	Type      string          `json:"type"`
-	Sender    crypto.Address  `json:"sender"`
-	Nonce     tm.HexBytes     `json:"nonce"`
-	Fee       types.Currency  `json:"fee"`
-	Payload   json.RawMessage `json:"payload"`
-	Signature Signature       `json:"-"`
+	Type       string          `json:"type"`
+	Sender     crypto.Address  `json:"sender"`
+	Nonce      tm.HexBytes     `json:"nonce"`
+	Fee        types.Currency  `json:"fee"`
+	LastHeight int64           `json:"last_height"`
+	Payload    json.RawMessage `json:"payload"`
+	Signature  Signature       `json:"-"`
 }
 
 func classifyTx(base TxBase) Tx {
@@ -167,6 +170,10 @@ func (t *TxBase) GetSender() crypto.Address {
 
 func (t *TxBase) GetFee() types.Currency {
 	return t.Fee
+}
+
+func (t *TxBase) GetLastHeight() int64 {
+	return t.LastHeight
 }
 
 func (t *TxBase) getNonce() tm.HexBytes {

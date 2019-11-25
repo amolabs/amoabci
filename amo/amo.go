@@ -39,7 +39,8 @@ const (
 	defaultLazinessCounterSize  = int64(300)
 	defaultLazinessCounterRatio = float64(0.8)
 
-	defaultLockupPeriod = uint64(1000000)
+	defaultBlockBoundTxGracePeriod = uint64(1000)
+	defaultLockupPeriod            = uint64(1000000)
 )
 
 // Output are sorted by voting power.
@@ -101,7 +102,8 @@ type AMOAppConfig struct {
 	LazinessCounterSize  int64   `json:"laziness_counter_size"`
 	LazinessCounterRatio float64 `json:"laziness_counter_ratio"`
 
-	LockupPeriod uint64 `json:"lockup_period"`
+	BlockBoundTxGracePeriod uint64 `json:"block_bound_tx_grace_period"`
+	LockupPeriod            uint64 `json:"lockup_period"`
 }
 
 type AMOApp struct {
@@ -137,7 +139,8 @@ type AMOApp struct {
 	pendingEvidences      []abci.Evidence
 	pendingLazyValidators []crypto.Address
 
-	lazinessCounter blockchain.LazinessCounter
+	lazinessCounter     blockchain.LazinessCounter
+	blockBindingManager blockchain.BlockBindingManager
 }
 
 var _ abci.Application = (*AMOApp)(nil)
@@ -171,6 +174,7 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 			defaultPenaltyRatioL,
 			defaultLazinessCounterSize,
 			defaultLazinessCounterRatio,
+			defaultBlockBoundTxGracePeriod,
 			defaultLockupPeriod,
 		},
 		stateFile:      stateFile,
@@ -196,6 +200,11 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 		app.state.CounterDue,
 		app.config.LazinessCounterSize,
 		app.config.LazinessCounterRatio,
+	)
+
+	app.blockBindingManager = blockchain.NewBlockBindingManager(
+		app.config.BlockBoundTxGracePeriod,
+		app.state.LastHeight,
 	)
 
 	return app
@@ -250,16 +259,17 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	b := app.store.GetAppConfig()
 	if b == nil {
 		app.config = AMOAppConfig{
-			MaxValidators:        defaultMaxValidators,
-			WeightValidator:      defaultWeightValidator,
-			WeightDelegator:      defaultWeightDelegator,
-			BlkReward:            defaultBlkReward,
-			TxReward:             defaultTxReward,
-			PenaltyRatioM:        defaultPenaltyRatioM,
-			PenaltyRatioL:        defaultPenaltyRatioL,
-			LazinessCounterSize:  defaultLazinessCounterSize,
-			LazinessCounterRatio: defaultLazinessCounterRatio,
-			LockupPeriod:         defaultLockupPeriod,
+			MaxValidators:           defaultMaxValidators,
+			WeightValidator:         defaultWeightValidator,
+			WeightDelegator:         defaultWeightDelegator,
+			BlkReward:               defaultBlkReward,
+			TxReward:                defaultTxReward,
+			PenaltyRatioM:           defaultPenaltyRatioM,
+			PenaltyRatioL:           defaultPenaltyRatioL,
+			LazinessCounterSize:     defaultLazinessCounterSize,
+			LazinessCounterRatio:    defaultLazinessCounterRatio,
+			BlockBoundTxGracePeriod: defaultBlockBoundTxGracePeriod,
+			LockupPeriod:            defaultLockupPeriod,
 		}
 	} else {
 		json.Unmarshal(b, &app.config)
@@ -272,6 +282,11 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		app.state.CounterDue,
 		app.config.LazinessCounterSize,
 		app.config.LazinessCounterRatio,
+	)
+
+	app.blockBindingManager = blockchain.NewBlockBindingManager(
+		app.config.BlockBoundTxGracePeriod,
+		app.state.LastHeight,
 	)
 
 	app.save()
@@ -319,6 +334,8 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 
 func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.state.Height = req.Header.Height
+	app.blockBindingManager.Update()
+
 	app.doValUpdate = false
 	app.oldVals = app.store.GetValidators(app.config.MaxValidators, false)
 
@@ -337,6 +354,7 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 // Invariant checks. Do not consider app's store.
 // - check signature
 // - check parameter format
+// - check availability of binding tx to block
 func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 	t, err := tx.ParseTx(req.Tx)
 	if err != nil {
@@ -352,6 +370,15 @@ func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 			Code:      code.TxCodeBadSignature,
 			Log:       "Signature verification failed",
 			Info:      "Signature verification failed",
+			Codespace: "amo",
+		}
+	}
+
+	if !app.blockBindingManager.Check(t.GetLastHeight()) {
+		return abci.ResponseCheckTx{
+			Code:      code.TxCodeOldTx,
+			Log:       "Binding tx to block failed",
+			Info:      "Binding tx to block failed",
 			Codespace: "amo",
 		}
 	}
@@ -487,14 +514,15 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	b := app.store.GetAppConfig()
 	if b == nil {
 		app.config = AMOAppConfig{
-			MaxValidators:   defaultMaxValidators,
-			WeightValidator: defaultWeightValidator,
-			WeightDelegator: defaultWeightDelegator,
-			BlkReward:       defaultBlkReward,
-			TxReward:        defaultTxReward,
-			PenaltyRatioM:   defaultPenaltyRatioM,
-			PenaltyRatioL:   defaultPenaltyRatioL,
-			LockupPeriod:    defaultLockupPeriod,
+			MaxValidators:           defaultMaxValidators,
+			WeightValidator:         defaultWeightValidator,
+			WeightDelegator:         defaultWeightDelegator,
+			BlkReward:               defaultBlkReward,
+			TxReward:                defaultTxReward,
+			PenaltyRatioM:           defaultPenaltyRatioM,
+			PenaltyRatioL:           defaultPenaltyRatioL,
+			BlockBoundTxGracePeriod: defaultBlockBoundTxGracePeriod,
+			LockupPeriod:            defaultLockupPeriod,
 		}
 	} else {
 		json.Unmarshal(b, &app.config)

@@ -3,6 +3,7 @@ package code
 const (
 	TxCodeOK uint32 = iota
 	TxCodeBadParam
+	TxCodeOldTx
 	TxCodeNotEnoughBalance
 	TxCodeSelfTransaction
 	TxCodePermissionDenied
