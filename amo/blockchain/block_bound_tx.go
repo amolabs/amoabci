@@ -36,6 +36,16 @@ func NewBlockBindingManager(gracePeriod uint64, height int64) BlockBindingManage
 	return bbm
 }
 
+// Update() is called at BeginBlock()
+func (bbm *BlockBindingManager) Update() {
+	bbm.ToHeight += 1
+
+	if bbm.ToHeight-bbm.FromHeight == bbm.GracePeriod {
+		bbm.FromHeight += 1
+	}
+}
+
+// Check() is called at CheckTx()
 func (bbm *BlockBindingManager) Check(height int64) bool {
 	heightU := uint64(height)
 	if bbm.FromHeight <= heightU && heightU <= bbm.ToHeight {
@@ -43,12 +53,4 @@ func (bbm *BlockBindingManager) Check(height int64) bool {
 	}
 
 	return false
-}
-
-func (bbm *BlockBindingManager) Update() {
-	bbm.ToHeight += 1
-
-	if bbm.ToHeight-bbm.FromHeight == bbm.GracePeriod {
-		bbm.FromHeight += 1
-	}
 }

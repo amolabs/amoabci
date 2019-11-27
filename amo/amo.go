@@ -141,6 +141,7 @@ type AMOApp struct {
 
 	lazinessCounter     blockchain.LazinessCounter
 	blockBindingManager blockchain.BlockBindingManager
+	replayPreventer     blockchain.ReplayPreventer
 }
 
 var _ abci.Application = (*AMOApp)(nil)
@@ -203,6 +204,12 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 	)
 
 	app.blockBindingManager = blockchain.NewBlockBindingManager(
+		app.config.BlockBoundTxGracePeriod,
+		app.state.LastHeight,
+	)
+
+	app.replayPreventer = blockchain.NewReplayPreventer(
+		app.store,
 		app.config.BlockBoundTxGracePeriod,
 		app.state.LastHeight,
 	)
@@ -289,6 +296,12 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		app.state.LastHeight,
 	)
 
+	app.replayPreventer = blockchain.NewReplayPreventer(
+		app.store,
+		app.config.BlockBoundTxGracePeriod,
+		app.state.LastHeight,
+	)
+
 	app.save()
 	app.logger.Info("InitChain: new genesis app state applied.")
 
@@ -335,6 +348,7 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.state.Height = req.Header.Height
 	app.blockBindingManager.Update()
+	app.replayPreventer.Update()
 
 	app.doValUpdate = false
 	app.oldVals = app.store.GetValidators(app.config.MaxValidators, false)
@@ -355,6 +369,7 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 // - check signature
 // - check parameter format
 // - check availability of binding tx to block
+// - check replay attack of txs which were processed before
 func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 	t, err := tx.ParseTx(req.Tx)
 	if err != nil {
@@ -376,9 +391,18 @@ func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 
 	if !app.blockBindingManager.Check(t.GetLastHeight()) {
 		return abci.ResponseCheckTx{
-			Code:      code.TxCodeOldTx,
+			Code:      code.TxCodeTooOldTx,
 			Log:       "Binding tx to block failed",
 			Info:      "Binding tx to block failed",
+			Codespace: "amo",
+		}
+	}
+
+	if !app.replayPreventer.Check(req.Tx) {
+		return abci.ResponseCheckTx{
+			Code:      code.TxCodeAlreadyProcessedTx,
+			Log:       "Tx was processed before",
+			Info:      "Tx was processed before",
 			Codespace: "amo",
 		}
 	}
@@ -400,6 +424,15 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 			Code:      code.TxCodeBadParam,
 			Log:       err.Error(),
 			Info:      err.Error(),
+			Codespace: "amo",
+		}
+	}
+
+	if !app.replayPreventer.Append(req.Tx) {
+		return abci.ResponseDeliverTx{
+			Code:      code.TxCodeAlreadyProcessedTx,
+			Log:       "Tx was processed before",
+			Info:      "Tx was processed before",
 			Codespace: "amo",
 		}
 	}
@@ -481,6 +514,8 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.config.WeightValidator, app.config.WeightDelegator,
 		app.config.PenaltyRatioM, app.config.PenaltyRatioL,
 	)
+
+	app.replayPreventer.Index()
 
 	// update appHash
 	hash := app.store.Root()

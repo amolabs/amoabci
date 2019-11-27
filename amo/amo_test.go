@@ -993,6 +993,75 @@ func TestEmptyBlock(t *testing.T) {
 	assert.Equal(t, prevHash, hash)
 }
 
+func TestReplayAttack(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	t1 := p256.GenPrivKeyFromSecret([]byte("test1"))
+	tx1 := makeTxStake(t1, "test1", 10000)
+	tx2 := makeTxStake(t1, "test1", 10000)
+	tx3 := makeTxStake(t1, "test1", 10000)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app.replayPreventer = blockchain.NewReplayPreventer(
+		app.store,
+		3,
+		app.state.LastHeight,
+	)
+
+	app.store.SetBalance(t1.PubKey().Address(), new(types.Currency).Set(40000))
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 1}})
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 1})
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 2}})
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 2})
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 3}})
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx3}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx3}).Code)
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx3}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx3}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 3})
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 4}})
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx3}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx3}).Code)
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 4})
+}
+
 func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
 	validator, _ := ed25519.GenPrivKeyFromSecret([]byte(val)).
 		PubKey().(ed25519.PubKeyEd25519)
