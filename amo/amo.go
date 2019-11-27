@@ -428,6 +428,15 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 		}
 	}
 
+	if !app.blockBindingManager.Check(t.GetLastHeight()) {
+		return abci.ResponseDeliverTx{
+			Code:      code.TxCodeTooOldTx,
+			Log:       "Binding tx to block failed",
+			Info:      "Binding tx to block failed",
+			Codespace: "amo",
+		}
+	}
+
 	if !app.replayPreventer.Append(req.Tx) {
 		return abci.ResponseDeliverTx{
 			Code:      code.TxCodeAlreadyProcessedTx,
