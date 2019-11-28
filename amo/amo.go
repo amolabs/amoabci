@@ -384,12 +384,15 @@ func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 			Codespace: "amo",
 		}
 	}
-	if !t.Verify() {
-		return abci.ResponseCheckTx{
-			Code:      code.TxCodeBadSignature,
-			Log:       "Signature verification failed",
-			Info:      "Signature verification failed",
-			Codespace: "amo",
+
+	if req.Type == abci.CheckTxType_New {
+		if !t.Verify() {
+			return abci.ResponseCheckTx{
+				Code:      code.TxCodeBadSignature,
+				Log:       "Signature verification failed",
+				Info:      "Signature verification failed",
+				Codespace: "amo",
+			}
 		}
 	}
 
