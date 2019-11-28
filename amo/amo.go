@@ -296,11 +296,15 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		app.state.LastHeight,
 	)
 
+	app.blockBindingManager.Update()
+
 	app.replayPreventer = blockchain.NewReplayPreventer(
 		app.store,
 		app.config.BlockBoundTxGracePeriod,
 		app.state.LastHeight,
 	)
+
+	app.replayPreventer.Update()
 
 	app.save()
 	app.logger.Info("InitChain: new genesis app state applied.")

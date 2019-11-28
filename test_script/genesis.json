@@ -33,6 +33,7 @@
         "penalty_ratio_l": 0.5,
         "laziness_counter_size": 4, 
         "laziness_counter_ratio": 0.5,
+        "block_bound_tx_grace_period":25,
         "lockup_period": 20 
     },
     "balances": [

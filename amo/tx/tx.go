@@ -3,6 +3,7 @@ package tx
 import (
 	"crypto/elliptic"
 	"encoding/json"
+	"strconv"
 
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -57,8 +58,8 @@ type TxBase struct {
 	Sender     crypto.Address  `json:"sender"`
 	Nonce      tm.HexBytes     `json:"nonce"`
 	Fee        types.Currency  `json:"fee"`
-	LastHeight int64           `json:"last_height"`
-	Payload    json.RawMessage `json:"payload"` // TODO: change to txparam
+	LastHeight string          `json:"last_height"` // num as string
+	Payload    json.RawMessage `json:"payload"`     // TODO: change to txparam
 	Signature  Signature       `json:"signature"`
 }
 
@@ -67,7 +68,7 @@ type TxToSign struct {
 	Sender     crypto.Address  `json:"sender"`
 	Nonce      tm.HexBytes     `json:"nonce"`
 	Fee        types.Currency  `json:"fee"`
-	LastHeight int64           `json:"last_height"`
+	LastHeight string          `json:"last_height"` // num as string
 	Payload    json.RawMessage `json:"payload"`
 	Signature  Signature       `json:"-"`
 }
@@ -173,7 +174,13 @@ func (t *TxBase) GetFee() types.Currency {
 }
 
 func (t *TxBase) GetLastHeight() int64 {
-	return t.LastHeight
+	// convert string to int64
+	lastHeight, err := strconv.ParseInt(t.LastHeight, 10, 64)
+	if err != nil {
+		return 0
+	}
+
+	return lastHeight
 }
 
 func (t *TxBase) getNonce() tm.HexBytes {

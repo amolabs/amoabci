@@ -38,7 +38,7 @@ AMO100=100000000000000000000
 LOCKUP=$(cat $PWD/test_script/genesis.json | python -c "import sys, json; print json.load(sys.stdin)['app_state']['config']['lockup_period']")
 
 get_block_height() {
-	out=$($CLI status)
+	out=$($CLI query node)
 	height=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['sync_info']['latest_block_height']")
 
 	echo "$height"

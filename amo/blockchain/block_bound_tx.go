@@ -1,9 +1,13 @@
 package blockchain
 
-// BlockBindingManager: check avaiability of given height
-// - GracePeriod: period for which tx can be accepted
+import (
+	"fmt"
+)
 
-// GracePeriod: 10
+// BlockBindingManager: check avaiability of given height
+// - gracePeriod: period for which tx can be accepted
+
+// gracePeriod: 10
 // 0    5    10   15   20   25   30
 // |----|----|----|----|----|----|
 // ^ (h:0, f:1, t:0 - initChain)
@@ -18,19 +22,19 @@ package blockchain
 //     =========^ (h:13, f:4, t:13)
 
 type BlockBindingManager struct {
-	GracePeriod          uint64
-	FromHeight, ToHeight uint64
+	gracePeriod          uint64
+	fromHeight, toHeight uint64
 }
 
 func NewBlockBindingManager(gracePeriod uint64, height int64) BlockBindingManager {
 	bbm := BlockBindingManager{
-		GracePeriod: gracePeriod,
-		FromHeight:  1,
-		ToHeight:    uint64(height),
+		gracePeriod: gracePeriod,
+		fromHeight:  1,
+		toHeight:    uint64(height),
 	}
 
-	if bbm.ToHeight != 0 && bbm.ToHeight-bbm.FromHeight >= bbm.GracePeriod {
-		bbm.FromHeight = bbm.ToHeight - bbm.GracePeriod + 1
+	if bbm.toHeight != 0 && bbm.toHeight-bbm.fromHeight >= bbm.gracePeriod {
+		bbm.fromHeight = bbm.toHeight - bbm.gracePeriod + 1
 	}
 
 	return bbm
@@ -38,17 +42,19 @@ func NewBlockBindingManager(gracePeriod uint64, height int64) BlockBindingManage
 
 // Update() is called at BeginBlock()
 func (bbm *BlockBindingManager) Update() {
-	bbm.ToHeight += 1
+	bbm.toHeight += 1
 
-	if bbm.ToHeight-bbm.FromHeight == bbm.GracePeriod {
-		bbm.FromHeight += 1
+	if bbm.toHeight-bbm.fromHeight == bbm.gracePeriod {
+		bbm.fromHeight += 1
 	}
 }
 
 // Check() is called at CheckTx()
 func (bbm *BlockBindingManager) Check(height int64) bool {
 	heightU := uint64(height)
-	if bbm.FromHeight <= heightU && heightU <= bbm.ToHeight {
+
+	fmt.Println("f:", bbm.fromHeight, "h:", heightU, "t:", bbm.toHeight, "g:", bbm.gracePeriod)
+	if bbm.fromHeight <= heightU && heightU <= bbm.toHeight {
 		return true
 	}
 
