@@ -1,9 +1,5 @@
 package blockchain
 
-import (
-	"fmt"
-)
-
 // BlockBindingManager: check avaiability of given height
 // - gracePeriod: period for which tx can be accepted
 
@@ -53,7 +49,6 @@ func (bbm *BlockBindingManager) Update() {
 func (bbm *BlockBindingManager) Check(height int64) bool {
 	heightU := uint64(height)
 
-	fmt.Println("f:", bbm.fromHeight, "h:", heightU, "t:", bbm.toHeight, "g:", bbm.gracePeriod)
 	if bbm.fromHeight <= heightU && heightU <= bbm.toHeight {
 		return true
 	}
