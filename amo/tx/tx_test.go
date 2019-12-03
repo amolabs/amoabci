@@ -165,13 +165,14 @@ func TestTxSignature(t *testing.T) {
 	}
 	b, _ := json.Marshal(transfer)
 	trnx := &TxBase{
-		Type:    "transfer",
-		Payload: b,
-		Sender:  from.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
+		Type:       "transfer",
+		Payload:    b,
+		Sender:     from.PubKey().Address(),
+		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
+		LastHeight: "1",
 	}
 	sb := trnx.getSigningBytes()
-	_sb := `{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","nonce":"12345678","fee":"0","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}}`
+	_sb := `{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","nonce":"12345678","fee":"0","last_height":"1","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}}`
 	assert.Equal(t, _sb, string(sb))
 	err := trnx.Sign(from)
 	if err != nil {

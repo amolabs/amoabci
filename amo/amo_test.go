@@ -441,6 +441,7 @@ func TestSignedTransactionTest(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app.blockBindingManager.Update()
 
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
@@ -454,11 +455,12 @@ func TestSignedTransactionTest(t *testing.T) {
 	payload, err := json.Marshal(_tx)
 	assert.NoError(t, err)
 	msg := tx.TxBase{
-		Type:    "transfer",
-		Payload: payload,
-		Sender:  from.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
-		Fee:     *new(types.Currency).Set(0),
+		Type:       "transfer",
+		Payload:    payload,
+		Sender:     from.PubKey().Address(),
+		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:        *new(types.Currency).Set(0),
+		LastHeight: "1",
 	}
 
 	// not signed transaction
@@ -721,6 +723,7 @@ func TestEndBlock(t *testing.T) {
 	defer tearDownTest(t)
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app.blockBindingManager.Update()
 
 	// setup
 	tx.ConfigLockupPeriod = 1 // manipulate
@@ -738,17 +741,17 @@ func TestEndBlock(t *testing.T) {
 	app.BeginBlock(blkRequest) // we need this
 
 	// deliver stake tx
-	rawTx := makeTxStake(priv1, "val1", 100)
+	rawTx := makeTxStake(priv1, "val1", 100, "1")
 	resDeliver := app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 
-	rawTx = makeTxStake(priv2, "val1", 200)
+	rawTx = makeTxStake(priv2, "val1", 200, "1")
 	resCheck := app.CheckTx(abci.RequestCheckTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resCheck.Code)
 	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodePermissionDenied, resDeliver.Code)
 
-	rawTx = makeTxStake(priv2, "val2", 200)
+	rawTx = makeTxStake(priv2, "val2", 200, "1")
 	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 
@@ -946,7 +949,7 @@ func TestEmptyBlock(t *testing.T) {
 	// begin block
 	app.BeginBlock(abci.RequestBeginBlock{})
 
-	rawTx := makeTxStake(priv, "test", 500)
+	rawTx := makeTxStake(priv, "test", 500, "1")
 	app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 
 	// end block
@@ -990,7 +993,127 @@ func TestEmptyBlock(t *testing.T) {
 	assert.Equal(t, prevHash, hash)
 }
 
-func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
+func TestReplayAttack(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	t1 := p256.GenPrivKeyFromSecret([]byte("test1"))
+	tx1 := makeTxStake(t1, "test1", 10000, "1")
+	tx2 := makeTxStake(t1, "test1", 10000, "1")
+	tx3 := makeTxStake(t1, "test1", 10000, "1")
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app.replayPreventer = blockchain.NewReplayPreventer(
+		app.store,
+		3,
+		app.state.LastHeight,
+	)
+
+	app.store.SetBalance(t1.PubKey().Address(), new(types.Currency).Set(40000))
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 1}})
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 1})
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 2}})
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 2})
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 3}})
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx3}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx3}).Code)
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx3}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx3}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 3})
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 4}})
+
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx3}).Code)
+	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx3}).Code)
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 4})
+}
+
+func TestBindingBlock(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	t1 := p256.GenPrivKeyFromSecret([]byte("test1"))
+	tx1 := makeTxStake(t1, "test1", 10000, "1")
+	tx2 := makeTxStake(t1, "test1", 10000, "2")
+	tx3 := makeTxStake(t1, "test1", 10000, "3")
+	tx4 := makeTxStake(t1, "test1", 10000, "1")
+	tx5 := makeTxStake(t1, "test1", 10000, "2")
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app.blockBindingManager = blockchain.NewBlockBindingManager(
+		3,
+		app.state.LastHeight,
+	)
+
+	app.store.SetBalance(t1.PubKey().Address(), new(types.Currency).Set(50000))
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 1}})
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 1})
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 2}})
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 2})
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 3}})
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx3}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx3}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 3})
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 4}})
+
+	assert.Equal(t, code.TxCodeTooOldTx, app.CheckTx(abci.RequestCheckTx{Tx: tx4}).Code)
+	assert.Equal(t, code.TxCodeTooOldTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx4}).Code)
+
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx5}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx5}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 4})
+}
+
+func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64, lastHeight string) []byte {
 	validator, _ := ed25519.GenPrivKeyFromSecret([]byte(val)).
 		PubKey().(ed25519.PubKeyEd25519)
 	param := tx.StakeParam{
@@ -999,11 +1122,12 @@ func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64) []byte {
 	}
 	payload, _ := json.Marshal(param)
 	_tx := tx.TxBase{
-		Type:    "stake",
-		Payload: payload,
-		Sender:  priv.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
-		Fee:     *new(types.Currency).Set(0),
+		Type:       "stake",
+		Payload:    payload,
+		Sender:     priv.PubKey().Address(),
+		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:        *new(types.Currency).Set(0),
+		LastHeight: lastHeight,
 	}
 	_tx.Sign(priv)
 	rawTx, _ := json.Marshal(_tx)
@@ -1017,11 +1141,12 @@ func makeTxDelegate(priv p256.PrivKeyP256, to crypto.Address, amount uint64) []b
 	}
 	payload, _ := json.Marshal(param)
 	_tx := tx.TxBase{
-		Type:    "delegate",
-		Payload: payload,
-		Sender:  priv.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
-		Fee:     *new(types.Currency).Set(0),
+		Type:       "delegate",
+		Payload:    payload,
+		Sender:     priv.PubKey().Address(),
+		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:        *new(types.Currency).Set(0),
+		LastHeight: "1",
 	}
 	_tx.Sign(priv)
 	rawTx, _ := json.Marshal(_tx)
@@ -1034,11 +1159,12 @@ func makeTxWithdraw(priv p256.PrivKeyP256, amount uint64) []byte {
 	}
 	payload, _ := json.Marshal(param)
 	_tx := tx.TxBase{
-		Type:    "withdraw",
-		Payload: payload,
-		Sender:  priv.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
-		Fee:     *new(types.Currency).Set(0),
+		Type:       "withdraw",
+		Payload:    payload,
+		Sender:     priv.PubKey().Address(),
+		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
+		Fee:        *new(types.Currency).Set(0),
+		LastHeight: "1",
 	}
 	_tx.Sign(priv)
 	rawTx, _ := json.Marshal(_tx)

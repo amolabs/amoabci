@@ -3,6 +3,7 @@ package tx
 import (
 	"crypto/elliptic"
 	"encoding/json"
+	"strconv"
 
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -37,6 +38,7 @@ type Tx interface {
 	GetType() string
 	GetSender() crypto.Address
 	GetFee() types.Currency
+	GetLastHeight() int64
 	getNonce() tm.HexBytes
 	getPayload() json.RawMessage
 	getSignature() Signature
@@ -52,21 +54,23 @@ type Tx interface {
 var _ Tx = &TxBase{}
 
 type TxBase struct {
-	Type      string          `json:"type"`
-	Sender    crypto.Address  `json:"sender"`
-	Nonce     tm.HexBytes     `json:"nonce"`
-	Fee       types.Currency  `json:"fee"`
-	Payload   json.RawMessage `json:"payload"` // TODO: change to txparam
-	Signature Signature       `json:"signature"`
+	Type       string          `json:"type"`
+	Sender     crypto.Address  `json:"sender"`
+	Nonce      tm.HexBytes     `json:"nonce"`
+	Fee        types.Currency  `json:"fee"`
+	LastHeight string          `json:"last_height"` // num as string
+	Payload    json.RawMessage `json:"payload"`     // TODO: change to txparam
+	Signature  Signature       `json:"signature"`
 }
 
 type TxToSign struct {
-	Type      string          `json:"type"`
-	Sender    crypto.Address  `json:"sender"`
-	Nonce     tm.HexBytes     `json:"nonce"`
-	Fee       types.Currency  `json:"fee"`
-	Payload   json.RawMessage `json:"payload"`
-	Signature Signature       `json:"-"`
+	Type       string          `json:"type"`
+	Sender     crypto.Address  `json:"sender"`
+	Nonce      tm.HexBytes     `json:"nonce"`
+	Fee        types.Currency  `json:"fee"`
+	LastHeight string          `json:"last_height"` // num as string
+	Payload    json.RawMessage `json:"payload"`
+	Signature  Signature       `json:"-"`
 }
 
 func classifyTx(base TxBase) Tx {
@@ -167,6 +171,16 @@ func (t *TxBase) GetSender() crypto.Address {
 
 func (t *TxBase) GetFee() types.Currency {
 	return t.Fee
+}
+
+func (t *TxBase) GetLastHeight() int64 {
+	// convert string to int64
+	lastHeight, err := strconv.ParseInt(t.LastHeight, 10, 64)
+	if err != nil {
+		return 0
+	}
+
+	return lastHeight
 }
 
 func (t *TxBase) getNonce() tm.HexBytes {

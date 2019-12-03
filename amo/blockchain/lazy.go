@@ -47,7 +47,7 @@ func NewLazinessCounter(store *store.Store, height, due, size int64, ratio float
 		Ratio:  ratio,
 	}
 
-	lc.Candidates = lc.store.GetGroupCounter()
+	lc.Candidates = lc.store.GroupCounterGetLazyValidators()
 
 	return lc
 }
@@ -74,7 +74,7 @@ func (lc *LazinessCounter) Investigate(height int64, commitInfo abci.LastCommitI
 
 	// to decrease db set overload
 	if len(votes) > 0 {
-		lc.store.SetGroupCounter(lc.Candidates)
+		lc.store.GroupCounterSet(lc.Candidates)
 	}
 
 	return lazyValidators, lc.Due
@@ -114,7 +114,7 @@ func (lc *LazinessCounter) purge() {
 		delete(lc.Candidates, key)
 	}
 
-	lc.store.PurgeGroupCounter()
+	lc.store.GroupCounterPurge()
 }
 
 func (lc *LazinessCounter) checkEnd() bool {

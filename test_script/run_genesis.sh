@@ -46,3 +46,6 @@ echo "update seed node's peer set with val1addr on docker-compose.yml"
 out=$(sed -e s/__val1_addr__/$out/ -i.tmp docker-compose.yml)
 if [ $? -ne 0 ]; then fail $out; fi
 
+echo "update config set of amocli with the one from amo node"
+out=$($CLI query node $CLIOPT)
+out=$($CLI query config $CLIOPT)

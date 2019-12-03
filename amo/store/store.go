@@ -57,6 +57,15 @@ type Store struct {
 	// value: nil
 	indexEffStake tmdb.DB
 
+	// search index for block-first delivered txs
+	// key: block height
+	// value: hash of txs
+	indexBlockTx tmdb.DB
+	// search index for tx hash-first delivered txs
+	// key: tx hash
+	// value: block height
+	indexTxBlock tmdb.DB
+
 	incentiveDB tmdb.DB
 	// search incentive for block height-first:
 	// key: block height || stake holder address
@@ -75,10 +84,14 @@ func NewStore(merkleDB, indexDB, incentiveDB, lazinessCounterDB tmdb.DB) *Store 
 	return &Store{
 		merkleTree: iavl.NewMutableTree(merkleDB, merkleTreeCacheSize),
 
-		indexDB:        indexDB,
+		indexDB: indexDB,
+
 		indexDelegator: tmdb.NewPrefixDB(indexDB, prefixIndexDelegator),
 		indexValidator: tmdb.NewPrefixDB(indexDB, prefixIndexValidator),
 		indexEffStake:  tmdb.NewPrefixDB(indexDB, prefixIndexEffStake),
+
+		indexBlockTx: tmdb.NewPrefixDB(indexDB, prefixIndexBlockTx),
+		indexTxBlock: tmdb.NewPrefixDB(indexDB, prefixIndexTxBlock),
 
 		incentiveDB:      incentiveDB,
 		incentiveHeight:  tmdb.NewPrefixDB(incentiveDB, prefixIncentiveHeight),

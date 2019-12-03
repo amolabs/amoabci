@@ -12,7 +12,7 @@ type (
 )
 
 // Record map[Address]int64
-func (s Store) SetGroupCounter(candidates LazyValidators) {
+func (s Store) GroupCounterSet(candidates LazyValidators) {
 	for address, count := range candidates {
 		cb := make([]byte, 8)
 		binary.BigEndian.PutUint64(cb, uint64(count))
@@ -21,7 +21,7 @@ func (s Store) SetGroupCounter(candidates LazyValidators) {
 	}
 }
 
-func (s Store) GetGroupCounter() LazyValidators {
+func (s Store) GroupCounterGetLazyValidators() LazyValidators {
 	lazyValidators := LazyValidators{}
 
 	itr := s.lazinessCounterDB.Iterator(nil, nil)
@@ -36,7 +36,7 @@ func (s Store) GetGroupCounter() LazyValidators {
 	return lazyValidators
 }
 
-func (s Store) PurgeGroupCounter() {
+func (s Store) GroupCounterPurge() {
 	itr := s.lazinessCounterDB.Iterator(nil, nil)
 	defer itr.Close()
 	for ; itr.Valid(); itr.Next() {
