@@ -33,7 +33,7 @@ func (s Store) AddTxIndexer(height int64, txs [][]byte) {
 	}
 }
 
-func (s Store) GetTxIndexerHeight(height int64) [][]byte {
+func (s Store) TxIndexerGetHash(height int64) [][]byte {
 	txs := [][]byte{}
 
 	hb := make([]byte, 8)
@@ -51,20 +51,20 @@ func (s Store) GetTxIndexerHeight(height int64) [][]byte {
 	return txs
 }
 
-func (s Store) GetTxIndexerHash(tx []byte) int64 {
+func (s Store) TxIndexerGetHeight(txHash []byte) int64 {
 	height := int64(0)
 
-	if !s.indexTxBlock.Has(tx) {
+	if !s.indexTxBlock.Has(txHash) {
 		return height
 	}
 
-	value := s.indexTxBlock.Get(tx)
+	value := s.indexTxBlock.Get(txHash)
 	height = int64(binary.BigEndian.Uint64(value))
 
 	return height
 }
 
-func (s Store) DeleteTxIndexer(height int64) {
+func (s Store) TxIndexerDelete(height int64) {
 	hb := make([]byte, 8)
 	binary.BigEndian.PutUint64(hb, uint64(height))
 
@@ -73,7 +73,7 @@ func (s Store) DeleteTxIndexer(height int64) {
 	}
 
 	// get txs from indexBlockTx
-	txs := s.GetTxIndexerHeight(height)
+	txs := s.TxIndexerGetHash(height)
 
 	// delete indexBlockTx of given height
 	s.indexBlockTx.Delete(hb)
@@ -84,7 +84,7 @@ func (s Store) DeleteTxIndexer(height int64) {
 	}
 }
 
-func (s Store) PurgeTxIndexer() {
+func (s Store) TxIndexerPurge() {
 	itr := s.indexBlockTx.Iterator(nil, nil)
 	defer itr.Close()
 

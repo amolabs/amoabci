@@ -92,7 +92,7 @@ func (rp *ReplayPreventer) Check(tx []byte) bool {
 	}
 
 	// check if given tx already exists in txIndexer
-	height := rp.store.GetTxIndexerHash(txHash[:])
+	height := rp.store.TxIndexerGetHeight(txHash[:])
 	if height > 0 {
 		return false
 	}
@@ -123,7 +123,7 @@ func (rp *ReplayPreventer) Index() {
 	rp.store.AddTxIndexer(int64(rp.toHeight), txs)
 
 	if rp.toHeight-rp.fromHeight+1 == rp.indexRange {
-		rp.store.DeleteTxIndexer(int64(rp.fromHeight))
+		rp.store.TxIndexerDelete(int64(rp.fromHeight))
 	}
 
 	// clear txBucket

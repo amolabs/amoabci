@@ -21,13 +21,13 @@ func TestGroupCounter(t *testing.T) {
 
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 
-	s.SetGroupCounter(lazyValidators)
-	output := s.GetGroupCounter()
+	s.GroupCounterSet(lazyValidators)
+	output := s.GroupCounterGetLazyValidators()
 
 	assert.Equal(t, lazyValidators, output)
 
-	s.PurgeGroupCounter()
-	output = s.GetGroupCounter()
+	s.GroupCounterPurge()
+	output = s.GroupCounterGetLazyValidators()
 
 	assert.Equal(t, 0, len(output))
 }

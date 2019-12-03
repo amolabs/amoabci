@@ -153,10 +153,10 @@ func TestReplayPreventer(t *testing.T) {
 	ok = rp.Check(h3[2])
 	assert.False(t, ok)
 
-	txs := rp.store.GetTxIndexerHeight(int64(1))
+	txs := rp.store.TxIndexerGetHash(int64(1))
 	assert.Equal(t, 0, len(txs))
-	txs = rp.store.GetTxIndexerHeight(int64(2))
+	txs = rp.store.TxIndexerGetHash(int64(2))
 	assert.Equal(t, 3, len(txs))
-	txs = rp.store.GetTxIndexerHeight(int64(3))
+	txs = rp.store.TxIndexerGetHash(int64(3))
 	assert.Equal(t, 3, len(txs))
 }
