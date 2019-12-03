@@ -21,9 +21,11 @@ func (s *State) LoadFrom(f *os.File) error {
 		return err
 	}
 
-	err = json.Unmarshal(file, s)
-	if err != nil {
-		return err
+	if len(file) > 0 {
+		err = json.Unmarshal(file, s)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

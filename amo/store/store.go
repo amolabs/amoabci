@@ -203,6 +203,11 @@ func (s Store) Save() ([]byte, int64, error) {
 	return s.merkleTree.SaveVersion()
 }
 
+// Load the latest versioned tree from disk.
+func (s Store) Load() (int64, error) {
+	return s.merkleTree.Load()
+}
+
 func (s Store) Root() []byte {
 	// NOTES
 	// Hash() : Hash returns the hash of the latest saved version of the tree,
@@ -399,9 +404,9 @@ func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error
 		s.indexValidator.Delete(stake.Validator.Address())
 	} else {
 		s.set(makeStakeKey(holder), b)
-		s.indexValidator.Set(stake.Validator.Address(), holder)
+		s.indexValidator.SetSync(stake.Validator.Address(), holder)
 		after := makeEffStakeKey(s.GetEffStake(holder, false).Amount, holder)
-		s.indexEffStake.Set(after, nil)
+		s.indexEffStake.SetSync(after, nil)
 	}
 
 	return nil
@@ -440,9 +445,9 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 		s.indexValidator.Delete(stake.Validator.Address())
 	} else {
 		s.set(makeLockedStakeKey(holder, height), b)
-		s.indexValidator.Set(stake.Validator.Address(), holder)
+		s.indexValidator.SetSync(stake.Validator.Address(), holder)
 		after := makeEffStakeKey(s.GetEffStake(holder, false).Amount, holder)
-		s.indexEffStake.Set(after, nil)
+		s.indexEffStake.SetSync(after, nil)
 	}
 
 	return nil
@@ -755,7 +760,7 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 		s.indexDelegator.Delete(append(delegate.Delegatee, holder...))
 	} else {
 		s.set(getDelegateKey(holder), b)
-		s.indexDelegator.Set(append(delegate.Delegatee, holder...), nil)
+		s.indexDelegator.SetSync(append(delegate.Delegatee, holder...), nil)
 	}
 
 	after := makeEffStakeKey(
@@ -763,7 +768,7 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 		delegate.Delegatee,
 	)
 
-	s.indexEffStake.Set(after, nil)
+	s.indexEffStake.SetSync(after, nil)
 
 	return nil
 }
@@ -834,6 +839,7 @@ func (s Store) GetTopStakes(max uint64, committed bool) []*types.Stake {
 		cnt++
 		// TODO: assert GetEffStake() gives the same result
 	}
+
 	return stakes
 }
 
