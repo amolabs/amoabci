@@ -937,10 +937,7 @@ func TestEmptyBlock(t *testing.T) {
 
 	// setup
 	tx.ConfigLockupPeriod = 2 // manipulate
-	//	validator, _ := ed25519.GenPrivKeyFromSecret([]byte("test")).
-	//		PubKey().(ed25519.PubKeyEd25519)
 	priv := p256.GenPrivKeyFromSecret([]byte("test"))
-
 	app.store.SetBalance(priv.PubKey().Address(), new(types.Currency).Set(500))
 
 	// init chain

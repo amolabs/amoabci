@@ -164,20 +164,7 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 	}
 
 	app := &AMOApp{
-		logger: l,
-		config: AMOAppConfig{ // TODO: read from config file
-			defaultMaxValidators,
-			defaultWeightValidator,
-			defaultWeightDelegator,
-			defaultBlkReward,
-			defaultTxReward,
-			defaultPenaltyRatioM,
-			defaultPenaltyRatioL,
-			defaultLazinessCounterSize,
-			defaultLazinessCounterRatio,
-			defaultBlockBoundTxGracePeriod,
-			defaultLockupPeriod,
-		},
+		logger:         l,
 		stateFile:      stateFile,
 		state:          State{},
 		merkleDB:       mdb,
@@ -188,12 +175,11 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 		store: astore.NewStore(mdb, idxdb, incdb, gcdb),
 	}
 
-	// necessary to initialize state.json file
-	app.save()
+	// load state, db and config
+	app.load()
 
 	// TODO: use something more elegant
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
-	app.load()
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -214,6 +200,8 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 		app.state.LastHeight,
 	)
 
+	app.save()
+
 	return app
 }
 
@@ -222,6 +210,48 @@ func (app *AMOApp) load() {
 	if err != nil {
 		panic(err)
 	}
+
+	version, err := app.store.Load()
+	if err != nil {
+		panic(err)
+	}
+
+	app.state.MerkleVersion = version
+
+	err = app.loadAppConfig()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (app *AMOApp) loadAppConfig() error {
+	cfg := AMOAppConfig{
+		defaultMaxValidators,
+		defaultWeightValidator,
+		defaultWeightDelegator,
+		defaultBlkReward,
+		defaultTxReward,
+		defaultPenaltyRatioM,
+		defaultPenaltyRatioL,
+		defaultLazinessCounterSize,
+		defaultLazinessCounterRatio,
+		defaultBlockBoundTxGracePeriod,
+		defaultLockupPeriod,
+	}
+
+	b := app.store.GetAppConfig()
+
+	// if config exists
+	if len(b) > 0 {
+		err := json.Unmarshal(b, &cfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	app.config = cfg
+
+	return nil
 }
 
 func (app *AMOApp) save() {
@@ -261,26 +291,11 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	app.state.LastHeight = 0
 	app.state.LastAppHash = hash
 
-	// apply config
-	// TODO: need to do something to make it better
-	b := app.store.GetAppConfig()
-	if b == nil {
-		app.config = AMOAppConfig{
-			MaxValidators:           defaultMaxValidators,
-			WeightValidator:         defaultWeightValidator,
-			WeightDelegator:         defaultWeightDelegator,
-			BlkReward:               defaultBlkReward,
-			TxReward:                defaultTxReward,
-			PenaltyRatioM:           defaultPenaltyRatioM,
-			PenaltyRatioL:           defaultPenaltyRatioL,
-			LazinessCounterSize:     defaultLazinessCounterSize,
-			LazinessCounterRatio:    defaultLazinessCounterRatio,
-			BlockBoundTxGracePeriod: defaultBlockBoundTxGracePeriod,
-			LockupPeriod:            defaultLockupPeriod,
-		}
-	} else {
-		json.Unmarshal(b, &app.config)
+	err = app.loadAppConfig()
+	if err != nil {
+		return abci.ResponseInitChain{}
 	}
+
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
@@ -296,14 +311,14 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		app.state.LastHeight,
 	)
 
-	app.blockBindingManager.Update()
-
 	app.replayPreventer = blockchain.NewReplayPreventer(
 		app.store,
 		app.config.BlockBoundTxGracePeriod,
 		app.state.LastHeight,
 	)
 
+	// initialize
+	app.blockBindingManager.Update()
 	app.replayPreventer.Update()
 
 	app.save()
@@ -351,6 +366,7 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 
 func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.state.Height = req.Header.Height
+
 	app.blockBindingManager.Update()
 	app.replayPreventer.Update()
 
@@ -560,25 +576,13 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	app.state.LastAppHash = app.state.AppHash
 	app.state.LastHeight = app.state.Height
 
-	// apply config
-	// TODO: need to do something to make it better
-	b := app.store.GetAppConfig()
-	if b == nil {
-		app.config = AMOAppConfig{
-			MaxValidators:           defaultMaxValidators,
-			WeightValidator:         defaultWeightValidator,
-			WeightDelegator:         defaultWeightDelegator,
-			BlkReward:               defaultBlkReward,
-			TxReward:                defaultTxReward,
-			PenaltyRatioM:           defaultPenaltyRatioM,
-			PenaltyRatioL:           defaultPenaltyRatioL,
-			BlockBoundTxGracePeriod: defaultBlockBoundTxGracePeriod,
-			LockupPeriod:            defaultLockupPeriod,
-		}
-	} else {
-		json.Unmarshal(b, &app.config)
+	err = app.loadAppConfig()
+	if err != nil {
+		return abci.ResponseCommit{}
 	}
+
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
+
 	app.save()
 
 	return abci.ResponseCommit{Data: app.state.LastAppHash}

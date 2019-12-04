@@ -26,11 +26,15 @@ func (s Store) AddTxIndexer(height int64, txs [][]byte) {
 	// update indexBlockTx
 	s.indexBlockTx.Set(hb, txsJSON)
 
-	s.indexTxBlock.NewBatch().Write()
+	batch := s.indexTxBlock.NewBatch()
+	defer batch.Close()
+
 	// update indexTxBlock
 	for _, tx := range txs {
-		s.indexTxBlock.Set(tx, hb)
+		batch.Set(tx, hb)
 	}
+
+	batch.WriteSync()
 }
 
 func (s Store) TxIndexerGetHash(height int64) [][]byte {

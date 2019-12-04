@@ -1,7 +1,6 @@
 package amo
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,9 +17,6 @@ func TestStateFile(t *testing.T) {
 		LastHeight:    int64(1),
 		LastAppHash:   []byte("lastAppHash"),
 	}
-
-	state1 := State{}
-	fmt.Println(state1)
 
 	err := state.SaveTo(tmpFile)
 	assert.NoError(t, err)

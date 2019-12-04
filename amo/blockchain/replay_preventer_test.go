@@ -36,6 +36,13 @@ func TestReplayPreventer(t *testing.T) {
 	ok = rp.Append(h1[2])
 	assert.True(t, ok)
 
+	ok = rp.Check(h1[0])
+	assert.False(t, ok)
+	ok = rp.Check(h1[1])
+	assert.False(t, ok)
+	ok = rp.Check(h1[2])
+	assert.False(t, ok)
+
 	// before:
 	//   txBucket: ["tx11", "tx12", "tx13"]
 	//   txIndexer: []
@@ -72,6 +79,19 @@ func TestReplayPreventer(t *testing.T) {
 	assert.True(t, ok)
 	ok = rp.Append(h2[2])
 	assert.True(t, ok)
+
+	ok = rp.Check(h1[0])
+	assert.False(t, ok)
+	ok = rp.Check(h1[1])
+	assert.False(t, ok)
+	ok = rp.Check(h1[2])
+	assert.False(t, ok)
+	ok = rp.Check(h2[0])
+	assert.False(t, ok)
+	ok = rp.Check(h2[1])
+	assert.False(t, ok)
+	ok = rp.Check(h2[2])
+	assert.False(t, ok)
 
 	// before:
 	//   txBucket: ["tx21", "tx22", "tx23"]
@@ -121,6 +141,25 @@ func TestReplayPreventer(t *testing.T) {
 	assert.True(t, ok)
 	ok = rp.Append(h3[2])
 	assert.True(t, ok)
+
+	ok = rp.Check(h1[0])
+	assert.False(t, ok)
+	ok = rp.Check(h1[1])
+	assert.False(t, ok)
+	ok = rp.Check(h1[2])
+	assert.False(t, ok)
+	ok = rp.Check(h2[0])
+	assert.False(t, ok)
+	ok = rp.Check(h2[1])
+	assert.False(t, ok)
+	ok = rp.Check(h2[2])
+	assert.False(t, ok)
+	ok = rp.Check(h3[0])
+	assert.False(t, ok)
+	ok = rp.Check(h3[1])
+	assert.False(t, ok)
+	ok = rp.Check(h3[2])
+	assert.False(t, ok)
 
 	// before:
 	//   txBucket: ["tx31", "tx32", "tx33"]
