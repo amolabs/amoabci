@@ -42,7 +42,7 @@ requiring docker, you need install the following:
 ABCI app for AMO blockchain requires a
 [tendermint](https://github.com/tendermint/tendermint) daemon running in the
 same host. So, we need to install tendermint first. Current version of AMO ABCI
-app requires tendermint v0.32.7.
+app requires tendermint v0.32.8.
 
 Run the following commands to install tendermint daemon:
 ```bash

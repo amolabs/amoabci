@@ -20,7 +20,7 @@ RUN cp -a leveldb-1.20/include/leveldb /usr/include/
 COPY contrib/leveldb/bin/libleveldb.so* /usr/lib/ 
 
 # tendermint
-RUN git clone -b v0.32.7 https://github.com/tendermint/tendermint
+RUN git clone -b v0.32.8 https://github.com/tendermint/tendermint
 RUN make -C tendermint build_c
 
 # amod

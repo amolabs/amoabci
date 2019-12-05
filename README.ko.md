@@ -42,7 +42,7 @@ TBA
 AMO 블록체인을 위한 ABCI 앱을 실행하려면 같은 호스트에서
 [tendermint](https://github.com/tendermint/tendermint) 데몬이 실행되고 있어야
 한다. 따라서 tendermint를 먼저 설치하도록 한다. 현재 버전의 AMO ABCI 앱은
-tendermint v0.32.3이 필요하다.
+tendermint v0.32.8이 필요하다.
 
 다음 명령을 실행해서 tendermint 데몬을 설치한다:
 ```bash
