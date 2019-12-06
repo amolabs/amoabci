@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	NonceSize           = 4
 	defaultLockupPeriod = uint64(1000000)
 )
 
@@ -39,7 +38,6 @@ type Tx interface {
 	GetSender() crypto.Address
 	GetFee() types.Currency
 	GetLastHeight() int64
-	getNonce() tm.HexBytes
 	getPayload() json.RawMessage
 	getSignature() Signature
 	getSigningBytes() []byte
@@ -56,7 +54,6 @@ var _ Tx = &TxBase{}
 type TxBase struct {
 	Type       string          `json:"type"`
 	Sender     crypto.Address  `json:"sender"`
-	Nonce      tm.HexBytes     `json:"nonce"`
 	Fee        types.Currency  `json:"fee"`
 	LastHeight string          `json:"last_height"` // num as string
 	Payload    json.RawMessage `json:"payload"`     // TODO: change to txparam
@@ -66,7 +63,6 @@ type TxBase struct {
 type TxToSign struct {
 	Type       string          `json:"type"`
 	Sender     crypto.Address  `json:"sender"`
-	Nonce      tm.HexBytes     `json:"nonce"`
 	Fee        types.Currency  `json:"fee"`
 	LastHeight string          `json:"last_height"` // num as string
 	Payload    json.RawMessage `json:"payload"`
@@ -181,10 +177,6 @@ func (t *TxBase) GetLastHeight() int64 {
 	}
 
 	return lastHeight
-}
-
-func (t *TxBase) getNonce() tm.HexBytes {
-	return t.Nonce
 }
 
 func (t *TxBase) getPayload() json.RawMessage {

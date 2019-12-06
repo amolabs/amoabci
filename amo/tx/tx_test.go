@@ -53,7 +53,6 @@ func makeTestTx(txType string, seed string, payload []byte) Tx {
 	trans := TxBase{
 		Type:    txType,
 		Sender:  addr,
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
 		Payload: payload,
 	}
 	trans.Sign(privKey)
@@ -103,16 +102,11 @@ func getTestStore() *store.Store {
 }
 
 func TestParseTx(t *testing.T) {
-	bytes := []byte(`{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","nonce":"12345678","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"},"signature":{"pubkey":"0485FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B185FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B1EF1D55E9B1EF1D","sig_bytes":"FFFFFFFF"}}`)
-	var sender, nonce, tmp, sigbytes cmn.HexBytes
+	bytes := []byte(`{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"},"signature":{"pubkey":"0485FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B185FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B1EF1D55E9B1EF1D","sig_bytes":"FFFFFFFF"}}`)
+	var sender, tmp, sigbytes cmn.HexBytes
 	err := json.Unmarshal(
 		[]byte(`"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"`),
 		&sender,
-	)
-	assert.NoError(t, err)
-	err = json.Unmarshal(
-		[]byte(`"12345678"`),
-		&nonce,
 	)
 	assert.NoError(t, err)
 	err = json.Unmarshal(
@@ -139,7 +133,6 @@ func TestParseTx(t *testing.T) {
 		TxBase{
 			Type:    "transfer",
 			Sender:  sender,
-			Nonce:   nonce,
 			Payload: []byte(`{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}`),
 			Signature: Signature{
 				PubKey:   pubkey,
@@ -168,11 +161,10 @@ func TestTxSignature(t *testing.T) {
 		Type:       "transfer",
 		Payload:    b,
 		Sender:     from.PubKey().Address(),
-		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
 		LastHeight: "1",
 	}
 	sb := trnx.getSigningBytes()
-	_sb := `{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","nonce":"12345678","fee":"0","last_height":"1","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}}`
+	_sb := `{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","fee":"0","last_height":"1","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}}`
 	assert.Equal(t, _sb, string(sb))
 	err := trnx.Sign(from)
 	if err != nil {

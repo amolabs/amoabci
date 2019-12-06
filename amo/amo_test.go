@@ -458,7 +458,6 @@ func TestSignedTransactionTest(t *testing.T) {
 		Type:       "transfer",
 		Payload:    payload,
 		Sender:     from.PubKey().Address(),
-		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
 		Fee:        *new(types.Currency).Set(0),
 		LastHeight: "1",
 	}
@@ -1122,7 +1121,6 @@ func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64, lastHeight st
 		Type:       "stake",
 		Payload:    payload,
 		Sender:     priv.PubKey().Address(),
-		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
 		Fee:        *new(types.Currency).Set(0),
 		LastHeight: lastHeight,
 	}
@@ -1141,7 +1139,6 @@ func makeTxDelegate(priv p256.PrivKeyP256, to crypto.Address, amount uint64) []b
 		Type:       "delegate",
 		Payload:    payload,
 		Sender:     priv.PubKey().Address(),
-		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
 		Fee:        *new(types.Currency).Set(0),
 		LastHeight: "1",
 	}
@@ -1159,7 +1156,6 @@ func makeTxWithdraw(priv p256.PrivKeyP256, amount uint64) []byte {
 		Type:       "withdraw",
 		Payload:    payload,
 		Sender:     priv.PubKey().Address(),
-		Nonce:      []byte{0x12, 0x34, 0x56, 0x78},
 		Fee:        *new(types.Currency).Set(0),
 		LastHeight: "1",
 	}

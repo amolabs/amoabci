@@ -75,7 +75,6 @@ func BenchmarkCheckTransferTx(b *testing.B) {
 		Type:    "transfer",
 		Payload: payload,
 		Sender:  from.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
 	}
 	msg.Sign(from)
 	raw, _ := json.Marshal(msg)
@@ -126,7 +125,6 @@ func BenchmarkDeliverTransferTx(b *testing.B) {
 		Type:    "transfer",
 		Payload: payload,
 		Sender:  from.PubKey().Address(),
-		Nonce:   []byte{0x12, 0x34, 0x56, 0x78},
 	}
 	msg.Sign(from)
 	raw, _ := json.Marshal(msg)
