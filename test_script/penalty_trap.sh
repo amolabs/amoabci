@@ -17,7 +17,7 @@ if [ $? -ne 0 ]; then fail $out; fi
 echo "stake of tu1: "$out
 
 echo "stake to tu1: 10000 MOTE"
-out=$($CLI tx stake $CLIOPT --user tu1 $val 10000)
+out=$($CLI tx --broadcast=commit stake $CLIOPT --user tu1 $val 10000)
 h=$(echo $out | tr -d '^@' | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 

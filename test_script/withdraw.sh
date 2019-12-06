@@ -23,7 +23,7 @@ for ((i=FROM; i<=NODENUM; i++))
 do
     printf "withdraw val$i: $(bc <<< "$AMOUNT / $AMO1") AMO - "
 
-	out=$($CLI tx withdraw $CLIOPT --user tval$i "$AMOUNT")
+	out=$($CLI tx --broadcast=commit withdraw $CLIOPT --user tval$i "$AMOUNT")
 	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
 	if [ -z "$h" -o "$h" != "$RESULT" ]; then fail $out; fi
 
