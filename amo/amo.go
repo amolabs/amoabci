@@ -36,8 +36,8 @@ const (
 	defaultPenaltyRatioM = float64(0.3)
 	defaultPenaltyRatioL = float64(0.3)
 
-	defaultLazinessCounterSize  = int64(300)
-	defaultLazinessCounterRatio = float64(0.8)
+	defaultLazinessCounterWindow = int64(300)
+	defaultLazinessThreshold     = float64(0.8)
 
 	defaultBlockBoundTxGracePeriod = uint64(1000)
 	defaultLockupPeriod            = uint64(1000000)
@@ -99,8 +99,8 @@ type AMOAppConfig struct {
 	PenaltyRatioM float64 `json:"penalty_ratio_m"` // malicious validator
 	PenaltyRatioL float64 `json:"penalty_ratio_l"` // lazy validators
 
-	LazinessCounterSize  int64   `json:"laziness_counter_size"`
-	LazinessCounterRatio float64 `json:"laziness_counter_ratio"`
+	LazinessCounterWindow int64   `json:"laziness_counter_window"`
+	LazinessThreshold     float64 `json:"laziness_threshold"`
 
 	BlockBoundTxGracePeriod uint64 `json:"block_bound_tx_grace_period"`
 	LockupPeriod            uint64 `json:"lockup_period"`
@@ -185,8 +185,8 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 		app.store,
 		app.state.LastHeight,
 		app.state.CounterDue,
-		app.config.LazinessCounterSize,
-		app.config.LazinessCounterRatio,
+		app.config.LazinessCounterWindow,
+		app.config.LazinessThreshold,
 	)
 
 	app.blockBindingManager = blockchain.NewBlockBindingManager(
@@ -233,8 +233,8 @@ func (app *AMOApp) loadAppConfig() error {
 		defaultTxReward,
 		defaultPenaltyRatioM,
 		defaultPenaltyRatioL,
-		defaultLazinessCounterSize,
-		defaultLazinessCounterRatio,
+		defaultLazinessCounterWindow,
+		defaultLazinessThreshold,
 		defaultBlockBoundTxGracePeriod,
 		defaultLockupPeriod,
 	}
@@ -302,8 +302,8 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		app.store,
 		app.state.LastHeight,
 		app.state.CounterDue,
-		app.config.LazinessCounterSize,
-		app.config.LazinessCounterRatio,
+		app.config.LazinessCounterWindow,
+		app.config.LazinessThreshold,
 	)
 
 	app.blockBindingManager = blockchain.NewBlockBindingManager(
