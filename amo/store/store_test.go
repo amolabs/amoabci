@@ -98,13 +98,18 @@ func TestBalance(t *testing.T) {
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	balance := new(types.Currency).Set(1000)
-	s.SetBalance(testAddr, balance)
+
+	err := s.SetBalance(testAddr, balance)
+	assert.NoError(t, err)
+
 	assert.Equal(t, balance, s.GetBalance(testAddr, false))
 
-	// setting 0 balance should return error
-	balance = balance.Set(0)
-	err := s.SetBalance(testAddr, balance)
-	assert.Error(t, err)
+	balance = new(types.Currency).Set(0)
+
+	err = s.SetBalance(testAddr, balance)
+	assert.NoError(t, err)
+
+	assert.Equal(t, balance, s.GetBalance(testAddr, false))
 }
 
 func TestParcel(t *testing.T) {

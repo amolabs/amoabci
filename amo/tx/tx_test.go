@@ -552,6 +552,12 @@ func TestValidTransfer(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 	rc, _, _ = trans.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
+
+	aliceBal := s.GetBalance(makeTestAddress("alice"), false)
+	assert.Equal(t, new(types.Currency).Set(0), aliceBal)
+
+	bobBal := s.GetBalance(bob.addr, false)
+	assert.Equal(t, new(types.Currency).Set(1230), bobBal)
 }
 
 func TestNonValidTransfer(t *testing.T) {
@@ -587,6 +593,15 @@ func TestNonValidTransfer(t *testing.T) {
 	assert.Equal(t, code.TxCodeSelfTransaction, rc)
 	rc, _, _ = t3.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	aliceBal := s.GetBalance(makeTestAddress("alice"), false)
+	assert.Equal(t, new(types.Currency).Set(0), aliceBal)
+
+	bobBal := s.GetBalance(makeTestAddress("bob"), false)
+	assert.Equal(t, new(types.Currency).Set(0), bobBal)
+
+	eveBal := s.GetBalance(makeTestAddress("eve"), false)
+	assert.Equal(t, new(types.Currency).Set(0), eveBal)
 }
 
 func TestValidStake(t *testing.T) {

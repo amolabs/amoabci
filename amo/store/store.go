@@ -168,13 +168,13 @@ func (s Store) Purge() error {
 // save : working tree -> saved tree
 
 // node(key, value) -> working tree
-func (s Store) set(key, value []byte) error {
-	ok := s.merkleTree.Set(key, value)
-	if !ok {
-		return errors.New("couldn't set merkle tree node with key, value")
-	}
 
-	return nil
+func (s Store) has(key []byte) bool {
+	return s.merkleTree.Has(key)
+}
+
+func (s Store) set(key, value []byte) bool {
+	return s.merkleTree.Set(key, value)
 }
 
 // { working tree || saved tree } -> node(key, value)
@@ -256,27 +256,35 @@ func getBalanceKey(addr tm.Address) []byte {
 
 func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
 	zero := new(types.Currency).Set(0)
-
-	// just ignore setting zero balance
-	if balance.Equals(zero) {
-		return fmt.Errorf("ignore setting %s balance", balance.String())
-	}
+	balanceKey := getBalanceKey(addr)
 
 	if balance.LessThan(zero) {
 		return fmt.Errorf("unavailable amount: %s", balance.String())
+	}
+
+	// pre-process for setting zero balance, just remove corresponding key
+	if s.has(balanceKey) && balance.Equals(zero) {
+		s.remove(balanceKey)
+		return nil
 	}
 
 	b, err := json.Marshal(balance)
 	if err != nil {
 		return err
 	}
-	s.set(getBalanceKey(addr), b)
+
+	s.set(balanceKey, b)
+
 	return nil
 }
 
 func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) error {
-	// just ignore setting zero balance
-	if balance == uint64(0) {
+	zero := uint64(0)
+	balanceKey := getBalanceKey(addr)
+
+	// pre-process for setting zero balance, just remove corresponding key
+	if s.has(balanceKey) && balance == zero {
+		s.remove(balanceKey)
 		return nil
 	}
 
@@ -284,7 +292,9 @@ func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) error {
 	if err != nil {
 		return err
 	}
-	s.set(getBalanceKey(addr), b)
+
+	s.set(balanceKey, b)
+
 	return nil
 }
 
