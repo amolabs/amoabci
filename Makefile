@@ -54,4 +54,4 @@ docker:
 	docker build -t amolabs/amod - < amoabci-docker.tar.gz
 
 clean:
-	rm -f amod
+	rm -f amod *.test
