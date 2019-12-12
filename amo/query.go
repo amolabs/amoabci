@@ -169,7 +169,13 @@ func queryParcel(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	jsonstr, _ := json.Marshal(parcel)
+	parcelEx := types.ParcelValueEx{
+		ParcelValue: parcel,
+		Requests:    s.GetRequests(id, true),
+		Usages:      s.GetUsages(id, true),
+	}
+
+	jsonstr, _ := json.Marshal(parcelEx)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
 	res.Code = code.QueryCodeOK
