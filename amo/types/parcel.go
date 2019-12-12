@@ -14,6 +14,12 @@ type ParcelValue struct {
 	Info    cmn.HexBytes   `json:"info,omitempty"`
 }
 
+type ParcelValueEx struct {
+	*ParcelValue
+	Requests []*RequestValueEx `json:"requests,omitempty"`
+	Usages   []*UsageValueEx   `json:"usages,omitempty"`
+}
+
 func (value ParcelValue) Serialize() ([]byte, error) {
 	return cdc.MarshalBinaryBare(value)
 }

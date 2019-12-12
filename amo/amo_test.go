@@ -171,6 +171,9 @@ func TestQueryParcel(t *testing.T) {
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
 	addr := crypto.Address(addrbin)
+	_addrbin, _ := hex.DecodeString("FFECB223B976F27D77B0E03E95602DABCC28D876")
+	_addr := crypto.Address(_addrbin)
+
 	parcelID := cmn.HexBytes(cmn.RandBytes(32))
 	parcelID[31] = 0xFF
 	queryjson, _ := json.Marshal(parcelID)
@@ -181,7 +184,23 @@ func TestQueryParcel(t *testing.T) {
 		Info:    []byte("This is test parcel value"),
 	}
 
+	request := types.RequestValue{
+		Payment: *new(types.Currency).Set(1),
+	}
+
+	parcelEx := types.ParcelValueEx{
+		ParcelValue: &parcel,
+		Requests: []*types.RequestValueEx{
+			&types.RequestValueEx{
+				RequestValue: &request,
+				Buyer:        _addr,
+			},
+		},
+		Usages: []*types.UsageValueEx{},
+	}
+
 	app.store.SetParcel(parcelID, &parcel)
+	app.store.SetRequest(_addr, parcelID, &request)
 
 	_, _, err := app.store.Save()
 	assert.NoError(t, err)
@@ -216,7 +235,7 @@ func TestQueryParcel(t *testing.T) {
 	req = abci.RequestQuery{Path: "/parcel", Data: queryjson}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeOK, res.Code)
-	jsonstr, _ = json.Marshal(parcel)
+	jsonstr, _ = json.Marshal(parcelEx)
 	assert.Equal(t, []byte(jsonstr), res.Value)
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)

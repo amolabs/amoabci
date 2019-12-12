@@ -885,8 +885,17 @@ func (s Store) DeleteParcel(parcelID []byte) {
 }
 
 // Request store
-func getRequestKey(buyer crypto.Address, parcelID []byte) []byte {
-	return append(prefixRequest, append(append(buyer, ':'), parcelID...)...)
+func getRequestKey(buyer crypto.Address, parcelID []byte) (buyerParcelKey, parcelBuyerKey []byte) {
+	buyerParcelKey = append(prefixRequest, append(append(buyer, ':'), parcelID...)...)
+	parcelBuyerKey = append(prefixRequest, append(append(parcelID, ':'), buyer...)...)
+	return
+}
+
+func splitParcelBuyerKey(prefix, key []byte) (parcelID []byte, buyer crypto.Address) {
+	// prefix + parcelID + buyer
+	parcelID = key[len(prefix) : len(key)-crypto.AddressSize-1]
+	buyer = key[len(key)-crypto.AddressSize:]
+	return
 }
 
 func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.RequestValue) error {
@@ -894,12 +903,20 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.Re
 	if err != nil {
 		return err
 	}
-	s.set(getRequestKey(buyer, parcelID), b)
+
+	buyerParcelKey, parcelBuyerKey := getRequestKey(buyer, parcelID)
+
+	// parcelBuyerKey has only nil as value to use it as index
+	s.set(buyerParcelKey, b)
+	s.set(parcelBuyerKey, []byte{0})
+
 	return nil
 }
 
 func (s Store) GetRequest(buyer crypto.Address, parcelID []byte, committed bool) *types.RequestValue {
-	b := s.get(getRequestKey(buyer, parcelID), committed)
+	buyerParcelKey, _ := getRequestKey(buyer, parcelID)
+
+	b := s.get(buyerParcelKey, committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -911,13 +928,53 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte, committed bool)
 	return &request
 }
 
+func (s Store) GetRequests(parcelID []byte, committed bool) []*types.RequestValueEx {
+	prefixRequestKey := append(prefixRequest, append(parcelID, ':')...)
+	requests := []*types.RequestValueEx{}
+
+	imt, err := s.getImmutableTree(committed)
+	if err != nil {
+		return nil
+	}
+
+	imt.IterateRangeInclusive(prefixRequestKey, nil, true,
+		func(key []byte, value []byte, version int64) bool {
+			if !bytes.HasPrefix(key, prefixRequestKey) {
+				return false
+			}
+
+			// TODO: Is this really the best ?
+			parcelID, buyer := splitParcelBuyerKey(prefixRequest, key)
+			requestValue := s.GetRequest(buyer, parcelID, committed)
+			if requestValue == nil {
+				return false
+			}
+			request := types.RequestValueEx{
+				RequestValue: requestValue,
+				Buyer:        buyer,
+			}
+
+			requests = append(requests, &request)
+
+			return false
+		},
+	)
+
+	return requests
+}
+
 func (s Store) DeleteRequest(buyer crypto.Address, parcelID []byte) {
-	s.remove(getRequestKey(buyer, parcelID))
+	buyerParcelKey, parcelBuyerKey := getRequestKey(buyer, parcelID)
+
+	s.remove(buyerParcelKey)
+	s.remove(parcelBuyerKey)
 }
 
 // Usage store
-func getUsageKey(buyer crypto.Address, parcelID []byte) []byte {
-	return append(prefixUsage, append(append(buyer, ':'), parcelID...)...)
+func getUsageKey(buyer crypto.Address, parcelID []byte) (buyerParcelKey, parcelBuyerKey []byte) {
+	buyerParcelKey = append(prefixUsage, append(append(buyer, ':'), parcelID...)...)
+	parcelBuyerKey = append(prefixUsage, append(append(parcelID, ':'), buyer...)...)
+	return
 }
 
 func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.UsageValue) error {
@@ -925,12 +982,19 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.Usag
 	if err != nil {
 		return err
 	}
-	s.set(getUsageKey(buyer, parcelID), b)
+
+	buyerParcelKey, parcelBuyerKey := getUsageKey(buyer, parcelID)
+
+	// parcelBuyerKey has only nil as value to use it as index
+	s.set(buyerParcelKey, b)
+	s.set(parcelBuyerKey, []byte{0})
+
 	return nil
 }
 
 func (s Store) GetUsage(buyer crypto.Address, parcelID []byte, committed bool) *types.UsageValue {
-	b := s.get(getUsageKey(buyer, parcelID), committed)
+	buyerParcelKey, _ := getUsageKey(buyer, parcelID)
+	b := s.get(buyerParcelKey, committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -942,8 +1006,42 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte, committed bool) *
 	return &usage
 }
 
+func (s Store) GetUsages(parcelID []byte, committed bool) []*types.UsageValueEx {
+	prefixUsageKey := append(prefixUsage, append(parcelID, ':')...)
+	usages := []*types.UsageValueEx{}
+
+	imt, err := s.getImmutableTree(committed)
+	if err != nil {
+		return nil
+	}
+
+	imt.IterateRangeInclusive(prefixUsageKey, nil, true,
+		func(key []byte, value []byte, version int64) bool {
+			if !bytes.HasPrefix(key, prefixUsageKey) {
+				return false
+			}
+
+			// TODO: Is this really the best ?
+			parcelID, buyer := splitParcelBuyerKey(prefixUsage, key)
+			usage := types.UsageValueEx{
+				UsageValue: s.GetUsage(buyer, parcelID, committed),
+				Buyer:      buyer,
+			}
+
+			usages = append(usages, &usage)
+
+			return false
+		},
+	)
+
+	return usages
+}
+
 func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
-	s.remove(getUsageKey(buyer, parcelID))
+	buyerParcelKey, parcelBuyerKey := getUsageKey(buyer, parcelID)
+
+	s.remove(buyerParcelKey)
+	s.remove(parcelBuyerKey)
 }
 
 func (s Store) GetValidators(max uint64, committed bool) abci.ValidatorUpdates {

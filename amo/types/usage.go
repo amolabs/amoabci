@@ -1,9 +1,12 @@
 package types
 
 import (
-	"github.com/amolabs/amoabci/amo/encoding/binary"
-	cmn "github.com/tendermint/tendermint/libs/common"
 	"time"
+
+	"github.com/tendermint/tendermint/crypto"
+	cmn "github.com/tendermint/tendermint/libs/common"
+
+	"github.com/amolabs/amoabci/amo/encoding/binary"
 )
 
 const UsageAminoName = "amo/UsageValue"
@@ -11,6 +14,11 @@ const UsageAminoName = "amo/UsageValue"
 type UsageValue struct {
 	Custody cmn.HexBytes `json:"custody"`
 	Exp     time.Time    `json:"exp"`
+}
+
+type UsageValueEx struct {
+	*UsageValue
+	Buyer crypto.Address `json:"buyer"`
 }
 
 func (value UsageValue) Serialize() ([]byte, error) {
