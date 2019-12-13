@@ -908,7 +908,7 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.Re
 
 	// parcelBuyerKey has only nil as value to use it as index
 	s.set(buyerParcelKey, b)
-	s.set(parcelBuyerKey, []byte{0})
+	s.set(parcelBuyerKey, []byte{})
 
 	return nil
 }
@@ -987,7 +987,7 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.Usag
 
 	// parcelBuyerKey has only nil as value to use it as index
 	s.set(buyerParcelKey, b)
-	s.set(parcelBuyerKey, []byte{0})
+	s.set(parcelBuyerKey, []byte{})
 
 	return nil
 }
