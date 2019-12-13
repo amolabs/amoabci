@@ -744,7 +744,8 @@ func TestEndBlock(t *testing.T) {
 	app.blockBindingManager.Update()
 
 	// setup
-	tx.ConfigLockupPeriod = 1 // manipulate
+	tx.ConfigLockupPeriod = 1       // manipulate
+	tx.ConfigMinStakingUnit = "100" // manipulate
 	priv1 := p256.GenPrivKeyFromSecret([]byte("staker1"))
 	app.store.SetBalance(priv1.PubKey().Address(), new(types.Currency).Set(500))
 	priv2 := p256.GenPrivKeyFromSecret([]byte("staker2"))
@@ -802,6 +803,7 @@ func TestIncentive(t *testing.T) {
 	defer tearDownTest(t)
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	tx.ConfigMinStakingUnit = "50"
 
 	validator, _ := ed25519.GenPrivKey().PubKey().(ed25519.PubKeyEd25519)
 
@@ -846,6 +848,7 @@ func TestIncentive(t *testing.T) {
 	app.EndBlock(abci.RequestEndBlock{Height: 1})
 
 	app.Commit()
+	tx.ConfigMinStakingUnit = "50"
 
 	// check incentive records
 	bir := app.store.GetBlockIncentiveRecords(1)
@@ -880,6 +883,7 @@ func TestIncentive(t *testing.T) {
 	app.EndBlock(abci.RequestEndBlock{Height: 2})
 
 	app.Commit()
+	tx.ConfigMinStakingUnit = "50"
 
 	bir = app.store.GetBlockIncentiveRecords(2)
 	assert.Equal(t, 3, len(bir))
@@ -954,7 +958,8 @@ func TestEmptyBlock(t *testing.T) {
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// setup
-	tx.ConfigLockupPeriod = 2 // manipulate
+	tx.ConfigLockupPeriod = 2       // manipulate
+	tx.ConfigMinStakingUnit = "100" // manipulate
 	priv := p256.GenPrivKeyFromSecret([]byte("test"))
 	app.store.SetBalance(priv.PubKey().Address(), new(types.Currency).Set(500))
 
@@ -1023,6 +1028,8 @@ func TestReplayAttack(t *testing.T) {
 		3,
 		app.state.LastHeight,
 	)
+
+	tx.ConfigMinStakingUnit = "100" // manipulate
 
 	app.store.SetBalance(t1.PubKey().Address(), new(types.Currency).Set(40000))
 
@@ -1093,6 +1100,8 @@ func TestBindingBlock(t *testing.T) {
 		3,
 		app.state.LastHeight,
 	)
+
+	tx.ConfigMinStakingUnit = "100" // manipulate
 
 	app.store.SetBalance(t1.PubKey().Address(), new(types.Currency).Set(50000))
 

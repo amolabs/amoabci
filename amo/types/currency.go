@@ -10,7 +10,7 @@ import (
 const (
 	maxCurrencyHex = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
 	currencyLen    = 256 / 8
-	OneAMOUint64   = 1000000000000000000 // in decimal
+	OneAMOUint64   = uint64(1000000000000000000) // in decimal
 	//oneAMO         = 0xDE0B6B3A7640000
 )
 

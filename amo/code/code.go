@@ -16,6 +16,8 @@ const (
 	TxCodeMultipleDelegates
 	TxCodeDelegateNotFound
 	TxCodeNoStake
+	TxCodeImproperStakingUnit
+	TxCodeImproperStakeAmount
 	TxCodeHeightTaken
 	TxCodeBadValidator
 	TxCodeLastValidator

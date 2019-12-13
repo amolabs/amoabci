@@ -29,6 +29,8 @@ const (
 	defaultWeightValidator = int64(2)
 	defaultWeightDelegator = int64(1)
 
+	defaultMinStakingUnit = "1000000000000000000000000"
+
 	defaultBlkReward = uint64(0)
 	defaultTxReward  = uint64(types.OneAMOUint64 / 10)
 
@@ -92,6 +94,8 @@ type AMOAppConfig struct {
 	MaxValidators   uint64 `json:"max_validators"`
 	WeightValidator int64  `json:"weight_validator"`
 	WeightDelegator int64  `json:"weight_delegator"`
+
+	MinStakingUnit string `json:"min_staking_unit"`
 
 	BlkReward uint64 `json:"blk_reward"`
 	TxReward  uint64 `json:"tx_reward"`
@@ -180,6 +184,7 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 
 	// TODO: use something more elegant
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
+	tx.ConfigMinStakingUnit = app.config.MinStakingUnit
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -229,6 +234,7 @@ func (app *AMOApp) loadAppConfig() error {
 		defaultMaxValidators,
 		defaultWeightValidator,
 		defaultWeightDelegator,
+		defaultMinStakingUnit,
 		defaultBlkReward,
 		defaultTxReward,
 		defaultPenaltyRatioM,
@@ -247,6 +253,10 @@ func (app *AMOApp) loadAppConfig() error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if cfg.MinStakingUnit == "" {
+		cfg.MinStakingUnit = defaultMinStakingUnit
 	}
 
 	app.config = cfg
@@ -297,6 +307,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	}
 
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
+	tx.ConfigMinStakingUnit = app.config.MinStakingUnit
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -582,6 +593,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	}
 
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
+	tx.ConfigMinStakingUnit = app.config.MinStakingUnit
 
 	app.save()
 

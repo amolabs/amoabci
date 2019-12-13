@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	defaultLockupPeriod = uint64(1000000)
+	defaultLockupPeriod   = uint64(1000000)
+	defaultMinStakingUnit = "1000000000000000000000000"
 )
 
 var (
@@ -24,7 +25,8 @@ var (
 
 var (
 	// config values from the app
-	ConfigLockupPeriod = defaultLockupPeriod
+	ConfigLockupPeriod   = defaultLockupPeriod
+	ConfigMinStakingUnit = defaultMinStakingUnit
 )
 
 type Signature struct {
