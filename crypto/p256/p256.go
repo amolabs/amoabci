@@ -5,11 +5,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/hex"
-	"encoding/json"
 	"math/big"
 	"strings"
 
-	"github.com/tendermint/go-amino"
 	tmc "github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -19,8 +17,6 @@ var (
 	c = elliptic.P256()
 	h = tmc.Sha256
 )
-
-var cdc = amino.NewCodec()
 
 const (
 	PrivKeyAminoName = "amo/PrivKeyP256"
@@ -32,16 +28,6 @@ const (
 
 type PrivKeyP256 [PrivKeyP256Size]byte
 type PubKeyP256 [PubKeyP256Size]byte
-
-func init() {
-	cdc.RegisterInterface((*tmc.PubKey)(nil), nil)
-	cdc.RegisterConcrete(PubKeyP256{},
-		PubKeyAminoName, nil)
-
-	cdc.RegisterInterface((*tmc.PrivKey)(nil), nil)
-	cdc.RegisterConcrete(PrivKeyP256{},
-		PrivKeyAminoName, nil)
-}
 
 func GenPrivKeyFromSecret(secret []byte) PrivKeyP256 {
 	privKey32 := h(secret)
@@ -62,10 +48,6 @@ func GenPrivKey() PrivKeyP256 {
 }
 
 func (privKey PrivKeyP256) Bytes() []byte {
-	return cdc.MustMarshalBinaryBare(privKey)
-}
-
-func (privKey PrivKeyP256) RawBytes() []byte {
 	return privKey[:]
 }
 
@@ -142,10 +124,6 @@ func (pubKey PubKeyP256) Address() tmc.Address {
 }
 
 func (pubKey PubKeyP256) Bytes() []byte {
-	return cdc.MustMarshalBinaryBare(pubKey)
-}
-
-func (pubKey PubKeyP256) RawBytes() []byte {
 	return pubKey[:]
 }
 
@@ -195,10 +173,3 @@ func (pubKey *PubKeyP256) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
-
-var _ tmc.PrivKey = PrivKeyP256{}
-var _ json.Marshaler = (*PrivKeyP256)(nil)
-var _ json.Unmarshaler = (*PrivKeyP256)(nil)
-var _ tmc.PubKey = PubKeyP256{}
-var _ json.Marshaler = (*PubKeyP256)(nil)
-var _ json.Unmarshaler = (*PubKeyP256)(nil)
