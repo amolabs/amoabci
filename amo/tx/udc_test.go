@@ -103,8 +103,10 @@ func TestTxUDCBalance(t *testing.T) {
 		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NotNil(t, s)
 
+	amo0 := *new(types.Currency)
 	amoM := *new(types.Currency).Set(1000000)
 	amoK := *new(types.Currency).Set(1000)
+	issuer := makeAccAddr("issuer")
 
 	// issue
 	param := IssueParam{
@@ -120,7 +122,7 @@ func TestTxUDCBalance(t *testing.T) {
 	udc := s.GetUDC([]byte("mycoin"), false)
 	assert.NotNil(t, udc)
 	assert.Equal(t, amoM, udc.Total)
-	bal := s.GetUDCBalance(udc.Id, makeAccAddr("issuer"), false)
+	bal := s.GetUDCBalance(udc.Id, issuer, false)
 	assert.Equal(t, &amoM, bal)
 
 	// issue more
@@ -137,6 +139,62 @@ func TestTxUDCBalance(t *testing.T) {
 	tmp := types.Currency{}
 	tmp.Add(&amoM)
 	tmp.Add(&amoK)
-	bal = s.GetUDCBalance(udc.Id, makeAccAddr("issuer"), false)
+	bal = s.GetUDCBalance(udc.Id, issuer, false)
+	assert.Equal(t, &tmp, bal)
+
+	// non-UDC balance
+	bal = s.GetUDCBalance(nil, issuer, false)
+	assert.Equal(t, &amo0, bal)
+
+	// parser test for optional tx field
+	b := []byte(`{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}`)
+	parsed, err := parseTransferParam(b)
+	assert.NoError(t, err)
+	assert.Nil(t, parsed.UDC)
+	b = []byte(`{"udc":"6d79","to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}`)
+	parsed, err = parseTransferParam(b)
+	assert.NoError(t, err)
+	assert.NotNil(t, parsed.UDC)
+	assert.Equal(t, []byte("my"), parsed.UDC.Bytes())
+	// transfer
+	acc1 := makeAccAddr("acc1")
+	payload, _ = json.Marshal(TransferParam{
+		UDC:    []byte("mycoin"),
+		To:     acc1,
+		Amount: amoK,
+	})
+	tx = makeTestTx("transfer", "issuer", payload)
+	rc, _ := tx.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	// check
+	bal = s.GetUDCBalance([]byte("mycoin"), issuer, false)
+	assert.Equal(t, &amoM, bal)
+	bal = s.GetUDCBalance([]byte("mycoin"), acc1, false)
+	assert.Equal(t, &amoK, bal)
+	// not enough  balance
+	payload, _ = json.Marshal(TransferParam{
+		UDC:    []byte("mycoin"),
+		To:     acc1,
+		Amount: amoK,
+	})
+	tx = makeTestTx("transfer", "acc2", payload)
+	rc, _ = tx.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+	// transfer remaining
+	payload, _ = json.Marshal(TransferParam{
+		UDC:    []byte("mycoin"),
+		To:     acc1,
+		Amount: amoM,
+	})
+	tx = makeTestTx("transfer", "issuer", payload)
+	tx.Execute(s)
+	// check
+	bal = s.GetUDCBalance([]byte("mycoin"), issuer, false)
+	assert.Equal(t, &amo0, bal)
+	bal = s.GetUDCBalance([]byte("mycoin"), acc1, false)
 	assert.Equal(t, &tmp, bal)
 }

@@ -43,7 +43,9 @@ func (s Store) GetUDC(id []byte, committed bool) *types.UDC {
 // UDC Balance store
 func getUDCBalanceKey(udc []byte, addr tm.Address) []byte {
 	key := append(prefixBalance, udc...)
-	key = append(key, ':')
+	if len(udc) > 0 {
+		key = append(key, ':')
+	}
 	key = append(key, addr.Bytes()...)
 	return key
 }
