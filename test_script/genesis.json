@@ -29,7 +29,7 @@
   ],
   "app_state": {
     "config": {
-		"min_staking_unit": "10000",
+        "min_staking_unit": "10000",
         "penalty_ratio_m": 0.5,
         "penalty_ratio_l": 0.5,
         "laziness_counter_window": 4, 
