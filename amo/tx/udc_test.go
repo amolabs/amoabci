@@ -97,3 +97,46 @@ func TestTxIssue(t *testing.T) {
 	assert.Equal(t, "my own coin", udc.Desc)
 	assert.Equal(t, *new(types.Currency).Set(2000000), udc.Total)
 }
+
+func TestTxUDCBalance(t *testing.T) {
+	s := store.NewStore(
+		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NotNil(t, s)
+
+	amoM := *new(types.Currency).Set(1000000)
+	amoK := *new(types.Currency).Set(1000)
+
+	// issue
+	param := IssueParam{
+		Id:        []byte("mycoin"),
+		Operators: []crypto.Address{makeAccAddr("oper1")},
+		Desc:      "mycoin",
+		Total:     amoM,
+	}
+	payload, _ := json.Marshal(param)
+	tx := makeTestTx("issue", "issuer", payload)
+	tx.Execute(s)
+	// check
+	udc := s.GetUDC([]byte("mycoin"), false)
+	assert.NotNil(t, udc)
+	assert.Equal(t, amoM, udc.Total)
+	bal := s.GetUDCBalance(udc.Id, makeAccAddr("issuer"), false)
+	assert.Equal(t, &amoM, bal)
+
+	// issue more
+	param = IssueParam{
+		Id:        []byte("mycoin"),
+		Operators: nil,
+		Desc:      "mycoin",
+		Total:     amoK,
+	}
+	payload, _ = json.Marshal(param)
+	tx = makeTestTx("issue", "issuer", payload)
+	tx.Execute(s)
+	// check
+	tmp := types.Currency{}
+	tmp.Add(&amoM)
+	tmp.Add(&amoK)
+	bal = s.GetUDCBalance(udc.Id, makeAccAddr("issuer"), false)
+	assert.Equal(t, &tmp, bal)
+}

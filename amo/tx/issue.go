@@ -79,11 +79,20 @@ func (t *TxIssue) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 		udc.Desc = param.Desc
 		udc.Total.Add(&param.Total)
 	}
-	// TODO: update UDC balance
-	// save
-	err := s.SetUDC(param.Id, udc)
+	// update UDC balance
+	bal := s.GetUDCBalance(udc.Id, sender, false)
+	if bal == nil {
+		bal = new(types.Currency)
+	}
+	after := bal.Add(&param.Total)
+	err := s.SetUDCBalance(udc.Id, sender, after)
 	if err != nil {
-		return code.TxCodeUnknown, "failed to save UDC", nil
+		return code.TxCodeUnknown, err.Error(), nil
+	}
+	// store UDC registry
+	err = s.SetUDC(udc.Id, udc)
+	if err != nil {
+		return code.TxCodeUnknown, err.Error(), nil
 	}
 	return code.TxCodeOK, "ok", nil
 }

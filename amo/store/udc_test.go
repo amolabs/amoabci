@@ -43,3 +43,25 @@ func TestUDCSetGet(t *testing.T) {
 	assert.NotNil(t, udc)
 	assert.Equal(t, mycoin, udc)
 }
+
+func TestUDCBalance(t *testing.T) {
+	s := NewStore(
+		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NotNil(t, s)
+
+	udc := []byte("mycoin")
+	tester := makeAccAddr("tester")
+	amo10 := new(types.Currency).SetAMO(10)
+	amo0 := new(types.Currency)
+
+	err := s.SetUDCBalance(udc, tester, amo10)
+	assert.NoError(t, err)
+	bal := s.GetUDCBalance(udc, tester, false)
+	assert.NotNil(t, bal)
+	assert.Equal(t, amo10, bal)
+
+	err = s.SetUDCBalance(udc, tester, amo0)
+	assert.NoError(t, err)
+	bal = s.GetUDCBalance(udc, tester, false)
+	assert.Equal(t, amo0, bal)
+}
