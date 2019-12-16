@@ -17,6 +17,7 @@ import (
 const (
 	defaultLockupPeriod   = uint64(1000000)
 	defaultMinStakingUnit = "1000000000000000000000000"
+	defaultMaxValidators  = uint64(100)
 )
 
 var (
@@ -27,6 +28,7 @@ var (
 	// config values from the app
 	ConfigLockupPeriod   = defaultLockupPeriod
 	ConfigMinStakingUnit = defaultMinStakingUnit
+	ConfigMaxValidators  = defaultMaxValidators
 )
 
 type Signature struct {
