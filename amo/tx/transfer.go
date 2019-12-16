@@ -56,6 +56,10 @@ func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
+	if !txParam.Amount.GreaterThan(zero) {
+		return code.TxCodeInvalidAmount, "invalid amount", nil
+	}
+
 	udc := []byte(nil)
 	if len(txParam.UDC) > 0 {
 		udc = txParam.UDC

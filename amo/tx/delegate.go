@@ -54,6 +54,11 @@ func (t *TxDelegate) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
+	// check balance
+	if txParam.Amount.Equals(zero) || txParam.Amount.LessThan(zero) {
+		return code.TxCodeInvalidAmount, "invalid amount", nil
+	}
+
 	// check minimum staking unit first
 	tmp := new(types.Currency)
 	checkUnit, err := new(types.Currency).SetString(ConfigMinStakingUnit, 10)
@@ -66,7 +71,6 @@ func (t *TxDelegate) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeImproperStakeAmount, "improper stake amount", nil
 	}
 
-	// check balance
 	balance := store.GetBalance(t.GetSender(), false)
 	if balance.LessThan(&txParam.Amount) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
