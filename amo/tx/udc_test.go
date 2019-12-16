@@ -58,7 +58,14 @@ func TestTxIssue(t *testing.T) {
 	assert.NotNil(t, tx)
 	rc, _ := tx.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
-	// TODO: test validator permission
+	// check validator permission
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+	// make enough stake and try again
+	newStake := types.Stake{}
+	newStake.Amount = *new(types.Currency).Set(2000)
+	copy(newStake.Validator[:], cmn.RandBytes(32))
+	s.SetUnlockedStake(makeAccAddr("issuer"), &newStake)
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	udc := s.GetUDC([]byte("mycoin"), false)
@@ -107,6 +114,12 @@ func TestTxUDCBalance(t *testing.T) {
 	amoM := *new(types.Currency).Set(1000000)
 	amoK := *new(types.Currency).Set(1000)
 	issuer := makeAccAddr("issuer")
+
+	// make necessary stake
+	newStake := types.Stake{}
+	newStake.Amount = *new(types.Currency).Set(2000)
+	copy(newStake.Validator[:], cmn.RandBytes(32))
+	s.SetUnlockedStake(makeAccAddr("issuer"), &newStake)
 
 	// issue
 	param := IssueParam{

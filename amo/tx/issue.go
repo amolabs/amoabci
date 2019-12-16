@@ -53,7 +53,10 @@ func (t *TxIssue) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 
 	udc := s.GetUDC(param.Id, false)
 	if udc == nil {
-		// TODO: check validator permission before creating new UDC
+		stakes := s.GetTopStakes(ConfigMaxValidators, sender, false)
+		if len(stakes) == 0 {
+			return code.TxCodePermissionDenied, "permission denied", nil
+		}
 		udc = &types.UDC{
 			Id:        param.Id,
 			Issuer:    sender,
