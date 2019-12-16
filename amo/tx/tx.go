@@ -19,12 +19,13 @@ const (
 )
 
 var (
-	c = elliptic.P256()
+	// config values from the app
+	ConfigLockupPeriod = defaultLockupPeriod
 )
 
 var (
-	// config values from the app
-	ConfigLockupPeriod = defaultLockupPeriod
+	c    = elliptic.P256()
+	zero = new(types.Currency).Set(0)
 )
 
 type Signature struct {

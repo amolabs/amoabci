@@ -54,6 +54,10 @@ func (t *TxDelegate) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
+	if txParam.Amount.Equals(zero) || txParam.Amount.LessThan(zero) {
+		return code.TxCodeUnavailableAmount, "unavailable amount", nil
+	}
+
 	balance := store.GetBalance(t.GetSender(), false)
 	if balance.LessThan(&txParam.Amount) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil

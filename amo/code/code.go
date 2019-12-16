@@ -5,6 +5,7 @@ const (
 	TxCodeBadParam
 	TxCodeTooOldTx
 	TxCodeAlreadyProcessedTx
+	TxCodeUnavailableAmount
 	TxCodeNotEnoughBalance
 	TxCodeSelfTransaction
 	TxCodePermissionDenied
