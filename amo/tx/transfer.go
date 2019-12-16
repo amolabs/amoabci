@@ -13,6 +13,8 @@ import (
 )
 
 type TransferParam struct {
+	// TODO: change to human-readable ascii string
+	UDC    tm.HexBytes    `json:"udc,omitempty"`
 	To     crypto.Address `json:"to"`
 	Amount types.Currency `json:"amount"`
 }
@@ -54,14 +56,19 @@ func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	fromBalance := store.GetBalance(t.GetSender(), false)
+	udc := []byte(nil)
+	if len(txParam.UDC) > 0 {
+		udc = txParam.UDC
+	}
+
+	fromBalance := store.GetUDCBalance(udc, t.GetSender(), false)
 	if fromBalance.LessThan(&txParam.Amount) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
-	toBalance := store.GetBalance(txParam.To, false)
+	toBalance := store.GetUDCBalance(udc, txParam.To, false)
 	fromBalance.Sub(&txParam.Amount)
 	toBalance.Add(&txParam.Amount)
-	store.SetBalance(t.GetSender(), fromBalance)
-	store.SetBalance(txParam.To, toBalance)
+	store.SetUDCBalance(udc, t.GetSender(), fromBalance)
+	store.SetUDCBalance(udc, txParam.To, toBalance)
 	return code.TxCodeOK, "ok", nil
 }

@@ -17,6 +17,7 @@ import (
 const (
 	defaultLockupPeriod   = uint64(1000000)
 	defaultMinStakingUnit = "1000000000000000000000000"
+	defaultMaxValidators  = uint64(100)
 )
 
 var (
@@ -27,6 +28,7 @@ var (
 	// config values from the app
 	ConfigLockupPeriod   = defaultLockupPeriod
 	ConfigMinStakingUnit = defaultMinStakingUnit
+	ConfigMaxValidators  = defaultMaxValidators
 )
 
 type Signature struct {
@@ -73,6 +75,7 @@ type TxToSign struct {
 
 func classifyTx(base TxBase) Tx {
 	var t Tx
+	// TODO: use err return from parseSomethingParam()
 	switch base.Type {
 	case "transfer":
 		param, _ := parseTransferParam(base.Payload)
@@ -137,6 +140,12 @@ func classifyTx(base TxBase) Tx {
 	case "revoke":
 		param, _ := parseRevokeParam(base.Payload)
 		t = &TxRevoke{
+			TxBase: base,
+			Param:  param,
+		}
+	case "issue":
+		param, _ := parseIssueParam(base.Payload)
+		t = &TxIssue{
 			TxBase: base,
 			Param:  param,
 		}

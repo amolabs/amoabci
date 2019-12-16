@@ -185,6 +185,7 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 	// TODO: use something more elegant
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
 	tx.ConfigMinStakingUnit = app.config.MinStakingUnit
+	tx.ConfigMaxValidators = app.config.MaxValidators
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -308,6 +309,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
 	tx.ConfigMinStakingUnit = app.config.MinStakingUnit
+	tx.ConfigMaxValidators = app.config.MaxValidators
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -594,6 +596,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 
 	tx.ConfigLockupPeriod = app.config.LockupPeriod
 	tx.ConfigMinStakingUnit = app.config.MinStakingUnit
+	tx.ConfigMaxValidators = app.config.MaxValidators
 
 	app.save()
 

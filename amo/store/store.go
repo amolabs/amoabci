@@ -373,7 +373,7 @@ func (s Store) checkStakeDeletion(holder crypto.Address, stake *types.Stake, hei
 			}
 
 			// check if this is the last stake
-			ts := s.GetTopStakes(2, false)
+			ts := s.GetTopStakes(2, nil, false)
 			if len(ts) == 1 {
 				// requested 2 but got 1. it means this is the last validator.
 				return code.TxErrLastValidator
@@ -831,7 +831,7 @@ func (s Store) GetEffStake(delegatee crypto.Address, committed bool) *types.Stak
 	return stake
 }
 
-func (s Store) GetTopStakes(max uint64, committed bool) []*types.Stake {
+func (s Store) GetTopStakes(max uint64, peek crypto.Address, committed bool) []*types.Stake {
 	var stakes []*types.Stake
 	var itr tmdb.Iterator = s.indexEffStake.ReverseIterator(nil, nil)
 	var cnt uint64 = 0
@@ -843,9 +843,17 @@ func (s Store) GetTopStakes(max uint64, committed bool) []*types.Stake {
 		var amount types.Currency
 		amount.SetBytes(key[:32])
 		holder := key[32:]
-		stake := s.GetStake(holder, committed)
-		stake.Amount = amount
-		stakes = append(stakes, stake)
+		// peeking mode
+		if len(peek) > 0 {
+			if bytes.Equal(holder, peek) {
+				stakes = append(stakes, s.GetStake(holder, committed))
+				return stakes
+			}
+		} else {
+			stake := s.GetStake(holder, committed)
+			stake.Amount = amount
+			stakes = append(stakes, stake)
+		}
 		cnt++
 		// TODO: assert GetEffStake() gives the same result
 	}
@@ -1046,7 +1054,7 @@ func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
 
 func (s Store) GetValidators(max uint64, committed bool) abci.ValidatorUpdates {
 	var vals abci.ValidatorUpdates
-	stakes := s.GetTopStakes(max, committed)
+	stakes := s.GetTopStakes(max, nil, committed)
 	adjFactor := calcAdjustFactor(stakes)
 	for _, stake := range stakes {
 		key := abci.PubKey{ // TODO
