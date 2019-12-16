@@ -465,7 +465,7 @@ func TestDelegate(t *testing.T) {
 	assert.Equal(t, *new(types.Currency).Set(303), es)
 
 	// test effective stake cache
-	ts := s.GetTopStakes(10, false)
+	ts := s.GetTopStakes(10, nil, false)
 	assert.Equal(t, 1, len(ts))
 	assert.Equal(t, s.GetEffStake(staker, false), ts[0])
 }
