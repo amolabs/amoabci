@@ -608,6 +608,7 @@ func TestValidStake(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 3000)
+	ConfigMinStakingUnit = "500"
 
 	// target
 	param := StakeParam{
@@ -628,7 +629,8 @@ func TestValidStake(t *testing.T) {
 func TestNonValidStake(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
-	s.SetBalanceUint64(alice.addr, 3000)
+	s.SetBalanceUint64(alice.addr, 1000)
+	ConfigMinStakingUnit = "500"
 
 	// target
 	param := StakeParam{
@@ -636,22 +638,37 @@ func TestNonValidStake(t *testing.T) {
 		Amount:    *new(types.Currency).Set(2000),
 	}
 	payload, _ := json.Marshal(param)
-	t1 := makeTestTx("stake", "eve", payload)
-
-	t2 := makeTestTx("stake", "alice", payload)
+	t1 := makeTestTx("stake", "alice", payload)
+	t2 := makeTestTx("stake", "bob", payload)
 
 	// test
 	rc, _, _ := t1.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 
 	// env
-	s.SetBalanceUint64(eve.addr, 2000)
+	s.SetBalanceUint64(alice.addr, 2000)
+
+	// test
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
+
+	// env
+	s.SetBalanceUint64(bob.addr, 2000)
 
 	// test
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
+
+	// env
+	param.Validator = cmn.RandBytes(32)
+	param.Amount.Set(2345)
+	payload, _ = json.Marshal(param)
+	t3 := makeTestTx("stake", "eve", payload)
+	s.SetBalanceUint64(eve.addr, 3000)
+
+	// test
+	rc, _, _ = t3.Execute(s)
+	assert.Equal(t, code.TxCodeImproperStakeAmount, rc)
 }
 
 func TestValidWithdraw(t *testing.T) {
@@ -746,6 +763,7 @@ func TestValidDelegate(t *testing.T) {
 		Validator: k,
 	})
 	s.SetBalanceUint64(bob.addr, 1000)
+	ConfigMinStakingUnit = "500"
 
 	// target
 	param := DelegateParam{
@@ -780,6 +798,7 @@ func TestNonValidDelegate(t *testing.T) {
 	})
 	s.SetBalanceUint64(alice.addr, 1000)
 	s.SetBalanceUint64(bob.addr, 1000)
+	ConfigMinStakingUnit = "500"
 
 	// test
 	payload, _ := json.Marshal(DelegateParam{
@@ -817,6 +836,14 @@ func TestNonValidDelegate(t *testing.T) {
 	t1 = makeTestTx("delegate", "alice", payload)
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeNoStake, rc)
+
+	payload, _ = json.Marshal(DelegateParam{
+		Amount: *new(types.Currency).Set(543),
+		To:     bob.addr,
+	})
+	t1 = makeTestTx("delegate", "alice", payload)
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeImproperStakeAmount, rc)
 }
 
 func TestValidRetract(t *testing.T) {
