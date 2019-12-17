@@ -61,7 +61,7 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	}
 	if !bytes.Equal(parcel.Owner, t.GetSender()) &&
 		!bytes.Equal(parcel.ProxyAccount, t.GetSender()) {
-		return code.TxCodePermissionDenied, "parcel not permitted", nil
+		return code.TxCodePermissionDenied, "permission denied", nil
 	}
 
 	if store.GetUsage(txParam.Grantee, txParam.Target, false) != nil {
