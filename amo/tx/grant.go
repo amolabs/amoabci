@@ -59,9 +59,11 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
-	if !bytes.Equal(parcel.Owner, t.GetSender()) {
-		return code.TxCodePermissionDenied, "parcel not owned", nil
+	if !bytes.Equal(parcel.Owner, t.GetSender()) &&
+		!bytes.Equal(parcel.ProxyAccount, t.GetSender()) {
+		return code.TxCodePermissionDenied, "parcel not permitted", nil
 	}
+
 	if store.GetUsage(txParam.Grantee, txParam.Target, false) != nil {
 		return code.TxCodeAlreadyGranted, "parcel already granted", nil
 	}
