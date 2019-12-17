@@ -9,7 +9,7 @@ type ParcelValue struct {
 	Owner        crypto.Address `json:"owner"`
 	Custody      cmn.HexBytes   `json:"custody"`
 	Info         cmn.HexBytes   `json:"info,omitempty"`
-	ProxyAccount cmn.HexBytes   `json:"proxy_account,omitempty"`
+	ProxyAccount crypto.Address `json:"proxy_account,omitempty"`
 }
 
 type ParcelValueEx struct {
