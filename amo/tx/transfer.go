@@ -54,7 +54,7 @@ func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	if txParam.Amount.Equals(zero) || txParam.Amount.LessThan(zero) {
+	if !txParam.Amount.GreaterThan(zero) {
 		return code.TxCodeUnavailableAmount, "unavailable amount", nil
 	}
 
