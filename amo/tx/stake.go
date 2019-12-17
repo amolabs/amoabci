@@ -52,8 +52,7 @@ func (t *TxStake) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	// check balance
-	if txParam.Amount.Equals(zero) || txParam.Amount.LessThan(zero) {
+	if !txParam.Amount.GreaterThan(zero) {
 		return code.TxCodeInvalidAmount, "invalid amount", nil
 	}
 
