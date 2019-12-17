@@ -1,6 +1,7 @@
 package tx
 
 import (
+	"bytes"
 	"encoding/json"
 
 	"github.com/tendermint/tendermint/crypto/ed25519"
@@ -75,9 +76,15 @@ func (t *TxStake) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 
 	balance.Sub(&txParam.Amount)
 
+	// just to check if existing validator key matches to the one of sender
+	stake := store.GetStake(t.GetSender(), false)
+	if stake != nil && !bytes.Equal(stake.Validator[:], txParam.Validator[:]) {
+		return code.TxCodePermissionDenied, "validator key mismatch", nil
+	}
+
 	var k ed25519.PubKeyEd25519
 	copy(k[:], txParam.Validator)
-	stake := &types.Stake{
+	stake = &types.Stake{
 		Amount:    txParam.Amount,
 		Validator: k,
 	}
