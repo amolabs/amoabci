@@ -11,8 +11,10 @@ import (
 )
 
 type RegisterParam struct {
-	Target  tm.HexBytes `json:"target"`
-	Custody tm.HexBytes `json:"custody"`
+	Target       tm.HexBytes `json:"target"`
+	Custody      tm.HexBytes `json:"custody"`
+	Info         tm.HexBytes `json:"info"`
+	ProxyAccount tm.HexBytes `json:"proxy_account"`
 	// TODO: extra info
 }
 
@@ -54,8 +56,10 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	}
 
 	parcel := types.ParcelValue{
-		Owner:   t.GetSender(),
-		Custody: txParam.Custody,
+		Owner:        t.GetSender(),
+		Custody:      txParam.Custody,
+		Info:         txParam.Info,
+		ProxyAccount: txParam.ProxyAccount,
 	}
 	store.SetParcel(txParam.Target, &parcel)
 	tags := []tm.KVPair{

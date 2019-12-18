@@ -51,8 +51,9 @@ func (t *TxDiscard) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
-	if !bytes.Equal(parcel.Owner, t.GetSender()) {
-		return code.TxCodePermissionDenied, "parcel not owned", nil
+	if !bytes.Equal(parcel.Owner, t.GetSender()) &&
+		!bytes.Equal(parcel.ProxyAccount, t.GetSender()) {
+		return code.TxCodePermissionDenied, "permission denied", nil
 	}
 
 	store.DeleteParcel(txParam.Target)

@@ -31,9 +31,12 @@ func newUser(privKey p256.PrivKeyP256) user {
 	}
 }
 
-var alice = newUser(p256.GenPrivKeyFromSecret([]byte("alice")))
-var bob = newUser(p256.GenPrivKeyFromSecret([]byte("bob")))
-var eve = newUser(p256.GenPrivKeyFromSecret([]byte("eve")))
+var (
+	alice = newUser(p256.GenPrivKeyFromSecret([]byte("alice")))
+	bob   = newUser(p256.GenPrivKeyFromSecret([]byte("bob")))
+	carol = newUser(p256.GenPrivKeyFromSecret([]byte("carol")))
+	eve   = newUser(p256.GenPrivKeyFromSecret([]byte("eve")))
+)
 
 var parcelID = []cmn.HexBytes{
 	[]byte{0xA, 0xA, 0xA, 0xA},
@@ -226,6 +229,12 @@ func TestValidDiscard(t *testing.T) {
 		Custody: custody[0],
 	})
 
+	s.SetParcel(parcelID[1], &types.ParcelValue{
+		Owner:        alice.addr,
+		Custody:      custody[1],
+		ProxyAccount: bob.addr,
+	})
+
 	// target
 	param := DiscardParam{
 		parcelID[0],
@@ -233,10 +242,21 @@ func TestValidDiscard(t *testing.T) {
 	payload, _ := json.Marshal(param)
 	t1 := makeTestTx("discard", "alice", payload)
 
+	param = DiscardParam{
+		parcelID[1],
+	}
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("discard", "bob", payload)
+
 	// test
 	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _ = t2.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 }
 
@@ -244,8 +264,9 @@ func TestNonValidDiscard(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[0], &types.ParcelValue{
-		Owner:   alice.addr,
-		Custody: custody[0],
+		Owner:        alice.addr,
+		Custody:      custody[0],
+		ProxyAccount: bob.addr,
 	})
 
 	// target
@@ -280,14 +301,29 @@ func TestValidGrant(t *testing.T) {
 		Payment: *new(types.Currency).Set(100),
 	})
 
+	s.SetParcel(parcelID[2], &types.ParcelValue{
+		Owner:        bob.addr,
+		Custody:      custody[2],
+		ProxyAccount: eve.addr,
+	})
+	s.SetRequest(alice.addr, parcelID[2], &types.RequestValue{
+		Payment: *new(types.Currency).Set(100),
+	})
+
 	// target
-	param := GrantParam{
+	payload, _ := json.Marshal(GrantParam{
 		Target:  parcelID[1],
 		Grantee: alice.addr,
 		Custody: custody[1],
-	}
-	payload, _ := json.Marshal(param)
+	})
 	t1 := makeTestTx("grant", "bob", payload)
+
+	payload, _ = json.Marshal(GrantParam{
+		Target:  parcelID[2],
+		Grantee: alice.addr,
+		Custody: custody[2],
+	})
+	t2 := makeTestTx("grant", "eve", payload)
 
 	// test
 	rc, _ := t1.Check()
@@ -295,14 +331,18 @@ func TestValidGrant(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestNonValidGrant(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[0], &types.ParcelValue{
-		Owner:   alice.addr,
-		Custody: custody[0],
+		Owner:        alice.addr,
+		Custody:      custody[0],
+		ProxyAccount: carol.addr,
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
@@ -325,12 +365,16 @@ func TestNonValidGrant(t *testing.T) {
 	}
 	payload, _ = json.Marshal(param)
 	t2 := makeTestTx("grant", "alice", payload)
+	t3 := makeTestTx("grant", "carol", payload)
 
 	// test
 	rc, _, _ := t1.Execute(s)
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
 
 	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
+
+	rc, _, _ = t3.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
 }
 
@@ -340,8 +384,9 @@ func TestValidRegister(t *testing.T) {
 
 	// target
 	param := RegisterParam{
-		Target:  parcelID[2],
-		Custody: custody[2],
+		Target:       parcelID[2],
+		Custody:      custody[2],
+		ProxyAccount: bob.addr,
 	}
 	payload, _ := json.Marshal(param)
 	t1 := makeTestTx("register", "alice", payload)
@@ -358,14 +403,16 @@ func TestNonValidRegister(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[0], &types.ParcelValue{
-		Owner:   alice.addr,
-		Custody: custody[0],
+		Owner:        alice.addr,
+		Custody:      custody[0],
+		ProxyAccount: bob.addr,
 	})
 
 	// target
 	param := RegisterParam{
-		Target:  parcelID[0],
-		Custody: custody[0],
+		Target:       parcelID[0],
+		Custody:      custody[0],
+		ProxyAccount: bob.addr,
 	}
 	payload, _ := json.Marshal(param)
 	t1 := makeTestTx("register", "alice", payload)
@@ -383,8 +430,9 @@ func TestValidRequest(t *testing.T) {
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 200)
 	s.SetParcel(parcelID[0], &types.ParcelValue{
-		Owner:   bob.addr,
-		Custody: custody[0],
+		Owner:        bob.addr,
+		Custody:      custody[0],
+		ProxyAccount: carol.addr,
 	})
 
 	// target
