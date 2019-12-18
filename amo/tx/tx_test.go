@@ -531,6 +531,15 @@ func TestValidRevoke(t *testing.T) {
 		Custody: custody[0],
 		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
+	s.SetParcel(parcelID[1], &types.ParcelValue{
+		Owner:        alice.addr,
+		Custody:      custody[1],
+		ProxyAccount: carol.addr,
+	})
+	s.SetUsage(bob.addr, parcelID[1], &types.UsageValue{
+		Custody: custody[1],
+		Exp:     time.Now().UTC().Add(24 * time.Hour),
+	})
 
 	// target
 	param := RevokeParam{
@@ -540,10 +549,22 @@ func TestValidRevoke(t *testing.T) {
 	payload, _ := json.Marshal(param)
 	t1 := makeTestTx("revoke", "alice", payload)
 
+	param = RevokeParam{
+		Grantee: bob.addr,
+		Target:  parcelID[1],
+	}
+	payload, _ = json.Marshal(param)
+	t2 := makeTestTx("revoke", "carol", payload)
+
 	// test
 	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _ = t2.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 }
 
@@ -551,8 +572,9 @@ func TestNonValidRevoke(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetParcel(parcelID[0], &types.ParcelValue{
-		Owner:   alice.addr,
-		Custody: custody[0],
+		Owner:        alice.addr,
+		Custody:      custody[0],
+		ProxyAccount: carol.addr,
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
