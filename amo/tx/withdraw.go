@@ -45,6 +45,10 @@ func (t *TxWithdraw) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
+	if !txParam.Amount.GreaterThan(zero) {
+		return code.TxCodeInvalidAmount, "invalid amount", nil
+	}
+
 	stake := store.GetStake(t.GetSender(), false)
 	if stake == nil {
 		return code.TxCodeNoStake, "no stake", nil

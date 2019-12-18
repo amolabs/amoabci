@@ -21,14 +21,13 @@ const (
 )
 
 var (
-	c = elliptic.P256()
-)
-
-var (
 	// config values from the app
 	ConfigLockupPeriod   = defaultLockupPeriod
 	ConfigMinStakingUnit = defaultMinStakingUnit
 	ConfigMaxValidators  = defaultMaxValidators
+
+	c    = elliptic.P256()
+	zero = new(types.Currency).Set(0)
 )
 
 type Signature struct {

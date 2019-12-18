@@ -53,6 +53,10 @@ func (t *TxStake) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
+	if !txParam.Amount.GreaterThan(zero) {
+		return code.TxCodeInvalidAmount, "invalid amount", nil
+	}
+
 	// check minimum staking unit first
 	tmp := new(types.Currency)
 	checkUnit, err := new(types.Currency).SetString(ConfigMinStakingUnit, 10)
@@ -65,26 +69,26 @@ func (t *TxStake) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeImproperStakeAmount, "improper stake amount", nil
 	}
 
-	// check balance
 	balance := store.GetBalance(t.GetSender(), false)
 	if balance.LessThan(&txParam.Amount) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 
 	balance.Sub(&txParam.Amount)
+
+	// just to check if existing validator key matches to the one of sender
 	stake := store.GetStake(t.GetSender(), false)
-	if stake == nil {
-		var k ed25519.PubKeyEd25519
-		copy(k[:], txParam.Validator)
-		stake = &types.Stake{
-			Amount:    txParam.Amount,
-			Validator: k,
-		}
-	} else if bytes.Equal(stake.Validator[:], txParam.Validator[:]) {
-		stake.Amount.Add(&txParam.Amount)
-	} else {
+	if stake != nil && !bytes.Equal(stake.Validator[:], txParam.Validator[:]) {
 		return code.TxCodePermissionDenied, "validator key mismatch", nil
 	}
+
+	var k ed25519.PubKeyEd25519
+	copy(k[:], txParam.Validator)
+	stake = &types.Stake{
+		Amount:    txParam.Amount,
+		Validator: k,
+	}
+
 	err = store.SetLockedStake(t.GetSender(), stake, int64(ConfigLockupPeriod))
 	if err != nil {
 		switch err {
@@ -100,6 +104,8 @@ func (t *TxStake) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 			return code.TxCodeUnknown, err.Error(), nil
 		}
 	}
+
 	store.SetBalance(t.GetSender(), balance)
+
 	return code.TxCodeOK, "ok", nil
 }
