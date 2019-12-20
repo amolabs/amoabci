@@ -14,9 +14,9 @@ import (
 
 type IssueParam struct {
 	Id        tm.HexBytes      `json:"id"`        // required
-	Operators []crypto.Address `json:"operators"` // optional
 	Desc      string           `json:"desc"`      // optional
-	Total     types.Currency   `json:"total"`     // required
+	Operators []crypto.Address `json:"operators"` // optional
+	Amount    types.Currency   `json:"amount"`    // required
 }
 
 func parseIssueParam(raw []byte) (IssueParam, error) {
@@ -58,14 +58,13 @@ func (t *TxIssue) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 			return code.TxCodePermissionDenied, "permission denied", nil
 		}
 		udc = &types.UDC{
-			Id:        param.Id,
-			Issuer:    sender,
+			Owner:     sender,
 			Operators: param.Operators,
 			Desc:      param.Desc,
-			Total:     param.Total,
+			Total:     param.Amount,
 		}
 	} else {
-		if bytes.Equal(sender, udc.Issuer) == false {
+		if bytes.Equal(sender, udc.Owner) == false {
 			match := false
 			for _, op := range udc.Operators {
 				if bytes.Equal(sender, op) {
@@ -80,20 +79,20 @@ func (t *TxIssue) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 		// update fields
 		udc.Operators = param.Operators
 		udc.Desc = param.Desc
-		udc.Total.Add(&param.Total)
+		udc.Total.Add(&param.Amount)
 	}
 	// update UDC balance
-	bal := s.GetUDCBalance(udc.Id, sender, false)
+	bal := s.GetUDCBalance(param.Id, sender, false)
 	if bal == nil {
 		bal = new(types.Currency)
 	}
-	after := bal.Add(&param.Total)
-	err := s.SetUDCBalance(udc.Id, sender, after)
+	after := bal.Add(&param.Amount)
+	err := s.SetUDCBalance(param.Id, sender, after)
 	if err != nil {
 		return code.TxCodeUnknown, err.Error(), nil
 	}
 	// store UDC registry
-	err = s.SetUDC(udc.Id, udc)
+	err = s.SetUDC(param.Id, udc)
 	if err != nil {
 		return code.TxCodeUnknown, err.Error(), nil
 	}

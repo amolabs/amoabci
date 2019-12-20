@@ -16,19 +16,18 @@ func TestUDCSetGet(t *testing.T) {
 	assert.NotNil(t, s)
 
 	mycoin := &types.UDC{
-		[]byte("mycoin"),
 		makeAccAddr("issuer"),
+		"mycoin for test",
 		[]crypto.Address{
 			makeAccAddr("op1"),
 			makeAccAddr("op2"),
 		},
-		"mycoin for test",
 		*new(types.Currency).SetAMO(100),
 	}
 	assert.NotNil(t, mycoin)
 
 	// save and load
-	assert.NoError(t, s.SetUDC(mycoin.Id, mycoin))
+	assert.NoError(t, s.SetUDC([]byte("mycoin"), mycoin))
 
 	udc := s.GetUDC([]byte("mycoin"), true)
 	assert.Nil(t, udc)

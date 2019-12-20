@@ -20,7 +20,7 @@ func makeAccAddr(seed string) crypto.Address {
 }
 
 func TestParseIssue(t *testing.T) {
-	payload := []byte(`{"id":"ff3e","operators":["99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"],"desc":"mycoin","total":"1000000"}`)
+	payload := []byte(`{"id":"ff3e","operators":["99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"],"desc":"mycoin","amount":"1000000"}`)
 
 	var operator cmn.HexBytes
 	err := json.Unmarshal(
@@ -33,7 +33,7 @@ func TestParseIssue(t *testing.T) {
 		Id:        []byte{0xff, 0x3e},
 		Operators: []crypto.Address{operator},
 		Desc:      "mycoin",
-		Total:     *new(types.Currency).Set(1000000),
+		Amount:    *new(types.Currency).Set(1000000),
 	}
 	txParam, err := parseIssueParam(payload)
 	assert.NoError(t, err)
@@ -49,7 +49,7 @@ func TestTxIssue(t *testing.T) {
 		Id:        []byte("mycoin"),
 		Operators: []crypto.Address{makeAccAddr("oper1")},
 		Desc:      "mycoin",
-		Total:     *new(types.Currency).Set(1000000),
+		Amount:    *new(types.Currency).Set(1000000),
 	}
 	payload, _ := json.Marshal(param)
 
@@ -91,7 +91,7 @@ func TestTxIssue(t *testing.T) {
 		Id:        []byte("mycoin"),
 		Operators: []crypto.Address{makeAccAddr("oper2")},
 		Desc:      "my own coin",
-		Total:     *new(types.Currency).Set(0),
+		Amount:    *new(types.Currency).Set(0),
 	}
 	payload, _ = json.Marshal(param)
 	tx = makeTestTx("issue", "oper1", payload)
@@ -126,7 +126,7 @@ func TestTxUDCBalance(t *testing.T) {
 		Id:        []byte("mycoin"),
 		Operators: []crypto.Address{makeAccAddr("oper1")},
 		Desc:      "mycoin",
-		Total:     amoM,
+		Amount:    amoM,
 	}
 	payload, _ := json.Marshal(param)
 	tx := makeTestTx("issue", "issuer", payload)
@@ -135,7 +135,7 @@ func TestTxUDCBalance(t *testing.T) {
 	udc := s.GetUDC([]byte("mycoin"), false)
 	assert.NotNil(t, udc)
 	assert.Equal(t, amoM, udc.Total)
-	bal := s.GetUDCBalance(udc.Id, issuer, false)
+	bal := s.GetUDCBalance(param.Id, issuer, false)
 	assert.Equal(t, &amoM, bal)
 
 	// issue more
@@ -143,7 +143,7 @@ func TestTxUDCBalance(t *testing.T) {
 		Id:        []byte("mycoin"),
 		Operators: nil,
 		Desc:      "mycoin",
-		Total:     amoK,
+		Amount:    amoK,
 	}
 	payload, _ = json.Marshal(param)
 	tx = makeTestTx("issue", "issuer", payload)
@@ -152,7 +152,7 @@ func TestTxUDCBalance(t *testing.T) {
 	tmp := types.Currency{}
 	tmp.Add(&amoM)
 	tmp.Add(&amoK)
-	bal = s.GetUDCBalance(udc.Id, issuer, false)
+	bal = s.GetUDCBalance(param.Id, issuer, false)
 	assert.Equal(t, &tmp, bal)
 
 	// non-UDC balance

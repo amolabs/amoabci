@@ -2,13 +2,11 @@ package types
 
 import (
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 type UDC struct {
-	Id        cmn.HexBytes     `json:"id"`        // required // TODO: remove
-	Issuer    crypto.Address   `json:"owner"`     // required
-	Operators []crypto.Address `json:"operators"` // optional
+	Owner     crypto.Address   `json:"owner"`     // required
 	Desc      string           `json:"desc"`      // optional
+	Operators []crypto.Address `json:"operators"` // optional
 	Total     Currency         `json:"total"`     // required
 }
