@@ -60,6 +60,8 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		Custody:      txParam.Custody,
 		Info:         txParam.Info,
 		ProxyAccount: txParam.ProxyAccount,
+
+		Register: t.getPayload(),
 	}
 	store.SetParcel(txParam.Target, &parcel)
 	tags := []tm.KVPair{

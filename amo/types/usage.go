@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/tendermint/tendermint/crypto"
@@ -10,6 +11,10 @@ import (
 type UsageValue struct {
 	Custody cmn.HexBytes `json:"custody"`
 	Exp     time.Time    `json:"exp"`
+
+	Register json.RawMessage `json:"register"`
+	Request  json.RawMessage `json:"request"`
+	Grant    json.RawMessage `json:"grant"`
 }
 
 type UsageValueEx struct {

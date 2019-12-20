@@ -293,37 +293,60 @@ func TestNonValidDiscard(t *testing.T) {
 func TestValidGrant(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+
+	registerPayload1, err := json.Marshal("register_payload_1")
+	assert.NoError(t, err)
+	requestPayload1, err := json.Marshal("request_payload_1")
+	assert.NoError(t, err)
+
+	registerPayload2, err := json.Marshal("register_payload_2")
+	assert.NoError(t, err)
+	requestPayload2, err := json.Marshal("request_payload_2")
+	assert.NoError(t, err)
+
 	s.SetParcel(parcelID[1], &types.ParcelValue{
 		Owner:   bob.addr,
 		Custody: custody[1],
+
+		Register: registerPayload1,
 	})
+
 	s.SetRequest(alice.addr, parcelID[1], &types.RequestValue{
 		Payment: *new(types.Currency).Set(100),
+
+		Register: registerPayload1,
+		Request:  requestPayload1,
 	})
 
 	s.SetParcel(parcelID[2], &types.ParcelValue{
 		Owner:        bob.addr,
 		Custody:      custody[2],
 		ProxyAccount: eve.addr,
+
+		Register: registerPayload2,
 	})
+
 	s.SetRequest(alice.addr, parcelID[2], &types.RequestValue{
 		Payment: *new(types.Currency).Set(100),
+
+		Register: registerPayload2,
+		Request:  requestPayload2,
 	})
 
 	// target
-	payload, _ := json.Marshal(GrantParam{
+	grantPayload1, _ := json.Marshal(GrantParam{
 		Target:  parcelID[1],
 		Grantee: alice.addr,
 		Custody: custody[1],
 	})
-	t1 := makeTestTx("grant", "bob", payload)
+	t1 := makeTestTx("grant", "bob", grantPayload1)
 
-	payload, _ = json.Marshal(GrantParam{
+	grantPayload2, _ := json.Marshal(GrantParam{
 		Target:  parcelID[2],
 		Grantee: alice.addr,
 		Custody: custody[2],
 	})
-	t2 := makeTestTx("grant", "eve", payload)
+	t2 := makeTestTx("grant", "eve", grantPayload2)
 
 	// test
 	rc, _ := t1.Check()
@@ -334,6 +357,17 @@ func TestValidGrant(t *testing.T) {
 
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
+
+	grant1 := s.GetUsage(alice.addr, parcelID[1], false)
+	grant2 := s.GetUsage(alice.addr, parcelID[2], false)
+
+	assert.Equal(t, registerPayload1, []byte(grant1.Register))
+	assert.Equal(t, requestPayload1, []byte(grant1.Request))
+	assert.Equal(t, grantPayload1, []byte(grant1.Grant))
+
+	assert.Equal(t, registerPayload2, []byte(grant2.Register))
+	assert.Equal(t, requestPayload2, []byte(grant2.Request))
+	assert.Equal(t, grantPayload2, []byte(grant2.Grant))
 }
 
 func TestNonValidGrant(t *testing.T) {
@@ -388,8 +422,8 @@ func TestValidRegister(t *testing.T) {
 		Custody:      custody[2],
 		ProxyAccount: bob.addr,
 	}
-	payload, _ := json.Marshal(param)
-	t1 := makeTestTx("register", "alice", payload)
+	registerPayload, _ := json.Marshal(param)
+	t1 := makeTestTx("register", "alice", registerPayload)
 
 	// test
 	rc, _ := t1.Check()
@@ -397,6 +431,9 @@ func TestValidRegister(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
+
+	parcel := s.GetParcel(parcelID[2], false)
+	assert.Equal(t, registerPayload, []byte(parcel.Register))
 }
 
 func TestNonValidRegister(t *testing.T) {
@@ -429,10 +466,16 @@ func TestValidRequest(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 200)
+
+	registerPayload, err := json.Marshal("register_payload")
+	assert.NoError(t, err)
+
 	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:        bob.addr,
 		Custody:      custody[0],
 		ProxyAccount: carol.addr,
+
+		Register: registerPayload,
 	})
 
 	// target
@@ -440,8 +483,9 @@ func TestValidRequest(t *testing.T) {
 		Target:  parcelID[0],
 		Payment: *new(types.Currency).Set(200),
 	}
-	payload, _ := json.Marshal(param)
-	t1 := makeTestTx("request", "alice", payload)
+	requestPayload, _ := json.Marshal(param)
+
+	t1 := makeTestTx("request", "alice", requestPayload)
 
 	// test
 	rc, _ := t1.Check()
@@ -449,6 +493,10 @@ func TestValidRequest(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
+
+	request := s.GetRequest(makeAccAddr("alice"), parcelID[0], false)
+	assert.Equal(t, registerPayload, []byte(request.Register))
+	assert.Equal(t, requestPayload, []byte(request.Request))
 }
 
 func TestNonValidRequest(t *testing.T) {

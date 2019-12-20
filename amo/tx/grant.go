@@ -76,10 +76,16 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	balance := store.GetBalance(t.GetSender(), false)
 	balance.Add(&request.Payment)
 	store.SetBalance(t.GetSender(), balance)
+
 	usage := types.UsageValue{
 		Custody: txParam.Custody,
+
+		Register: request.Register,
+		Request:  request.Request,
+		Grant:    t.getPayload(),
 	}
 	store.SetUsage(txParam.Grantee, txParam.Target, &usage)
+
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}

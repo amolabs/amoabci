@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"testing"
 	"time"
@@ -53,6 +54,8 @@ func makeParcel(seed string, custody []byte) *types.ParcelValue {
 		Owner:   makeAccAddr(seed),
 		Custody: custody,
 		Info:    []byte("dummy parcel"),
+
+		Register: json.RawMessage("null"),
 	}
 }
 
@@ -120,6 +123,8 @@ func TestParcel(t *testing.T) {
 		Owner:   testAddr,
 		Custody: custody,
 		Info:    []byte("test"),
+
+		Register: json.RawMessage("null"),
 	}
 	parcelID := cmn.RandBytes(32)
 	s.SetParcel(parcelID, &parcelInput)
@@ -138,6 +143,9 @@ func TestRequest(t *testing.T) {
 	requestInput := types.RequestValue{
 		Payment: *new(types.Currency).Set(100),
 		Exp:     exp,
+
+		Register: json.RawMessage("null"),
+		Request:  json.RawMessage("null"),
 	}
 	s.SetRequest(testAddr, parcelID, &requestInput)
 	requestOutput := s.GetRequest(testAddr, parcelID, false)
@@ -158,6 +166,10 @@ func TestUsage(t *testing.T) {
 	usageInput := types.UsageValue{
 		Custody: custody,
 		Exp:     exp,
+
+		Register: json.RawMessage("null"),
+		Request:  json.RawMessage("null"),
+		Grant:    json.RawMessage("null"),
 	}
 	s.SetUsage(testAddr, parcelID, &usageInput)
 	usageOutput := s.GetUsage(testAddr, parcelID, false)
@@ -559,7 +571,7 @@ func TestMerkleTree(t *testing.T) {
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 
 	// make transactions to put into merkleTree
-	hash := "8019daa70792ac5db4f4418add9d7504c8c4d63b06f8bbea02cc4bfbbd2f77fe"
+	hash := "9ccb3198b54f2275373e5ef69b7bee7d8b62be4d1b1a8db5876df6c15dd9ff2d"
 	expectedHash, err := hex.DecodeString(hash)
 	assert.NoError(t, err)
 

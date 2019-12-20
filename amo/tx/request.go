@@ -68,10 +68,14 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	balance := store.GetBalance(t.GetSender(), false)
 	balance.Sub(&txParam.Payment)
 	store.SetBalance(t.GetSender(), balance)
+
 	request := types.RequestValue{
-		Payment: txParam.Payment,
+		Payment:  txParam.Payment,
+		Register: parcel.Register,
+		Request:  t.getPayload(),
 	}
 	store.SetRequest(t.GetSender(), txParam.Target, &request)
+
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}
