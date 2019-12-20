@@ -181,7 +181,6 @@ func TestQueryParcel(t *testing.T) {
 	parcel := types.ParcelValue{
 		Owner:   addr,
 		Custody: cmn.RandBytes(32),
-		Info:    []byte("This is test parcel value"),
 	}
 
 	request := types.RequestValue{

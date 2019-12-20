@@ -294,28 +294,36 @@ func TestValidGrant(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 
-	registerPayload1, err := json.Marshal("register_payload_1")
+	regExt1, err := json.Marshal("regExt1")
 	assert.NoError(t, err)
-	requestPayload1, err := json.Marshal("request_payload_1")
+	reqExt1, err := json.Marshal("reqExt1")
+	assert.NoError(t, err)
+	grtExt1, err := json.Marshal("grtExt1")
 	assert.NoError(t, err)
 
-	registerPayload2, err := json.Marshal("register_payload_2")
+	regExt2, err := json.Marshal("regExt2")
 	assert.NoError(t, err)
-	requestPayload2, err := json.Marshal("request_payload_2")
+	reqExt2, err := json.Marshal("reqExt2")
+	assert.NoError(t, err)
+	grtExt2, err := json.Marshal("grtExt2")
 	assert.NoError(t, err)
 
 	s.SetParcel(parcelID[1], &types.ParcelValue{
 		Owner:   bob.addr,
 		Custody: custody[1],
 
-		Register: registerPayload1,
+		Extra: types.Extra{
+			Register: regExt1,
+		},
 	})
 
 	s.SetRequest(alice.addr, parcelID[1], &types.RequestValue{
 		Payment: *new(types.Currency).Set(100),
 
-		Register: registerPayload1,
-		Request:  requestPayload1,
+		Extra: types.Extra{
+			Register: regExt1,
+			Request:  reqExt1,
+		},
 	})
 
 	s.SetParcel(parcelID[2], &types.ParcelValue{
@@ -323,30 +331,38 @@ func TestValidGrant(t *testing.T) {
 		Custody:      custody[2],
 		ProxyAccount: eve.addr,
 
-		Register: registerPayload2,
+		Extra: types.Extra{
+			Register: regExt2,
+		},
 	})
 
 	s.SetRequest(alice.addr, parcelID[2], &types.RequestValue{
 		Payment: *new(types.Currency).Set(100),
 
-		Register: registerPayload2,
-		Request:  requestPayload2,
+		Extra: types.Extra{
+			Register: regExt2,
+			Request:  reqExt2,
+		},
 	})
 
 	// target
-	grantPayload1, _ := json.Marshal(GrantParam{
+	payload, _ := json.Marshal(GrantParam{
 		Target:  parcelID[1],
 		Grantee: alice.addr,
 		Custody: custody[1],
-	})
-	t1 := makeTestTx("grant", "bob", grantPayload1)
 
-	grantPayload2, _ := json.Marshal(GrantParam{
+		Extra: grtExt1,
+	})
+	t1 := makeTestTx("grant", "bob", payload)
+
+	payload, _ = json.Marshal(GrantParam{
 		Target:  parcelID[2],
 		Grantee: alice.addr,
 		Custody: custody[2],
+
+		Extra: grtExt2,
 	})
-	t2 := makeTestTx("grant", "eve", grantPayload2)
+	t2 := makeTestTx("grant", "eve", payload)
 
 	// test
 	rc, _ := t1.Check()
@@ -361,13 +377,13 @@ func TestValidGrant(t *testing.T) {
 	grant1 := s.GetUsage(alice.addr, parcelID[1], false)
 	grant2 := s.GetUsage(alice.addr, parcelID[2], false)
 
-	assert.Equal(t, registerPayload1, []byte(grant1.Register))
-	assert.Equal(t, requestPayload1, []byte(grant1.Request))
-	assert.Equal(t, grantPayload1, []byte(grant1.Grant))
+	assert.Equal(t, regExt1, []byte(grant1.Register))
+	assert.Equal(t, reqExt1, []byte(grant1.Request))
+	assert.Equal(t, grtExt1, []byte(grant1.Grant))
 
-	assert.Equal(t, registerPayload2, []byte(grant2.Register))
-	assert.Equal(t, requestPayload2, []byte(grant2.Request))
-	assert.Equal(t, grantPayload2, []byte(grant2.Grant))
+	assert.Equal(t, regExt2, []byte(grant2.Register))
+	assert.Equal(t, reqExt2, []byte(grant2.Request))
+	assert.Equal(t, grtExt2, []byte(grant2.Grant))
 }
 
 func TestNonValidGrant(t *testing.T) {
@@ -416,14 +432,19 @@ func TestValidRegister(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 
+	regExt, err := json.Marshal("regExt")
+	assert.NoError(t, err)
+
 	// target
 	param := RegisterParam{
 		Target:       parcelID[2],
 		Custody:      custody[2],
 		ProxyAccount: bob.addr,
+
+		Extra: regExt,
 	}
-	registerPayload, _ := json.Marshal(param)
-	t1 := makeTestTx("register", "alice", registerPayload)
+	payload, _ := json.Marshal(param)
+	t1 := makeTestTx("register", "alice", payload)
 
 	// test
 	rc, _ := t1.Check()
@@ -433,7 +454,7 @@ func TestValidRegister(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 
 	parcel := s.GetParcel(parcelID[2], false)
-	assert.Equal(t, registerPayload, []byte(parcel.Register))
+	assert.Equal(t, regExt, []byte(parcel.Register))
 }
 
 func TestNonValidRegister(t *testing.T) {
@@ -467,7 +488,9 @@ func TestValidRequest(t *testing.T) {
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 200)
 
-	registerPayload, err := json.Marshal("register_payload")
+	regExt, err := json.Marshal("regExt")
+	assert.NoError(t, err)
+	reqExt, err := json.Marshal("reqExt")
 	assert.NoError(t, err)
 
 	s.SetParcel(parcelID[0], &types.ParcelValue{
@@ -475,17 +498,21 @@ func TestValidRequest(t *testing.T) {
 		Custody:      custody[0],
 		ProxyAccount: carol.addr,
 
-		Register: registerPayload,
+		Extra: types.Extra{
+			Register: regExt,
+		},
 	})
 
 	// target
 	param := RequestParam{
 		Target:  parcelID[0],
 		Payment: *new(types.Currency).Set(200),
-	}
-	requestPayload, _ := json.Marshal(param)
 
-	t1 := makeTestTx("request", "alice", requestPayload)
+		Extra: reqExt,
+	}
+	payload, _ := json.Marshal(param)
+
+	t1 := makeTestTx("request", "alice", payload)
 
 	// test
 	rc, _ := t1.Check()
@@ -495,8 +522,8 @@ func TestValidRequest(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 
 	request := s.GetRequest(makeAccAddr("alice"), parcelID[0], false)
-	assert.Equal(t, registerPayload, []byte(request.Register))
-	assert.Equal(t, requestPayload, []byte(request.Request))
+	assert.Equal(t, regExt, []byte(request.Extra.Register))
+	assert.Equal(t, reqExt, []byte(request.Extra.Request))
 }
 
 func TestNonValidRequest(t *testing.T) {

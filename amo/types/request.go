@@ -1,7 +1,6 @@
 package types
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/tendermint/tendermint/crypto"
@@ -11,8 +10,7 @@ type RequestValue struct {
 	Payment Currency  `json:"payment"`
 	Exp     time.Time `json:"exp"`
 
-	Register json.RawMessage `json:"register"`
-	Request  json.RawMessage `json:"request"`
+	Extra `json:"extra,omitempty"`
 }
 
 type RequestValueEx struct {

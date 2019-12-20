@@ -7,13 +7,18 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
+type Extra struct {
+	Register json.RawMessage `json:"register,omitempty"`
+	Request  json.RawMessage `json:"request,omitempty"`
+	Grant    json.RawMessage `json:"grant,omitempty"`
+}
+
 type ParcelValue struct {
 	Owner        crypto.Address `json:"owner"`
 	Custody      cmn.HexBytes   `json:"custody"`
-	Info         cmn.HexBytes   `json:"info,omitempty"`
 	ProxyAccount crypto.Address `json:"proxy_account,omitempty"`
 
-	Register json.RawMessage `json:"register"`
+	Extra `json:"extra,omitempty"`
 }
 
 type ParcelValueEx struct {
