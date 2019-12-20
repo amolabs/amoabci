@@ -16,6 +16,8 @@ type GrantParam struct {
 	Target  tm.HexBytes    `json:"target"`
 	Grantee crypto.Address `json:"grantee"`
 	Custody tm.HexBytes    `json:"custody"`
+
+	Extra json.RawMessage `json:"extra"`
 }
 
 func parseGrantParam(raw []byte) (GrantParam, error) {
@@ -76,10 +78,18 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	balance := store.GetBalance(t.GetSender(), false)
 	balance.Add(&request.Payment)
 	store.SetBalance(t.GetSender(), balance)
+
 	usage := types.UsageValue{
 		Custody: txParam.Custody,
+
+		Extra: types.Extra{
+			Register: request.Extra.Register,
+			Request:  request.Extra.Request,
+			Grant:    txParam.Extra,
+		},
 	}
 	store.SetUsage(txParam.Grantee, txParam.Target, &usage)
+
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}

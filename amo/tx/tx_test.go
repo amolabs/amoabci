@@ -3,7 +3,6 @@ package tx
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/crypto"
@@ -89,7 +88,6 @@ func getTestStore() *store.Store {
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
@@ -293,21 +291,56 @@ func TestNonValidDiscard(t *testing.T) {
 func TestValidGrant(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+
+	regExt1, err := json.Marshal("regExt1")
+	assert.NoError(t, err)
+	reqExt1, err := json.Marshal("reqExt1")
+	assert.NoError(t, err)
+	grtExt1, err := json.Marshal("grtExt1")
+	assert.NoError(t, err)
+
+	regExt2, err := json.Marshal("regExt2")
+	assert.NoError(t, err)
+	reqExt2, err := json.Marshal("reqExt2")
+	assert.NoError(t, err)
+	grtExt2, err := json.Marshal("grtExt2")
+	assert.NoError(t, err)
+
 	s.SetParcel(parcelID[1], &types.ParcelValue{
 		Owner:   bob.addr,
 		Custody: custody[1],
+
+		Extra: types.Extra{
+			Register: regExt1,
+		},
 	})
+
 	s.SetRequest(alice.addr, parcelID[1], &types.RequestValue{
 		Payment: *new(types.Currency).Set(100),
+
+		Extra: types.Extra{
+			Register: regExt1,
+			Request:  reqExt1,
+		},
 	})
 
 	s.SetParcel(parcelID[2], &types.ParcelValue{
 		Owner:        bob.addr,
 		Custody:      custody[2],
 		ProxyAccount: eve.addr,
+
+		Extra: types.Extra{
+			Register: regExt2,
+		},
 	})
+
 	s.SetRequest(alice.addr, parcelID[2], &types.RequestValue{
 		Payment: *new(types.Currency).Set(100),
+
+		Extra: types.Extra{
+			Register: regExt2,
+			Request:  reqExt2,
+		},
 	})
 
 	// target
@@ -315,6 +348,8 @@ func TestValidGrant(t *testing.T) {
 		Target:  parcelID[1],
 		Grantee: alice.addr,
 		Custody: custody[1],
+
+		Extra: grtExt1,
 	})
 	t1 := makeTestTx("grant", "bob", payload)
 
@@ -322,6 +357,8 @@ func TestValidGrant(t *testing.T) {
 		Target:  parcelID[2],
 		Grantee: alice.addr,
 		Custody: custody[2],
+
+		Extra: grtExt2,
 	})
 	t2 := makeTestTx("grant", "eve", payload)
 
@@ -334,6 +371,17 @@ func TestValidGrant(t *testing.T) {
 
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
+
+	grant1 := s.GetUsage(alice.addr, parcelID[1], false)
+	grant2 := s.GetUsage(alice.addr, parcelID[2], false)
+
+	assert.Equal(t, regExt1, []byte(grant1.Extra.Register))
+	assert.Equal(t, reqExt1, []byte(grant1.Extra.Request))
+	assert.Equal(t, grtExt1, []byte(grant1.Extra.Grant))
+
+	assert.Equal(t, regExt2, []byte(grant2.Extra.Register))
+	assert.Equal(t, reqExt2, []byte(grant2.Extra.Request))
+	assert.Equal(t, grtExt2, []byte(grant2.Extra.Grant))
 }
 
 func TestNonValidGrant(t *testing.T) {
@@ -346,7 +394,6 @@ func TestNonValidGrant(t *testing.T) {
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 
 	// target
@@ -382,11 +429,16 @@ func TestValidRegister(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 
+	regExt, err := json.Marshal("regExt")
+	assert.NoError(t, err)
+
 	// target
 	param := RegisterParam{
 		Target:       parcelID[2],
 		Custody:      custody[2],
 		ProxyAccount: bob.addr,
+
+		Extra: regExt,
 	}
 	payload, _ := json.Marshal(param)
 	t1 := makeTestTx("register", "alice", payload)
@@ -397,6 +449,9 @@ func TestValidRegister(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
+
+	parcel := s.GetParcel(parcelID[2], false)
+	assert.Equal(t, regExt, []byte(parcel.Extra.Register))
 }
 
 func TestNonValidRegister(t *testing.T) {
@@ -429,18 +484,31 @@ func TestValidRequest(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 200)
+
+	regExt, err := json.Marshal("regExt")
+	assert.NoError(t, err)
+	reqExt, err := json.Marshal("reqExt")
+	assert.NoError(t, err)
+
 	s.SetParcel(parcelID[0], &types.ParcelValue{
 		Owner:        bob.addr,
 		Custody:      custody[0],
 		ProxyAccount: carol.addr,
+
+		Extra: types.Extra{
+			Register: regExt,
+		},
 	})
 
 	// target
 	param := RequestParam{
 		Target:  parcelID[0],
 		Payment: *new(types.Currency).Set(200),
+
+		Extra: reqExt,
 	}
 	payload, _ := json.Marshal(param)
+
 	t1 := makeTestTx("request", "alice", payload)
 
 	// test
@@ -449,6 +517,10 @@ func TestValidRequest(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
+
+	request := s.GetRequest(makeAccAddr("alice"), parcelID[0], false)
+	assert.Equal(t, regExt, []byte(request.Extra.Register))
+	assert.Equal(t, reqExt, []byte(request.Extra.Request))
 }
 
 func TestNonValidRequest(t *testing.T) {
@@ -474,7 +546,6 @@ func TestNonValidRequest(t *testing.T) {
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 
 	// target
@@ -529,7 +600,6 @@ func TestValidRevoke(t *testing.T) {
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 	s.SetParcel(parcelID[1], &types.ParcelValue{
 		Owner:        alice.addr,
@@ -538,7 +608,6 @@ func TestValidRevoke(t *testing.T) {
 	})
 	s.SetUsage(bob.addr, parcelID[1], &types.UsageValue{
 		Custody: custody[1],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 
 	// target
@@ -578,7 +647,6 @@ func TestNonValidRevoke(t *testing.T) {
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 
 	// target
