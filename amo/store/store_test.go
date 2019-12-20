@@ -53,7 +53,6 @@ func makeParcel(seed string, custody []byte) *types.ParcelValue {
 	return &types.ParcelValue{
 		Owner:   makeAccAddr(seed),
 		Custody: custody,
-
 		Extra: types.Extra{
 			Register: json.RawMessage("null"),
 		},
@@ -123,7 +122,6 @@ func TestParcel(t *testing.T) {
 	parcelInput := types.ParcelValue{
 		Owner:   testAddr,
 		Custody: custody,
-
 		Extra: types.Extra{
 			Register: json.RawMessage("null"),
 		},
@@ -140,12 +138,8 @@ func TestRequest(t *testing.T) {
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := cmn.RandBytes(32)
-	exp := time.Now().UTC()
-	exp = exp.Add(100 * time.Minute)
 	requestInput := types.RequestValue{
 		Payment: *new(types.Currency).Set(100),
-		Exp:     exp,
-
 		Extra: types.Extra{
 			Register: json.RawMessage("null"),
 			Request:  json.RawMessage("null"),
@@ -154,8 +148,6 @@ func TestRequest(t *testing.T) {
 	s.SetRequest(testAddr, parcelID, &requestInput)
 	requestOutput := s.GetRequest(testAddr, parcelID, false)
 	assert.Equal(t, requestInput.Payment, (*requestOutput).Payment)
-	assert.Equal(t, requestInput.Exp.Unix(), (*requestOutput).Exp.Unix())
-	assert.False(t, requestOutput.IsExpired())
 	t.Log(requestInput)
 	t.Log(*requestOutput)
 }
@@ -169,8 +161,6 @@ func TestUsage(t *testing.T) {
 	exp = exp.Add(100 * time.Minute)
 	usageInput := types.UsageValue{
 		Custody: custody,
-		Exp:     exp,
-
 		Extra: types.Extra{
 			Register: json.RawMessage("null"),
 			Request:  json.RawMessage("null"),
@@ -180,8 +170,6 @@ func TestUsage(t *testing.T) {
 	s.SetUsage(testAddr, parcelID, &usageInput)
 	usageOutput := s.GetUsage(testAddr, parcelID, false)
 	assert.Equal(t, usageInput.Custody, (*usageOutput).Custody)
-	assert.Equal(t, usageInput.Exp.Unix(), (*usageOutput).Exp.Unix())
-	assert.False(t, usageOutput.IsExpired())
 	t.Log(usageInput)
 	t.Log(*usageOutput)
 }

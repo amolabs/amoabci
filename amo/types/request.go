@@ -1,23 +1,15 @@
 package types
 
 import (
-	"time"
-
 	"github.com/tendermint/tendermint/crypto"
 )
 
 type RequestValue struct {
-	Payment Currency  `json:"payment"`
-	Exp     time.Time `json:"exp"`
-
-	Extra `json:"extra,omitempty"`
+	Payment Currency `json:"payment"`
+	Extra   Extra    `json:"extra,omitempty"`
 }
 
 type RequestValueEx struct {
 	*RequestValue
 	Buyer crypto.Address `json:"buyer"`
-}
-
-func (value RequestValue) IsExpired() bool {
-	return value.Exp.Before(time.Now())
 }

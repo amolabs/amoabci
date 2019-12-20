@@ -3,7 +3,6 @@ package tx
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/crypto"
@@ -89,7 +88,6 @@ func getTestStore() *store.Store {
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 	var k ed25519.PubKeyEd25519
 	copy(k[:], cmn.RandBytes(32))
@@ -377,13 +375,13 @@ func TestValidGrant(t *testing.T) {
 	grant1 := s.GetUsage(alice.addr, parcelID[1], false)
 	grant2 := s.GetUsage(alice.addr, parcelID[2], false)
 
-	assert.Equal(t, regExt1, []byte(grant1.Register))
-	assert.Equal(t, reqExt1, []byte(grant1.Request))
-	assert.Equal(t, grtExt1, []byte(grant1.Grant))
+	assert.Equal(t, regExt1, []byte(grant1.Extra.Register))
+	assert.Equal(t, reqExt1, []byte(grant1.Extra.Request))
+	assert.Equal(t, grtExt1, []byte(grant1.Extra.Grant))
 
-	assert.Equal(t, regExt2, []byte(grant2.Register))
-	assert.Equal(t, reqExt2, []byte(grant2.Request))
-	assert.Equal(t, grtExt2, []byte(grant2.Grant))
+	assert.Equal(t, regExt2, []byte(grant2.Extra.Register))
+	assert.Equal(t, reqExt2, []byte(grant2.Extra.Request))
+	assert.Equal(t, grtExt2, []byte(grant2.Extra.Grant))
 }
 
 func TestNonValidGrant(t *testing.T) {
@@ -396,7 +394,6 @@ func TestNonValidGrant(t *testing.T) {
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 
 	// target
@@ -454,7 +451,7 @@ func TestValidRegister(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 
 	parcel := s.GetParcel(parcelID[2], false)
-	assert.Equal(t, regExt, []byte(parcel.Register))
+	assert.Equal(t, regExt, []byte(parcel.Extra.Register))
 }
 
 func TestNonValidRegister(t *testing.T) {
@@ -549,7 +546,6 @@ func TestNonValidRequest(t *testing.T) {
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 
 	// target
@@ -604,7 +600,6 @@ func TestValidRevoke(t *testing.T) {
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 	s.SetParcel(parcelID[1], &types.ParcelValue{
 		Owner:        alice.addr,
@@ -613,7 +608,6 @@ func TestValidRevoke(t *testing.T) {
 	})
 	s.SetUsage(bob.addr, parcelID[1], &types.UsageValue{
 		Custody: custody[1],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 
 	// target
@@ -653,7 +647,6 @@ func TestNonValidRevoke(t *testing.T) {
 	})
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
-		Exp:     time.Now().UTC().Add(24 * time.Hour),
 	})
 
 	// target
