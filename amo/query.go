@@ -25,7 +25,7 @@ import (
 func queryAppConfig(config AMOAppConfig) (res abci.ResponseQuery) {
 	jsonstr, _ := json.Marshal(config)
 	res.Log = string(jsonstr)
-	res.Key = []byte("app_config")
+	res.Key = []byte("config")
 	res.Value = jsonstr
 	res.Code = code.QueryCodeOK
 
