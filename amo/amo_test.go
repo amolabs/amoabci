@@ -104,7 +104,7 @@ func TestQueryAppConfig(t *testing.T) {
 		jsonstr []byte
 	)
 
-	req = abci.RequestQuery{Path: "/app_config"}
+	req = abci.RequestQuery{Path: "/config"}
 	res = app.Query(req)
 
 	jsonstr, _ = json.Marshal(config)
