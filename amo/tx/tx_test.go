@@ -203,6 +203,11 @@ func TestValidCancel(t *testing.T) {
 func TestNonValidCancel(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s.SetParcel(parcelID[0], &types.ParcelValue{
+		Owner:        alice.addr,
+		Custody:      custody[0],
+		ProxyAccount: carol.addr,
+	})
 
 	// target
 	param := CancelParam{
@@ -392,6 +397,7 @@ func TestNonValidGrant(t *testing.T) {
 		Custody:      custody[0],
 		ProxyAccount: carol.addr,
 	})
+
 	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
 		Custody: custody[0],
 	})
@@ -537,7 +543,7 @@ func TestNonValidRequest(t *testing.T) {
 
 	// test
 	rc, _, _ := t1.Execute(s)
-	assert.Equal(t, code.TxCodeParcelNotFound, rc)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 
 	// env
 	s.SetParcel(parcelID[0], &types.ParcelValue{
