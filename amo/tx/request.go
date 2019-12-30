@@ -51,37 +51,46 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
+	if store.GetBalance(t.GetSender(), false).LessThan(&txParam.Payment) {
+		return code.TxCodeNotEnoughBalance, "not enough balance", nil
+	}
+
 	parcel := store.GetParcel(txParam.Target, false)
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
-	if store.GetUsage(t.GetSender(), txParam.Target, false) != nil {
-		return code.TxCodeAlreadyGranted, "request already granted", nil
-	}
-	if store.GetBalance(t.GetSender(), false).LessThan(&txParam.Payment) {
-		return code.TxCodeNotEnoughBalance, "not enough balance", nil
-	}
+
 	if bytes.Equal(parcel.Owner, t.GetSender()) {
 		// add new code for this
 		return code.TxCodeSelfTransaction, "requesting own parcel", nil
 	}
 
-	balance := store.GetBalance(t.GetSender(), false)
-	balance.Sub(&txParam.Payment)
-	store.SetBalance(t.GetSender(), balance)
+	usage := store.GetUsage(t.GetSender(), txParam.Target, false)
+	if usage != nil {
+		return code.TxCodeAlreadyGranted, "parcel already granted", nil
+	}
 
-	request := types.RequestValue{
+	request := store.GetRequest(t.GetSender(), txParam.Target, false)
+	if request != nil {
+		return code.TxCodeAlreadyRequested, "parcel already requested", nil
+	}
+
+	store.SetRequest(t.GetSender(), txParam.Target, &types.RequestValue{
 		Payment: txParam.Payment,
 
 		Extra: types.Extra{
 			Register: parcel.Extra.Register,
 			Request:  txParam.Extra,
 		},
-	}
-	store.SetRequest(t.GetSender(), txParam.Target, &request)
+	})
+
+	balance := store.GetBalance(t.GetSender(), false)
+	balance.Sub(&txParam.Payment)
+	store.SetBalance(t.GetSender(), balance)
 
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}
+
 	return code.TxCodeOK, "ok", tags
 }

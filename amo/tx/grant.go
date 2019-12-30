@@ -61,25 +61,25 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
+
 	if !bytes.Equal(parcel.Owner, t.GetSender()) &&
 		!bytes.Equal(parcel.ProxyAccount, t.GetSender()) {
 		return code.TxCodePermissionDenied, "permission denied", nil
 	}
 
-	if store.GetUsage(txParam.Grantee, txParam.Target, false) != nil {
+	usage := store.GetUsage(txParam.Grantee, txParam.Target, false)
+	if usage != nil {
 		return code.TxCodeAlreadyGranted, "parcel already granted", nil
 	}
+
 	request := store.GetRequest(txParam.Grantee, txParam.Target, false)
 	if request == nil {
-		return code.TxCodeRequestNotFound, "request not found", nil
+		return code.TxCodeRequestNotFound, "parcel not requested", nil
 	}
 
 	store.DeleteRequest(txParam.Grantee, txParam.Target)
-	balance := store.GetBalance(t.GetSender(), false)
-	balance.Add(&request.Payment)
-	store.SetBalance(t.GetSender(), balance)
 
-	usage := types.UsageValue{
+	store.SetUsage(txParam.Grantee, txParam.Target, &types.UsageValue{
 		Custody: txParam.Custody,
 
 		Extra: types.Extra{
@@ -87,11 +87,15 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 			Request:  request.Extra.Request,
 			Grant:    txParam.Extra,
 		},
-	}
-	store.SetUsage(txParam.Grantee, txParam.Target, &usage)
+	})
+
+	balance := store.GetBalance(t.GetSender(), false)
+	balance.Add(&request.Payment)
+	store.SetBalance(t.GetSender(), balance)
 
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}
+
 	return code.TxCodeOK, "ok", tags
 }

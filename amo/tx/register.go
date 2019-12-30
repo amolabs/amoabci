@@ -51,11 +51,12 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	if store.GetParcel(txParam.Target, false) != nil {
+	parcel := store.GetParcel(txParam.Target, false)
+	if parcel != nil {
 		return code.TxCodeAlreadyRegistered, "parcel already registered", nil
 	}
 
-	parcel := types.ParcelValue{
+	store.SetParcel(txParam.Target, &types.ParcelValue{
 		Owner:        t.GetSender(),
 		Custody:      txParam.Custody,
 		ProxyAccount: txParam.ProxyAccount,
@@ -63,11 +64,12 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		Extra: types.Extra{
 			Register: txParam.Extra,
 		},
-	}
-	store.SetParcel(txParam.Target, &parcel)
+	})
+
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 		{Key: []byte("parcel.owner"), Value: t.GetSender()},
 	}
+
 	return code.TxCodeOK, "ok", tags
 }

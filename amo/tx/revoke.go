@@ -63,6 +63,11 @@ func (t *TxRevoke) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodePermissionDenied, "permission denied", nil
 	}
 
+	usage := store.GetUsage(txParam.Grantee, txParam.Target, false)
+	if usage == nil {
+		return code.TxCodeUsageNotFound, "usage not found", nil
+	}
+
 	store.DeleteUsage(txParam.Grantee, txParam.Target)
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},

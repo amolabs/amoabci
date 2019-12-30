@@ -9,11 +9,13 @@ const (
 	TxCodeNotEnoughBalance
 	TxCodeSelfTransaction
 	TxCodePermissionDenied
-	TxCodeAlreadyGranted
 	TxCodeAlreadyRegistered
+	TxCodeAlreadyRequested
+	TxCodeAlreadyGranted
 	TxCodeParcelNotFound
-	TxCodeBadSignature
 	TxCodeRequestNotFound
+	TxCodeUsageNotFound
+	TxCodeBadSignature
 	TxCodeMultipleDelegates
 	TxCodeDelegateNotFound
 	TxCodeNoStake

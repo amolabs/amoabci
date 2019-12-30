@@ -46,16 +46,30 @@ func (t *TxCancel) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
+	parcel := store.GetParcel(txParam.Target, false)
+	if parcel == nil {
+		return code.TxCodeParcelNotFound, "parcel not found", nil
+	}
+
 	request := store.GetRequest(t.GetSender(), txParam.Target, false)
 	if request == nil {
 		return code.TxCodeRequestNotFound, "request not found", nil
 	}
+
+	usage := store.GetUsage(t.GetSender(), txParam.Target, false)
+	if usage != nil {
+		return code.TxCodeAlreadyGranted, "parcel already granted", nil
+	}
+
 	store.DeleteRequest(t.GetSender(), txParam.Target)
+
 	balance := store.GetBalance(t.GetSender(), false)
 	balance.Add(&request.Payment)
 	store.SetBalance(t.GetSender(), balance)
+
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 	}
+
 	return code.TxCodeOK, "ok", tags
 }
