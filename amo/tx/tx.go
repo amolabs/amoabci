@@ -106,6 +106,18 @@ func classifyTx(base TxBase) Tx {
 			TxBase: base,
 			Param:  param,
 		}
+	case "setup":
+		param, _ := parseSetupParam(base.Payload)
+		t = &TxSetup{
+			TxBase: base,
+			Param:  param,
+		}
+	case "close":
+		param, _ := parseCloseParam(base.Payload)
+		t = &TxClose{
+			TxBase: base,
+			Param:  param,
+		}
 	case "register":
 		param, _ := parseRegisterParam(base.Payload)
 		t = &TxRegister{

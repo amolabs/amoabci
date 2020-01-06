@@ -26,6 +26,7 @@ const (
 	TxCodeLastValidator
 	TxCodeDelegateExists
 	TxCodeStakeLocked
+	TxCodeNotFound
 	TxCodeUnknown
 )
 

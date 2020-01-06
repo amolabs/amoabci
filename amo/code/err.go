@@ -22,5 +22,6 @@ var (
 	TxErrLastValidator     = errors.New("LastValidator")
 	TxErrDelegateExists    = errors.New("DelegateExists")
 	TxErrStakeLocked       = errors.New("StakeLocked")
+	TxErrNotFound          = errors.New("NotFound")
 	TxErrUnknown           = errors.New("UnknownError")
 )
