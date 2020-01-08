@@ -217,10 +217,6 @@ func (app *AMOApp) loadAppConfig() error {
 		}
 	}
 
-	if cfg.MinStakingUnit == "" {
-		cfg.MinStakingUnit = defaultMinStakingUnit
-	}
-
 	app.config = cfg
 
 	return nil

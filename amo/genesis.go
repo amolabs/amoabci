@@ -42,11 +42,29 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	if genState.Config.WeightDelegator == 0 {
 		genState.Config.WeightDelegator = defaultWeightDelegator
 	}
+	if genState.Config.MinStakingUnit == "" {
+		genState.Config.MinStakingUnit = defaultMinStakingUnit
+	}
 	if genState.Config.BlkReward == "" {
 		genState.Config.BlkReward = defaultBlkReward
 	}
 	if genState.Config.TxReward == "" {
 		genState.Config.TxReward = defaultTxReward
+	}
+	if genState.Config.PenaltyRatioM == 0 {
+		genState.Config.PenaltyRatioM = defaultPenaltyRatioM
+	}
+	if genState.Config.PenaltyRatioL == 0 {
+		genState.Config.PenaltyRatioL = defaultPenaltyRatioL
+	}
+	if genState.Config.LazinessCounterWindow == 0 {
+		genState.Config.LazinessCounterWindow = defaultLazinessCounterWindow
+	}
+	if genState.Config.LazinessThreshold == 0 {
+		genState.Config.LazinessThreshold = defaultLazinessThreshold
+	}
+	if genState.Config.BlockBoundTxGracePeriod == 0 {
+		genState.Config.BlockBoundTxGracePeriod = defaultBlockBoundTxGracePeriod
 	}
 	if genState.Config.LockupPeriod == 0 {
 		genState.Config.LockupPeriod = defaultLockupPeriod
