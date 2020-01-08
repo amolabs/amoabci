@@ -1,5 +1,27 @@
 package amo
 
+const (
+	// hard-coded configs
+	defaultMaxValidators   = 100
+	defaultWeightValidator = uint64(2)
+	defaultWeightDelegator = uint64(1)
+
+	defaultMinStakingUnit = "1000000000000000000000000"
+
+	defaultBlkReward = "0"
+	defaultTxReward  = "10000000000000000000"
+
+	// TODO: not fixed default ratios yet
+	defaultPenaltyRatioM = float64(0.3)
+	defaultPenaltyRatioL = float64(0.3)
+
+	defaultLazinessCounterWindow = int64(300)
+	defaultLazinessThreshold     = float64(0.8)
+
+	defaultBlockBoundTxGracePeriod = uint64(1000)
+	defaultLockupPeriod            = uint64(1000000)
+)
+
 type AMOAppConfig struct {
 	MaxValidators   uint64 `json:"max_validators"`
 	WeightValidator uint64 `json:"weight_validator"`
@@ -7,8 +29,8 @@ type AMOAppConfig struct {
 
 	MinStakingUnit string `json:"min_staking_unit"`
 
-	BlkReward uint64 `json:"blk_reward"`
-	TxReward  uint64 `json:"tx_reward"`
+	BlkReward string `json:"blk_reward"`
+	TxReward  string `json:"tx_reward"`
 
 	PenaltyRatioM float64 `json:"penalty_ratio_m"` // malicious validator
 	PenaltyRatioL float64 `json:"penalty_ratio_l"` // lazy validators

@@ -42,10 +42,10 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	if genState.Config.WeightDelegator == 0 {
 		genState.Config.WeightDelegator = defaultWeightDelegator
 	}
-	if genState.Config.BlkReward == 0 {
+	if genState.Config.BlkReward == "" {
 		genState.Config.BlkReward = defaultBlkReward
 	}
-	if genState.Config.TxReward == 0 {
+	if genState.Config.TxReward == "" {
 		genState.Config.TxReward = defaultTxReward
 	}
 	if genState.Config.LockupPeriod == 0 {

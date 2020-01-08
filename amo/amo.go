@@ -24,25 +24,6 @@ const (
 	// versions
 	AMOAppVersion      = "v1.1.0-dev"
 	AMOProtocolVersion = 0x2
-	// hard-coded configs
-	defaultMaxValidators   = 100
-	defaultWeightValidator = uint64(2)
-	defaultWeightDelegator = uint64(1)
-
-	defaultMinStakingUnit = "1000000000000000000000000"
-
-	defaultBlkReward = uint64(0)
-	defaultTxReward  = uint64(types.OneAMOUint64 / 10)
-
-	// TODO: not fixed default ratios yet
-	defaultPenaltyRatioM = float64(0.3)
-	defaultPenaltyRatioL = float64(0.3)
-
-	defaultLazinessCounterWindow = int64(300)
-	defaultLazinessThreshold     = float64(0.8)
-
-	defaultBlockBoundTxGracePeriod = uint64(1000)
-	defaultLockupPeriod            = uint64(1000000)
 )
 
 // Output are sorted by voting power.
@@ -513,6 +494,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 // TODO: use req.Height
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	// XXX no means to convey error to res
+
 	blockchain.DistributeIncentive(
 		app.store,
 		app.logger,
