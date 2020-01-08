@@ -49,8 +49,8 @@ func makeStake(seed string, amount uint64) *types.Stake {
 	return &stake
 }
 
-func makeParcel(seed string, custody []byte) *types.ParcelValue {
-	return &types.ParcelValue{
+func makeParcel(seed string, custody []byte) *types.Parcel {
+	return &types.Parcel{
 		Owner:   makeAccAddr(seed),
 		Custody: custody,
 		Extra: types.Extra{
@@ -119,7 +119,7 @@ func TestParcel(t *testing.T) {
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	custody := cmn.RandBytes(32)
-	parcelInput := types.ParcelValue{
+	parcelInput := types.Parcel{
 		Owner:   testAddr,
 		Custody: custody,
 		Extra: types.Extra{
@@ -138,7 +138,7 @@ func TestRequest(t *testing.T) {
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := cmn.RandBytes(32)
-	requestInput := types.RequestValue{
+	requestInput := types.Request{
 		Payment: *new(types.Currency).Set(100),
 		Extra: types.Extra{
 			Register: json.RawMessage("null"),
@@ -159,7 +159,7 @@ func TestUsage(t *testing.T) {
 	custody := cmn.RandBytes(32)
 	exp := time.Now().UTC()
 	exp = exp.Add(100 * time.Minute)
-	usageInput := types.UsageValue{
+	usageInput := types.Usage{
 		Custody: custody,
 		Extra: types.Extra{
 			Register: json.RawMessage("null"),

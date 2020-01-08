@@ -79,7 +79,7 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 
 	store.DeleteRequest(txParam.Grantee, txParam.Target)
 
-	store.SetUsage(txParam.Grantee, txParam.Target, &types.UsageValue{
+	store.SetUsage(txParam.Grantee, txParam.Target, &types.Usage{
 		Custody: txParam.Custody,
 
 		Extra: types.Extra{

@@ -72,21 +72,21 @@ func getTestStore() *store.Store {
 	s.SetBalanceUint64(alice.addr, 3000)
 	s.SetBalanceUint64(bob.addr, 1000)
 	s.SetBalanceUint64(eve.addr, 50)
-	s.SetParcel(parcelID[0], &types.ParcelValue{
+	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:   alice.addr,
 		Custody: custody[0],
 	})
-	s.SetParcel(parcelID[1], &types.ParcelValue{
+	s.SetParcel(parcelID[1], &types.Parcel{
 		Owner:   bob.addr,
 		Custody: custody[1],
 	})
-	s.SetRequest(bob.addr, parcelID[0], &types.RequestValue{
+	s.SetRequest(bob.addr, parcelID[0], &types.Request{
 		Payment: *new(types.Currency).Set(100),
 	})
-	s.SetRequest(alice.addr, parcelID[1], &types.RequestValue{
+	s.SetRequest(alice.addr, parcelID[1], &types.Request{
 		Payment: *new(types.Currency).Set(100),
 	})
-	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+	s.SetUsage(bob.addr, parcelID[0], &types.Usage{
 		Custody: custody[0],
 	})
 	var k ed25519.PubKeyEd25519
@@ -177,11 +177,11 @@ func TestTxSignature(t *testing.T) {
 func TestValidCancel(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
-	s.SetParcel(parcelID[0], &types.ParcelValue{
+	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:   alice.addr,
 		Custody: custody[0],
 	})
-	s.SetRequest(bob.addr, parcelID[0], &types.RequestValue{
+	s.SetRequest(bob.addr, parcelID[0], &types.Request{
 		Payment: *new(types.Currency).Set(100),
 	})
 
@@ -203,7 +203,7 @@ func TestValidCancel(t *testing.T) {
 func TestNonValidCancel(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
-	s.SetParcel(parcelID[0], &types.ParcelValue{
+	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:        alice.addr,
 		Custody:      custody[0],
 		ProxyAccount: carol.addr,
@@ -227,12 +227,12 @@ func TestNonValidCancel(t *testing.T) {
 func TestValidDiscard(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
-	s.SetParcel(parcelID[0], &types.ParcelValue{
+	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:   alice.addr,
 		Custody: custody[0],
 	})
 
-	s.SetParcel(parcelID[1], &types.ParcelValue{
+	s.SetParcel(parcelID[1], &types.Parcel{
 		Owner:        alice.addr,
 		Custody:      custody[1],
 		ProxyAccount: bob.addr,
@@ -266,7 +266,7 @@ func TestValidDiscard(t *testing.T) {
 func TestNonValidDiscard(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
-	s.SetParcel(parcelID[0], &types.ParcelValue{
+	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:        alice.addr,
 		Custody:      custody[0],
 		ProxyAccount: bob.addr,
@@ -311,7 +311,7 @@ func TestValidGrant(t *testing.T) {
 	grtExt2, err := json.Marshal("grtExt2")
 	assert.NoError(t, err)
 
-	s.SetParcel(parcelID[1], &types.ParcelValue{
+	s.SetParcel(parcelID[1], &types.Parcel{
 		Owner:   bob.addr,
 		Custody: custody[1],
 
@@ -320,7 +320,7 @@ func TestValidGrant(t *testing.T) {
 		},
 	})
 
-	s.SetRequest(alice.addr, parcelID[1], &types.RequestValue{
+	s.SetRequest(alice.addr, parcelID[1], &types.Request{
 		Payment: *new(types.Currency).Set(100),
 
 		Extra: types.Extra{
@@ -329,7 +329,7 @@ func TestValidGrant(t *testing.T) {
 		},
 	})
 
-	s.SetParcel(parcelID[2], &types.ParcelValue{
+	s.SetParcel(parcelID[2], &types.Parcel{
 		Owner:        bob.addr,
 		Custody:      custody[2],
 		ProxyAccount: eve.addr,
@@ -339,7 +339,7 @@ func TestValidGrant(t *testing.T) {
 		},
 	})
 
-	s.SetRequest(alice.addr, parcelID[2], &types.RequestValue{
+	s.SetRequest(alice.addr, parcelID[2], &types.Request{
 		Payment: *new(types.Currency).Set(100),
 
 		Extra: types.Extra{
@@ -392,13 +392,13 @@ func TestValidGrant(t *testing.T) {
 func TestNonValidGrant(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
-	s.SetParcel(parcelID[0], &types.ParcelValue{
+	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:        alice.addr,
 		Custody:      custody[0],
 		ProxyAccount: carol.addr,
 	})
 
-	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+	s.SetUsage(bob.addr, parcelID[0], &types.Usage{
 		Custody: custody[0],
 	})
 
@@ -463,7 +463,7 @@ func TestValidRegister(t *testing.T) {
 func TestNonValidRegister(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
-	s.SetParcel(parcelID[0], &types.ParcelValue{
+	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:        alice.addr,
 		Custody:      custody[0],
 		ProxyAccount: bob.addr,
@@ -496,7 +496,7 @@ func TestValidRequest(t *testing.T) {
 	reqExt, err := json.Marshal("reqExt")
 	assert.NoError(t, err)
 
-	s.SetParcel(parcelID[0], &types.ParcelValue{
+	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:        bob.addr,
 		Custody:      custody[0],
 		ProxyAccount: carol.addr,
@@ -546,11 +546,11 @@ func TestNonValidRequest(t *testing.T) {
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 
 	// env
-	s.SetParcel(parcelID[0], &types.ParcelValue{
+	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:   alice.addr,
 		Custody: custody[0],
 	})
-	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+	s.SetUsage(bob.addr, parcelID[0], &types.Usage{
 		Custody: custody[0],
 	})
 
@@ -567,7 +567,7 @@ func TestNonValidRequest(t *testing.T) {
 	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
 
 	// env
-	s.SetParcel(parcelID[1], &types.ParcelValue{
+	s.SetParcel(parcelID[1], &types.Parcel{
 		Owner:   bob.addr,
 		Custody: custody[1],
 	})
@@ -600,19 +600,19 @@ func TestNonValidRequest(t *testing.T) {
 func TestValidRevoke(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
-	s.SetParcel(parcelID[0], &types.ParcelValue{
+	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:   alice.addr,
 		Custody: custody[0],
 	})
-	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+	s.SetUsage(bob.addr, parcelID[0], &types.Usage{
 		Custody: custody[0],
 	})
-	s.SetParcel(parcelID[1], &types.ParcelValue{
+	s.SetParcel(parcelID[1], &types.Parcel{
 		Owner:        alice.addr,
 		Custody:      custody[1],
 		ProxyAccount: carol.addr,
 	})
-	s.SetUsage(bob.addr, parcelID[1], &types.UsageValue{
+	s.SetUsage(bob.addr, parcelID[1], &types.Usage{
 		Custody: custody[1],
 	})
 
@@ -646,12 +646,12 @@ func TestValidRevoke(t *testing.T) {
 func TestNonValidRevoke(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
-	s.SetParcel(parcelID[0], &types.ParcelValue{
+	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:        alice.addr,
 		Custody:      custody[0],
 		ProxyAccount: carol.addr,
 	})
-	s.SetUsage(bob.addr, parcelID[0], &types.UsageValue{
+	s.SetUsage(bob.addr, parcelID[0], &types.Usage{
 		Custody: custody[0],
 	})
 

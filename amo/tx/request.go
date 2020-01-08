@@ -75,7 +75,7 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeAlreadyRequested, "parcel already requested", nil
 	}
 
-	store.SetRequest(t.GetSender(), txParam.Target, &types.RequestValue{
+	store.SetRequest(t.GetSender(), txParam.Target, &types.Request{
 		Payment: txParam.Payment,
 
 		Extra: types.Extra{

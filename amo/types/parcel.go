@@ -13,15 +13,15 @@ type Extra struct {
 	Grant    json.RawMessage `json:"grant,omitempty"`
 }
 
-type ParcelValue struct {
+type Parcel struct {
 	Owner        crypto.Address `json:"owner"`
 	Custody      cmn.HexBytes   `json:"custody"`
 	ProxyAccount crypto.Address `json:"proxy_account,omitempty"`
 	Extra        Extra          `json:"extra,omitempty"`
 }
 
-type ParcelValueEx struct {
-	*ParcelValue
-	Requests []*RequestValueEx `json:"requests,omitempty"`
-	Usages   []*UsageValueEx   `json:"usages,omitempty"`
+type ParcelEx struct {
+	*Parcel
+	Requests []*RequestEx `json:"requests,omitempty"`
+	Usages   []*UsageEx   `json:"usages,omitempty"`
 }

@@ -178,24 +178,24 @@ func TestQueryParcel(t *testing.T) {
 	parcelID[31] = 0xFF
 	queryjson, _ := json.Marshal(parcelID)
 
-	parcel := types.ParcelValue{
+	parcel := types.Parcel{
 		Owner:   addr,
 		Custody: cmn.RandBytes(32),
 	}
 
-	request := types.RequestValue{
+	request := types.Request{
 		Payment: *new(types.Currency).Set(1),
 	}
 
-	parcelEx := types.ParcelValueEx{
-		ParcelValue: &parcel,
-		Requests: []*types.RequestValueEx{
-			&types.RequestValueEx{
-				RequestValue: &request,
-				Buyer:        _addr,
+	parcelEx := types.ParcelEx{
+		Parcel: &parcel,
+		Requests: []*types.RequestEx{
+			&types.RequestEx{
+				Request: &request,
+				Buyer:   _addr,
 			},
 		},
-		Usages: []*types.UsageValueEx{},
+		Usages: []*types.UsageEx{},
 	}
 
 	app.store.SetParcel(parcelID, &parcel)
@@ -252,7 +252,7 @@ func TestQueryRequest(t *testing.T) {
 	parcelID := cmn.RandBytes(32)
 	parcelID[31] = 0xFF
 
-	request := types.RequestValue{
+	request := types.Request{
 		Payment: *new(types.Currency).Set(400),
 	}
 
@@ -336,7 +336,7 @@ func TestQueryUsage(t *testing.T) {
 	parcelID := cmn.RandBytes(32)
 	parcelID[31] = 0xFF
 
-	usage := types.UsageValue{
+	usage := types.Usage{
 		Custody: cmn.RandBytes(32),
 	}
 

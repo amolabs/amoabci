@@ -5,12 +5,12 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
-type UsageValue struct {
+type Usage struct {
 	Custody cmn.HexBytes `json:"custody"`
 	Extra   Extra        `json:"extra,omitempty"`
 }
 
-type UsageValueEx struct {
-	*UsageValue
+type UsageEx struct {
+	*Usage
 	Buyer crypto.Address `json:"buyer"`
 }

@@ -56,7 +56,7 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeAlreadyRegistered, "parcel already registered", nil
 	}
 
-	store.SetParcel(txParam.Target, &types.ParcelValue{
+	store.SetParcel(txParam.Target, &types.Parcel{
 		Owner:        t.GetSender(),
 		Custody:      txParam.Custody,
 		ProxyAccount: txParam.ProxyAccount,

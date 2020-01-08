@@ -4,12 +4,12 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 )
 
-type RequestValue struct {
+type Request struct {
 	Payment Currency `json:"payment"`
 	Extra   Extra    `json:"extra,omitempty"`
 }
 
-type RequestValueEx struct {
-	*RequestValue
+type RequestEx struct {
+	*Request
 	Buyer crypto.Address `json:"buyer"`
 }

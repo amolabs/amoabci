@@ -866,7 +866,7 @@ func getParcelKey(parcelID []byte) []byte {
 	return append(prefixParcel, parcelID...)
 }
 
-func (s Store) SetParcel(parcelID []byte, value *types.ParcelValue) error {
+func (s Store) SetParcel(parcelID []byte, value *types.Parcel) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -875,12 +875,12 @@ func (s Store) SetParcel(parcelID []byte, value *types.ParcelValue) error {
 	return nil
 }
 
-func (s Store) GetParcel(parcelID []byte, committed bool) *types.ParcelValue {
+func (s Store) GetParcel(parcelID []byte, committed bool) *types.Parcel {
 	b := s.get(getParcelKey(parcelID), committed)
 	if len(b) == 0 {
 		return nil
 	}
-	var parcel types.ParcelValue
+	var parcel types.Parcel
 	err := json.Unmarshal(b, &parcel)
 	if err != nil {
 		return nil
@@ -906,7 +906,7 @@ func splitParcelBuyerKey(prefix, key []byte) (parcelID []byte, buyer crypto.Addr
 	return
 }
 
-func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.RequestValue) error {
+func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.Request) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -921,14 +921,14 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.Re
 	return nil
 }
 
-func (s Store) GetRequest(buyer crypto.Address, parcelID []byte, committed bool) *types.RequestValue {
+func (s Store) GetRequest(buyer crypto.Address, parcelID []byte, committed bool) *types.Request {
 	buyerParcelKey, _ := getRequestKey(buyer, parcelID)
 
 	b := s.get(buyerParcelKey, committed)
 	if len(b) == 0 {
 		return nil
 	}
-	var request types.RequestValue
+	var request types.Request
 	err := json.Unmarshal(b, &request)
 	if err != nil {
 		return nil
@@ -936,9 +936,9 @@ func (s Store) GetRequest(buyer crypto.Address, parcelID []byte, committed bool)
 	return &request
 }
 
-func (s Store) GetRequests(parcelID []byte, committed bool) []*types.RequestValueEx {
+func (s Store) GetRequests(parcelID []byte, committed bool) []*types.RequestEx {
 	prefixRequestKey := append(prefixRequest, append(parcelID, ':')...)
-	requests := []*types.RequestValueEx{}
+	requests := []*types.RequestEx{}
 
 	imt, err := s.getImmutableTree(committed)
 	if err != nil {
@@ -957,9 +957,9 @@ func (s Store) GetRequests(parcelID []byte, committed bool) []*types.RequestValu
 			if requestValue == nil {
 				return false
 			}
-			request := types.RequestValueEx{
-				RequestValue: requestValue,
-				Buyer:        buyer,
+			request := types.RequestEx{
+				Request: requestValue,
+				Buyer:   buyer,
 			}
 
 			requests = append(requests, &request)
@@ -985,7 +985,7 @@ func getUsageKey(buyer crypto.Address, parcelID []byte) (buyerParcelKey, parcelB
 	return
 }
 
-func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.UsageValue) error {
+func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.Usage) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -1000,13 +1000,13 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.Usag
 	return nil
 }
 
-func (s Store) GetUsage(buyer crypto.Address, parcelID []byte, committed bool) *types.UsageValue {
+func (s Store) GetUsage(buyer crypto.Address, parcelID []byte, committed bool) *types.Usage {
 	buyerParcelKey, _ := getUsageKey(buyer, parcelID)
 	b := s.get(buyerParcelKey, committed)
 	if len(b) == 0 {
 		return nil
 	}
-	var usage types.UsageValue
+	var usage types.Usage
 	err := json.Unmarshal(b, &usage)
 	if err != nil {
 		return nil
@@ -1014,9 +1014,9 @@ func (s Store) GetUsage(buyer crypto.Address, parcelID []byte, committed bool) *
 	return &usage
 }
 
-func (s Store) GetUsages(parcelID []byte, committed bool) []*types.UsageValueEx {
+func (s Store) GetUsages(parcelID []byte, committed bool) []*types.UsageEx {
 	prefixUsageKey := append(prefixUsage, append(parcelID, ':')...)
-	usages := []*types.UsageValueEx{}
+	usages := []*types.UsageEx{}
 
 	imt, err := s.getImmutableTree(committed)
 	if err != nil {
@@ -1031,9 +1031,9 @@ func (s Store) GetUsages(parcelID []byte, committed bool) []*types.UsageValueEx 
 
 			// TODO: Is this really the best ?
 			parcelID, buyer := splitParcelBuyerKey(prefixUsage, key)
-			usage := types.UsageValueEx{
-				UsageValue: s.GetUsage(buyer, parcelID, committed),
-				Buyer:      buyer,
+			usage := types.UsageEx{
+				Usage: s.GetUsage(buyer, parcelID, committed),
+				Buyer: buyer,
 			}
 
 			usages = append(usages, &usage)
