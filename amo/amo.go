@@ -205,6 +205,13 @@ func (app *AMOApp) loadAppConfig() error {
 		defaultLazinessThreshold,
 		defaultBlockBoundTxGracePeriod,
 		defaultLockupPeriod,
+		defaultDraftOpenCount,
+		defaultDraftCloseCount,
+		defaultDraftApplyCount,
+		defaultDraftDeposit,
+		defaultDraftQuorumRate,
+		defaultDraftPassRate,
+		defaultDraftRefundRate,
 	}
 
 	b := app.store.GetAppConfig()

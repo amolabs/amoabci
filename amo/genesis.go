@@ -69,6 +69,28 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	if genState.Config.LockupPeriod == 0 {
 		genState.Config.LockupPeriod = defaultLockupPeriod
 	}
+	if genState.Config.DraftOpenCount == 0 {
+		genState.Config.DraftOpenCount = defaultDraftOpenCount
+	}
+	if genState.Config.DraftCloseCount == 0 {
+		genState.Config.DraftCloseCount = defaultDraftCloseCount
+	}
+	if genState.Config.DraftApplyCount == 0 {
+		genState.Config.DraftApplyCount = defaultDraftApplyCount
+	}
+	if genState.Config.DraftDeposit == "" {
+		genState.Config.DraftDeposit = defaultDraftDeposit
+	}
+	if genState.Config.DraftQuorumRate == 0 {
+		genState.Config.DraftQuorumRate = defaultDraftQuorumRate
+	}
+	if genState.Config.DraftPassRate == 0 {
+		genState.Config.DraftPassRate = defaultDraftPassRate
+	}
+	if genState.Config.DraftRefundRate == 0 {
+		genState.Config.DraftRefundRate = defaultDraftRefundRate
+	}
+
 	return &genState, nil
 }
 

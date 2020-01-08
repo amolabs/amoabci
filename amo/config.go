@@ -20,6 +20,14 @@ const (
 
 	defaultBlockBoundTxGracePeriod = uint64(1000)
 	defaultLockupPeriod            = uint64(1000000)
+
+	defaultDraftOpenCount  = uint64(1000)
+	defaultDraftCloseCount = uint64(100)
+	defaultDraftApplyCount = uint64(1000)
+	defaultDraftDeposit    = "1000000000000000000000000"
+	defaultDraftQuorumRate = float64(0.3)
+	defaultDraftPassRate   = float64(0.51)
+	defaultDraftRefundRate = float64(0.2)
 )
 
 type AMOAppConfig struct {
@@ -40,4 +48,12 @@ type AMOAppConfig struct {
 
 	BlockBoundTxGracePeriod uint64 `json:"block_bound_tx_grace_period"`
 	LockupPeriod            uint64 `json:"lockup_period"`
+
+	DraftOpenCount  uint64  `json:"draft_open_count"`
+	DraftCloseCount uint64  `json:"draft_close_count"`
+	DraftApplyCount uint64  `json:"draft_apply_count"`
+	DraftDeposit    string  `json:"draft_deposit"`
+	DraftQuorumRate float64 `json:"draft_quorum_rate"`
+	DraftPassRate   float64 `json:"draft_pass_rate"`
+	DraftRefundRate float64 `json:"draft_refund_rate"`
 }
