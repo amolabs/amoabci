@@ -431,57 +431,52 @@ func TestNonValidGrant(t *testing.T) {
 	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
 }
 
-func TestValidRegister(t *testing.T) {
+func TestRegister(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s := store.NewStore(
+		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NotNil(t, s)
 
 	regExt, err := json.Marshal("regExt")
 	assert.NoError(t, err)
 
 	// target
 	param := RegisterParam{
-		Target:       parcelID[2],
-		Custody:      custody[2],
+		Target:       []byte("XXXXparcel"),
+		Custody:      []byte("custody"),
 		ProxyAccount: bob.addr,
-
-		Extra: regExt,
+		Extra:        regExt,
 	}
 	payload, _ := json.Marshal(param)
 	t1 := makeTestTx("register", "alice", payload)
-
-	// test
 	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
+	// register before storage setup
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNoStorage, rc)
+
+	// dummy storage setup
+	mysto := &types.Storage{Active: false}
+	assert.NoError(t, s.SetStorage([]byte("XXXX"), mysto))
+
+	// register with inactive storage
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNoStorage, rc)
+
+	// dummy storage setup
+	mysto = &types.Storage{Active: true}
+	assert.NoError(t, s.SetStorage([]byte("XXXX"), mysto))
+
+	// register with active storage
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	parcel := s.GetParcel(parcelID[2], false)
+	parcel := s.GetParcel([]byte("XXXXparcel"), false)
+	assert.NotNil(t, parcel)
 	assert.Equal(t, regExt, []byte(parcel.Extra.Register))
-}
 
-func TestNonValidRegister(t *testing.T) {
-	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
-	s.SetParcel(parcelID[0], &types.Parcel{
-		Owner:        alice.addr,
-		Custody:      custody[0],
-		ProxyAccount: bob.addr,
-	})
-
-	// target
-	param := RegisterParam{
-		Target:       parcelID[0],
-		Custody:      custody[0],
-		ProxyAccount: bob.addr,
-	}
-	payload, _ := json.Marshal(param)
-	t1 := makeTestTx("register", "alice", payload)
-
-	// test
-	rc, _ := t1.Check()
-	assert.Equal(t, code.TxCodeOK, rc)
-
+	// reigster already registered parcel
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyRegistered, rc)
 }

@@ -4,6 +4,8 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 )
 
+const StorageIDLen = 4
+
 type Storage struct {
 	Owner           crypto.Address `json:"owner"`
 	Url             string         `json:"url"`

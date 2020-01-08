@@ -28,6 +28,7 @@ const (
 	TxCodeStakeLocked
 	TxCodeNotFound
 	TxCodeUnknown
+	TxCodeNoStorage
 )
 
 const (

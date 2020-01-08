@@ -23,5 +23,6 @@ var (
 	TxErrDelegateExists    = errors.New("DelegateExists")
 	TxErrStakeLocked       = errors.New("StakeLocked")
 	TxErrNotFound          = errors.New("NotFound")
+	TxErrNoStorage         = errors.New("NoStorage")
 	TxErrUnknown           = errors.New("UnknownError")
 )

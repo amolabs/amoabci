@@ -11,11 +11,10 @@ import (
 )
 
 type RegisterParam struct {
-	Target       tm.HexBytes `json:"target"`
-	Custody      tm.HexBytes `json:"custody"`
-	ProxyAccount tm.HexBytes `json:"proxy_account"`
-
-	Extra json.RawMessage `json:"extra"`
+	Target       tm.HexBytes     `json:"target"`
+	Custody      tm.HexBytes     `json:"custody"`
+	ProxyAccount tm.HexBytes     `json:"proxy_account"`
+	Extra        json.RawMessage `json:"extra"`
 }
 
 func parseRegisterParam(raw []byte) (RegisterParam, error) {
@@ -35,11 +34,14 @@ type TxRegister struct {
 var _ Tx = &TxRegister{}
 
 func (t *TxRegister) Check() (uint32, string) {
-	// TOOD: check format
-	//txParam, err := parseRegisterParam(t.getPayload())
-	_, err := parseRegisterParam(t.getPayload())
+	txParam, err := parseRegisterParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
+	}
+	// XXX: If len(txParam.Target) == types.StorageIDLen, then there is no room
+	// for in-storage ID for a parcel. Invalid parcel ID in that case.
+	if len(txParam.Target) <= types.StorageIDLen {
+		return code.TxCodeBadParam, "parcel id too short"
 	}
 
 	return code.TxCodeOK, "ok"
@@ -49,6 +51,11 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	txParam, err := parseRegisterParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	storage := store.GetStorage(txParam.Target[:types.StorageIDLen], false)
+	if storage == nil || storage.Active == false {
+		return code.TxCodeNoStorage, "no active storage for this parcel", nil
 	}
 
 	parcel := store.GetParcel(txParam.Target, false)
