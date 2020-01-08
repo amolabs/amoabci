@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/amolabs/amoabci/amo/types"
 )
@@ -15,6 +16,9 @@ func getStorageKey(id []byte) []byte {
 }
 
 func (s Store) SetStorage(id []byte, sto *types.Storage) error {
+	if len(id) != types.StorageIDLen {
+		return errors.New("wrong storage ID length")
+	}
 	b, err := json.Marshal(sto)
 	if err != nil {
 		return err

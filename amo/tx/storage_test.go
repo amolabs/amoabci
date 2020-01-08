@@ -14,7 +14,7 @@ import (
 )
 
 func TestParseSetup(t *testing.T) {
-	b := tm.HexBytes([]byte("mystorage"))
+	b := tm.HexBytes([]byte("aaaa"))
 	id, _ := json.Marshal(b)
 	payload := []byte(`{"storage":` + string(id) + `,"url": "http://need_to_check_url_format","registration_fee":"1000000000000000000","hosting_fee":"1000000000000000000"}`)
 
@@ -30,7 +30,7 @@ func TestParseSetup(t *testing.T) {
 }
 
 func TestParseClose(t *testing.T) {
-	b := tm.HexBytes([]byte("mystorage"))
+	b := tm.HexBytes([]byte("aaaa"))
 	id, _ := json.Marshal(b)
 	payload := []byte(`{"storage":` + string(id) + `}`)
 
@@ -49,7 +49,7 @@ func TestTxSetup(t *testing.T) {
 
 	// initial setup
 	param := SetupParam{
-		Storage:         []byte("mystorage"),
+		Storage:         []byte("aaaa"),
 		Url:             "http://need_to_check_url_format",
 		RegistrationFee: *new(types.Currency).SetAMO(1),
 		HostingFee:      *new(types.Currency).SetAMO(1),
@@ -65,7 +65,7 @@ func TestTxSetup(t *testing.T) {
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check store
-	sto := s.GetStorage([]byte("mystorage"), false)
+	sto := s.GetStorage([]byte("aaaa"), false)
 	assert.NotNil(t, sto)
 	assert.Equal(t, &types.Storage{
 		Owner:           makeAccAddr("provider"),
@@ -77,7 +77,7 @@ func TestTxSetup(t *testing.T) {
 
 	// close
 	param2 := CloseParam{
-		Storage: []byte("mystorage"),
+		Storage: []byte("aaaa"),
 	}
 	payload, _ = json.Marshal(param2)
 	//
@@ -90,7 +90,7 @@ func TestTxSetup(t *testing.T) {
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check whether closed
-	sto = s.GetStorage([]byte("mystorage"), false)
+	sto = s.GetStorage([]byte("aaaa"), false)
 	assert.NotNil(t, sto)
 	assert.Equal(t, &types.Storage{
 		Owner:           makeAccAddr("provider"),
@@ -105,7 +105,7 @@ func TestTxSetup(t *testing.T) {
 	tx = makeTestTx("setup", "provider", payload)
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	sto = s.GetStorage([]byte("mystorage"), false)
+	sto = s.GetStorage([]byte("aaaa"), false)
 	assert.NotNil(t, sto)
 	assert.Equal(t, &types.Storage{
 		Owner:           makeAccAddr("provider"),
