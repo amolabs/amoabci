@@ -2,7 +2,6 @@ package amo
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -189,44 +188,6 @@ func (app *AMOApp) load() {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func (app *AMOApp) loadAppConfig() error {
-	cfg := AMOAppConfig{
-		defaultMaxValidators,
-		defaultWeightValidator,
-		defaultWeightDelegator,
-		defaultMinStakingUnit,
-		defaultBlkReward,
-		defaultTxReward,
-		defaultPenaltyRatioM,
-		defaultPenaltyRatioL,
-		defaultLazinessCounterWindow,
-		defaultLazinessThreshold,
-		defaultBlockBoundTxGracePeriod,
-		defaultLockupPeriod,
-		defaultDraftOpenCount,
-		defaultDraftCloseCount,
-		defaultDraftApplyCount,
-		defaultDraftDeposit,
-		defaultDraftQuorumRate,
-		defaultDraftPassRate,
-		defaultDraftRefundRate,
-	}
-
-	b := app.store.GetAppConfig()
-
-	// if config exists
-	if len(b) > 0 {
-		err := json.Unmarshal(b, &cfg)
-		if err != nil {
-			return err
-		}
-	}
-
-	app.config = cfg
-
-	return nil
 }
 
 func (app *AMOApp) save() {

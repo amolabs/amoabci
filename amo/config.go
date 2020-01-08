@@ -1,5 +1,9 @@
 package amo
 
+import (
+	"encoding/json"
+)
+
 const (
 	// hard-coded configs
 	defaultMaxValidators   = 100
@@ -56,4 +60,42 @@ type AMOAppConfig struct {
 	DraftQuorumRate float64 `json:"draft_quorum_rate"`
 	DraftPassRate   float64 `json:"draft_pass_rate"`
 	DraftRefundRate float64 `json:"draft_refund_rate"`
+}
+
+func (app *AMOApp) loadAppConfig() error {
+	cfg := AMOAppConfig{
+		defaultMaxValidators,
+		defaultWeightValidator,
+		defaultWeightDelegator,
+		defaultMinStakingUnit,
+		defaultBlkReward,
+		defaultTxReward,
+		defaultPenaltyRatioM,
+		defaultPenaltyRatioL,
+		defaultLazinessCounterWindow,
+		defaultLazinessThreshold,
+		defaultBlockBoundTxGracePeriod,
+		defaultLockupPeriod,
+		defaultDraftOpenCount,
+		defaultDraftCloseCount,
+		defaultDraftApplyCount,
+		defaultDraftDeposit,
+		defaultDraftQuorumRate,
+		defaultDraftPassRate,
+		defaultDraftRefundRate,
+	}
+
+	b := app.store.GetAppConfig()
+
+	// if config exists
+	if len(b) > 0 {
+		err := json.Unmarshal(b, &cfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	app.config = cfg
+
+	return nil
 }
