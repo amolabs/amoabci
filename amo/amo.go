@@ -26,8 +26,8 @@ const (
 	AMOProtocolVersion = 0x2
 	// hard-coded configs
 	defaultMaxValidators   = 100
-	defaultWeightValidator = int64(2)
-	defaultWeightDelegator = int64(1)
+	defaultWeightValidator = uint64(2)
+	defaultWeightDelegator = uint64(1)
 
 	defaultMinStakingUnit = "1000000000000000000000000"
 
@@ -88,26 +88,6 @@ func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdate
 		return updates[i].Power > updates[j].Power
 	})
 	return updates
-}
-
-type AMOAppConfig struct {
-	MaxValidators   uint64 `json:"max_validators"`
-	WeightValidator int64  `json:"weight_validator"`
-	WeightDelegator int64  `json:"weight_delegator"`
-
-	MinStakingUnit string `json:"min_staking_unit"`
-
-	BlkReward uint64 `json:"blk_reward"`
-	TxReward  uint64 `json:"tx_reward"`
-
-	PenaltyRatioM float64 `json:"penalty_ratio_m"` // malicious validator
-	PenaltyRatioL float64 `json:"penalty_ratio_l"` // lazy validators
-
-	LazinessCounterWindow int64   `json:"laziness_counter_window"`
-	LazinessThreshold     float64 `json:"laziness_threshold"`
-
-	BlockBoundTxGracePeriod uint64 `json:"block_bound_tx_grace_period"`
-	LockupPeriod            uint64 `json:"lockup_period"`
 }
 
 type AMOApp struct {
