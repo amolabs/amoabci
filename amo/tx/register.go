@@ -63,15 +63,26 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeAlreadyRegistered, "parcel already registered", nil
 	}
 
+	sender := t.GetSender()
+	if store.GetBalance(sender, false).LessThan(&storage.RegistrationFee) {
+		return code.TxCodeNotEnoughBalance, "not enough balance for registration fee", nil
+	}
+
 	store.SetParcel(txParam.Target, &types.Parcel{
-		Owner:        t.GetSender(),
+		Owner:        sender,
 		Custody:      txParam.Custody,
 		ProxyAccount: txParam.ProxyAccount,
-
 		Extra: types.Extra{
 			Register: txParam.Extra,
 		},
 	})
+
+	balance := store.GetBalance(sender, false)
+	balance.Sub(&storage.RegistrationFee)
+	store.SetBalance(sender, balance)
+	balance = store.GetBalance(storage.Owner, false)
+	balance.Add(&storage.RegistrationFee)
+	store.SetBalance(storage.Owner, balance)
 
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},

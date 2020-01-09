@@ -437,18 +437,14 @@ func TestRegister(t *testing.T) {
 		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NotNil(t, s)
 
-	regExt, err := json.Marshal("regExt")
-	assert.NoError(t, err)
-
 	// target
-	param := RegisterParam{
+	payload, _ := json.Marshal(RegisterParam{
 		Target:       []byte("XXXXparcel"),
 		Custody:      []byte("custody"),
 		ProxyAccount: bob.addr,
-		Extra:        regExt,
-	}
-	payload, _ := json.Marshal(param)
-	t1 := makeTestTx("register", "alice", payload)
+		Extra:        []byte(`"any json"`),
+	})
+	t1 := makeTestTx("register", "seller", payload)
 	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
@@ -465,16 +461,33 @@ func TestRegister(t *testing.T) {
 	assert.Equal(t, code.TxCodeNoStorage, rc)
 
 	// dummy storage setup
-	mysto = &types.Storage{Active: true}
+	mysto = &types.Storage{
+		Owner:           makeAccAddr("provider"),
+		Url:             "http://dummy",
+		RegistrationFee: *new(types.Currency).SetAMO(1),
+		HostingFee:      *new(types.Currency).SetAMO(1),
+		Active:          true,
+	}
 	assert.NoError(t, s.SetStorage([]byte("XXXX"), mysto))
 
-	// register with active storage
+	// register with active storage but not enough balance for registration fee
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	// with some balance, do it again
+	s.SetBalance(makeAccAddr("seller"), new(types.Currency).SetAMO(1))
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 
+	// check parcel
 	parcel := s.GetParcel([]byte("XXXXparcel"), false)
 	assert.NotNil(t, parcel)
-	assert.Equal(t, regExt, []byte(parcel.Extra.Register))
+	assert.Equal(t, []byte(`"any json"`), []byte(parcel.Extra.Register))
+	// check balances
+	bal := s.GetBalance(makeAccAddr("seller"), false)
+	assert.Equal(t, types.Zero, bal)
+	bal = s.GetBalance(makeAccAddr("provider"), false)
+	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
 
 	// reigster already registered parcel
 	rc, _, _ = t1.Execute(s)
