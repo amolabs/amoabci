@@ -2,6 +2,7 @@ package amo
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -76,7 +77,7 @@ type AMOApp struct {
 	logger log.Logger
 
 	// app config
-	config AMOAppConfig
+	config types.AMOAppConfig
 
 	// internal database
 	merkleDB       tmdb.DB
@@ -169,6 +170,74 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 	app.save()
 
 	return app
+}
+
+const (
+	// hard-coded configs
+	defaultMaxValidators   = 100
+	defaultWeightValidator = uint64(2)
+	defaultWeightDelegator = uint64(1)
+
+	defaultMinStakingUnit = "1000000000000000000000000"
+
+	defaultBlkReward = "0"
+	defaultTxReward  = "10000000000000000000"
+
+	// TODO: not fixed default ratios yet
+	defaultPenaltyRatioM = float64(0.3)
+	defaultPenaltyRatioL = float64(0.3)
+
+	defaultLazinessCounterWindow = int64(300)
+	defaultLazinessThreshold     = float64(0.8)
+
+	defaultBlockBoundTxGracePeriod = uint64(1000)
+	defaultLockupPeriod            = uint64(1000000)
+
+	defaultDraftOpenCount  = uint64(1000)
+	defaultDraftCloseCount = uint64(100)
+	defaultDraftApplyCount = uint64(1000)
+	defaultDraftDeposit    = "1000000000000000000000000"
+	defaultDraftQuorumRate = float64(0.3)
+	defaultDraftPassRate   = float64(0.51)
+	defaultDraftRefundRate = float64(0.2)
+)
+
+func (app *AMOApp) loadAppConfig() error {
+	cfg := types.AMOAppConfig{
+		defaultMaxValidators,
+		defaultWeightValidator,
+		defaultWeightDelegator,
+		defaultMinStakingUnit,
+		defaultBlkReward,
+		defaultTxReward,
+		defaultPenaltyRatioM,
+		defaultPenaltyRatioL,
+		defaultLazinessCounterWindow,
+		defaultLazinessThreshold,
+		defaultBlockBoundTxGracePeriod,
+		defaultLockupPeriod,
+		defaultDraftOpenCount,
+		defaultDraftCloseCount,
+		defaultDraftApplyCount,
+		defaultDraftDeposit,
+		defaultDraftQuorumRate,
+		defaultDraftPassRate,
+		defaultDraftRefundRate,
+	}
+
+	b := app.store.GetAppConfig()
+
+	// if config exists
+	if len(b) > 0 {
+		err := json.Unmarshal(b, &cfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	app.config = cfg
+
+	return nil
 }
 
 func (app *AMOApp) load() {

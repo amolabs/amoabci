@@ -22,7 +22,7 @@ import (
 //   So, it is mandatory to use 'true' for 'committed' arg input
 //   to query data from merkle tree
 
-func queryAppConfig(config AMOAppConfig) (res abci.ResponseQuery) {
+func queryAppConfig(config types.AMOAppConfig) (res abci.ResponseQuery) {
 	jsonstr, _ := json.Marshal(config)
 	res.Log = string(jsonstr)
 	res.Key = []byte("config")
