@@ -26,6 +26,12 @@ const (
 	TxCodeLastValidator
 	TxCodeDelegateExists
 	TxCodeStakeLocked
+
+	TxCodeImproperDraftID
+	TxCodeImproperDraftDeposit
+	TxCodeProposedDraft
+	TxCodeDraftInProcess
+
 	TxCodeUnknown
 )
 

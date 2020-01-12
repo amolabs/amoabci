@@ -1,6 +1,7 @@
 package tx
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"testing"
 
@@ -757,7 +758,7 @@ func TestValidStake(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 3000)
-	ConfigMinStakingUnit = "500"
+	ConfigAMOApp.MinStakingUnit = "500"
 
 	validator := cmn.RandBytes(32)
 
@@ -781,7 +782,7 @@ func TestValidStake(t *testing.T) {
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 
-	ConfigLockupPeriod += 1 // manipulate
+	ConfigAMOApp.LockupPeriod += 1 // manipulate
 
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
@@ -794,7 +795,7 @@ func TestNonValidStake(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 1000)
-	ConfigMinStakingUnit = "500"
+	ConfigAMOApp.MinStakingUnit = "500"
 
 	// target
 	payload, _ := json.Marshal(StakeParam{
@@ -944,7 +945,7 @@ func TestValidDelegate(t *testing.T) {
 		Validator: k,
 	})
 	s.SetBalanceUint64(bob.addr, 1000)
-	ConfigMinStakingUnit = "500"
+	ConfigAMOApp.MinStakingUnit = "500"
 
 	// target
 	param := DelegateParam{
@@ -979,7 +980,7 @@ func TestNonValidDelegate(t *testing.T) {
 	})
 	s.SetBalanceUint64(alice.addr, 1000)
 	s.SetBalanceUint64(bob.addr, 1000)
-	ConfigMinStakingUnit = "500"
+	ConfigAMOApp.MinStakingUnit = "500"
 
 	// test
 	payload, _ := json.Marshal(DelegateParam{
@@ -1123,7 +1124,7 @@ func TestStakeLockup(t *testing.T) {
 	s.SetBalanceUint64(alice.addr, 3000)
 
 	// setup lock-up period config
-	ConfigLockupPeriod = 2
+	ConfigAMOApp.LockupPeriod = 2
 
 	// deposit stake
 	stakeParam := StakeParam{
@@ -1167,4 +1168,21 @@ func TestStakeLockup(t *testing.T) {
 
 	//stake = s.GetStake(makeTestAddress("alice"))
 	//assert.Nil(t, stake)
+}
+
+func TestDraftIDConversion(t *testing.T) {
+	draftID := cmn.HexBytes(`"12"`)
+	var (
+		draftIDInt       uint32
+		draftIDByteArray []byte
+	)
+
+	draftIDInt, draftIDByteArray, err := ConvDraftIDFromHex(draftID)
+	assert.NoError(t, err)
+
+	assert.Equal(t, []byte{0x0, 0x0, 0x0, 0xc}, draftIDByteArray)
+
+	draftIDInt = binary.BigEndian.Uint32(draftIDByteArray)
+
+	assert.Equal(t, uint32(12), draftIDInt)
 }

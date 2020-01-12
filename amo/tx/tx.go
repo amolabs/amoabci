@@ -18,13 +18,22 @@ const (
 	defaultLockupPeriod   = uint64(1000000)
 	defaultMinStakingUnit = "1000000000000000000000000"
 	defaultMaxValidators  = uint64(100)
+	defaultDraftDeposit   = "1000000000000000000000000"
+
+	defaultNextDraftID = uint32(1)
 )
 
 var (
 	// config values from the app
-	ConfigLockupPeriod   = defaultLockupPeriod
-	ConfigMinStakingUnit = defaultMinStakingUnit
-	ConfigMaxValidators  = defaultMaxValidators
+	ConfigAMOApp = types.AMOAppConfig{
+		LockupPeriod:   defaultLockupPeriod,
+		MinStakingUnit: defaultMinStakingUnit,
+		MaxValidators:  defaultMaxValidators,
+		DraftDeposit:   defaultDraftDeposit,
+	}
+
+	// state from the app
+	StateNextDraftID = defaultNextDraftID
 
 	c    = elliptic.P256()
 	zero = new(types.Currency).Set(0)
@@ -148,6 +157,8 @@ func classifyTx(base TxBase) Tx {
 			TxBase: base,
 			Param:  param,
 		}
+	case "propose":
+	case "vote":
 	default:
 		t = &base
 	}

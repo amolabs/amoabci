@@ -60,7 +60,7 @@ func (t *TxDelegate) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 
 	// check minimum staking unit
 	tmp := new(types.Currency)
-	checkUnit, err := new(types.Currency).SetString(ConfigMinStakingUnit, 10)
+	checkUnit, err := new(types.Currency).SetString(ConfigAMOApp.MinStakingUnit, 10)
 	if err != nil {
 		return code.TxCodeImproperStakingUnit, "improper staking unit", nil
 	}

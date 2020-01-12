@@ -27,3 +27,74 @@ type AMOAppConfig struct {
 	DraftPassRate   float64 `json:"draft_pass_rate"`
 	DraftRefundRate float64 `json:"draft_refund_rate"`
 }
+
+func (cfg *AMOAppConfig) CheckValue() bool {
+	if comp(cfg.MaxValidators, ">", 0) &&
+		comp(cfg.WeightValidator, ">", 0) &&
+		comp(cfg.WeightDelegator, ">", 0) &&
+		comp(cfg.MinStakingUnit, ">", "0") {
+		return true
+	}
+
+	return false
+}
+
+func comp(targetA interface{}, operator string, targetB interface{}) bool {
+	var equal, greater, less bool
+
+	switch targetA.(type) {
+	case string:
+		a, err := new(Currency).SetString(targetA.(string), 10)
+		if err != nil {
+			return false
+		}
+
+		b, err := new(Currency).SetString(targetB.(string), 10)
+		if err != nil {
+			return false
+		}
+
+		equal = a.Equals(b)
+		greater = a.GreaterThan(b)
+		less = a.LessThan(b)
+
+	case uint64:
+		a := targetA.(uint64)
+		b := targetB.(uint64)
+
+		equal = (a == b)
+		greater = (a > b)
+		less = (a < b)
+
+	case int64:
+		a := targetA.(int64)
+		b := targetB.(int64)
+
+		equal = (a == b)
+		greater = (a > b)
+		less = (a < b)
+
+	case float64:
+		a := targetA.(float64)
+		b := targetB.(float64)
+
+		equal = (a == b)
+		greater = (a > b)
+		less = (a < b)
+	}
+
+	switch operator {
+	case ">":
+		return greater
+	case ">=":
+		return greater && equal
+	case "==":
+		return equal
+	case "<=":
+		return less && equal
+	case "<":
+		return less
+	default:
+		return false
+	}
+}
