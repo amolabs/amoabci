@@ -12,10 +12,9 @@ import (
 )
 
 type RequestParam struct {
-	Target  tm.HexBytes    `json:"target"`
-	Payment types.Currency `json:"payment"`
-
-	Extra json.RawMessage `json:"extra"`
+	Target  tm.HexBytes     `json:"target"`
+	Payment types.Currency  `json:"payment"`
+	Extra   json.RawMessage `json:"extra"`
 }
 
 func parseRequestParam(raw []byte) (RequestParam, error) {
@@ -51,10 +50,6 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	if store.GetBalance(t.GetSender(), false).LessThan(&txParam.Payment) {
-		return code.TxCodeNotEnoughBalance, "not enough balance", nil
-	}
-
 	parcel := store.GetParcel(txParam.Target, false)
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
@@ -73,6 +68,10 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	request := store.GetRequest(t.GetSender(), txParam.Target, false)
 	if request != nil {
 		return code.TxCodeAlreadyRequested, "parcel already requested", nil
+	}
+
+	if store.GetBalance(t.GetSender(), false).LessThan(&txParam.Payment) {
+		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 
 	store.SetRequest(t.GetSender(), txParam.Target, &types.Request{

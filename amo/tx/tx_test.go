@@ -356,115 +356,72 @@ func TestRegister(t *testing.T) {
 	assert.Equal(t, code.TxCodeAlreadyRegistered, rc)
 }
 
-func TestValidRequest(t *testing.T) {
+func TestRequest(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
-	s.SetBalanceUint64(alice.addr, 200)
-
-	regExt, err := json.Marshal("regExt")
-	assert.NoError(t, err)
-	reqExt, err := json.Marshal("reqExt")
-	assert.NoError(t, err)
-
-	s.SetParcel(parcelID[0], &types.Parcel{
-		Owner:        bob.addr,
-		Custody:      custody[0],
-		ProxyAccount: carol.addr,
-
-		Extra: types.Extra{
-			Register: regExt,
-		},
-	})
+	s := store.NewStore(
+		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NotNil(t, s)
 
 	// target
-	param := RequestParam{
-		Target:  parcelID[0],
-		Payment: *new(types.Currency).Set(200),
-
-		Extra: reqExt,
-	}
-	payload, _ := json.Marshal(param)
-
-	t1 := makeTestTx("request", "alice", payload)
-
-	// test
+	payload, _ := json.Marshal(RequestParam{
+		Target:  []byte("AAAAparcel"),
+		Payment: *new(types.Currency).SetAMO(1),
+		Extra:   []byte(`"any json for req"`),
+	})
+	t1 := makeTestTx("request", "buyer", payload)
 	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
+	// request for non-existent parcel
 	rc, _, _ = t1.Execute(s)
-	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, code.TxCodeParcelNotFound, rc)
 
-	request := s.GetRequest(makeAccAddr("alice"), parcelID[0], false)
-	assert.Equal(t, regExt, []byte(request.Extra.Register))
-	assert.Equal(t, reqExt, []byte(request.Extra.Request))
-}
-
-func TestNonValidRequest(t *testing.T) {
-	// env
-	s := getTestStore()
-
-	// target
-	param := RequestParam{
-		Target:  []byte{0x0, 0x0, 0x0, 0x0},
-		Payment: *new(types.Currency).Set(100),
-	}
-	payload, _ := json.Marshal(param)
-	t1 := makeTestTx("request", "eve", payload)
-
-	// test
-	rc, _, _ := t1.Execute(s)
-	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
-
-	// env
-	s.SetParcel(parcelID[0], &types.Parcel{
-		Owner:   alice.addr,
-		Custody: custody[0],
+	// request for buyer owned parcel
+	s.SetParcel([]byte("AAAAparcel"), &types.Parcel{
+		Owner:        makeAccAddr("buyer"),
+		Custody:      []byte("custody"),
+		ProxyAccount: makeAccAddr("proxy"),
+		Extra:        types.Extra{},
 	})
-	s.SetUsage(bob.addr, parcelID[0], &types.Usage{
-		Custody: custody[0],
-	})
-
-	// target
-	param = RequestParam{
-		Target:  parcelID[0],
-		Payment: *new(types.Currency).Set(100),
-	}
-	payload, _ = json.Marshal(param)
-	t2 := makeTestTx("request", "bob", payload)
-
-	// test
-	rc, _, _ = t2.Execute(s)
-	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
-
-	// env
-	s.SetParcel(parcelID[1], &types.Parcel{
-		Owner:   bob.addr,
-		Custody: custody[1],
-	})
-
-	// target
-	param = RequestParam{
-		Target:  parcelID[1],
-		Payment: *new(types.Currency).Set(100),
-	}
-	payload, _ = json.Marshal(param)
-	t3 := makeTestTx("request", "bob", payload)
-
-	// test
-	rc, _, _ = t3.Execute(s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeSelfTransaction, rc)
 
-	// target
-	param = RequestParam{
-		Target:  parcelID[1],
-		Payment: *new(types.Currency).Set(100),
-	}
-	payload, _ = json.Marshal(param)
-	t4 := makeTestTx("request", "eve", payload)
+	// request for already granted parcel
+	s.SetParcel([]byte("AAAAparcel"), &types.Parcel{
+		Owner:        makeAccAddr("seller"),
+		Custody:      []byte("custody"),
+		ProxyAccount: makeAccAddr("proxy"),
+		Extra: types.Extra{
+			Register: []byte(`"any json for reg"`),
+		},
+	})
+	s.SetUsage(makeAccAddr("buyer"), []byte("AAAAparcel"), &types.Usage{
+		Custody: []byte("custody"),
+		Extra:   types.Extra{},
+	})
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
+	// clean-up
+	s.DeleteUsage(makeAccAddr("buyer"), []byte("AAAAparcel"))
 
-	// test
-	rc, _, _ = t4.Execute(s)
+	// not enough balance
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	// with some balance, do it again
+	s.SetBalance(makeAccAddr("buyer"), new(types.Currency).SetAMO(2))
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	bal := s.GetBalance(makeAccAddr("buyer"), false)
+	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
+	req := s.GetRequest(makeAccAddr("buyer"), []byte("AAAAparcel"), false)
+	assert.NotNil(t, req)
+	assert.Equal(t, []byte(`"any json for reg"`), []byte(req.Extra.Register))
+	assert.Equal(t, []byte(`"any json for req"`), []byte(req.Extra.Request))
+
+	// request for already requested parcel
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeAlreadyRequested, rc)
 }
 
 func TestGrant(t *testing.T) {
