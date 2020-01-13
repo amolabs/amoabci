@@ -28,10 +28,13 @@ const (
 	TxCodeStakeLocked
 
 	TxCodeImproperDraftID
-	TxCodeImproperDraftDeposit
 	TxCodeImproperDraftConfig
+	TxCodeImproperDraftDeposit
 	TxCodeProposedDraft
-	TxCodeDraftInProcess
+	TxCodeNonExistingDraft
+	TxCodeAnotherDraftInProcess
+	TxCodeUnavailableVote
+	TxCodeAlreadyVoted
 
 	TxCodeUnknown
 )

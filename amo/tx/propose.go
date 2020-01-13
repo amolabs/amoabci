@@ -71,7 +71,7 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		if !(latestDraft.DraftOpenCount == 0 &&
 			latestDraft.DraftCloseCount == 0 &&
 			latestDraft.DraftApplyCount == 0) {
-			return code.TxCodeDraftInProcess, "another draft in process", nil
+			return code.TxCodeAnotherDraftInProcess, "another draft in process", nil
 		}
 	}
 
@@ -116,6 +116,12 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 
 	// set sender balance
 	store.SetBalance(t.GetSender(), balance)
+
+	// sender approve draft as proposer
+	store.SetVote(draftIDByteArray, t.GetSender(), &types.Vote{
+		Approve: true,
+		Power:   *new(types.Currency).Set(0),
+	})
 
 	return code.TxCodeOK, "ok", nil
 }
