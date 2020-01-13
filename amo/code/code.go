@@ -29,6 +29,7 @@ const (
 
 	TxCodeImproperDraftID
 	TxCodeImproperDraftDeposit
+	TxCodeImproperDraftConfig
 	TxCodeProposedDraft
 	TxCodeDraftInProcess
 

@@ -20,6 +20,7 @@ type ProposeParam struct {
 
 func parseProposeParam(raw []byte) (ProposeParam, error) {
 	var param ProposeParam
+
 	err := json.Unmarshal(raw, &param)
 	if err != nil {
 		return param, err
@@ -89,11 +90,32 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 
+	balance.Sub(deposit)
+
 	// config check
+	ok, cfg := ConfigAMOApp.Check(t.getPayload())
+	if !ok {
+		return code.TxCodeImproperDraftConfig, "improper config to apply", nil
+	}
 
 	// set draft
+	store.SetDraft(draftIDByteArray, &types.Draft{
+		Proposer: t.GetSender(),
+		Config:   cfg,
+		Desc:     t.Param.Desc,
+
+		DraftOpenCount:  ConfigAMOApp.DraftOpenCount,
+		DraftCloseCount: ConfigAMOApp.DraftCloseCount,
+		DraftApplyCount: ConfigAMOApp.DraftApplyCount,
+		DraftDeposit:    *deposit,
+
+		TallyQuorum:  *new(types.Currency).Set(0),
+		TallyApprove: *new(types.Currency).Set(0),
+		TallyReject:  *new(types.Currency).Set(0),
+	})
 
 	// set sender balance
+	store.SetBalance(t.GetSender(), balance)
 
 	return code.TxCodeOK, "ok", nil
 }
