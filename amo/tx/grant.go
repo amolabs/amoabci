@@ -105,6 +105,9 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	balance = store.GetBalance(storage.Owner, false)
 	balance.Add(&storage.HostingFee)
 	store.SetBalance(storage.Owner, balance)
+	balance = store.GetBalance(request.Dealer, false)
+	balance.Add(&request.DealerFee)
+	store.SetBalance(request.Dealer, balance)
 
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},

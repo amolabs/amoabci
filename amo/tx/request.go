@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -12,9 +13,11 @@ import (
 )
 
 type RequestParam struct {
-	Target  tm.HexBytes     `json:"target"`
-	Payment types.Currency  `json:"payment"`
-	Extra   json.RawMessage `json:"extra"`
+	Target    tm.HexBytes     `json:"target"`
+	Payment   types.Currency  `json:"payment"`
+	Dealer    crypto.Address  `json:"dealer,omitempty"`
+	DealerFee types.Currency  `json:"dealer_fee,omitempty"`
+	Extra     json.RawMessage `json:"extra"`
 }
 
 func parseRequestParam(raw []byte) (RequestParam, error) {
@@ -57,7 +60,7 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 
 	if bytes.Equal(parcel.Owner, t.GetSender()) {
 		// add new code for this
-		return code.TxCodeSelfTransaction, "requesting own parcel", nil
+		return code.TxCodeSelfTransaction, "requesting owned parcel", nil
 	}
 
 	usage := store.GetUsage(t.GetSender(), txParam.Target, false)
@@ -70,21 +73,30 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeAlreadyRequested, "parcel already requested", nil
 	}
 
-	if store.GetBalance(t.GetSender(), false).LessThan(&txParam.Payment) {
+	if len(txParam.Dealer) == 0 {
+		txParam.DealerFee.Set(0)
+	} else if len(txParam.Dealer) != crypto.AddressSize {
+		return code.TxCodeBadParam, "invalid dealer address", nil
+	}
+
+	balance := store.GetBalance(t.GetSender(), false)
+	wanted := txParam.Payment
+	wanted.Add(&txParam.DealerFee)
+	if balance.LessThan(&wanted) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 
 	store.SetRequest(t.GetSender(), txParam.Target, &types.Request{
-		Payment: txParam.Payment,
-
+		Payment:   txParam.Payment,
+		Dealer:    txParam.Dealer,
+		DealerFee: txParam.DealerFee,
 		Extra: types.Extra{
 			Register: parcel.Extra.Register,
 			Request:  txParam.Extra,
 		},
 	})
 
-	balance := store.GetBalance(t.GetSender(), false)
-	balance.Sub(&txParam.Payment)
+	balance.Sub(&wanted)
 	store.SetBalance(t.GetSender(), balance)
 
 	tags := []tm.KVPair{

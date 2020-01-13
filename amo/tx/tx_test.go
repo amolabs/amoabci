@@ -422,6 +422,35 @@ func TestRequest(t *testing.T) {
 	// request for already requested parcel
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyRequested, rc)
+	// clean-up
+	s.DeleteRequest(makeAccAddr("buyer"), []byte("AAAAparcel"))
+
+	// dealer fee
+	// XXX: dealer fee is optional, so the previous tests without dealer fee
+	// are valid also.
+	payload2, _ := json.Marshal(RequestParam{
+		Target:    []byte("AAAAparcel"),
+		Payment:   *new(types.Currency).SetAMO(1),
+		Dealer:    makeAccAddr("dealer"),
+		DealerFee: *new(types.Currency).SetAMO(1),
+		Extra:     []byte(`"any json for req"`),
+	})
+	t2 := makeTestTx("request", "buyer", payload2)
+	rc, _ = t2.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	// at this point, buyer's balance is 1 AMO. not enough
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+	// do again with more money
+	s.SetBalance(makeAccAddr("buyer"), new(types.Currency).SetAMO(2))
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	// check balance
+	bal = s.GetBalance(makeAccAddr("buyer"), false)
+	assert.Equal(t, types.Zero, bal)
+	req = s.GetRequest(makeAccAddr("buyer"), []byte("AAAAparcel"), false)
+	assert.Equal(t, new(types.Currency).SetAMO(1), &req.Payment)
+	assert.Equal(t, new(types.Currency).SetAMO(1), &req.DealerFee)
 }
 
 func TestGrant(t *testing.T) {
@@ -470,7 +499,9 @@ func TestGrant(t *testing.T) {
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
 
 	s.SetRequest(makeAccAddr("buyer"), []byte("AAAAparcel"), &types.Request{
-		Payment: *new(types.Currency).SetAMO(1),
+		Payment:   *new(types.Currency).SetAMO(1),
+		Dealer:    makeAccAddr("dealer"),
+		DealerFee: *new(types.Currency).SetAMO(1),
 		Extra: types.Extra{
 			Register: []byte(`"any json for reg"`),
 			Request:  []byte(`"any json for req"`),
@@ -507,6 +538,8 @@ func TestGrant(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 	bal := s.GetBalance(makeAccAddr("seller"), false)
 	assert.Equal(t, types.Zero, bal)
+	bal = s.GetBalance(makeAccAddr("dealer"), false)
+	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
 	// check extras
 	usage := s.GetUsage(makeAccAddr("buyer"), []byte("AAAAparcel"), false)
 	assert.Equal(t, []byte(`"any json for reg"`), []byte(usage.Extra.Register))
