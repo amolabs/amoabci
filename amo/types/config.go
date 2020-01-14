@@ -35,6 +35,11 @@ type AMOAppConfig struct {
 func (cfg *AMOAppConfig) Check(txCfgRaw json.RawMessage) (bool, AMOAppConfig) {
 	var txCfgMap map[string]interface{}
 
+	// handle exception for allowing empty config field on purpose
+	if len(txCfgRaw) == 0 {
+		return true, *cfg
+	}
+
 	cfgMap, err := cfg.getMap()
 	if err != nil {
 		return false, AMOAppConfig{}

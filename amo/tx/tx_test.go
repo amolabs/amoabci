@@ -1300,6 +1300,23 @@ func TestPropose(t *testing.T) {
 
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeAnotherDraftInProcess, rc)
+
+	// imitate next draft id for test
+	StateNextDraftID = 4
+
+	// propose a draft having config left empty on purpose
+	s.SetBalance(makeAccAddr("proposer"), new(types.Currency).Set(1000))
+	payload, _ = json.Marshal(ProposeParam{
+		DraftID: []byte(`"4"`),
+		Config:  []byte(``),
+		Desc:    []byte(`"empty config is used to give an opinion"`),
+	})
+	t1 = makeTestTx("propose", "proposer", payload)
+	rc, _ = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestVote(t *testing.T) {

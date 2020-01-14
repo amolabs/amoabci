@@ -12,7 +12,7 @@ import (
 
 type ProposeParam struct {
 	DraftID tm.HexBytes     `json:"draft_id"`
-	Config  json.RawMessage `json:"config"`
+	Config  json.RawMessage `json:"config,omitempty"`
 	Desc    json.RawMessage `json:"desc"`
 }
 
