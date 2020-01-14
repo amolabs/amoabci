@@ -33,7 +33,7 @@ const (
 	TxCodeProposedDraft
 	TxCodeNonExistingDraft
 	TxCodeAnotherDraftInProcess
-	TxCodeUnavailableVote
+	TxCodeVoteNotOpened
 	TxCodeAlreadyVoted
 
 	TxCodeUnknown

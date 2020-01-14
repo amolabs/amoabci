@@ -13,9 +13,9 @@ import (
 )
 
 type ProposeParam struct {
-	DraftID tm.HexBytes        `json:"draft_id"`
-	Config  types.AMOAppConfig `json:"config"`
-	Desc    json.RawMessage    `json:"desc"`
+	DraftID tm.HexBytes     `json:"draft_id"`
+	Config  json.RawMessage `json:"config"`
+	Desc    json.RawMessage `json:"desc"`
 }
 
 func parseProposeParam(raw []byte) (ProposeParam, error) {
@@ -93,7 +93,7 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	balance.Sub(deposit)
 
 	// config check
-	ok, cfg := ConfigAMOApp.Check(t.getPayload())
+	ok, cfg := ConfigAMOApp.Check(t.Param.Config)
 	if !ok {
 		return code.TxCodeImproperDraftConfig, "improper config to apply", nil
 	}

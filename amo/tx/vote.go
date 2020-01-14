@@ -1,7 +1,6 @@
 package tx
 
 import (
-	"bytes"
 	"encoding/json"
 
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -51,7 +50,7 @@ func (t *TxVote) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 
 	stakes := store.GetTopStakes(ConfigAMOApp.MaxValidators, t.GetSender(), false)
 	if len(stakes) == 0 {
-		return code.TxCodePermissionDenied, "no permission to propose a draft", nil
+		return code.TxCodePermissionDenied, "no permission to vote", nil
 	}
 
 	_, draftIDByteArray, err := ConvDraftIDFromHex(txParam.DraftID)
@@ -67,7 +66,7 @@ func (t *TxVote) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	if !(draft.DraftOpenCount == 0 &&
 		draft.DraftCloseCount > 0 &&
 		draft.DraftApplyCount > 0) {
-		return code.TxCodeUnavailableVote, "votig is unavailable", nil
+		return code.TxCodeVoteNotOpened, "vote is not opened", nil
 	}
 
 	vote := store.GetVote(draftIDByteArray, t.GetSender(), false)

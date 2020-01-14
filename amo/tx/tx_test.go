@@ -1186,3 +1186,234 @@ func TestDraftIDConversion(t *testing.T) {
 
 	assert.Equal(t, uint32(12), draftIDInt)
 }
+
+func TestPropose(t *testing.T) {
+	// env
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NotNil(t, s)
+	ConfigAMOApp = types.AMOAppConfig{
+		MaxValidators:           uint64(100),
+		WeightValidator:         uint64(2),
+		WeightDelegator:         uint64(1),
+		MinStakingUnit:          "100",
+		BlkReward:               "1000",
+		TxReward:                "1000",
+		PenaltyRatioM:           float64(0.1),
+		PenaltyRatioL:           float64(0.1),
+		LazinessCounterWindow:   int64(10000),
+		LazinessThreshold:       float64(0.9),
+		BlockBoundTxGracePeriod: uint64(10000),
+		LockupPeriod:            uint64(10000),
+		DraftOpenCount:          uint64(10000),
+		DraftCloseCount:         uint64(10000),
+		DraftApplyCount:         uint64(10000),
+		DraftDeposit:            "1000",
+		DraftQuorumRate:         float64(0.1),
+		DraftPassRate:           float64(0.7),
+		DraftRefundRate:         float64(0.2),
+	}
+
+	// target
+	payload, _ := json.Marshal(ProposeParam{
+		DraftID: []byte(`"2"`),
+		Config:  []byte(`{"min_staking_unit": "0"}`),
+		Desc:    []byte(`"any json"`),
+	})
+	t1 := makeTestTx("propose", "proposer", payload)
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// propose before proposer acquires permission
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+
+	// proposer stake
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+
+	assert.NoError(t, s.SetUnlockedStake(makeAccAddr("proposer"), &types.Stake{
+		Validator: k,
+		Amount:    *new(types.Currency).Set(10000000),
+	}))
+
+	// propose with improper draft id
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeImproperDraftID, rc)
+
+	// imitate next draft id for test
+	StateNextDraftID = 2
+
+	// propose without having enough balance in proposer's account
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	// give some balance and imitate draft deposit
+	s.SetBalance(makeAccAddr("proposer"), new(types.Currency).Set(1000))
+	ConfigAMOApp.DraftDeposit = "1000"
+
+	// propose draft with improper draft config
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeImproperDraftConfig, rc)
+
+	// modify draft config to make it proper
+	payload, _ = json.Marshal(ProposeParam{
+		DraftID: []byte(`"2"`),
+		Config:  []byte(`{"min_staking_unit": "100"}`),
+		Desc:    []byte(`"any json"`),
+	})
+	t1 = makeTestTx("propose", "proposer", payload)
+	rc, _ = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// propose draft with proper draft config
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// check balance
+	bal := s.GetBalance(makeAccAddr("proposer"), false)
+	assert.Equal(t, types.Zero, bal)
+
+	// propose same draft by proposerDup
+	copy(k[:], cmn.RandBytes(32))
+	s.SetBalance(makeAccAddr("proposerDup"), new(types.Currency).Set(1000))
+	assert.NoError(t, s.SetUnlockedStake(makeAccAddr("proposerDup"), &types.Stake{
+		Validator: k,
+		Amount:    *new(types.Currency).Set(10000000),
+	}))
+	t1 = makeTestTx("propose", "proposerDup", payload)
+	rc, _ = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeProposedDraft, rc)
+
+	// propose other draft while there exists a draft in process
+	StateNextDraftID = 3
+	payload, _ = json.Marshal(ProposeParam{
+		DraftID: []byte(`"3"`),
+		Config:  []byte(`{"tx_reward": "0"}`),
+		Desc:    []byte(`"i don't want other vals to earn tx rewards"`),
+	})
+	t1 = makeTestTx("propose", "proposerDup", payload)
+	rc, _ = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeAnotherDraftInProcess, rc)
+}
+
+func TestVote(t *testing.T) {
+	// env
+	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NotNil(t, s)
+
+	// target
+	payload, _ := json.Marshal(VoteParam{
+		DraftID: []byte(`"1"`),
+		Approve: true,
+	})
+	t1 := makeTestTx("vote", "voter1", payload)
+	rc, _ := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// voter1 vote without permission (without stake)
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+
+	// voter1 stake
+	var k ed25519.PubKeyEd25519
+	copy(k[:], cmn.RandBytes(32))
+	assert.NoError(t, s.SetUnlockedStake(makeAccAddr("voter1"), &types.Stake{
+		Validator: k,
+		Amount:    *new(types.Currency).Set(10000000),
+	}))
+
+	// voter1 tries to vote for non-existing draft
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNonExistingDraft, rc)
+
+	// set dummy draft
+	cfg := types.AMOAppConfig{
+		MaxValidators:           uint64(100),
+		WeightValidator:         uint64(2),
+		WeightDelegator:         uint64(1),
+		MinStakingUnit:          "100",
+		BlkReward:               "1000",
+		TxReward:                "1000",
+		PenaltyRatioM:           float64(0.1),
+		PenaltyRatioL:           float64(0.1),
+		LazinessCounterWindow:   int64(10000),
+		LazinessThreshold:       float64(0.9),
+		BlockBoundTxGracePeriod: uint64(10000),
+		LockupPeriod:            uint64(10000),
+		DraftOpenCount:          uint64(10000),
+		DraftCloseCount:         uint64(10000),
+		DraftApplyCount:         uint64(10000),
+		DraftDeposit:            "1000",
+		DraftQuorumRate:         float64(0.1),
+		DraftPassRate:           float64(0.7),
+		DraftRefundRate:         float64(0.2),
+	}
+	StateNextDraftID = uint32(1)
+	draftID := ConvDraftIDFromUint(StateNextDraftID)
+	s.SetDraft(draftID, &types.Draft{
+		Proposer: makeAccAddr("proposer"),
+		Config:   cfg,
+		Desc:     []byte(`"any desc"`),
+
+		// imitate beginning of draft vote situation
+		DraftOpenCount:  uint64(0),
+		DraftCloseCount: uint64(1000),
+		DraftApplyCount: uint64(10000),
+		DraftDeposit:    *new(types.Currency).Set(100),
+
+		TallyQuorum:  *new(types.Currency).Set(0),
+		TallyApprove: *new(types.Currency).Set(0),
+		TallyReject:  *new(types.Currency).Set(0),
+	})
+	s.SetVote(draftID, makeAccAddr("proposer"), &types.Vote{
+		Approve: true,
+		Power:   *new(types.Currency).Set(0),
+	})
+
+	StateNextDraftID = uint32(2)
+
+	// voter1 vote again
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// voter1 tries to already voted draft vote
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeAlreadyVoted, rc)
+
+	// voter2 stake
+	copy(k[:], cmn.RandBytes(32))
+	assert.NoError(t, s.SetUnlockedStake(makeAccAddr("voter2"), &types.Stake{
+		Validator: k,
+		Amount:    *new(types.Currency).Set(10000000),
+	}))
+
+	// relpace draft value to imitate ending of draft vote
+	s.SetDraft(draftID, &types.Draft{
+		Proposer: makeAccAddr("proposer"),
+		Config:   cfg,
+		Desc:     []byte(`"any desc"`),
+
+		// imitate ending of draft vote situation
+		DraftOpenCount:  uint64(0),
+		DraftCloseCount: uint64(0),
+		DraftApplyCount: uint64(10000),
+		DraftDeposit:    *new(types.Currency).Set(100),
+
+		TallyQuorum:  *new(types.Currency).Set(0),
+		TallyApprove: *new(types.Currency).Set(0),
+		TallyReject:  *new(types.Currency).Set(0),
+	})
+
+	// voter2 tries to vote for closed draft vote
+	t2 := makeTestTx("vote", "voter2", payload)
+	rc, _ = t2.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeVoteNotOpened, rc)
+}

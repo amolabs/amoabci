@@ -158,7 +158,17 @@ func classifyTx(base TxBase) Tx {
 			Param:  param,
 		}
 	case "propose":
+		param, _ := parseProposeParam(base.Payload)
+		t = &TxPropose{
+			TxBase: base,
+			Param:  param,
+		}
 	case "vote":
+		param, _ := parseVoteParam(base.Payload)
+		t = &TxVote{
+			TxBase: base,
+			Param:  param,
+		}
 	default:
 		t = &base
 	}
