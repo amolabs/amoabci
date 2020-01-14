@@ -1,9 +1,7 @@
 package tx
 
 import (
-	"encoding/binary"
 	"encoding/json"
-	"strconv"
 
 	tm "github.com/tendermint/tendermint/libs/common"
 
@@ -56,7 +54,7 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodePermissionDenied, "no permission to propose a draft", nil
 	}
 
-	draftIDInt, draftIDByteArray, err := ConvDraftIDFromHex(txParam.DraftID)
+	draftIDInt, draftIDByteArray, err := types.ConvDraftIDFromHex(txParam.DraftID)
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
@@ -65,12 +63,12 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeImproperDraftID, "improper draft ID", nil
 	}
 
-	latestDraftIDByteArray := ConvDraftIDFromUint(StateNextDraftID - 1)
+	latestDraftIDByteArray := types.ConvDraftIDFromUint(StateNextDraftID - 1)
 	latestDraft := store.GetDraft(latestDraftIDByteArray, false)
 	if latestDraft != nil {
-		if !(latestDraft.DraftOpenCount == 0 &&
-			latestDraft.DraftCloseCount == 0 &&
-			latestDraft.DraftApplyCount == 0) {
+		if !(latestDraft.OpenCount == 0 &&
+			latestDraft.CloseCount == 0 &&
+			latestDraft.ApplyCount == 0) {
 			return code.TxCodeAnotherDraftInProcess, "another draft in process", nil
 		}
 	}
@@ -104,10 +102,10 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		Config:   cfg,
 		Desc:     t.Param.Desc,
 
-		DraftOpenCount:  ConfigAMOApp.DraftOpenCount,
-		DraftCloseCount: ConfigAMOApp.DraftCloseCount,
-		DraftApplyCount: ConfigAMOApp.DraftApplyCount,
-		DraftDeposit:    *deposit,
+		OpenCount:  ConfigAMOApp.DraftOpenCount,
+		CloseCount: ConfigAMOApp.DraftCloseCount,
+		ApplyCount: ConfigAMOApp.DraftApplyCount,
+		Deposit:    *deposit,
 
 		TallyQuorum:  *new(types.Currency).Set(0),
 		TallyApprove: *new(types.Currency).Set(0),
@@ -124,35 +122,4 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	})
 
 	return code.TxCodeOK, "ok", nil
-}
-
-func ConvDraftIDFromHex(raw tm.HexBytes) (uint32, []byte, error) {
-	var (
-		draftIDStr       string
-		draftIDUint      uint32
-		draftIDByteArray []byte
-	)
-
-	err := json.Unmarshal(raw, &draftIDStr)
-	if err != nil {
-		return draftIDUint, draftIDByteArray, err
-	}
-
-	tmp, err := strconv.ParseUint(draftIDStr, 10, 32)
-	if err != nil {
-		return draftIDUint, draftIDByteArray, err
-	}
-
-	draftIDUint = uint32(tmp)
-
-	draftIDByteArray = ConvDraftIDFromUint(draftIDUint)
-
-	return draftIDUint, draftIDByteArray, nil
-}
-
-func ConvDraftIDFromUint(raw uint32) []byte {
-	draftIDByteArray := make([]byte, 4)
-	binary.BigEndian.PutUint32(draftIDByteArray, raw)
-
-	return draftIDByteArray
 }

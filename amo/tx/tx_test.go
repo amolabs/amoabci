@@ -1177,7 +1177,7 @@ func TestDraftIDConversion(t *testing.T) {
 		draftIDByteArray []byte
 	)
 
-	draftIDInt, draftIDByteArray, err := ConvDraftIDFromHex(draftID)
+	draftIDInt, draftIDByteArray, err := types.ConvDraftIDFromHex(draftID)
 	assert.NoError(t, err)
 
 	assert.Equal(t, []byte{0x0, 0x0, 0x0, 0xc}, draftIDByteArray)
@@ -1355,17 +1355,17 @@ func TestVote(t *testing.T) {
 		DraftRefundRate:         float64(0.2),
 	}
 	StateNextDraftID = uint32(1)
-	draftID := ConvDraftIDFromUint(StateNextDraftID)
+	draftID := types.ConvDraftIDFromUint(StateNextDraftID)
 	s.SetDraft(draftID, &types.Draft{
 		Proposer: makeAccAddr("proposer"),
 		Config:   cfg,
 		Desc:     []byte(`"any desc"`),
 
 		// imitate beginning of draft vote situation
-		DraftOpenCount:  uint64(0),
-		DraftCloseCount: uint64(1000),
-		DraftApplyCount: uint64(10000),
-		DraftDeposit:    *new(types.Currency).Set(100),
+		OpenCount:  uint64(0),
+		CloseCount: uint64(1000),
+		ApplyCount: uint64(10000),
+		Deposit:    *new(types.Currency).Set(100),
 
 		TallyQuorum:  *new(types.Currency).Set(0),
 		TallyApprove: *new(types.Currency).Set(0),
@@ -1400,10 +1400,10 @@ func TestVote(t *testing.T) {
 		Desc:     []byte(`"any desc"`),
 
 		// imitate ending of draft vote situation
-		DraftOpenCount:  uint64(0),
-		DraftCloseCount: uint64(0),
-		DraftApplyCount: uint64(10000),
-		DraftDeposit:    *new(types.Currency).Set(100),
+		OpenCount:  uint64(0),
+		CloseCount: uint64(0),
+		ApplyCount: uint64(10000),
+		Deposit:    *new(types.Currency).Set(100),
 
 		TallyQuorum:  *new(types.Currency).Set(0),
 		TallyApprove: *new(types.Currency).Set(0),

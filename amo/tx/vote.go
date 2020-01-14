@@ -53,7 +53,7 @@ func (t *TxVote) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodePermissionDenied, "no permission to vote", nil
 	}
 
-	_, draftIDByteArray, err := ConvDraftIDFromHex(txParam.DraftID)
+	_, draftIDByteArray, err := types.ConvDraftIDFromHex(txParam.DraftID)
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
@@ -63,9 +63,9 @@ func (t *TxVote) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeNonExistingDraft, "non-existing draft", nil
 	}
 
-	if !(draft.DraftOpenCount == 0 &&
-		draft.DraftCloseCount > 0 &&
-		draft.DraftApplyCount > 0) {
+	if !(draft.OpenCount == 0 &&
+		draft.CloseCount > 0 &&
+		draft.ApplyCount > 0) {
 		return code.TxCodeVoteNotOpened, "vote is not opened", nil
 	}
 

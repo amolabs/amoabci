@@ -894,6 +894,163 @@ func (s Store) GetDraft(draftID []byte, committed bool) *types.Draft {
 	return &draft
 }
 
+func (s Store) ProcessDraftVotes(
+	latestDraftIDUint uint32,
+	maxValidators uint64,
+	quorumRate, passRate, refundRate float64,
+	committed bool,
+) {
+	voteJustGotClosed := false
+	applyDraftConfig := false
+
+	// check if there is a draft in process first
+	draftID := types.ConvDraftIDFromUint(latestDraftIDUint)
+	draft := s.GetDraft(draftID, committed)
+
+	// ignore non-existing draft
+	if draft == nil {
+		return
+	}
+
+	// ignore already applied draft
+	if draft.OpenCount == 0 && draft.CloseCount == 0 && draft.ApplyCount == 0 {
+		return
+	}
+
+	// decrement draft's open, close, apply counts
+	if draft.OpenCount > 0 && draft.CloseCount > 0 && draft.ApplyCount > 0 {
+		draft.OpenCount -= uint64(1)
+	} else if draft.OpenCount == 0 && draft.CloseCount > 0 && draft.ApplyCount > 0 {
+		draft.CloseCount -= uint64(1)
+		if draft.CloseCount == 0 {
+			voteJustGotClosed = true
+		}
+	} else if draft.OpenCount == 0 && draft.CloseCount == 0 && draft.ApplyCount > 0 {
+		draft.ApplyCount -= uint64(1)
+		if draft.ApplyCount == 0 {
+			applyDraftConfig = true
+		}
+	}
+
+	// if draft just gets closed, update draft's tally value and handle deposit
+	if voteJustGotClosed {
+		// calculate draft.TallyQuorum
+		tes := new(types.Currency).Set(0)
+		tss := s.GetTopStakes(maxValidators, nil, committed)
+		for _, ts := range tss {
+			holder := s.GetHolderByValidator(ts.Validator.Address(), committed)
+			es := s.GetEffStake(holder, committed)
+			tes.Add(&es.Amount)
+		}
+
+		// tallyQuorum = totalEffectiveStake * quorumRate
+		tesf := new(big.Float).SetInt(&tes.Int)
+		qrf := new(big.Float).SetFloat64(quorumRate)
+		qf := tesf.Mul(tesf, qrf)
+
+		tallyQuorum := new(types.Currency)
+		qf.Int(&tallyQuorum.Int)
+
+		draft.TallyQuorum = *tallyQuorum
+
+		// calculate vote.Power, draft.TallyApprove and draft.TallyReject
+		votes := s.GetVotes(draftID, committed)
+		for _, vote := range votes {
+			// if not included in top stakes, ignore and delete vote
+			ts := s.GetTopStakes(maxValidators, vote.Voter, committed)
+			if len(ts) == 0 {
+				s.DeleteVote(draftID, vote.Voter)
+				continue
+			}
+
+			// update voter's power field with its effective stake
+			es := s.GetEffStake(vote.Voter, committed)
+			vote.Record.Power = es.Amount
+
+			s.SetVote(draftID, vote.Voter, &vote.Record)
+
+			// update vote's tally fields
+			if vote.Record.Approve {
+				draft.TallyApprove.Add(&es.Amount)
+			} else {
+				draft.TallyReject.Add(&es.Amount)
+			}
+		}
+
+		s.SetDraft(draftID, draft)
+
+		// totalTally = draft.TallyApprove + draft.TallyReject
+		totalTally := new(types.Currency).Set(0)
+		totalTally.Add(&draft.TallyApprove)
+		totalTally.Add(&draft.TallyReject)
+
+		// refund = totalTally * refundRate
+		tesf = new(big.Float).SetInt(&totalTally.Int)
+		rrf := new(big.Float).SetFloat64(refundRate)
+		rf := tesf.Mul(tesf, rrf)
+
+		refund := new(types.Currency)
+		rf.Int(&refund.Int)
+
+		// if refund >= draft.TallyApprove
+		if refund.GreaterThan(&draft.TallyApprove) || refund.Equals(&draft.TallyApprove) {
+			// return deposit to proposer
+			balance := s.GetBalance(draft.Proposer, committed)
+			balance.Add(&draft.Deposit)
+			s.SetBalance(draft.Proposer, balance)
+		} else {
+			// distribute deposit to voters
+			votes := s.GetVotes(draftID, committed)
+
+			// distAmount = draft.Deposit * len(votes)
+			df := new(big.Float).SetInt(&draft.Deposit.Int)
+			nf := new(big.Float).SetUint64(uint64(len(votes)))
+			daf := df.Mul(df, nf)
+
+			distAmount := new(types.Currency)
+			daf.Int(&distAmount.Int)
+
+			for _, vote := range votes {
+				balance := s.GetBalance(vote.Voter, committed)
+				balance.Add(distAmount)
+				s.SetBalance(vote.Voter, balance)
+			}
+		}
+	}
+
+	if applyDraftConfig {
+		// totalTally = draft.TallyApprove + draft.TallyReject
+		totalTally := new(types.Currency).Set(0)
+		totalTally.Add(&draft.TallyApprove)
+		totalTally.Add(&draft.TallyReject)
+
+		// if draft.TallyQuorum > totalTally, drop draft config
+		if draft.TallyQuorum.GreaterThan(totalTally) {
+			return
+		}
+
+		// pass = totalTally * passRate
+		ttf := new(big.Float).SetInt(&totalTally.Int)
+		prf := new(big.Float).SetFloat64(passRate)
+		pf := ttf.Mul(ttf, prf)
+
+		pass := new(types.Currency)
+		pf.Int(&pass.Int)
+
+		// if pass > totalTally, drop draft config
+		if pass.GreaterThan(totalTally) {
+			return
+		}
+
+		b, err := json.Marshal(draft.Config)
+		if err != nil {
+			return
+		}
+
+		s.SetAppConfig(b)
+	}
+}
+
 // Vote store
 func makeVoteKey(draftID []byte, voter crypto.Address) []byte {
 	return append(prefixVote, append(draftID, voter...)...)
@@ -957,6 +1114,10 @@ func (s Store) GetVotes(draftID []byte, committed bool) []*types.VoteInfo {
 	})
 
 	return voteInfo
+}
+
+func (s Store) DeleteVote(draftID []byte, voter crypto.Address) {
+	s.remove(makeVoteKey(draftID, voter))
 }
 
 // Parcel store

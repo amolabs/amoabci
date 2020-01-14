@@ -145,9 +145,6 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 
 	// TODO: use something more elegant
 	tx.ConfigAMOApp = app.config
-	tx.ConfigAMOApp.LockupPeriod = app.config.LockupPeriod
-	tx.ConfigAMOApp.MinStakingUnit = app.config.MinStakingUnit
-	tx.ConfigAMOApp.MaxValidators = app.config.MaxValidators
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -296,15 +293,14 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	app.state.MerkleVersion = version
 	app.state.LastHeight = 0
 	app.state.LastAppHash = hash
+	app.state.NextDraftID = 1
 
 	err = app.loadAppConfig()
 	if err != nil {
 		return abci.ResponseInitChain{}
 	}
 
-	tx.ConfigAMOApp.LockupPeriod = app.config.LockupPeriod
-	tx.ConfigAMOApp.MinStakingUnit = app.config.MinStakingUnit
-	tx.ConfigAMOApp.MaxValidators = app.config.MaxValidators
+	tx.ConfigAMOApp = app.config
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -506,6 +502,11 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 			t.GetType() == "delegate" || t.GetType() == "retract" {
 			app.doValUpdate = true
 		}
+
+		if t.GetType() == "propose" {
+			app.state.NextDraftID += uint32(1)
+		}
+
 		tags = append(tags, opTags...)
 		app.numDeliveredTxs += 1
 	} else {
@@ -558,6 +559,15 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 
 	app.replayPreventer.Index()
 
+	app.store.ProcessDraftVotes(
+		app.state.NextDraftID-1,
+		app.config.MaxValidators,
+		app.config.DraftQuorumRate,
+		app.config.DraftPassRate,
+		app.config.DraftRefundRate,
+		false,
+	)
+
 	// update appHash
 	hash := app.store.Root()
 	if hash == nil {
@@ -590,9 +600,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 		return abci.ResponseCommit{}
 	}
 
-	tx.ConfigAMOApp.LockupPeriod = app.config.LockupPeriod
-	tx.ConfigAMOApp.MinStakingUnit = app.config.MinStakingUnit
-	tx.ConfigAMOApp.MaxValidators = app.config.MaxValidators
+	tx.ConfigAMOApp = app.config
 
 	app.save()
 

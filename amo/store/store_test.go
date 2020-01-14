@@ -644,10 +644,10 @@ func TestDraft(t *testing.T) {
 		Config:   types.AMOAppConfig{TxReward: "1000000000000000000000"},
 		Desc:     json.RawMessage("null"),
 
-		DraftOpenCount:  uint64(100),
-		DraftCloseCount: uint64(10),
-		DraftApplyCount: uint64(100),
-		DraftDeposit:    *new(types.Currency).Set(1000),
+		OpenCount:  uint64(100),
+		CloseCount: uint64(10),
+		ApplyCount: uint64(100),
+		Deposit:    *new(types.Currency).Set(1000),
 
 		TallyQuorum:  *new(types.Currency).Set(100000),
 		TallyApprove: *new(types.Currency).Set(123),
