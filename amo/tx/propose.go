@@ -107,19 +107,13 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		ApplyCount: ConfigAMOApp.DraftApplyCount,
 		Deposit:    *deposit,
 
-		TallyQuorum:  *new(types.Currency).Set(0),
-		TallyApprove: *new(types.Currency).Set(0),
-		TallyReject:  *new(types.Currency).Set(0),
+		TallyQuorum:  *types.Zero,
+		TallyApprove: *types.Zero,
+		TallyReject:  *types.Zero,
 	})
 
 	// set sender balance
 	store.SetBalance(t.GetSender(), balance)
-
-	// sender approve draft as proposer
-	store.SetVote(draftIDByteArray, t.GetSender(), &types.Vote{
-		Approve: true,
-		Power:   *new(types.Currency).Set(0),
-	})
 
 	return code.TxCodeOK, "ok", nil
 }

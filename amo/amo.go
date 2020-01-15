@@ -172,7 +172,7 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 
 const (
 	// hard-coded configs
-	defaultMaxValidators   = 100
+	defaultMaxValidators   = uint64(100)
 	defaultWeightValidator = uint64(2)
 	defaultWeightDelegator = uint64(1)
 
@@ -185,15 +185,15 @@ const (
 	defaultPenaltyRatioM = float64(0.3)
 	defaultPenaltyRatioL = float64(0.3)
 
-	defaultLazinessCounterWindow = int64(300)
+	defaultLazinessCounterWindow = int64(10000)
 	defaultLazinessThreshold     = float64(0.8)
 
-	defaultBlockBoundTxGracePeriod = uint64(1000)
+	defaultBlockBoundTxGracePeriod = uint64(10000)
 	defaultLockupPeriod            = uint64(1000000)
 
-	defaultDraftOpenCount  = uint64(1000)
-	defaultDraftCloseCount = uint64(100)
-	defaultDraftApplyCount = uint64(1000)
+	defaultDraftOpenCount  = uint64(10000)
+	defaultDraftCloseCount = uint64(10000)
+	defaultDraftApplyCount = uint64(10000)
 	defaultDraftDeposit    = "1000000000000000000000000"
 	defaultDraftQuorumRate = float64(0.3)
 	defaultDraftPassRate   = float64(0.51)
@@ -291,9 +291,9 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	}
 
 	app.state.MerkleVersion = version
-	app.state.LastHeight = 0
+	app.state.LastHeight = int64(0)
 	app.state.LastAppHash = hash
-	app.state.NextDraftID = 1
+	app.state.NextDraftID = uint32(1)
 
 	err = app.loadAppConfig()
 	if err != nil {
@@ -560,7 +560,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	app.replayPreventer.Index()
 
 	app.store.ProcessDraftVotes(
-		app.state.NextDraftID-1,
+		app.state.NextDraftID-uint32(1),
 		app.config.MaxValidators,
 		app.config.DraftQuorumRate,
 		app.config.DraftPassRate,

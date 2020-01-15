@@ -257,15 +257,14 @@ func makeBalanceKey(addr tm.Address) []byte {
 }
 
 func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
-	zero := new(types.Currency).Set(0)
 	balanceKey := makeBalanceKey(addr)
 
-	if balance.LessThan(zero) {
+	if balance.LessThan(types.Zero) {
 		return fmt.Errorf("unavailable amount: %s", balance.String())
 	}
 
 	// pre-process for setting zero balance, just remove corresponding key
-	if s.has(balanceKey) && balance.Equals(zero) {
+	if s.has(balanceKey) && balance.Equals(types.Zero) {
 		s.remove(balanceKey)
 		return nil
 	}
@@ -281,6 +280,7 @@ func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
 }
 
 func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) error {
+
 	zero := uint64(0)
 	balanceKey := makeBalanceKey(addr)
 
@@ -466,8 +466,6 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 }
 
 func (s Store) SlashStakes(holder crypto.Address, amount types.Currency, committed bool) {
-	zeroAmount := new(types.Currency).Set(0)
-
 	total := s.GetStake(holder, committed)
 	if total == nil {
 		return
@@ -495,7 +493,7 @@ func (s Store) SlashStakes(holder crypto.Address, amount types.Currency, committ
 		s.SetUnlockedStake(holder, unlockedStake)
 
 		// check end of slash
-		if amount.Equals(zeroAmount) {
+		if amount.Equals(types.Zero) {
 			return
 		}
 	}
@@ -519,7 +517,7 @@ func (s Store) SlashStakes(holder crypto.Address, amount types.Currency, committ
 
 		s.SetLockedStake(holder, lockedStake, height)
 
-		if amount.Equals(zeroAmount) {
+		if amount.Equals(types.Zero) {
 			break
 		}
 	}
@@ -954,6 +952,9 @@ func (s Store) ProcessDraftVotes(
 		draft.TallyQuorum = *tallyQuorum
 
 		// calculate vote.Power, draft.TallyApprove and draft.TallyReject
+		pes := s.GetEffStake(draft.Proposer, committed)
+		draft.TallyApprove.Add(&pes.Amount)
+
 		votes := s.GetVotes(draftID, committed)
 		for _, vote := range votes {
 			// if not included in top stakes, ignore and delete vote
@@ -977,8 +978,6 @@ func (s Store) ProcessDraftVotes(
 			}
 		}
 
-		s.SetDraft(draftID, draft)
-
 		// totalTally = draft.TallyApprove + draft.TallyReject
 		totalTally := new(types.Currency).Set(0)
 		totalTally.Add(&draft.TallyApprove)
@@ -992,8 +991,8 @@ func (s Store) ProcessDraftVotes(
 		refund := new(types.Currency)
 		rf.Int(&refund.Int)
 
-		// if refund >= draft.TallyApprove
-		if refund.GreaterThan(&draft.TallyApprove) || refund.Equals(&draft.TallyApprove) {
+		// if draft.TallyApprove > refund
+		if draft.TallyApprove.GreaterThan(refund) {
 			// return deposit to proposer
 			balance := s.GetBalance(draft.Proposer, committed)
 			balance.Add(&draft.Deposit)
@@ -1049,6 +1048,8 @@ func (s Store) ProcessDraftVotes(
 
 		s.SetAppConfig(b)
 	}
+
+	s.SetDraft(draftID, draft)
 }
 
 // Vote store

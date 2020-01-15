@@ -18,6 +18,7 @@ import (
 
 	"github.com/amolabs/amoabci/amo/blockchain"
 	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/tx"
 	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/crypto/p256"
@@ -1136,6 +1137,181 @@ func TestBindingBlock(t *testing.T) {
 	app.EndBlock(abci.RequestEndBlock{Height: 4})
 }
 
+func TestGovernance(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	// manipulate InitChain() func
+	app.state.NextDraftID = uint32(1)
+
+	err := app.loadAppConfig()
+	assert.NoError(t, err)
+
+	// manipulate draft related configs and state
+	app.config.DraftDeposit = "1000"
+	app.config.DraftQuorumRate = float64(0.6)
+	app.config.DraftPassRate = float64(0.51)
+	app.config.DraftRefundRate = float64(0.7)
+
+	tx.ConfigAMOApp = app.config
+
+	// prepare validator set
+	// total: 15, voters: 10(yay: 6, nay: 4), non-voters: 5
+	p, _ := prepForGov(app.store, "p", 1000)     // true
+	v1, _ := prepForGov(app.store, "v1", 1000)   // true
+	v2, _ := prepForGov(app.store, "v2", 1000)   // true
+	v3, _ := prepForGov(app.store, "v3", 1000)   // true
+	v4, _ := prepForGov(app.store, "v4", 1000)   // true
+	v5, _ := prepForGov(app.store, "v5", 1000)   // true
+	v6, _ := prepForGov(app.store, "v6", 1000)   // false
+	v7, _ := prepForGov(app.store, "v7", 1000)   // false
+	v8, _ := prepForGov(app.store, "v8", 1000)   // false
+	v9, _ := prepForGov(app.store, "v9", 1000)   // false
+	v10, _ := prepForGov(app.store, "v10", 1000) // nop
+	v11, _ := prepForGov(app.store, "v11", 1000) // nop
+	v12, _ := prepForGov(app.store, "v12", 1000) // nop
+	v13, _ := prepForGov(app.store, "v13", 1000) // nop
+	v14, _ := prepForGov(app.store, "v14", 1000) // nop
+
+	// check target value before draft application
+	assert.Equal(t, defaultTxReward, app.config.TxReward)
+	assert.Equal(t, defaultLockupPeriod, app.config.LockupPeriod)
+
+	// proposer propose a draft in height 1
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 1}})
+
+	draftID := []byte(`"1"`)
+	cfg := app.config
+	cfg.TxReward = "0"
+	cfg.LockupPeriod = 10000
+	desc := []byte(`"I want others to get no reward and stay locked shorter"`)
+
+	// bypass 'propose' tx
+	_, draftIDByteArray, err := types.ConvDraftIDFromHex(draftID)
+	assert.NoError(t, err)
+
+	deposit, err := new(types.Currency).SetString(app.config.DraftDeposit, 10)
+	assert.NoError(t, err)
+
+	app.store.SetDraft(draftIDByteArray, &types.Draft{
+		Proposer: p.PubKey().Address(),
+		Config:   cfg,
+		Desc:     desc,
+
+		OpenCount:  uint64(1),
+		CloseCount: uint64(1),
+		ApplyCount: uint64(1),
+		Deposit:    *deposit,
+
+		TallyQuorum:  *types.Zero,
+		TallyApprove: *types.Zero,
+		TallyReject:  *types.Zero,
+	})
+
+	balance := app.store.GetBalance(p.PubKey().Address(), false)
+	balance.Sub(deposit)
+	app.store.SetBalance(p.PubKey().Address(), balance)
+
+	app.state.NextDraftID += uint32(1)
+
+	assert.Equal(t, types.Zero, app.store.GetBalance(p.PubKey().Address(), false))
+
+	app.EndBlock(abci.RequestEndBlock{Height: 1})
+
+	draft := app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(1), draft.CloseCount)
+	assert.Equal(t, uint64(1), draft.ApplyCount)
+
+	// voters vote for the draft in height 2
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 2}})
+
+	tx := makeTxVote(v1, draftID, true)
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
+
+	tx = makeTxVote(v2, draftID, true)
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
+
+	tx = makeTxVote(v3, draftID, true)
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
+
+	tx = makeTxVote(v4, draftID, true)
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
+
+	tx = makeTxVote(v5, draftID, true)
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
+
+	tx = makeTxVote(v6, draftID, false)
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
+
+	tx = makeTxVote(v7, draftID, false)
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
+
+	tx = makeTxVote(v8, draftID, false)
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
+
+	tx = makeTxVote(v9, draftID, false)
+	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
+	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 2})
+
+	draft = app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(0), draft.CloseCount)
+	assert.Equal(t, uint64(1), draft.ApplyCount)
+	assert.Equal(t, *new(types.Currency).Set(6000), draft.TallyApprove)
+	assert.Equal(t, *new(types.Currency).Set(4000), draft.TallyReject)
+
+	// check if draft deposit is not returned to proposer
+	assert.Equal(t, types.Zero, app.store.GetBalance(p.PubKey().Address(), false))
+
+	// check if draft deposit is distributed to voters, not to non-voters
+	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v1.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v2.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v3.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v4.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v5.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v6.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v7.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v8.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v9.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v10.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v11.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v12.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v13.PubKey().Address(), false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v14.PubKey().Address(), false))
+
+	// wait for draft to get applied for 1 at height 3
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 3}})
+	app.EndBlock(abci.RequestEndBlock{Height: 3})
+
+	draft = app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(0), draft.CloseCount)
+	assert.Equal(t, uint64(0), draft.ApplyCount)
+
+	// imitate Commit() to load new app config
+	_, _, err = app.store.Save()
+	assert.NoError(t, err)
+	err = app.loadAppConfig()
+	assert.NoError(t, err)
+
+	// after target
+	assert.Equal(t, "0", app.config.TxReward)
+	assert.Equal(t, uint64(10000), app.config.LockupPeriod)
+}
+
 func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64, lastHeight string) []byte {
 	validator, _ := ed25519.GenPrivKeyFromSecret([]byte(val)).
 		PubKey().(ed25519.PubKeyEd25519)
@@ -1191,8 +1367,59 @@ func makeTxWithdraw(priv p256.PrivKeyP256, amount uint64) []byte {
 	return rawTx
 }
 
+func makeTxPropose(priv p256.PrivKeyP256, draftID cmn.HexBytes, cfg, desc json.RawMessage) []byte {
+	param := tx.ProposeParam{
+		DraftID: draftID,
+		Config:  cfg,
+		Desc:    desc,
+	}
+	payload, _ := json.Marshal(param)
+	_tx := tx.TxBase{
+		Type:       "propose",
+		Payload:    payload,
+		Sender:     priv.PubKey().Address(),
+		Fee:        *new(types.Currency).Set(0),
+		LastHeight: "1",
+	}
+	_tx.Sign(priv)
+	rawTx, _ := json.Marshal(_tx)
+	return rawTx
+}
+
+func makeTxVote(priv p256.PrivKeyP256, draftID cmn.HexBytes, approve bool) []byte {
+	param := tx.VoteParam{
+		DraftID: draftID,
+		Approve: approve,
+	}
+	payload, _ := json.Marshal(param)
+	_tx := tx.TxBase{
+		Type:       "vote",
+		Payload:    payload,
+		Sender:     priv.PubKey().Address(),
+		Fee:        *new(types.Currency).Set(0),
+		LastHeight: "1",
+	}
+	_tx.Sign(priv)
+	rawTx, _ := json.Marshal(_tx)
+	return rawTx
+}
+
 func makeTestAddress(seed string) crypto.Address {
 	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
 	addr := privKey.PubKey().Address()
 	return addr
+}
+
+func prepForGov(s *store.Store, seed string, amount uint64) (p256.PrivKeyP256, ed25519.PrivKeyEd25519) {
+	validator := ed25519.GenPrivKeyFromSecret([]byte(seed))
+	holder := p256.GenPrivKeyFromSecret([]byte(seed))
+
+	s.SetBalance(holder.PubKey().Address(), new(types.Currency).Set(amount))
+
+	s.SetUnlockedStake(holder.PubKey().Address(), &types.Stake{
+		Validator: validator.PubKey().(ed25519.PubKeyEd25519),
+		Amount:    *new(types.Currency).Set(amount),
+	})
+
+	return holder, validator
 }

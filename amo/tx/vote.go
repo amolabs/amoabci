@@ -76,7 +76,7 @@ func (t *TxVote) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 
 	store.SetVote(draftIDByteArray, t.GetSender(), &types.Vote{
 		Approve: t.Param.Approve,
-		Power:   *new(types.Currency).Set(0),
+		Power:   *types.Zero,
 	})
 
 	return code.TxCodeOK, "ok", nil

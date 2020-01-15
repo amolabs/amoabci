@@ -50,4 +50,10 @@ func TestConfigCheckValue(t *testing.T) {
 	ok, changedCfg = cfg.Check(payload)
 	assert.True(t, ok)
 	assert.NotEqual(t, changedCfg.BlkReward, cfg.BlkReward)
+
+	payload = []byte(`{"blk_reward": "100", "lockup_period": 1000000}`)
+	ok, changedCfg = cfg.Check(payload)
+	assert.True(t, ok)
+	assert.NotEqual(t, changedCfg.BlkReward, cfg.BlkReward)
+	assert.NotEqual(t, changedCfg.LockupPeriod, cfg.LockupPeriod)
 }
