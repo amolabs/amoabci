@@ -1001,10 +1001,10 @@ func (s Store) ProcessDraftVotes(
 			// distribute deposit to voters
 			votes := s.GetVotes(draftID, committed)
 
-			// distAmount = draft.Deposit * len(votes)
+			// distAmount = draft.Deposit / len(votes)
 			df := new(big.Float).SetInt(&draft.Deposit.Int)
 			nf := new(big.Float).SetUint64(uint64(len(votes)))
-			daf := df.Mul(df, nf)
+			daf := df.Quo(df, nf)
 
 			distAmount := new(types.Currency)
 			daf.Int(&distAmount.Int)
@@ -1016,6 +1016,8 @@ func (s Store) ProcessDraftVotes(
 			}
 		}
 	}
+
+	s.SetDraft(draftID, draft)
 
 	if applyDraftConfig {
 		// totalTally = draft.TallyApprove + draft.TallyReject
@@ -1036,8 +1038,8 @@ func (s Store) ProcessDraftVotes(
 		pass := new(types.Currency)
 		pf.Int(&pass.Int)
 
-		// if pass > totalTally, drop draft config
-		if pass.GreaterThan(totalTally) {
+		// if pass > draft.TallyApprove, drop draft config
+		if pass.GreaterThan(&draft.TallyApprove) {
 			return
 		}
 
@@ -1048,8 +1050,6 @@ func (s Store) ProcessDraftVotes(
 
 		s.SetAppConfig(b)
 	}
-
-	s.SetDraft(draftID, draft)
 }
 
 // Vote store

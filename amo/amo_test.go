@@ -1156,37 +1156,38 @@ func TestGovernance(t *testing.T) {
 	err := app.loadAppConfig()
 	assert.NoError(t, err)
 
-	// manipulate draft related configs and state
+	// manipulate draft related configs
 	app.config.DraftDeposit = *new(types.Currency).Set(1000)
 	app.config.DraftQuorumRate = float64(0.6)
 	app.config.DraftPassRate = float64(0.51)
-	app.config.DraftRefundRate = float64(0.7)
+	app.config.DraftRefundRate = float64(0.25)
 
 	tx.ConfigAMOApp = app.config
 
 	// prepare validator set
+	p := prepForGov(app.store, "p", 1000)
+	v1 := prepForGov(app.store, "v1", 1000)
+	v2 := prepForGov(app.store, "v2", 1000)
+	v3 := prepForGov(app.store, "v3", 1000)
+	v4 := prepForGov(app.store, "v4", 1000)
+	v5 := prepForGov(app.store, "v5", 1000)
+	v6 := prepForGov(app.store, "v6", 1000)
+	v7 := prepForGov(app.store, "v7", 1000)
+	v8 := prepForGov(app.store, "v8", 1000)
+	v9 := prepForGov(app.store, "v9", 1000)
+	v10 := prepForGov(app.store, "v10", 1000)
+	v11 := prepForGov(app.store, "v11", 1000)
+	v12 := prepForGov(app.store, "v12", 1000)
+	v13 := prepForGov(app.store, "v13", 1000)
+	v14 := prepForGov(app.store, "v14", 1000)
+
+	// test for draft being approved, deposit returned to proposer
 	// total: 15, voters: 10(yay: 6, nay: 4), non-voters: 5
-	p, _ := prepForGov(app.store, "p", 1000)     // true
-	v1, _ := prepForGov(app.store, "v1", 1000)   // true
-	v2, _ := prepForGov(app.store, "v2", 1000)   // true
-	v3, _ := prepForGov(app.store, "v3", 1000)   // true
-	v4, _ := prepForGov(app.store, "v4", 1000)   // true
-	v5, _ := prepForGov(app.store, "v5", 1000)   // true
-	v6, _ := prepForGov(app.store, "v6", 1000)   // false
-	v7, _ := prepForGov(app.store, "v7", 1000)   // false
-	v8, _ := prepForGov(app.store, "v8", 1000)   // false
-	v9, _ := prepForGov(app.store, "v9", 1000)   // false
-	v10, _ := prepForGov(app.store, "v10", 1000) // nop
-	v11, _ := prepForGov(app.store, "v11", 1000) // nop
-	v12, _ := prepForGov(app.store, "v12", 1000) // nop
-	v13, _ := prepForGov(app.store, "v13", 1000) // nop
-	v14, _ := prepForGov(app.store, "v14", 1000) // nop
 
 	// check target value before draft application
 	tmp, err := new(types.Currency).SetString(defaultTxReward, 10)
 	assert.NoError(t, err)
 	assert.Equal(t, *tmp, app.config.TxReward)
-
 	assert.Equal(t, defaultLockupPeriod, app.config.LockupPeriod)
 
 	// proposer propose a draft in height 1
@@ -1198,35 +1199,35 @@ func TestGovernance(t *testing.T) {
 	cfg.LockupPeriod = 10000
 	desc := []byte(`"I want others to get no reward and stay locked shorter"`)
 
-	// bypass 'propose' tx
 	_, draftIDByteArray, err := types.ConvDraftIDFromHex(draftID)
 	assert.NoError(t, err)
 
+	// imitate 'propose' tx
 	app.store.SetDraft(draftIDByteArray, &types.Draft{
-		Proposer: p.PubKey().Address(),
-		Config:   cfg,
-		Desc:     desc,
-
-		OpenCount:  uint64(1),
-		CloseCount: uint64(1),
-		ApplyCount: uint64(1),
-		Deposit:    app.config.DraftDeposit,
-
+		Proposer:     p,
+		Config:       cfg,
+		Desc:         desc,
+		OpenCount:    uint64(1),
+		CloseCount:   uint64(1),
+		ApplyCount:   uint64(1),
+		Deposit:      app.config.DraftDeposit,
 		TallyQuorum:  *types.Zero,
 		TallyApprove: *types.Zero,
 		TallyReject:  *types.Zero,
 	})
 
-	balance := app.store.GetBalance(p.PubKey().Address(), false)
+	// withdraw draft deposit from proposer's balance
+	balance := app.store.GetBalance(p, false)
 	balance.Sub(&app.config.DraftDeposit)
-	app.store.SetBalance(p.PubKey().Address(), balance)
+	app.store.SetBalance(p, balance)
+	assert.Equal(t, types.Zero, app.store.GetBalance(p, false))
 
+	// imitate a job done after 'propose' tx is successfully processed
 	app.state.NextDraftID += uint32(1)
-
-	assert.Equal(t, types.Zero, app.store.GetBalance(p.PubKey().Address(), false))
 
 	app.EndBlock(abci.RequestEndBlock{Height: 1})
 
+	// check if draft is properly stored
 	draft := app.store.GetDraft(draftIDByteArray, false)
 	assert.Equal(t, uint64(0), draft.OpenCount)
 	assert.Equal(t, uint64(1), draft.CloseCount)
@@ -1235,44 +1236,19 @@ func TestGovernance(t *testing.T) {
 	// voters vote for the draft in height 2
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 2}})
 
-	tx := makeTxVote(v1, draftID, true)
-	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
-	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
-
-	tx = makeTxVote(v2, draftID, true)
-	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
-	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
-
-	tx = makeTxVote(v3, draftID, true)
-	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
-	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
-
-	tx = makeTxVote(v4, draftID, true)
-	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
-	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
-
-	tx = makeTxVote(v5, draftID, true)
-	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
-	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
-
-	tx = makeTxVote(v6, draftID, false)
-	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
-	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
-
-	tx = makeTxVote(v7, draftID, false)
-	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
-	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
-
-	tx = makeTxVote(v8, draftID, false)
-	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
-	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
-
-	tx = makeTxVote(v9, draftID, false)
-	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx}).Code)
-	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx}).Code)
+	app.store.SetVote(draftIDByteArray, v1, &types.Vote{Approve: true, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v2, &types.Vote{Approve: true, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v3, &types.Vote{Approve: true, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v4, &types.Vote{Approve: true, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v5, &types.Vote{Approve: true, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v6, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v7, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v8, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v9, &types.Vote{Approve: false, Power: *types.Zero})
 
 	app.EndBlock(abci.RequestEndBlock{Height: 2})
 
+	// check if vote is closed and tally_* values are properly calculated
 	draft = app.store.GetDraft(draftIDByteArray, false)
 	assert.Equal(t, uint64(0), draft.OpenCount)
 	assert.Equal(t, uint64(0), draft.CloseCount)
@@ -1280,29 +1256,30 @@ func TestGovernance(t *testing.T) {
 	assert.Equal(t, *new(types.Currency).Set(6000), draft.TallyApprove)
 	assert.Equal(t, *new(types.Currency).Set(4000), draft.TallyReject)
 
-	// check if draft deposit is not returned to proposer
-	assert.Equal(t, types.Zero, app.store.GetBalance(p.PubKey().Address(), false))
+	// check if draft deposit is returned to proposer
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(p, false))
 
-	// check if draft deposit is distributed to voters, not to non-voters
-	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v1.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v2.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v3.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v4.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v5.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v6.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v7.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v8.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(10000), app.store.GetBalance(v9.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v10.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v11.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v12.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v13.PubKey().Address(), false))
-	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v14.PubKey().Address(), false))
+	// check if draft deposit is not distributed to voters
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v1, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v2, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v3, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v4, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v5, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v6, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v7, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v8, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v9, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v10, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v11, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v12, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v13, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v14, false))
 
 	// wait for draft to get applied for 1 at height 3
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 3}})
 	app.EndBlock(abci.RequestEndBlock{Height: 3})
 
+	// check if draft's counts are proper
 	draft = app.store.GetDraft(draftIDByteArray, false)
 	assert.Equal(t, uint64(0), draft.OpenCount)
 	assert.Equal(t, uint64(0), draft.CloseCount)
@@ -1317,6 +1294,115 @@ func TestGovernance(t *testing.T) {
 	// after target
 	assert.Equal(t, *types.Zero, app.config.TxReward)
 	assert.Equal(t, uint64(10000), app.config.LockupPeriod)
+
+	// test for draft being rejected, deposit distributed to voters
+	// total: 15, voters: 10(yay: 2, nay: 8), non-voters: 5
+
+	// check target value before draft application
+	assert.Equal(t, defaultBlockBoundTxGracePeriod, app.config.BlockBoundTxGracePeriod)
+
+	// proposer propose a draft in height 4
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 4}})
+
+	draftID = []byte(`"2"`)
+	cfg = app.config
+	cfg.BlockBoundTxGracePeriod = uint64(100000000)
+	desc = []byte(`"block_bound_tx_grace_period should be longer for no reason"`)
+
+	_, draftIDByteArray, err = types.ConvDraftIDFromHex(draftID)
+	assert.NoError(t, err)
+
+	// imitate 'propose' tx
+	app.store.SetDraft(draftIDByteArray, &types.Draft{
+		Proposer:     p,
+		Config:       cfg,
+		Desc:         desc,
+		OpenCount:    uint64(1),
+		CloseCount:   uint64(1),
+		ApplyCount:   uint64(1),
+		Deposit:      app.config.DraftDeposit,
+		TallyQuorum:  *types.Zero,
+		TallyApprove: *types.Zero,
+		TallyReject:  *types.Zero,
+	})
+
+	// withdraw draft deposit from proposer's balance
+	balance = app.store.GetBalance(p, false)
+	balance.Sub(&app.config.DraftDeposit)
+	app.store.SetBalance(p, balance)
+	assert.Equal(t, types.Zero, app.store.GetBalance(p, false))
+
+	// imitate a job done after 'propose' tx is successfully processed
+	app.state.NextDraftID += uint32(1)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 4})
+
+	// check if draft is properly stored
+	draft = app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(1), draft.CloseCount)
+	assert.Equal(t, uint64(1), draft.ApplyCount)
+
+	// voters vote for the draft in height 5
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 5}})
+
+	app.store.SetVote(draftIDByteArray, v1, &types.Vote{Approve: true, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v2, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v3, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v4, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v5, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v6, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v7, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v8, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v9, &types.Vote{Approve: false, Power: *types.Zero})
+
+	app.EndBlock(abci.RequestEndBlock{Height: 5})
+
+	// check if vote is closed and tally_* values are properly calculated
+	draft = app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(0), draft.CloseCount)
+	assert.Equal(t, uint64(1), draft.ApplyCount)
+	assert.Equal(t, *new(types.Currency).Set(2000), draft.TallyApprove)
+	assert.Equal(t, *new(types.Currency).Set(8000), draft.TallyReject)
+
+	// check if draft deposit is not returned to proposer
+	assert.Equal(t, types.Zero, app.store.GetBalance(p, false))
+
+	// check if draft deposit is distributed to voters, not to non-voters
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v1, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v2, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v3, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v4, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v5, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v6, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v7, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v8, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v9, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v10, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v11, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v12, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v13, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v14, false))
+
+	// wait for draft to get applied for 1 at height 6
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 6}})
+	app.EndBlock(abci.RequestEndBlock{Height: 6})
+
+	// check if draft's counts are proper
+	draft = app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(0), draft.CloseCount)
+	assert.Equal(t, uint64(0), draft.ApplyCount)
+
+	// imitate Commit() to load new app config
+	_, _, err = app.store.Save()
+	assert.NoError(t, err)
+	err = app.loadAppConfig()
+	assert.NoError(t, err)
+
+	// after target: should be same as befor drafte
+	assert.Equal(t, defaultBlockBoundTxGracePeriod, app.config.BlockBoundTxGracePeriod)
 }
 
 func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64, lastHeight string) []byte {
@@ -1417,16 +1503,15 @@ func makeTestAddress(seed string) crypto.Address {
 	return addr
 }
 
-func prepForGov(s *store.Store, seed string, amount uint64) (p256.PrivKeyP256, ed25519.PrivKeyEd25519) {
+func prepForGov(s *store.Store, seed string, amount uint64) crypto.Address {
 	validator := ed25519.GenPrivKeyFromSecret([]byte(seed))
 	holder := p256.GenPrivKeyFromSecret([]byte(seed))
 
 	s.SetBalance(holder.PubKey().Address(), new(types.Currency).Set(amount))
-
 	s.SetUnlockedStake(holder.PubKey().Address(), &types.Stake{
 		Validator: validator.PubKey().(ed25519.PubKeyEd25519),
 		Amount:    *new(types.Currency).Set(amount),
 	})
 
-	return holder, validator
+	return holder.PubKey().Address()
 }
