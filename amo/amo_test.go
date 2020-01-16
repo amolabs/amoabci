@@ -1236,15 +1236,15 @@ func TestGovernance(t *testing.T) {
 	// voters vote for the draft in height 2
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 2}})
 
-	app.store.SetVote(draftIDByteArray, v1, &types.Vote{Approve: true, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v2, &types.Vote{Approve: true, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v3, &types.Vote{Approve: true, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v4, &types.Vote{Approve: true, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v5, &types.Vote{Approve: true, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v6, &types.Vote{Approve: false, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v7, &types.Vote{Approve: false, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v8, &types.Vote{Approve: false, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v9, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v1, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v2, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v3, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v4, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v5, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v6, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v7, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v8, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v9, &types.Vote{Approve: false})
 
 	app.EndBlock(abci.RequestEndBlock{Height: 2})
 
@@ -1346,15 +1346,15 @@ func TestGovernance(t *testing.T) {
 	// voters vote for the draft in height 5
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 5}})
 
-	app.store.SetVote(draftIDByteArray, v1, &types.Vote{Approve: true, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v2, &types.Vote{Approve: false, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v3, &types.Vote{Approve: false, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v4, &types.Vote{Approve: false, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v5, &types.Vote{Approve: false, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v6, &types.Vote{Approve: false, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v7, &types.Vote{Approve: false, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v8, &types.Vote{Approve: false, Power: *types.Zero})
-	app.store.SetVote(draftIDByteArray, v9, &types.Vote{Approve: false, Power: *types.Zero})
+	app.store.SetVote(draftIDByteArray, v1, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v2, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v3, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v4, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v5, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v6, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v7, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v8, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v9, &types.Vote{Approve: false})
 
 	app.EndBlock(abci.RequestEndBlock{Height: 5})
 

@@ -679,7 +679,6 @@ func TestVote(t *testing.T) {
 
 	voteInput := types.Vote{
 		Approve: true,
-		Power:   *new(types.Currency).Set(10000000),
 	}
 
 	err := s.SetVote(draftID, voter1, &voteInput)

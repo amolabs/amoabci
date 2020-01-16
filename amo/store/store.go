@@ -964,11 +964,7 @@ func (s Store) ProcessDraftVotes(
 				continue
 			}
 
-			// update voter's power field with its effective stake
 			es := s.GetEffStake(vote.Voter, committed)
-			vote.Record.Power = es.Amount
-
-			s.SetVote(draftID, vote.Voter, &vote.Record)
 
 			// update vote's tally fields
 			if vote.Record.Approve {

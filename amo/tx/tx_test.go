@@ -1388,10 +1388,7 @@ func TestVote(t *testing.T) {
 		TallyApprove: *new(types.Currency).Set(0),
 		TallyReject:  *new(types.Currency).Set(0),
 	})
-	s.SetVote(draftID, makeAccAddr("proposer"), &types.Vote{
-		Approve: true,
-		Power:   *new(types.Currency).Set(0),
-	})
+	s.SetVote(draftID, makeAccAddr("proposer"), &types.Vote{Approve: true})
 
 	StateNextDraftID = uint32(2)
 

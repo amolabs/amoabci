@@ -5,8 +5,7 @@ import (
 )
 
 type Vote struct {
-	Approve bool     `json:"approve"`
-	Power   Currency `json:"power"`
+	Approve bool `json:"approve"`
 }
 
 type VoteInfo struct {
