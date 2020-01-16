@@ -56,8 +56,15 @@ func TestAppConfig(t *testing.T) {
 	assert.Equal(t, uint64(10), app.config.MaxValidators)
 	assert.Equal(t, defaultWeightValidator, app.config.WeightValidator)
 	assert.Equal(t, defaultWeightDelegator, app.config.WeightDelegator)
-	assert.Equal(t, defaultBlkReward, app.config.BlkReward)
-	assert.Equal(t, defaultTxReward, app.config.TxReward)
+
+	tmp, err := new(types.Currency).SetString(defaultBlkReward, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, *tmp, app.config.BlkReward)
+
+	tmp, err = new(types.Currency).SetString(defaultTxReward, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, *tmp, app.config.TxReward)
+
 	assert.Equal(t, uint64(2), app.config.LockupPeriod)
 }
 
@@ -744,8 +751,8 @@ func TestEndBlock(t *testing.T) {
 	app.blockBindingManager.Update()
 
 	// setup
-	tx.ConfigAMOApp.LockupPeriod = 1       // manipulate
-	tx.ConfigAMOApp.MinStakingUnit = "100" // manipulate
+	tx.ConfigAMOApp.LockupPeriod = 1                               // manipulate
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
 	priv1 := p256.GenPrivKeyFromSecret([]byte("staker1"))
 	app.store.SetBalance(priv1.PubKey().Address(), new(types.Currency).Set(500))
 	priv2 := p256.GenPrivKeyFromSecret([]byte("staker2"))
@@ -803,7 +810,7 @@ func TestIncentive(t *testing.T) {
 	defer tearDownTest(t)
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	tx.ConfigAMOApp.MinStakingUnit = "50"
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(50)
 
 	validator, _ := ed25519.GenPrivKey().PubKey().(ed25519.PubKeyEd25519)
 
@@ -848,7 +855,7 @@ func TestIncentive(t *testing.T) {
 	app.EndBlock(abci.RequestEndBlock{Height: 1})
 
 	app.Commit()
-	tx.ConfigAMOApp.MinStakingUnit = "50"
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(50)
 
 	// check incentive records
 	bir := app.store.GetBlockIncentiveRecords(1)
@@ -883,7 +890,7 @@ func TestIncentive(t *testing.T) {
 	app.EndBlock(abci.RequestEndBlock{Height: 2})
 
 	app.Commit()
-	tx.ConfigAMOApp.MinStakingUnit = "50"
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(50)
 
 	bir = app.store.GetBlockIncentiveRecords(2)
 	assert.Equal(t, 3, len(bir))
@@ -958,8 +965,8 @@ func TestEmptyBlock(t *testing.T) {
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// setup
-	tx.ConfigAMOApp.LockupPeriod = 2       // manipulate
-	tx.ConfigAMOApp.MinStakingUnit = "100" // manipulate
+	tx.ConfigAMOApp.LockupPeriod = 2                               // manipulate
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
 	priv := p256.GenPrivKeyFromSecret([]byte("test"))
 	app.store.SetBalance(priv.PubKey().Address(), new(types.Currency).Set(500))
 
@@ -1029,7 +1036,7 @@ func TestReplayAttack(t *testing.T) {
 		app.state.LastHeight,
 	)
 
-	tx.ConfigAMOApp.MinStakingUnit = "100" // manipulate
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
 
 	app.store.SetBalance(t1.PubKey().Address(), new(types.Currency).Set(40000))
 
@@ -1101,7 +1108,7 @@ func TestBindingBlock(t *testing.T) {
 		app.state.LastHeight,
 	)
 
-	tx.ConfigAMOApp.MinStakingUnit = "100" // manipulate
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
 
 	app.store.SetBalance(t1.PubKey().Address(), new(types.Currency).Set(50000))
 
@@ -1150,7 +1157,7 @@ func TestGovernance(t *testing.T) {
 	assert.NoError(t, err)
 
 	// manipulate draft related configs and state
-	app.config.DraftDeposit = "1000"
+	app.config.DraftDeposit = *new(types.Currency).Set(1000)
 	app.config.DraftQuorumRate = float64(0.6)
 	app.config.DraftPassRate = float64(0.51)
 	app.config.DraftRefundRate = float64(0.7)
@@ -1176,7 +1183,10 @@ func TestGovernance(t *testing.T) {
 	v14, _ := prepForGov(app.store, "v14", 1000) // nop
 
 	// check target value before draft application
-	assert.Equal(t, defaultTxReward, app.config.TxReward)
+	tmp, err := new(types.Currency).SetString(defaultTxReward, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, *tmp, app.config.TxReward)
+
 	assert.Equal(t, defaultLockupPeriod, app.config.LockupPeriod)
 
 	// proposer propose a draft in height 1
@@ -1184,15 +1194,12 @@ func TestGovernance(t *testing.T) {
 
 	draftID := []byte(`"1"`)
 	cfg := app.config
-	cfg.TxReward = "0"
+	cfg.TxReward = *types.Zero
 	cfg.LockupPeriod = 10000
 	desc := []byte(`"I want others to get no reward and stay locked shorter"`)
 
 	// bypass 'propose' tx
 	_, draftIDByteArray, err := types.ConvDraftIDFromHex(draftID)
-	assert.NoError(t, err)
-
-	deposit, err := new(types.Currency).SetString(app.config.DraftDeposit, 10)
 	assert.NoError(t, err)
 
 	app.store.SetDraft(draftIDByteArray, &types.Draft{
@@ -1203,7 +1210,7 @@ func TestGovernance(t *testing.T) {
 		OpenCount:  uint64(1),
 		CloseCount: uint64(1),
 		ApplyCount: uint64(1),
-		Deposit:    *deposit,
+		Deposit:    app.config.DraftDeposit,
 
 		TallyQuorum:  *types.Zero,
 		TallyApprove: *types.Zero,
@@ -1211,7 +1218,7 @@ func TestGovernance(t *testing.T) {
 	})
 
 	balance := app.store.GetBalance(p.PubKey().Address(), false)
-	balance.Sub(deposit)
+	balance.Sub(&app.config.DraftDeposit)
 	app.store.SetBalance(p.PubKey().Address(), balance)
 
 	app.state.NextDraftID += uint32(1)
@@ -1308,7 +1315,7 @@ func TestGovernance(t *testing.T) {
 	assert.NoError(t, err)
 
 	// after target
-	assert.Equal(t, "0", app.config.TxReward)
+	assert.Equal(t, *types.Zero, app.config.TxReward)
 	assert.Equal(t, uint64(10000), app.config.LockupPeriod)
 }
 

@@ -26,10 +26,8 @@ const (
 var (
 	// config values from the app
 	ConfigAMOApp = types.AMOAppConfig{
-		LockupPeriod:   defaultLockupPeriod,
-		MinStakingUnit: defaultMinStakingUnit,
-		MaxValidators:  defaultMaxValidators,
-		DraftDeposit:   defaultDraftDeposit,
+		LockupPeriod:  defaultLockupPeriod,
+		MaxValidators: defaultMaxValidators,
 	}
 
 	// state from the app
@@ -38,6 +36,20 @@ var (
 	c    = elliptic.P256()
 	zero = new(types.Currency).Set(0)
 )
+
+func init() {
+	tmp, err := new(types.Currency).SetString(defaultMinStakingUnit, 10)
+	if err != nil {
+		panic(err)
+	}
+	ConfigAMOApp.MinStakingUnit = *tmp
+
+	tmp, err = new(types.Currency).SetString(defaultDraftDeposit, 10)
+	if err != nil {
+		panic(err)
+	}
+	ConfigAMOApp.DraftDeposit = *tmp
+}
 
 type Signature struct {
 	PubKey   p256.PubKeyP256 `json:"pubkey"`

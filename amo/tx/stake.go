@@ -59,12 +59,7 @@ func (t *TxStake) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 
 	// check minimum staking unit first
 	tmp := new(types.Currency)
-	checkUnit, err := new(types.Currency).SetString(ConfigAMOApp.MinStakingUnit, 10)
-	if err != nil {
-		return code.TxCodeImproperStakingUnit, "improper staking unit", nil
-	}
-
-	tmp.Mod(&txParam.Amount.Int, &checkUnit.Int)
+	tmp.Mod(&txParam.Amount.Int, &ConfigAMOApp.MinStakingUnit.Int)
 	if !tmp.Equals(new(types.Currency).Set(0)) {
 		return code.TxCodeImproperStakeAmount, "improper stake amount", nil
 	}

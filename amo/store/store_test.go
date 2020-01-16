@@ -639,9 +639,12 @@ func TestDraft(t *testing.T) {
 	proposer := p256.GenPrivKey().PubKey().Address()
 	draftID := cmn.RandBytes(32)
 
+	txReward, err := new(types.Currency).SetString("1000000000000000000000", 10)
+	assert.NoError(t, err)
+
 	draftInput := types.Draft{
 		Proposer: proposer,
-		Config:   types.AMOAppConfig{TxReward: "1000000000000000000000"},
+		Config:   types.AMOAppConfig{TxReward: *txReward},
 		Desc:     json.RawMessage("null"),
 
 		OpenCount:  uint64(100),
@@ -654,7 +657,7 @@ func TestDraft(t *testing.T) {
 		TallyReject:  *new(types.Currency).Set(456),
 	}
 
-	err := s.SetDraft(draftID, &draftInput)
+	err = s.SetDraft(draftID, &draftInput)
 	assert.NoError(t, err)
 
 	draftOutput := s.GetDraft(draftID, false)

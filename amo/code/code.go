@@ -19,7 +19,6 @@ const (
 	TxCodeMultipleDelegates
 	TxCodeDelegateNotFound
 	TxCodeNoStake
-	TxCodeImproperStakingUnit
 	TxCodeImproperStakeAmount
 	TxCodeHeightTaken
 	TxCodeBadValidator
@@ -29,7 +28,6 @@ const (
 
 	TxCodeImproperDraftID
 	TxCodeImproperDraftConfig
-	TxCodeImproperDraftDeposit
 	TxCodeProposedDraft
 	TxCodeNonExistingDraft
 	TxCodeAnotherDraftInProcess

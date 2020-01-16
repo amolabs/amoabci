@@ -758,7 +758,7 @@ func TestValidStake(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 3000)
-	ConfigAMOApp.MinStakingUnit = "500"
+	ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(500)
 
 	validator := cmn.RandBytes(32)
 
@@ -795,7 +795,7 @@ func TestNonValidStake(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 1000)
-	ConfigAMOApp.MinStakingUnit = "500"
+	ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(500)
 
 	// target
 	payload, _ := json.Marshal(StakeParam{
@@ -945,7 +945,7 @@ func TestValidDelegate(t *testing.T) {
 		Validator: k,
 	})
 	s.SetBalanceUint64(bob.addr, 1000)
-	ConfigAMOApp.MinStakingUnit = "500"
+	ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(500)
 
 	// target
 	param := DelegateParam{
@@ -980,7 +980,7 @@ func TestNonValidDelegate(t *testing.T) {
 	})
 	s.SetBalanceUint64(alice.addr, 1000)
 	s.SetBalanceUint64(bob.addr, 1000)
-	ConfigAMOApp.MinStakingUnit = "500"
+	ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(500)
 
 	// test
 	payload, _ := json.Marshal(DelegateParam{
@@ -1195,9 +1195,9 @@ func TestPropose(t *testing.T) {
 		MaxValidators:           uint64(100),
 		WeightValidator:         uint64(2),
 		WeightDelegator:         uint64(1),
-		MinStakingUnit:          "100",
-		BlkReward:               "1000",
-		TxReward:                "1000",
+		MinStakingUnit:          *new(types.Currency).Set(100),
+		BlkReward:               *new(types.Currency).Set(1000),
+		TxReward:                *new(types.Currency).Set(1000),
 		PenaltyRatioM:           float64(0.1),
 		PenaltyRatioL:           float64(0.1),
 		LazinessCounterWindow:   int64(10000),
@@ -1207,7 +1207,7 @@ func TestPropose(t *testing.T) {
 		DraftOpenCount:          uint64(10000),
 		DraftCloseCount:         uint64(10000),
 		DraftApplyCount:         uint64(10000),
-		DraftDeposit:            "1000",
+		DraftDeposit:            *new(types.Currency).Set(1000),
 		DraftQuorumRate:         float64(0.1),
 		DraftPassRate:           float64(0.7),
 		DraftRefundRate:         float64(0.2),
@@ -1247,9 +1247,8 @@ func TestPropose(t *testing.T) {
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 
-	// give some balance and imitate draft deposit
+	// give some balance
 	s.SetBalance(makeAccAddr("proposer"), new(types.Currency).Set(1000))
-	ConfigAMOApp.DraftDeposit = "1000"
 
 	// propose draft with improper draft config
 	rc, _, _ = t1.Execute(s)
@@ -1354,9 +1353,9 @@ func TestVote(t *testing.T) {
 		MaxValidators:           uint64(100),
 		WeightValidator:         uint64(2),
 		WeightDelegator:         uint64(1),
-		MinStakingUnit:          "100",
-		BlkReward:               "1000",
-		TxReward:                "1000",
+		MinStakingUnit:          *new(types.Currency).Set(100),
+		BlkReward:               *new(types.Currency).Set(1000),
+		TxReward:                *new(types.Currency).Set(1000),
 		PenaltyRatioM:           float64(0.1),
 		PenaltyRatioL:           float64(0.1),
 		LazinessCounterWindow:   int64(10000),
@@ -1366,11 +1365,12 @@ func TestVote(t *testing.T) {
 		DraftOpenCount:          uint64(10000),
 		DraftCloseCount:         uint64(10000),
 		DraftApplyCount:         uint64(10000),
-		DraftDeposit:            "1000",
+		DraftDeposit:            *new(types.Currency).Set(1000),
 		DraftQuorumRate:         float64(0.1),
 		DraftPassRate:           float64(0.7),
 		DraftRefundRate:         float64(0.2),
 	}
+
 	StateNextDraftID = uint32(1)
 	draftID := types.ConvDraftIDFromUint(StateNextDraftID)
 	s.SetDraft(draftID, &types.Draft{

@@ -18,12 +18,10 @@ type ProposeParam struct {
 
 func parseProposeParam(raw []byte) (ProposeParam, error) {
 	var param ProposeParam
-
 	err := json.Unmarshal(raw, &param)
 	if err != nil {
 		return param, err
 	}
-
 	return param, nil
 }
 
@@ -39,7 +37,6 @@ func (t *TxPropose) Check() (uint32, string) {
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
-
 	return code.TxCodeOK, "ok"
 }
 
@@ -78,17 +75,11 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeProposedDraft, "already proposed draft", nil
 	}
 
-	deposit, err := new(types.Currency).SetString(ConfigAMOApp.DraftDeposit, 10)
-	if err != nil {
-		return code.TxCodeImproperDraftDeposit, err.Error(), nil
-	}
-
 	balance := store.GetBalance(t.GetSender(), false)
-	if balance.LessThan(deposit) {
+	if balance.LessThan(&ConfigAMOApp.DraftDeposit) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
-
-	balance.Sub(deposit)
+	balance.Sub(&ConfigAMOApp.DraftDeposit)
 
 	// config check
 	ok, cfg := ConfigAMOApp.Check(t.Param.Config)
@@ -105,7 +96,7 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		OpenCount:  ConfigAMOApp.DraftOpenCount,
 		CloseCount: ConfigAMOApp.DraftCloseCount,
 		ApplyCount: ConfigAMOApp.DraftApplyCount,
-		Deposit:    *deposit,
+		Deposit:    ConfigAMOApp.DraftDeposit,
 
 		TallyQuorum:  *types.Zero,
 		TallyApprove: *types.Zero,

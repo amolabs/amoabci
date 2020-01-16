@@ -42,14 +42,26 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	if genState.Config.WeightDelegator == 0 {
 		genState.Config.WeightDelegator = defaultWeightDelegator
 	}
-	if genState.Config.MinStakingUnit == "" {
-		genState.Config.MinStakingUnit = defaultMinStakingUnit
+	if genState.Config.MinStakingUnit.Equals(types.Zero) {
+		msu, err := new(types.Currency).SetString(defaultMinStakingUnit, 10)
+		if err != nil {
+			return nil, err
+		}
+		genState.Config.MinStakingUnit = *msu
 	}
-	if genState.Config.BlkReward == "" {
-		genState.Config.BlkReward = defaultBlkReward
+	if genState.Config.BlkReward.Equals(types.Zero) {
+		br, err := new(types.Currency).SetString(defaultBlkReward, 10)
+		if err != nil {
+			return nil, err
+		}
+		genState.Config.BlkReward = *br
 	}
-	if genState.Config.TxReward == "" {
-		genState.Config.TxReward = defaultTxReward
+	if genState.Config.TxReward.Equals(types.Zero) {
+		tr, err := new(types.Currency).SetString(defaultTxReward, 10)
+		if err != nil {
+			return nil, err
+		}
+		genState.Config.TxReward = *tr
 	}
 	if genState.Config.PenaltyRatioM == 0 {
 		genState.Config.PenaltyRatioM = defaultPenaltyRatioM
@@ -78,8 +90,12 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	if genState.Config.DraftApplyCount == 0 {
 		genState.Config.DraftApplyCount = defaultDraftApplyCount
 	}
-	if genState.Config.DraftDeposit == "" {
-		genState.Config.DraftDeposit = defaultDraftDeposit
+	if genState.Config.DraftDeposit.Equals(types.Zero) {
+		dd, err := new(types.Currency).SetString(defaultDraftDeposit, 10)
+		if err != nil {
+			return nil, err
+		}
+		genState.Config.DraftDeposit = *dd
 	}
 	if genState.Config.DraftQuorumRate == 0 {
 		genState.Config.DraftQuorumRate = defaultDraftQuorumRate

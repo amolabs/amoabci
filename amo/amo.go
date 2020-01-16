@@ -202,26 +202,46 @@ const (
 
 func (app *AMOApp) loadAppConfig() error {
 	cfg := types.AMOAppConfig{
-		defaultMaxValidators,
-		defaultWeightValidator,
-		defaultWeightDelegator,
-		defaultMinStakingUnit,
-		defaultBlkReward,
-		defaultTxReward,
-		defaultPenaltyRatioM,
-		defaultPenaltyRatioL,
-		defaultLazinessCounterWindow,
-		defaultLazinessThreshold,
-		defaultBlockBoundTxGracePeriod,
-		defaultLockupPeriod,
-		defaultDraftOpenCount,
-		defaultDraftCloseCount,
-		defaultDraftApplyCount,
-		defaultDraftDeposit,
-		defaultDraftQuorumRate,
-		defaultDraftPassRate,
-		defaultDraftRefundRate,
+		MaxValidators:           defaultMaxValidators,
+		WeightValidator:         defaultWeightValidator,
+		WeightDelegator:         defaultWeightDelegator,
+		PenaltyRatioM:           defaultPenaltyRatioM,
+		PenaltyRatioL:           defaultPenaltyRatioL,
+		LazinessCounterWindow:   defaultLazinessCounterWindow,
+		LazinessThreshold:       defaultLazinessThreshold,
+		BlockBoundTxGracePeriod: defaultBlockBoundTxGracePeriod,
+		LockupPeriod:            defaultLockupPeriod,
+		DraftOpenCount:          defaultDraftOpenCount,
+		DraftCloseCount:         defaultDraftCloseCount,
+		DraftApplyCount:         defaultDraftApplyCount,
+		DraftQuorumRate:         defaultDraftQuorumRate,
+		DraftPassRate:           defaultDraftPassRate,
+		DraftRefundRate:         defaultDraftRefundRate,
 	}
+
+	tmp, err := new(types.Currency).SetString(defaultMinStakingUnit, 10)
+	if err != nil {
+		return err
+	}
+	cfg.MinStakingUnit = *tmp
+
+	tmp, err = new(types.Currency).SetString(defaultBlkReward, 10)
+	if err != nil {
+		return err
+	}
+	cfg.BlkReward = *tmp
+
+	tmp, err = new(types.Currency).SetString(defaultTxReward, 10)
+	if err != nil {
+		return err
+	}
+	cfg.TxReward = *tmp
+
+	tmp, err = new(types.Currency).SetString(defaultDraftDeposit, 10)
+	if err != nil {
+		return err
+	}
+	cfg.DraftDeposit = *tmp
 
 	b := app.store.GetAppConfig()
 

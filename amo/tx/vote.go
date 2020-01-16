@@ -17,12 +17,10 @@ type VoteParam struct {
 
 func parseVoteParam(raw []byte) (VoteParam, error) {
 	var param VoteParam
-
 	err := json.Unmarshal(raw, &param)
 	if err != nil {
 		return param, err
 	}
-
 	return param, nil
 }
 
@@ -38,7 +36,6 @@ func (t *TxVote) Check() (uint32, string) {
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
-
 	return code.TxCodeOK, "ok"
 }
 
