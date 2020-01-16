@@ -967,7 +967,7 @@ func (s Store) ProcessDraftVotes(
 			es := s.GetEffStake(vote.Voter, committed)
 
 			// update vote's tally fields
-			if vote.Record.Approve {
+			if vote.Vote.Approve {
 				draft.TallyApprove.Add(&es.Amount)
 			} else {
 				draft.TallyReject.Add(&es.Amount)
@@ -1103,8 +1103,8 @@ func (s Store) GetVotes(draftID []byte, committed bool) []*types.VoteInfo {
 		}
 
 		voteInfo = append(voteInfo, &types.VoteInfo{
-			Voter:  voter,
-			Record: vote,
+			Voter: voter,
+			Vote:  vote,
 		})
 
 		return false

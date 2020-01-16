@@ -9,6 +9,6 @@ type Vote struct {
 }
 
 type VoteInfo struct {
-	Voter  crypto.Address `json:"voter"`
-	Record Vote           `json:"record"`
+	Voter crypto.Address `json:"voter"`
+	Vote  Vote           `json:"vote"`
 }

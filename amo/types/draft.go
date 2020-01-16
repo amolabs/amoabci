@@ -24,6 +24,11 @@ type Draft struct {
 	TallyReject  Currency `json:"tally_reject"`
 }
 
+type DraftEx struct {
+	Draft *Draft      `json:"draft"`
+	Votes []*VoteInfo `josn:"votes"`
+}
+
 func ConvDraftIDFromHex(raw tm.HexBytes) (uint32, []byte, error) {
 	var (
 		draftIDStr       string

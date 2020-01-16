@@ -146,6 +146,110 @@ func queryValidator(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	return
 }
 
+func queryDraft(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	var rawID tm.HexBytes
+	err := json.Unmarshal(queryData, &rawID)
+	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	_, draftID, err := types.ConvDraftIDFromHex(rawID)
+	if err != nil {
+		res.Log = "error: draft_id conversion"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	draft := s.GetDraft(draftID, true)
+	if draft == nil {
+		res.Log = "error: no draft"
+		res.Code = code.QueryCodeNoMatch
+		return
+	}
+
+	draftEx := types.DraftEx{
+		Draft: draft,
+		Votes: s.GetVotes(draftID, true),
+	}
+
+	jsonstr, err := json.Marshal(draftEx)
+	if err != nil {
+		res.Log = "error: marshal"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}
+
+func queryVote(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	keyMap := make(map[string]tm.HexBytes)
+	err := json.Unmarshal(queryData, &keyMap)
+	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+	if _, ok := keyMap["draft_id"]; !ok {
+		res.Log = "error: draft_id is missing"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+	if _, ok := keyMap["voter"]; !ok {
+		res.Log = "error: voter is missing"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	_, draftID, err := types.ConvDraftIDFromHex(keyMap["draft_id"])
+	if err != nil {
+		res.Log = "error: draft_id conversion"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	voter := crypto.Address(keyMap["voter"])
+	if len(voter) != crypto.AddressSize {
+		res.Log = "error: not avaiable address"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	vote := s.GetVote(draftID, voter, true)
+	if vote == nil {
+		res.Log = "error: no vote"
+		res.Code = code.QueryCodeNoMatch
+		return
+	}
+
+	jsonstr, _ := json.Marshal(vote)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}
+
 func queryParcel(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Log = "error: no query_data"
