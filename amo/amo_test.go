@@ -18,6 +18,7 @@ import (
 
 	"github.com/amolabs/amoabci/amo/blockchain"
 	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/tx"
 	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/crypto/p256"
@@ -55,8 +56,15 @@ func TestAppConfig(t *testing.T) {
 	assert.Equal(t, uint64(10), app.config.MaxValidators)
 	assert.Equal(t, defaultWeightValidator, app.config.WeightValidator)
 	assert.Equal(t, defaultWeightDelegator, app.config.WeightDelegator)
-	assert.Equal(t, defaultBlkReward, app.config.BlkReward)
-	assert.Equal(t, defaultTxReward, app.config.TxReward)
+
+	tmp, err := new(types.Currency).SetString(defaultBlkReward, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, *tmp, app.config.BlkReward)
+
+	tmp, err = new(types.Currency).SetString(defaultTxReward, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, *tmp, app.config.TxReward)
+
 	assert.Equal(t, uint64(2), app.config.LockupPeriod)
 }
 
@@ -743,8 +751,8 @@ func TestEndBlock(t *testing.T) {
 	app.blockBindingManager.Update()
 
 	// setup
-	tx.ConfigLockupPeriod = 1       // manipulate
-	tx.ConfigMinStakingUnit = "100" // manipulate
+	tx.ConfigAMOApp.LockupPeriod = 1                               // manipulate
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
 	priv1 := p256.GenPrivKeyFromSecret([]byte("staker1"))
 	app.store.SetBalance(priv1.PubKey().Address(), new(types.Currency).Set(500))
 	priv2 := p256.GenPrivKeyFromSecret([]byte("staker2"))
@@ -802,7 +810,7 @@ func TestIncentive(t *testing.T) {
 	defer tearDownTest(t)
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	tx.ConfigMinStakingUnit = "50"
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(50)
 
 	validator, _ := ed25519.GenPrivKey().PubKey().(ed25519.PubKeyEd25519)
 
@@ -847,7 +855,7 @@ func TestIncentive(t *testing.T) {
 	app.EndBlock(abci.RequestEndBlock{Height: 1})
 
 	app.Commit()
-	tx.ConfigMinStakingUnit = "50"
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(50)
 
 	// check incentive records
 	bir := app.store.GetBlockIncentiveRecords(1)
@@ -882,7 +890,7 @@ func TestIncentive(t *testing.T) {
 	app.EndBlock(abci.RequestEndBlock{Height: 2})
 
 	app.Commit()
-	tx.ConfigMinStakingUnit = "50"
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(50)
 
 	bir = app.store.GetBlockIncentiveRecords(2)
 	assert.Equal(t, 3, len(bir))
@@ -957,8 +965,8 @@ func TestEmptyBlock(t *testing.T) {
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// setup
-	tx.ConfigLockupPeriod = 2       // manipulate
-	tx.ConfigMinStakingUnit = "100" // manipulate
+	tx.ConfigAMOApp.LockupPeriod = 2                               // manipulate
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
 	priv := p256.GenPrivKeyFromSecret([]byte("test"))
 	app.store.SetBalance(priv.PubKey().Address(), new(types.Currency).Set(500))
 
@@ -1028,7 +1036,7 @@ func TestReplayAttack(t *testing.T) {
 		app.state.LastHeight,
 	)
 
-	tx.ConfigMinStakingUnit = "100" // manipulate
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
 
 	app.store.SetBalance(t1.PubKey().Address(), new(types.Currency).Set(40000))
 
@@ -1100,7 +1108,7 @@ func TestBindingBlock(t *testing.T) {
 		app.state.LastHeight,
 	)
 
-	tx.ConfigMinStakingUnit = "100" // manipulate
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
 
 	app.store.SetBalance(t1.PubKey().Address(), new(types.Currency).Set(50000))
 
@@ -1134,6 +1142,267 @@ func TestBindingBlock(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx5}).Code)
 
 	app.EndBlock(abci.RequestEndBlock{Height: 4})
+}
+
+func TestGovernance(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	// manipulate InitChain() func
+	app.state.NextDraftID = uint32(1)
+
+	err := app.loadAppConfig()
+	assert.NoError(t, err)
+
+	// manipulate draft related configs
+	app.config.DraftDeposit = *new(types.Currency).Set(1000)
+	app.config.DraftQuorumRate = float64(0.6)
+	app.config.DraftPassRate = float64(0.51)
+	app.config.DraftRefundRate = float64(0.25)
+
+	tx.ConfigAMOApp = app.config
+
+	// prepare validator set
+	p := prepForGov(app.store, "p", 1000)
+	v1 := prepForGov(app.store, "v1", 1000)
+	v2 := prepForGov(app.store, "v2", 1000)
+	v3 := prepForGov(app.store, "v3", 1000)
+	v4 := prepForGov(app.store, "v4", 1000)
+	v5 := prepForGov(app.store, "v5", 1000)
+	v6 := prepForGov(app.store, "v6", 1000)
+	v7 := prepForGov(app.store, "v7", 1000)
+	v8 := prepForGov(app.store, "v8", 1000)
+	v9 := prepForGov(app.store, "v9", 1000)
+	v10 := prepForGov(app.store, "v10", 1000)
+	v11 := prepForGov(app.store, "v11", 1000)
+	v12 := prepForGov(app.store, "v12", 1000)
+	v13 := prepForGov(app.store, "v13", 1000)
+	v14 := prepForGov(app.store, "v14", 1000)
+
+	// test for draft being approved, deposit returned to proposer
+	// total: 15, voters: 10(yay: 6, nay: 4), non-voters: 5
+
+	// check target value before draft application
+	tmp, err := new(types.Currency).SetString(defaultTxReward, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, *tmp, app.config.TxReward)
+	assert.Equal(t, defaultLockupPeriod, app.config.LockupPeriod)
+
+	// proposer propose a draft in height 1
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 1}})
+
+	draftID := []byte(`"1"`)
+	cfg := app.config
+	cfg.TxReward = *types.Zero
+	cfg.LockupPeriod = 10000
+	desc := []byte(`"I want others to get no reward and stay locked shorter"`)
+
+	_, draftIDByteArray, err := types.ConvDraftIDFromHex(draftID)
+	assert.NoError(t, err)
+
+	// imitate 'propose' tx
+	app.store.SetDraft(draftIDByteArray, &types.Draft{
+		Proposer:     p,
+		Config:       cfg,
+		Desc:         desc,
+		OpenCount:    uint64(1),
+		CloseCount:   uint64(1),
+		ApplyCount:   uint64(1),
+		Deposit:      app.config.DraftDeposit,
+		TallyQuorum:  *types.Zero,
+		TallyApprove: *types.Zero,
+		TallyReject:  *types.Zero,
+	})
+
+	// withdraw draft deposit from proposer's balance
+	balance := app.store.GetBalance(p, false)
+	balance.Sub(&app.config.DraftDeposit)
+	app.store.SetBalance(p, balance)
+	assert.Equal(t, types.Zero, app.store.GetBalance(p, false))
+
+	// imitate a job done after 'propose' tx is successfully processed
+	app.state.NextDraftID += uint32(1)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 1})
+
+	// check if draft is properly stored
+	draft := app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(1), draft.CloseCount)
+	assert.Equal(t, uint64(1), draft.ApplyCount)
+
+	// voters vote for the draft in height 2
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 2}})
+
+	app.store.SetVote(draftIDByteArray, v1, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v2, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v3, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v4, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v5, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v6, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v7, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v8, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v9, &types.Vote{Approve: false})
+
+	app.EndBlock(abci.RequestEndBlock{Height: 2})
+
+	// check if vote is closed and tally_* values are properly calculated
+	draft = app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(0), draft.CloseCount)
+	assert.Equal(t, uint64(1), draft.ApplyCount)
+	assert.Equal(t, *new(types.Currency).Set(6000), draft.TallyApprove)
+	assert.Equal(t, *new(types.Currency).Set(4000), draft.TallyReject)
+
+	// check if draft deposit is returned to proposer
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(p, false))
+
+	// check if draft deposit is not distributed to voters
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v1, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v2, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v3, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v4, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v5, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v6, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v7, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v8, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v9, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v10, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v11, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v12, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v13, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v14, false))
+
+	// wait for draft to get applied for 1 at height 3
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 3}})
+	app.EndBlock(abci.RequestEndBlock{Height: 3})
+
+	// check if draft's counts are proper
+	draft = app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(0), draft.CloseCount)
+	assert.Equal(t, uint64(0), draft.ApplyCount)
+
+	// imitate Commit() to load new app config
+	_, _, err = app.store.Save()
+	assert.NoError(t, err)
+	err = app.loadAppConfig()
+	assert.NoError(t, err)
+
+	// after target
+	assert.Equal(t, *types.Zero, app.config.TxReward)
+	assert.Equal(t, uint64(10000), app.config.LockupPeriod)
+
+	// test for draft being rejected, deposit distributed to voters
+	// total: 15, voters: 10(yay: 2, nay: 8), non-voters: 5
+
+	// check target value before draft application
+	assert.Equal(t, defaultBlockBoundTxGracePeriod, app.config.BlockBoundTxGracePeriod)
+
+	// proposer propose a draft in height 4
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 4}})
+
+	draftID = []byte(`"2"`)
+	cfg = app.config
+	cfg.BlockBoundTxGracePeriod = uint64(100000000)
+	desc = []byte(`"block_bound_tx_grace_period should be longer for no reason"`)
+
+	_, draftIDByteArray, err = types.ConvDraftIDFromHex(draftID)
+	assert.NoError(t, err)
+
+	// imitate 'propose' tx
+	app.store.SetDraft(draftIDByteArray, &types.Draft{
+		Proposer:     p,
+		Config:       cfg,
+		Desc:         desc,
+		OpenCount:    uint64(1),
+		CloseCount:   uint64(1),
+		ApplyCount:   uint64(1),
+		Deposit:      app.config.DraftDeposit,
+		TallyQuorum:  *types.Zero,
+		TallyApprove: *types.Zero,
+		TallyReject:  *types.Zero,
+	})
+
+	// withdraw draft deposit from proposer's balance
+	balance = app.store.GetBalance(p, false)
+	balance.Sub(&app.config.DraftDeposit)
+	app.store.SetBalance(p, balance)
+	assert.Equal(t, types.Zero, app.store.GetBalance(p, false))
+
+	// imitate a job done after 'propose' tx is successfully processed
+	app.state.NextDraftID += uint32(1)
+
+	app.EndBlock(abci.RequestEndBlock{Height: 4})
+
+	// check if draft is properly stored
+	draft = app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(1), draft.CloseCount)
+	assert.Equal(t, uint64(1), draft.ApplyCount)
+
+	// voters vote for the draft in height 5
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 5}})
+
+	app.store.SetVote(draftIDByteArray, v1, &types.Vote{Approve: true})
+	app.store.SetVote(draftIDByteArray, v2, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v3, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v4, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v5, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v6, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v7, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v8, &types.Vote{Approve: false})
+	app.store.SetVote(draftIDByteArray, v9, &types.Vote{Approve: false})
+
+	app.EndBlock(abci.RequestEndBlock{Height: 5})
+
+	// check if vote is closed and tally_* values are properly calculated
+	draft = app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(0), draft.CloseCount)
+	assert.Equal(t, uint64(1), draft.ApplyCount)
+	assert.Equal(t, *new(types.Currency).Set(2000), draft.TallyApprove)
+	assert.Equal(t, *new(types.Currency).Set(8000), draft.TallyReject)
+
+	// check if draft deposit is not returned to proposer
+	assert.Equal(t, types.Zero, app.store.GetBalance(p, false))
+
+	// check if draft deposit is distributed to voters, not to non-voters
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v1, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v2, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v3, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v4, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v5, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v6, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v7, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v8, false))
+	assert.Equal(t, new(types.Currency).Set(1111), app.store.GetBalance(v9, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v10, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v11, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v12, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v13, false))
+	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v14, false))
+
+	// wait for draft to get applied for 1 at height 6
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 6}})
+	app.EndBlock(abci.RequestEndBlock{Height: 6})
+
+	// check if draft's counts are proper
+	draft = app.store.GetDraft(draftIDByteArray, false)
+	assert.Equal(t, uint64(0), draft.OpenCount)
+	assert.Equal(t, uint64(0), draft.CloseCount)
+	assert.Equal(t, uint64(0), draft.ApplyCount)
+
+	// imitate Commit() to load new app config
+	_, _, err = app.store.Save()
+	assert.NoError(t, err)
+	err = app.loadAppConfig()
+	assert.NoError(t, err)
+
+	// after target: should be same as befor drafte
+	assert.Equal(t, defaultBlockBoundTxGracePeriod, app.config.BlockBoundTxGracePeriod)
 }
 
 func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64, lastHeight string) []byte {
@@ -1195,4 +1464,17 @@ func makeTestAddress(seed string) crypto.Address {
 	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
 	addr := privKey.PubKey().Address()
 	return addr
+}
+
+func prepForGov(s *store.Store, seed string, amount uint64) crypto.Address {
+	validator := ed25519.GenPrivKeyFromSecret([]byte(seed))
+	holder := p256.GenPrivKeyFromSecret([]byte(seed))
+
+	s.SetBalance(holder.PubKey().Address(), new(types.Currency).Set(amount))
+	s.SetUnlockedStake(holder.PubKey().Address(), &types.Stake{
+		Validator: validator.PubKey().(ed25519.PubKeyEd25519),
+		Amount:    *new(types.Currency).Set(amount),
+	})
+
+	return holder.PubKey().Address()
 }

@@ -19,13 +19,21 @@ const (
 	TxCodeMultipleDelegates
 	TxCodeDelegateNotFound
 	TxCodeNoStake
-	TxCodeImproperStakingUnit
 	TxCodeImproperStakeAmount
 	TxCodeHeightTaken
 	TxCodeBadValidator
 	TxCodeLastValidator
 	TxCodeDelegateExists
 	TxCodeStakeLocked
+
+	TxCodeImproperDraftID
+	TxCodeImproperDraftConfig
+	TxCodeProposedDraft
+	TxCodeNonExistingDraft
+	TxCodeAnotherDraftInProcess
+	TxCodeVoteNotOpened
+	TxCodeAlreadyVoted
+
 	TxCodeUnknown
 )
 

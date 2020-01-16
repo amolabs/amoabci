@@ -16,8 +16,8 @@ func DistributeIncentive(
 	store *store.Store,
 	logger log.Logger,
 
-	weightValidator, weightDelegator int64,
-	blkReward, txReward uint64,
+	weightValidator, weightDelegator uint64,
+	blkReward, txReward types.Currency,
 	height, numDeliveredTxs int64,
 	staker crypto.Address,
 	feeAccumulated types.Currency,
@@ -36,8 +36,8 @@ func DistributeIncentive(
 	// incentive = reward + fee
 
 	// total reward
-	rTotal.Set(blkReward)
-	rTx.Set(txReward)
+	rTotal = blkReward
+	rTx = txReward
 	tmp.SetInt64(numDeliveredTxs)
 	tmp.Mul(&tmp.Int, &rTx.Int)
 	rTotal.Add(&tmp)
@@ -52,9 +52,9 @@ func DistributeIncentive(
 
 	// weighted sum
 	var wsum, w big.Int
-	w.SetInt64(weightValidator)
+	w.SetUint64(weightValidator)
 	wsum.Mul(&w, &stake.Amount.Int)
-	w.SetInt64(weightDelegator)
+	w.SetUint64(weightDelegator)
 	for _, d := range ds {
 		tmp.Mul(&w, &d.Amount.Int)
 		wsum.Add(&wsum, &tmp.Int)

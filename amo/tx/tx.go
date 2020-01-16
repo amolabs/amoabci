@@ -18,17 +18,38 @@ const (
 	defaultLockupPeriod   = uint64(1000000)
 	defaultMinStakingUnit = "1000000000000000000000000"
 	defaultMaxValidators  = uint64(100)
+	defaultDraftDeposit   = "1000000000000000000000000"
+
+	defaultNextDraftID = uint32(1)
 )
 
 var (
 	// config values from the app
-	ConfigLockupPeriod   = defaultLockupPeriod
-	ConfigMinStakingUnit = defaultMinStakingUnit
-	ConfigMaxValidators  = defaultMaxValidators
+	ConfigAMOApp = types.AMOAppConfig{
+		LockupPeriod:  defaultLockupPeriod,
+		MaxValidators: defaultMaxValidators,
+	}
+
+	// state from the app
+	StateNextDraftID = defaultNextDraftID
 
 	c    = elliptic.P256()
 	zero = new(types.Currency).Set(0)
 )
+
+func init() {
+	tmp, err := new(types.Currency).SetString(defaultMinStakingUnit, 10)
+	if err != nil {
+		panic(err)
+	}
+	ConfigAMOApp.MinStakingUnit = *tmp
+
+	tmp, err = new(types.Currency).SetString(defaultDraftDeposit, 10)
+	if err != nil {
+		panic(err)
+	}
+	ConfigAMOApp.DraftDeposit = *tmp
+}
 
 type Signature struct {
 	PubKey   p256.PubKeyP256 `json:"pubkey"`
@@ -145,6 +166,18 @@ func classifyTx(base TxBase) Tx {
 	case "issue":
 		param, _ := parseIssueParam(base.Payload)
 		t = &TxIssue{
+			TxBase: base,
+			Param:  param,
+		}
+	case "propose":
+		param, _ := parseProposeParam(base.Payload)
+		t = &TxPropose{
+			TxBase: base,
+			Param:  param,
+		}
+	case "vote":
+		param, _ := parseVoteParam(base.Payload)
+		t = &TxVote{
 			TxBase: base,
 			Param:  param,
 		}

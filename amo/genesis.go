@@ -11,9 +11,9 @@ import (
 )
 
 type GenAmoAppState struct {
-	Config   AMOAppConfig    `json:"config"`
-	Balances []GenAccBalance `json:"balances"`
-	Stakes   []GenAccStake   `json:"stakes"`
+	Config   types.AMOAppConfig `json:"config"`
+	Balances []GenAccBalance    `json:"balances"`
+	Stakes   []GenAccStake      `json:"stakes"`
 }
 
 type GenAccBalance struct {
@@ -42,15 +42,71 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	if genState.Config.WeightDelegator == 0 {
 		genState.Config.WeightDelegator = defaultWeightDelegator
 	}
-	if genState.Config.BlkReward == 0 {
-		genState.Config.BlkReward = defaultBlkReward
+	if genState.Config.MinStakingUnit.Equals(types.Zero) {
+		msu, err := new(types.Currency).SetString(defaultMinStakingUnit, 10)
+		if err != nil {
+			return nil, err
+		}
+		genState.Config.MinStakingUnit = *msu
 	}
-	if genState.Config.TxReward == 0 {
-		genState.Config.TxReward = defaultTxReward
+	if genState.Config.BlkReward.Equals(types.Zero) {
+		br, err := new(types.Currency).SetString(defaultBlkReward, 10)
+		if err != nil {
+			return nil, err
+		}
+		genState.Config.BlkReward = *br
+	}
+	if genState.Config.TxReward.Equals(types.Zero) {
+		tr, err := new(types.Currency).SetString(defaultTxReward, 10)
+		if err != nil {
+			return nil, err
+		}
+		genState.Config.TxReward = *tr
+	}
+	if genState.Config.PenaltyRatioM == 0 {
+		genState.Config.PenaltyRatioM = defaultPenaltyRatioM
+	}
+	if genState.Config.PenaltyRatioL == 0 {
+		genState.Config.PenaltyRatioL = defaultPenaltyRatioL
+	}
+	if genState.Config.LazinessCounterWindow == 0 {
+		genState.Config.LazinessCounterWindow = defaultLazinessCounterWindow
+	}
+	if genState.Config.LazinessThreshold == 0 {
+		genState.Config.LazinessThreshold = defaultLazinessThreshold
+	}
+	if genState.Config.BlockBoundTxGracePeriod == 0 {
+		genState.Config.BlockBoundTxGracePeriod = defaultBlockBoundTxGracePeriod
 	}
 	if genState.Config.LockupPeriod == 0 {
 		genState.Config.LockupPeriod = defaultLockupPeriod
 	}
+	if genState.Config.DraftOpenCount == 0 {
+		genState.Config.DraftOpenCount = defaultDraftOpenCount
+	}
+	if genState.Config.DraftCloseCount == 0 {
+		genState.Config.DraftCloseCount = defaultDraftCloseCount
+	}
+	if genState.Config.DraftApplyCount == 0 {
+		genState.Config.DraftApplyCount = defaultDraftApplyCount
+	}
+	if genState.Config.DraftDeposit.Equals(types.Zero) {
+		dd, err := new(types.Currency).SetString(defaultDraftDeposit, 10)
+		if err != nil {
+			return nil, err
+		}
+		genState.Config.DraftDeposit = *dd
+	}
+	if genState.Config.DraftQuorumRate == 0 {
+		genState.Config.DraftQuorumRate = defaultDraftQuorumRate
+	}
+	if genState.Config.DraftPassRate == 0 {
+		genState.Config.DraftPassRate = defaultDraftPassRate
+	}
+	if genState.Config.DraftRefundRate == 0 {
+		genState.Config.DraftRefundRate = defaultDraftRefundRate
+	}
+
 	return &genState, nil
 }
 
