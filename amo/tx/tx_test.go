@@ -1388,7 +1388,20 @@ func TestVote(t *testing.T) {
 		TallyApprove: *new(types.Currency).Set(0),
 		TallyReject:  *new(types.Currency).Set(0),
 	})
-	s.SetVote(draftID, makeAccAddr("proposer"), &types.Vote{Approve: true})
+
+	// proposer stake
+	copy(k[:], cmn.RandBytes(32))
+	assert.NoError(t, s.SetUnlockedStake(makeAccAddr("proposer"), &types.Stake{
+		Validator: k,
+		Amount:    *new(types.Currency).Set(10000000),
+	}))
+
+	// proposer tries to vote on his own draft
+	t2 := makeTestTx("vote", "proposer", payload)
+	rc, _ = t2.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeSelfTransaction, rc)
 
 	StateNextDraftID = uint32(2)
 
@@ -1425,9 +1438,9 @@ func TestVote(t *testing.T) {
 	})
 
 	// voter2 tries to vote for closed draft vote
-	t2 := makeTestTx("vote", "voter2", payload)
-	rc, _ = t2.Check()
+	t3 := makeTestTx("vote", "voter2", payload)
+	rc, _ = t3.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
-	rc, _, _ = t2.Execute(s)
+	rc, _, _ = t3.Execute(s)
 	assert.Equal(t, code.TxCodeVoteNotOpened, rc)
 }

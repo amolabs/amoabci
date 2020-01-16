@@ -1,6 +1,7 @@
 package tx
 
 import (
+	"bytes"
 	"encoding/json"
 
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -58,6 +59,10 @@ func (t *TxVote) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	draft := store.GetDraft(draftIDByteArray, false)
 	if draft == nil {
 		return code.TxCodeNonExistingDraft, "non-existing draft", nil
+	}
+
+	if bytes.Equal(draft.Proposer, t.GetSender()) {
+		return code.TxCodeSelfTransaction, "proposer cannot vote on own draft", nil
 	}
 
 	if !(draft.OpenCount == 0 &&

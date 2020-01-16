@@ -1460,43 +1460,6 @@ func makeTxWithdraw(priv p256.PrivKeyP256, amount uint64) []byte {
 	return rawTx
 }
 
-func makeTxPropose(priv p256.PrivKeyP256, draftID cmn.HexBytes, cfg, desc json.RawMessage) []byte {
-	param := tx.ProposeParam{
-		DraftID: draftID,
-		Config:  cfg,
-		Desc:    desc,
-	}
-	payload, _ := json.Marshal(param)
-	_tx := tx.TxBase{
-		Type:       "propose",
-		Payload:    payload,
-		Sender:     priv.PubKey().Address(),
-		Fee:        *new(types.Currency).Set(0),
-		LastHeight: "1",
-	}
-	_tx.Sign(priv)
-	rawTx, _ := json.Marshal(_tx)
-	return rawTx
-}
-
-func makeTxVote(priv p256.PrivKeyP256, draftID cmn.HexBytes, approve bool) []byte {
-	param := tx.VoteParam{
-		DraftID: draftID,
-		Approve: approve,
-	}
-	payload, _ := json.Marshal(param)
-	_tx := tx.TxBase{
-		Type:       "vote",
-		Payload:    payload,
-		Sender:     priv.PubKey().Address(),
-		Fee:        *new(types.Currency).Set(0),
-		LastHeight: "1",
-	}
-	_tx.Sign(priv)
-	rawTx, _ := json.Marshal(_tx)
-	return rawTx
-}
-
 func makeTestAddress(seed string) crypto.Address {
 	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
 	addr := privKey.PubKey().Address()
