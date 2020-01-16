@@ -20,7 +20,7 @@ func makeAccAddr(seed string) crypto.Address {
 }
 
 func TestParseIssue(t *testing.T) {
-	payload := []byte(`{"id":"ff3e","operators":["99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"],"desc":"mycoin","amount":"1000000"}`)
+	payload := []byte(`{"udc":"ff3e","operators":["99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"],"desc":"mycoin","amount":"1000000"}`)
 
 	var operator cmn.HexBytes
 	err := json.Unmarshal(
@@ -30,7 +30,7 @@ func TestParseIssue(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := IssueParam{
-		Id:        []byte{0xff, 0x3e},
+		UDC:       []byte{0xff, 0x3e},
 		Operators: []crypto.Address{operator},
 		Desc:      "mycoin",
 		Amount:    *new(types.Currency).Set(1000000),
@@ -46,7 +46,7 @@ func TestTxIssue(t *testing.T) {
 	assert.NotNil(t, s)
 
 	param := IssueParam{
-		Id:        []byte("mycoin"),
+		UDC:       []byte("mycoin"),
 		Operators: []crypto.Address{makeAccAddr("oper1")},
 		Desc:      "mycoin",
 		Amount:    *new(types.Currency).Set(1000000),
@@ -90,7 +90,7 @@ func TestTxIssue(t *testing.T) {
 
 	// change fields other than total
 	param = IssueParam{
-		Id:        []byte("mycoin"),
+		UDC:       []byte("mycoin"),
 		Operators: []crypto.Address{makeAccAddr("oper2")},
 		Desc:      "my own coin",
 		Amount:    *new(types.Currency).Set(0),
@@ -125,7 +125,7 @@ func TestTxUDCBalance(t *testing.T) {
 
 	// issue
 	param := IssueParam{
-		Id:        []byte("mycoin"),
+		UDC:       []byte("mycoin"),
 		Operators: []crypto.Address{makeAccAddr("oper1")},
 		Desc:      "mycoin",
 		Amount:    amoM,
@@ -137,12 +137,12 @@ func TestTxUDCBalance(t *testing.T) {
 	udc := s.GetUDC([]byte("mycoin"), false)
 	assert.NotNil(t, udc)
 	assert.Equal(t, amoM, udc.Total)
-	bal := s.GetUDCBalance(param.Id, issuer, false)
+	bal := s.GetUDCBalance(param.UDC, issuer, false)
 	assert.Equal(t, &amoM, bal)
 
 	// issue more
 	param = IssueParam{
-		Id:        []byte("mycoin"),
+		UDC:       []byte("mycoin"),
 		Operators: nil,
 		Desc:      "mycoin",
 		Amount:    amoK,
@@ -154,7 +154,7 @@ func TestTxUDCBalance(t *testing.T) {
 	tmp := types.Currency{}
 	tmp.Add(&amoM)
 	tmp.Add(&amoK)
-	bal = s.GetUDCBalance(param.Id, issuer, false)
+	bal = s.GetUDCBalance(param.UDC, issuer, false)
 	assert.Equal(t, &tmp, bal)
 
 	// non-UDC balance
