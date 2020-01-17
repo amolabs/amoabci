@@ -53,7 +53,7 @@ func (t *TxIssue) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 
 	udc := s.GetUDC(param.Id, false)
 	if udc == nil {
-		stakes := s.GetTopStakes(ConfigMaxValidators, sender, false)
+		stakes := s.GetTopStakes(ConfigAMOApp.MaxValidators, sender, false)
 		if len(stakes) == 0 {
 			return code.TxCodePermissionDenied, "permission denied", nil
 		}

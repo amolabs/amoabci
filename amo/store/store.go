@@ -28,6 +28,8 @@ const (
 var (
 	prefixBalance  = []byte("balance:")
 	prefixStake    = []byte("stake:")
+	prefixDraft    = []byte("draft:")
+	prefixVote     = []byte("vote:")
 	prefixDelegate = []byte("delegate:")
 	prefixParcel   = []byte("parcel:")
 	prefixRequest  = []byte("request:")
@@ -250,20 +252,19 @@ func (s Store) getImmutableTree(committed bool) (*iavl.ImmutableTree, error) {
 }
 
 // Balance store
-func getBalanceKey(addr tm.Address) []byte {
+func makeBalanceKey(addr tm.Address) []byte {
 	return append(prefixBalance, addr.Bytes()...)
 }
 
 func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
-	zero := new(types.Currency).Set(0)
-	balanceKey := getBalanceKey(addr)
+	balanceKey := makeBalanceKey(addr)
 
-	if balance.LessThan(zero) {
+	if balance.LessThan(types.Zero) {
 		return fmt.Errorf("unavailable amount: %s", balance.String())
 	}
 
 	// pre-process for setting zero balance, just remove corresponding key
-	if s.has(balanceKey) && balance.Equals(zero) {
+	if s.has(balanceKey) && balance.Equals(types.Zero) {
 		s.remove(balanceKey)
 		return nil
 	}
@@ -279,8 +280,9 @@ func (s Store) SetBalance(addr tm.Address, balance *types.Currency) error {
 }
 
 func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) error {
+
 	zero := uint64(0)
-	balanceKey := getBalanceKey(addr)
+	balanceKey := makeBalanceKey(addr)
 
 	// pre-process for setting zero balance, just remove corresponding key
 	if s.has(balanceKey) && balance == zero {
@@ -300,7 +302,7 @@ func (s Store) SetBalanceUint64(addr tm.Address, balance uint64) error {
 
 func (s Store) GetBalance(addr tm.Address, committed bool) *types.Currency {
 	c := types.Currency{}
-	balance := s.get(getBalanceKey(addr), committed)
+	balance := s.get(makeBalanceKey(addr), committed)
 	if len(balance) == 0 {
 		return &c
 	}
@@ -464,8 +466,6 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 }
 
 func (s Store) SlashStakes(holder crypto.Address, amount types.Currency, committed bool) {
-	zeroAmount := new(types.Currency).Set(0)
-
 	total := s.GetStake(holder, committed)
 	if total == nil {
 		return
@@ -493,7 +493,7 @@ func (s Store) SlashStakes(holder crypto.Address, amount types.Currency, committ
 		s.SetUnlockedStake(holder, unlockedStake)
 
 		// check end of slash
-		if amount.Equals(zeroAmount) {
+		if amount.Equals(types.Zero) {
 			return
 		}
 	}
@@ -517,7 +517,7 @@ func (s Store) SlashStakes(holder crypto.Address, amount types.Currency, committ
 
 		s.SetLockedStake(holder, lockedStake, height)
 
-		if amount.Equals(zeroAmount) {
+		if amount.Equals(types.Zero) {
 			break
 		}
 	}
@@ -742,7 +742,7 @@ func (s Store) GetHolderByValidator(addr crypto.Address, committed bool) []byte 
 }
 
 // Delegate store
-func getDelegateKey(holder []byte) []byte {
+func makeDelegateKey(holder []byte) []byte {
 	return append(prefixDelegate, holder...)
 }
 
@@ -766,10 +766,10 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 
 	// upadate
 	if delegate.Amount.Sign() == 0 {
-		s.remove(getDelegateKey(holder))
+		s.remove(makeDelegateKey(holder))
 		s.indexDelegator.Delete(append(delegate.Delegatee, holder...))
 	} else {
-		s.set(getDelegateKey(holder), b)
+		s.set(makeDelegateKey(holder), b)
 		s.indexDelegator.SetSync(append(delegate.Delegatee, holder...), nil)
 	}
 
@@ -784,7 +784,7 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 }
 
 func (s Store) GetDelegate(holder crypto.Address, committed bool) *types.Delegate {
-	b := s.get(getDelegateKey(holder), committed)
+	b := s.get(makeDelegateKey(holder), committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -861,8 +861,264 @@ func (s Store) GetTopStakes(max uint64, peek crypto.Address, committed bool) []*
 	return stakes
 }
 
+// Draft store
+func makeDraftKey(draftID []byte) []byte {
+	return append(prefixDraft, draftID...)
+}
+
+func (s Store) SetDraft(draftID []byte, value *types.Draft) error {
+	b, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	s.set(makeDraftKey(draftID), b)
+
+	return nil
+}
+
+func (s Store) GetDraft(draftID []byte, committed bool) *types.Draft {
+	b := s.get(makeDraftKey(draftID), committed)
+	if len(b) == 0 {
+		return nil
+	}
+
+	var draft types.Draft
+	err := json.Unmarshal(b, &draft)
+	if err != nil {
+		return nil
+	}
+
+	return &draft
+}
+
+func (s Store) ProcessDraftVotes(
+	latestDraftIDUint uint32,
+	maxValidators uint64,
+	quorumRate, passRate, refundRate float64,
+	committed bool,
+) {
+	voteJustGotClosed := false
+	applyDraftConfig := false
+
+	// check if there is a draft in process first
+	draftID := types.ConvDraftIDFromUint(latestDraftIDUint)
+	draft := s.GetDraft(draftID, committed)
+
+	// ignore non-existing draft
+	if draft == nil {
+		return
+	}
+
+	// ignore already applied draft
+	if draft.OpenCount == 0 && draft.CloseCount == 0 && draft.ApplyCount == 0 {
+		return
+	}
+
+	// decrement draft's open, close, apply counts
+	if draft.OpenCount > 0 && draft.CloseCount > 0 && draft.ApplyCount > 0 {
+		draft.OpenCount -= uint64(1)
+	} else if draft.OpenCount == 0 && draft.CloseCount > 0 && draft.ApplyCount > 0 {
+		draft.CloseCount -= uint64(1)
+		if draft.CloseCount == 0 {
+			voteJustGotClosed = true
+		}
+	} else if draft.OpenCount == 0 && draft.CloseCount == 0 && draft.ApplyCount > 0 {
+		draft.ApplyCount -= uint64(1)
+		if draft.ApplyCount == 0 {
+			applyDraftConfig = true
+		}
+	}
+
+	// if draft just gets closed, update draft's tally value and handle deposit
+	if voteJustGotClosed {
+		// calculate draft.TallyQuorum
+		tes := new(types.Currency).Set(0)
+		tss := s.GetTopStakes(maxValidators, nil, committed)
+		for _, ts := range tss {
+			holder := s.GetHolderByValidator(ts.Validator.Address(), committed)
+			es := s.GetEffStake(holder, committed)
+			tes.Add(&es.Amount)
+		}
+
+		// tallyQuorum = totalEffectiveStake * quorumRate
+		tesf := new(big.Float).SetInt(&tes.Int)
+		qrf := new(big.Float).SetFloat64(quorumRate)
+		qf := tesf.Mul(tesf, qrf)
+
+		tallyQuorum := new(types.Currency)
+		qf.Int(&tallyQuorum.Int)
+
+		draft.TallyQuorum = *tallyQuorum
+
+		// calculate vote.Power, draft.TallyApprove and draft.TallyReject
+		pes := s.GetEffStake(draft.Proposer, committed)
+		draft.TallyApprove.Add(&pes.Amount)
+
+		votes := s.GetVotes(draftID, committed)
+		for _, vote := range votes {
+			// if not included in top stakes, ignore and delete vote
+			ts := s.GetTopStakes(maxValidators, vote.Voter, committed)
+			if len(ts) == 0 {
+				s.DeleteVote(draftID, vote.Voter)
+				continue
+			}
+
+			es := s.GetEffStake(vote.Voter, committed)
+
+			// update vote's tally fields
+			if vote.Vote.Approve {
+				draft.TallyApprove.Add(&es.Amount)
+			} else {
+				draft.TallyReject.Add(&es.Amount)
+			}
+		}
+
+		// totalTally = draft.TallyApprove + draft.TallyReject
+		totalTally := new(types.Currency).Set(0)
+		totalTally.Add(&draft.TallyApprove)
+		totalTally.Add(&draft.TallyReject)
+
+		// refund = totalTally * refundRate
+		tesf = new(big.Float).SetInt(&totalTally.Int)
+		rrf := new(big.Float).SetFloat64(refundRate)
+		rf := tesf.Mul(tesf, rrf)
+
+		refund := new(types.Currency)
+		rf.Int(&refund.Int)
+
+		// if draft.TallyApprove > refund
+		if draft.TallyApprove.GreaterThan(refund) {
+			// return deposit to proposer
+			balance := s.GetBalance(draft.Proposer, committed)
+			balance.Add(&draft.Deposit)
+			s.SetBalance(draft.Proposer, balance)
+		} else {
+			// distribute deposit to voters
+			votes := s.GetVotes(draftID, committed)
+
+			// distAmount = draft.Deposit / len(votes)
+			df := new(big.Float).SetInt(&draft.Deposit.Int)
+			nf := new(big.Float).SetUint64(uint64(len(votes)))
+			daf := df.Quo(df, nf)
+
+			distAmount := new(types.Currency)
+			daf.Int(&distAmount.Int)
+
+			for _, vote := range votes {
+				balance := s.GetBalance(vote.Voter, committed)
+				balance.Add(distAmount)
+				s.SetBalance(vote.Voter, balance)
+			}
+		}
+	}
+
+	s.SetDraft(draftID, draft)
+
+	if applyDraftConfig {
+		// totalTally = draft.TallyApprove + draft.TallyReject
+		totalTally := new(types.Currency).Set(0)
+		totalTally.Add(&draft.TallyApprove)
+		totalTally.Add(&draft.TallyReject)
+
+		// if draft.TallyQuorum > totalTally, drop draft config
+		if draft.TallyQuorum.GreaterThan(totalTally) {
+			return
+		}
+
+		// pass = totalTally * passRate
+		ttf := new(big.Float).SetInt(&totalTally.Int)
+		prf := new(big.Float).SetFloat64(passRate)
+		pf := ttf.Mul(ttf, prf)
+
+		pass := new(types.Currency)
+		pf.Int(&pass.Int)
+
+		// if pass > draft.TallyApprove, drop draft config
+		if pass.GreaterThan(&draft.TallyApprove) {
+			return
+		}
+
+		b, err := json.Marshal(draft.Config)
+		if err != nil {
+			return
+		}
+
+		s.SetAppConfig(b)
+	}
+}
+
+// Vote store
+func makeVoteKey(draftID []byte, voter crypto.Address) []byte {
+	return append(prefixVote, append(draftID, voter...)...)
+}
+
+func (s Store) SetVote(draftID []byte, voter crypto.Address, value *types.Vote) error {
+	b, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	s.set(makeVoteKey(draftID, voter), b)
+
+	return nil
+}
+
+func (s Store) GetVote(draftID []byte, voter crypto.Address, committed bool) *types.Vote {
+	b := s.get(makeVoteKey(draftID, voter), committed)
+	if len(b) == 0 {
+		return nil
+	}
+
+	var vote types.Vote
+	err := json.Unmarshal(b, &vote)
+	if err != nil {
+		return nil
+	}
+
+	return &vote
+}
+
+func (s Store) GetVotes(draftID []byte, committed bool) []*types.VoteInfo {
+	voteKey := makeVoteKey(draftID, []byte{})
+
+	var voteInfo []*types.VoteInfo
+
+	imt, err := s.getImmutableTree(committed)
+	if err != nil {
+		return nil
+	}
+
+	imt.IterateRangeInclusive(voteKey, nil, false, func(key []byte, value []byte, version int64) bool {
+		if !bytes.HasPrefix(key, voteKey) {
+			return false
+		}
+
+		voter := crypto.Address(key[len(prefixVote)+len(draftID):])
+
+		var vote types.Vote
+		err := json.Unmarshal(value, &vote)
+		if err != nil {
+			return false
+		}
+
+		voteInfo = append(voteInfo, &types.VoteInfo{
+			Voter: voter,
+			Vote:  vote,
+		})
+
+		return false
+	})
+
+	return voteInfo
+}
+
+func (s Store) DeleteVote(draftID []byte, voter crypto.Address) {
+	s.remove(makeVoteKey(draftID, voter))
+}
+
 // Parcel store
-func getParcelKey(parcelID []byte) []byte {
+func makeParcelKey(parcelID []byte) []byte {
 	return append(prefixParcel, parcelID...)
 }
 
@@ -871,12 +1127,12 @@ func (s Store) SetParcel(parcelID []byte, value *types.Parcel) error {
 	if err != nil {
 		return err
 	}
-	s.set(getParcelKey(parcelID), b)
+	s.set(makeParcelKey(parcelID), b)
 	return nil
 }
 
 func (s Store) GetParcel(parcelID []byte, committed bool) *types.Parcel {
-	b := s.get(getParcelKey(parcelID), committed)
+	b := s.get(makeParcelKey(parcelID), committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -889,11 +1145,11 @@ func (s Store) GetParcel(parcelID []byte, committed bool) *types.Parcel {
 }
 
 func (s Store) DeleteParcel(parcelID []byte) {
-	s.remove(getParcelKey(parcelID))
+	s.remove(makeParcelKey(parcelID))
 }
 
 // Request store
-func getRequestKey(buyer crypto.Address, parcelID []byte) (buyerParcelKey, parcelBuyerKey []byte) {
+func makeRequestKey(buyer crypto.Address, parcelID []byte) (buyerParcelKey, parcelBuyerKey []byte) {
 	buyerParcelKey = append(prefixRequest, append(append(buyer, ':'), parcelID...)...)
 	parcelBuyerKey = append(prefixRequest, append(append(parcelID, ':'), buyer...)...)
 	return
@@ -912,7 +1168,7 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.Re
 		return err
 	}
 
-	buyerParcelKey, parcelBuyerKey := getRequestKey(buyer, parcelID)
+	buyerParcelKey, parcelBuyerKey := makeRequestKey(buyer, parcelID)
 
 	// parcelBuyerKey has only nil as value to use it as index
 	s.set(buyerParcelKey, b)
@@ -922,7 +1178,7 @@ func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.Re
 }
 
 func (s Store) GetRequest(buyer crypto.Address, parcelID []byte, committed bool) *types.Request {
-	buyerParcelKey, _ := getRequestKey(buyer, parcelID)
+	buyerParcelKey, _ := makeRequestKey(buyer, parcelID)
 
 	b := s.get(buyerParcelKey, committed)
 	if len(b) == 0 {
@@ -972,14 +1228,14 @@ func (s Store) GetRequests(parcelID []byte, committed bool) []*types.RequestEx {
 }
 
 func (s Store) DeleteRequest(buyer crypto.Address, parcelID []byte) {
-	buyerParcelKey, parcelBuyerKey := getRequestKey(buyer, parcelID)
+	buyerParcelKey, parcelBuyerKey := makeRequestKey(buyer, parcelID)
 
 	s.remove(buyerParcelKey)
 	s.remove(parcelBuyerKey)
 }
 
 // Usage store
-func getUsageKey(buyer crypto.Address, parcelID []byte) (buyerParcelKey, parcelBuyerKey []byte) {
+func makeUsageKey(buyer crypto.Address, parcelID []byte) (buyerParcelKey, parcelBuyerKey []byte) {
 	buyerParcelKey = append(prefixUsage, append(append(buyer, ':'), parcelID...)...)
 	parcelBuyerKey = append(prefixUsage, append(append(parcelID, ':'), buyer...)...)
 	return
@@ -991,7 +1247,7 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.Usag
 		return err
 	}
 
-	buyerParcelKey, parcelBuyerKey := getUsageKey(buyer, parcelID)
+	buyerParcelKey, parcelBuyerKey := makeUsageKey(buyer, parcelID)
 
 	// parcelBuyerKey has only nil as value to use it as index
 	s.set(buyerParcelKey, b)
@@ -1001,7 +1257,7 @@ func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.Usag
 }
 
 func (s Store) GetUsage(buyer crypto.Address, parcelID []byte, committed bool) *types.Usage {
-	buyerParcelKey, _ := getUsageKey(buyer, parcelID)
+	buyerParcelKey, _ := makeUsageKey(buyer, parcelID)
 	b := s.get(buyerParcelKey, committed)
 	if len(b) == 0 {
 		return nil
@@ -1046,7 +1302,7 @@ func (s Store) GetUsages(parcelID []byte, committed bool) []*types.UsageEx {
 }
 
 func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
-	buyerParcelKey, parcelBuyerKey := getUsageKey(buyer, parcelID)
+	buyerParcelKey, parcelBuyerKey := makeUsageKey(buyer, parcelID)
 
 	s.remove(buyerParcelKey)
 	s.remove(parcelBuyerKey)

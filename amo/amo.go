@@ -24,25 +24,6 @@ const (
 	// versions
 	AMOAppVersion      = "v1.1.0-dev"
 	AMOProtocolVersion = 0x2
-	// hard-coded configs
-	defaultMaxValidators   = 100
-	defaultWeightValidator = int64(2)
-	defaultWeightDelegator = int64(1)
-
-	defaultMinStakingUnit = "1000000000000000000000000"
-
-	defaultBlkReward = uint64(0)
-	defaultTxReward  = uint64(types.OneAMOUint64 / 10)
-
-	// TODO: not fixed default ratios yet
-	defaultPenaltyRatioM = float64(0.3)
-	defaultPenaltyRatioL = float64(0.3)
-
-	defaultLazinessCounterWindow = int64(300)
-	defaultLazinessThreshold     = float64(0.8)
-
-	defaultBlockBoundTxGracePeriod = uint64(1000)
-	defaultLockupPeriod            = uint64(1000000)
 )
 
 // Output are sorted by voting power.
@@ -90,33 +71,13 @@ func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdate
 	return updates
 }
 
-type AMOAppConfig struct {
-	MaxValidators   uint64 `json:"max_validators"`
-	WeightValidator int64  `json:"weight_validator"`
-	WeightDelegator int64  `json:"weight_delegator"`
-
-	MinStakingUnit string `json:"min_staking_unit"`
-
-	BlkReward uint64 `json:"blk_reward"`
-	TxReward  uint64 `json:"tx_reward"`
-
-	PenaltyRatioM float64 `json:"penalty_ratio_m"` // malicious validator
-	PenaltyRatioL float64 `json:"penalty_ratio_l"` // lazy validators
-
-	LazinessCounterWindow int64   `json:"laziness_counter_window"`
-	LazinessThreshold     float64 `json:"laziness_threshold"`
-
-	BlockBoundTxGracePeriod uint64 `json:"block_bound_tx_grace_period"`
-	LockupPeriod            uint64 `json:"lockup_period"`
-}
-
 type AMOApp struct {
 	// app scaffold
 	abci.BaseApplication
 	logger log.Logger
 
 	// app config
-	config AMOAppConfig
+	config types.AMOAppConfig
 
 	// internal database
 	merkleDB       tmdb.DB
@@ -183,9 +144,7 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 	app.load()
 
 	// TODO: use something more elegant
-	tx.ConfigLockupPeriod = app.config.LockupPeriod
-	tx.ConfigMinStakingUnit = app.config.MinStakingUnit
-	tx.ConfigMaxValidators = app.config.MaxValidators
+	tx.ConfigAMOApp = app.config
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -211,6 +170,94 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 	return app
 }
 
+const (
+	// hard-coded configs
+	defaultMaxValidators   = uint64(100)
+	defaultWeightValidator = uint64(2)
+	defaultWeightDelegator = uint64(1)
+
+	defaultMinStakingUnit = "1000000000000000000000000"
+
+	defaultBlkReward = "0"
+	defaultTxReward  = "10000000000000000000"
+
+	// TODO: not fixed default ratios yet
+	defaultPenaltyRatioM = float64(0.3)
+	defaultPenaltyRatioL = float64(0.3)
+
+	defaultLazinessCounterWindow = int64(10000)
+	defaultLazinessThreshold     = float64(0.8)
+
+	defaultBlockBoundTxGracePeriod = uint64(10000)
+	defaultLockupPeriod            = uint64(1000000)
+
+	defaultDraftOpenCount  = uint64(10000)
+	defaultDraftCloseCount = uint64(10000)
+	defaultDraftApplyCount = uint64(10000)
+	defaultDraftDeposit    = "1000000000000000000000000"
+	defaultDraftQuorumRate = float64(0.3)
+	defaultDraftPassRate   = float64(0.51)
+	defaultDraftRefundRate = float64(0.2)
+)
+
+func (app *AMOApp) loadAppConfig() error {
+	cfg := types.AMOAppConfig{
+		MaxValidators:           defaultMaxValidators,
+		WeightValidator:         defaultWeightValidator,
+		WeightDelegator:         defaultWeightDelegator,
+		PenaltyRatioM:           defaultPenaltyRatioM,
+		PenaltyRatioL:           defaultPenaltyRatioL,
+		LazinessCounterWindow:   defaultLazinessCounterWindow,
+		LazinessThreshold:       defaultLazinessThreshold,
+		BlockBoundTxGracePeriod: defaultBlockBoundTxGracePeriod,
+		LockupPeriod:            defaultLockupPeriod,
+		DraftOpenCount:          defaultDraftOpenCount,
+		DraftCloseCount:         defaultDraftCloseCount,
+		DraftApplyCount:         defaultDraftApplyCount,
+		DraftQuorumRate:         defaultDraftQuorumRate,
+		DraftPassRate:           defaultDraftPassRate,
+		DraftRefundRate:         defaultDraftRefundRate,
+	}
+
+	tmp, err := new(types.Currency).SetString(defaultMinStakingUnit, 10)
+	if err != nil {
+		return err
+	}
+	cfg.MinStakingUnit = *tmp
+
+	tmp, err = new(types.Currency).SetString(defaultBlkReward, 10)
+	if err != nil {
+		return err
+	}
+	cfg.BlkReward = *tmp
+
+	tmp, err = new(types.Currency).SetString(defaultTxReward, 10)
+	if err != nil {
+		return err
+	}
+	cfg.TxReward = *tmp
+
+	tmp, err = new(types.Currency).SetString(defaultDraftDeposit, 10)
+	if err != nil {
+		return err
+	}
+	cfg.DraftDeposit = *tmp
+
+	b := app.store.GetAppConfig()
+
+	// if config exists
+	if len(b) > 0 {
+		err := json.Unmarshal(b, &cfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	app.config = cfg
+
+	return nil
+}
+
 func (app *AMOApp) load() {
 	err := app.state.LoadFrom(app.stateFile)
 	if err != nil {
@@ -228,41 +275,6 @@ func (app *AMOApp) load() {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func (app *AMOApp) loadAppConfig() error {
-	cfg := AMOAppConfig{
-		defaultMaxValidators,
-		defaultWeightValidator,
-		defaultWeightDelegator,
-		defaultMinStakingUnit,
-		defaultBlkReward,
-		defaultTxReward,
-		defaultPenaltyRatioM,
-		defaultPenaltyRatioL,
-		defaultLazinessCounterWindow,
-		defaultLazinessThreshold,
-		defaultBlockBoundTxGracePeriod,
-		defaultLockupPeriod,
-	}
-
-	b := app.store.GetAppConfig()
-
-	// if config exists
-	if len(b) > 0 {
-		err := json.Unmarshal(b, &cfg)
-		if err != nil {
-			return err
-		}
-	}
-
-	if cfg.MinStakingUnit == "" {
-		cfg.MinStakingUnit = defaultMinStakingUnit
-	}
-
-	app.config = cfg
-
-	return nil
 }
 
 func (app *AMOApp) save() {
@@ -299,17 +311,16 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	}
 
 	app.state.MerkleVersion = version
-	app.state.LastHeight = 0
+	app.state.LastHeight = int64(0)
 	app.state.LastAppHash = hash
+	app.state.NextDraftID = uint32(1)
 
 	err = app.loadAppConfig()
 	if err != nil {
 		return abci.ResponseInitChain{}
 	}
 
-	tx.ConfigLockupPeriod = app.config.LockupPeriod
-	tx.ConfigMinStakingUnit = app.config.MinStakingUnit
-	tx.ConfigMaxValidators = app.config.MaxValidators
+	tx.ConfigAMOApp = app.config
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -357,6 +368,10 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 		resQuery = queryValidator(app.store, reqQuery.Data)
 	case "/storage":
 		resQuery = queryStorage(app.store, reqQuery.Data)
+	case "/draft":
+		resQuery = queryDraft(app.store, reqQuery.Data)
+	case "/vote":
+		resQuery = queryVote(app.store, reqQuery.Data)
 	case "/parcel":
 		resQuery = queryParcel(app.store, reqQuery.Data)
 	case "/request":
@@ -513,6 +528,11 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 			t.GetType() == "delegate" || t.GetType() == "retract" {
 			app.doValUpdate = true
 		}
+
+		if t.GetType() == "propose" {
+			app.state.NextDraftID += uint32(1)
+		}
+
 		tags = append(tags, opTags...)
 		app.numDeliveredTxs += 1
 	} else {
@@ -535,6 +555,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 // TODO: use req.Height
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	// XXX no means to convey error to res
+
 	blockchain.DistributeIncentive(
 		app.store,
 		app.logger,
@@ -563,6 +584,15 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	)
 
 	app.replayPreventer.Index()
+
+	app.store.ProcessDraftVotes(
+		app.state.NextDraftID-uint32(1),
+		app.config.MaxValidators,
+		app.config.DraftQuorumRate,
+		app.config.DraftPassRate,
+		app.config.DraftRefundRate,
+		false,
+	)
 
 	// update appHash
 	hash := app.store.Root()
@@ -596,9 +626,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 		return abci.ResponseCommit{}
 	}
 
-	tx.ConfigLockupPeriod = app.config.LockupPeriod
-	tx.ConfigMinStakingUnit = app.config.MinStakingUnit
-	tx.ConfigMaxValidators = app.config.MaxValidators
+	tx.ConfigAMOApp = app.config
 
 	app.save()
 

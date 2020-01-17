@@ -592,9 +592,9 @@ func TestMerkleTree(t *testing.T) {
 	// check if nodes are put into the merkle tree
 	assert.Equal(t, int64(3), imt.Size())
 
-	assert.True(t, imt.Has(getBalanceKey(t1acc)))
+	assert.True(t, imt.Has(makeBalanceKey(t1acc)))
 	assert.True(t, imt.Has(makeStakeKey(t2acc)))
-	assert.True(t, imt.Has(getParcelKey(parcel)))
+	assert.True(t, imt.Has(makeParcelKey(parcel)))
 
 	// compare expected root hash to generated one
 	assert.Equal(t, expectedHash, resultHash)
@@ -631,4 +631,72 @@ func TestMutableTree(t *testing.T) {
 
 	assert.Equal(t, int64(1), version)
 	assert.Equal(t, workingHash, savedHash)
+}
+
+func TestDraft(t *testing.T) {
+	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+
+	proposer := p256.GenPrivKey().PubKey().Address()
+	draftID := cmn.RandBytes(32)
+
+	txReward, err := new(types.Currency).SetString("1000000000000000000000", 10)
+	assert.NoError(t, err)
+
+	draftInput := types.Draft{
+		Proposer: proposer,
+		Config:   types.AMOAppConfig{TxReward: *txReward},
+		Desc:     json.RawMessage("null"),
+
+		OpenCount:  uint64(100),
+		CloseCount: uint64(10),
+		ApplyCount: uint64(100),
+		Deposit:    *new(types.Currency).Set(1000),
+
+		TallyQuorum:  *new(types.Currency).Set(100000),
+		TallyApprove: *new(types.Currency).Set(123),
+		TallyReject:  *new(types.Currency).Set(456),
+	}
+
+	err = s.SetDraft(draftID, &draftInput)
+	assert.NoError(t, err)
+
+	draftOutput := s.GetDraft(draftID, false)
+
+	assert.Equal(t, draftInput, *draftOutput)
+
+	t.Log(draftInput)
+	t.Log(*draftOutput)
+}
+
+func TestVote(t *testing.T) {
+	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+
+	voter1 := p256.GenPrivKey().PubKey().Address()
+	voter2 := p256.GenPrivKey().PubKey().Address()
+	voter3 := p256.GenPrivKey().PubKey().Address()
+
+	draftID := cmn.RandBytes(32)
+
+	voteInput := types.Vote{
+		Approve: true,
+	}
+
+	err := s.SetVote(draftID, voter1, &voteInput)
+	assert.NoError(t, err)
+
+	voteOutput := s.GetVote(draftID, voter1, false)
+
+	assert.Equal(t, voteInput, *voteOutput)
+
+	t.Log(voteInput)
+	t.Log(*voteOutput)
+
+	err = s.SetVote(draftID, voter2, &voteInput)
+	assert.NoError(t, err)
+	err = s.SetVote(draftID, voter3, &voteInput)
+	assert.NoError(t, err)
+
+	votesOutput := s.GetVotes(draftID, false)
+
+	assert.Equal(t, 3, len(votesOutput))
 }

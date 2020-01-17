@@ -23,7 +23,7 @@ func PenalizeConvicts(
 	evidences []abci.Evidence,
 	lazyValidators []crypto.Address,
 
-	weightValidator, weightDelegator int64,
+	weightValidator, weightDelegator uint64,
 	penaltyRatioM, penaltyRatioL float64,
 ) error {
 
@@ -53,7 +53,7 @@ func penalize(
 	store *store.Store,
 	logger log.Logger,
 
-	weightValidator, weightDelegator int64,
+	weightValidator, weightDelegator uint64,
 	validator crypto.Address,
 	ratio float64,
 	penaltyType string,
@@ -83,9 +83,9 @@ func penalize(
 		wsum, w   big.Int
 		tmp, tmp2 types.Currency
 	)
-	w.SetInt64(weightValidator)
+	w.SetUint64(weightValidator)
 	wsum.Mul(&w, &vs.Amount.Int)
-	w.SetInt64(weightDelegator)
+	w.SetUint64(weightDelegator)
 	for _, d := range ds {
 		tmp.Mul(&w, &d.Amount.Int)
 		wsum.Add(&wsum, &tmp.Int)

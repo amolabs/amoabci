@@ -19,16 +19,22 @@ const (
 	TxCodeMultipleDelegates
 	TxCodeDelegateNotFound
 	TxCodeNoStake
-	TxCodeImproperStakingUnit
 	TxCodeImproperStakeAmount
 	TxCodeHeightTaken
 	TxCodeBadValidator
 	TxCodeLastValidator
 	TxCodeDelegateExists
 	TxCodeStakeLocked
-	TxCodeNotFound
-	TxCodeUnknown
+	TxCodeImproperDraftID
+	TxCodeImproperDraftConfig
+	TxCodeProposedDraft
+	TxCodeNonExistingDraft
+	TxCodeAnotherDraftInProcess
+	TxCodeVoteNotOpened
+	TxCodeAlreadyVoted
 	TxCodeNoStorage
+	TxCodeNotFound
+	TxCodeUnknown uint32 = 1000
 )
 
 const (
