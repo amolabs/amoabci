@@ -192,7 +192,7 @@ func queryDraft(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	_, draftID, err := types.ConvDraftIDFromHex(rawID)
+	_, draftID, err := types.ConvIDFromHex(rawID)
 	if err != nil {
 		res.Log = "error: draft_id conversion"
 		res.Code = code.QueryCodeBadKey
@@ -251,7 +251,7 @@ func queryVote(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	_, draftID, err := types.ConvDraftIDFromHex(keyMap["draft_id"])
+	_, draftID, err := types.ConvIDFromHex(keyMap["draft_id"])
 	if err != nil {
 		res.Log = "error: draft_id conversion"
 		res.Code = code.QueryCodeBadKey

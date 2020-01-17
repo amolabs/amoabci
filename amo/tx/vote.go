@@ -12,8 +12,8 @@ import (
 )
 
 type VoteParam struct {
-	DraftID tm.HexBytes `json:"draft_id"`
-	Approve bool        `json:"approve"`
+	DraftID uint32 `json:"draft_id"`
+	Approve bool   `json:"approve"`
 }
 
 func parseVoteParam(raw []byte) (VoteParam, error) {
@@ -51,10 +51,7 @@ func (t *TxVote) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodePermissionDenied, "no permission to vote", nil
 	}
 
-	_, draftIDByteArray, err := types.ConvDraftIDFromHex(txParam.DraftID)
-	if err != nil {
-		return code.TxCodeBadParam, err.Error(), nil
-	}
+	draftIDByteArray := types.ConvIDFromUint(txParam.DraftID)
 
 	draft := store.GetDraft(draftIDByteArray, false)
 	if draft == nil {

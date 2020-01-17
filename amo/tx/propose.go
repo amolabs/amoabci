@@ -11,7 +11,7 @@ import (
 )
 
 type ProposeParam struct {
-	DraftID tm.HexBytes     `json:"draft_id"`
+	DraftID uint32          `json:"draft_id"`
 	Config  json.RawMessage `json:"config,omitempty"`
 	Desc    string          `json:"desc"`
 }
@@ -51,16 +51,13 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodePermissionDenied, "no permission to propose a draft", nil
 	}
 
-	draftIDInt, draftIDByteArray, err := types.ConvDraftIDFromHex(txParam.DraftID)
-	if err != nil {
-		return code.TxCodeBadParam, err.Error(), nil
-	}
+	draftIDByteArray := types.ConvIDFromUint(txParam.DraftID)
 
-	if draftIDInt != StateNextDraftID {
+	if txParam.DraftID != StateNextDraftID {
 		return code.TxCodeImproperDraftID, "improper draft ID", nil
 	}
 
-	latestDraftIDByteArray := types.ConvDraftIDFromUint(StateNextDraftID - 1)
+	latestDraftIDByteArray := types.ConvIDFromUint(StateNextDraftID - 1)
 	latestDraft := store.GetDraft(latestDraftIDByteArray, false)
 	if latestDraft != nil {
 		if !(latestDraft.OpenCount == 0 &&

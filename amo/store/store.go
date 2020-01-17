@@ -902,7 +902,7 @@ func (s Store) ProcessDraftVotes(
 	applyDraftConfig := false
 
 	// check if there is a draft in process first
-	draftID := types.ConvDraftIDFromUint(latestDraftIDUint)
+	draftID := types.ConvIDFromUint(latestDraftIDUint)
 	draft := s.GetDraft(draftID, committed)
 
 	// ignore non-existing draft

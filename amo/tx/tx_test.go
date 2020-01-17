@@ -1127,7 +1127,7 @@ func TestDraftIDConversion(t *testing.T) {
 		draftIDByteArray []byte
 	)
 
-	draftIDInt, draftIDByteArray, err := types.ConvDraftIDFromHex(draftID)
+	draftIDInt, draftIDByteArray, err := types.ConvIDFromHex(draftID)
 	assert.NoError(t, err)
 
 	assert.Equal(t, []byte{0x0, 0x0, 0x0, 0xc}, draftIDByteArray)
@@ -1165,7 +1165,7 @@ func TestPropose(t *testing.T) {
 
 	// target
 	payload, _ := json.Marshal(ProposeParam{
-		DraftID: []byte(`"2"`),
+		DraftID: uint32(2),
 		Config:  []byte(`{"min_staking_unit": "0"}`),
 		Desc:    "any json",
 	})
@@ -1206,7 +1206,7 @@ func TestPropose(t *testing.T) {
 
 	// modify draft config to make it proper
 	payload, _ = json.Marshal(ProposeParam{
-		DraftID: []byte(`"2"`),
+		DraftID: uint32(2),
 		Config:  []byte(`{"min_staking_unit": "100"}`),
 		Desc:    "any json",
 	})
@@ -1239,7 +1239,7 @@ func TestPropose(t *testing.T) {
 	// propose other draft while there exists a draft in process
 	StateNextDraftID = 3
 	payload, _ = json.Marshal(ProposeParam{
-		DraftID: []byte(`"3"`),
+		DraftID: uint32(3),
 		Config:  []byte(`{"tx_reward": "0"}`),
 		Desc:    "i don't want other vals to earn tx rewards",
 	})
@@ -1256,7 +1256,7 @@ func TestPropose(t *testing.T) {
 	// propose a draft having config left empty on purpose
 	s.SetBalance(makeAccAddr("proposer"), new(types.Currency).Set(1000))
 	payload, _ = json.Marshal(ProposeParam{
-		DraftID: []byte(`"4"`),
+		DraftID: uint32(4),
 		Config:  []byte(``),
 		Desc:    "empty config is used to give an opinion",
 	})
@@ -1275,7 +1275,7 @@ func TestVote(t *testing.T) {
 
 	// target
 	payload, _ := json.Marshal(VoteParam{
-		DraftID: []byte(`"1"`),
+		DraftID: uint32(1),
 		Approve: true,
 	})
 	t1 := makeTestTx("vote", "voter1", payload)
@@ -1322,7 +1322,7 @@ func TestVote(t *testing.T) {
 	}
 
 	StateNextDraftID = uint32(1)
-	draftID := types.ConvDraftIDFromUint(StateNextDraftID)
+	draftID := types.ConvIDFromUint(StateNextDraftID)
 	s.SetDraft(draftID, &types.Draft{
 		Proposer: makeAccAddr("proposer"),
 		Config:   cfg,
