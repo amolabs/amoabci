@@ -5,8 +5,10 @@ import (
 )
 
 type Request struct {
-	Payment Currency `json:"payment"`
-	Extra   Extra    `json:"extra,omitempty"`
+	Payment   Currency       `json:"payment"`
+	Dealer    crypto.Address `json:"dealer,omitempty"`
+	DealerFee Currency       `json:"dealer_fee,omitempty"`
+	Extra     Extra          `json:"extra,omitempty"`
 }
 
 type RequestEx struct {

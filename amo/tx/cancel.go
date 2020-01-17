@@ -65,6 +65,7 @@ func (t *TxCancel) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 
 	balance := store.GetBalance(t.GetSender(), false)
 	balance.Add(&request.Payment)
+	balance.Add(&request.DealerFee)
 	store.SetBalance(t.GetSender(), balance)
 
 	tags := []tm.KVPair{

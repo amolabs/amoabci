@@ -25,7 +25,6 @@ const (
 	TxCodeLastValidator
 	TxCodeDelegateExists
 	TxCodeStakeLocked
-
 	TxCodeImproperDraftID
 	TxCodeImproperDraftConfig
 	TxCodeProposedDraft
@@ -33,8 +32,9 @@ const (
 	TxCodeAnotherDraftInProcess
 	TxCodeVoteNotOpened
 	TxCodeAlreadyVoted
-
-	TxCodeUnknown
+	TxCodeNoStorage
+	TxCodeNotFound
+	TxCodeUnknown uint32 = 1000
 )
 
 const (

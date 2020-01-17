@@ -56,6 +56,8 @@ func TestTxIssue(t *testing.T) {
 	// initial issuing
 	tx := makeTestTx("issue", "issuer", payload)
 	assert.NotNil(t, tx)
+	_, ok := tx.(*TxIssue)
+	assert.True(t, ok)
 	rc, _ := tx.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check validator permission

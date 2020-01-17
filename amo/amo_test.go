@@ -26,6 +26,10 @@ import (
 
 var tmpFile *os.File
 
+func makeAccAddr(seed string) crypto.Address {
+	return p256.GenPrivKeyFromSecret([]byte(seed)).PubKey().Address()
+}
+
 // setup and teardown
 func setUpTest(t *testing.T) {
 	file, err := ioutil.TempFile("", "state_*.json")
@@ -170,6 +174,50 @@ func TestQueryBalance(t *testing.T) {
 	assert.Equal(t, string(jsonstr), res.Log)
 }
 
+func TestQueryStorage(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	// populate db store
+	stoid := cmn.HexBytes(cmn.RandBytes(4))
+	storage := types.Storage{
+		Owner: makeAccAddr("any"),
+	}
+	app.store.SetStorage(stoid, &storage)
+	app.store.Save()
+
+	// query vars
+	var req abci.RequestQuery
+	var res abci.ResponseQuery
+	var barr []byte
+
+	// no key
+	req = abci.RequestQuery{Path: "/storage"}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoKey, res.Code)
+
+	// nonexistent storage id
+	stoid2 := cmn.HexBytes(cmn.RandBytes(4))
+	barr, _ = json.Marshal(stoid2)
+	req = abci.RequestQuery{Path: "/storage", Data: []byte(barr)}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
+	assert.Equal(t, []byte(nil), res.Value)
+	assert.Equal(t, "error: no such storage", res.Log)
+
+	// valid match
+	barr, _ = json.Marshal(stoid)
+	req = abci.RequestQuery{Path: "/storage", Data: []byte(barr)}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeOK, res.Code)
+	barr, _ = json.Marshal(storage)
+	assert.Equal(t, barr, res.Value)
+	assert.Equal(t, req.Data, res.Key)
+	assert.Equal(t, string(barr), res.Log)
+}
+
 func TestQueryParcel(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
@@ -183,7 +231,6 @@ func TestQueryParcel(t *testing.T) {
 	_addr := crypto.Address(_addrbin)
 
 	parcelID := cmn.HexBytes(cmn.RandBytes(32))
-	parcelID[31] = 0xFF
 	queryjson, _ := json.Marshal(parcelID)
 
 	parcel := types.Parcel{
@@ -213,7 +260,6 @@ func TestQueryParcel(t *testing.T) {
 	assert.NoError(t, err)
 
 	wrongParcelID := cmn.HexBytes(cmn.RandBytes(32))
-	wrongParcelID[31] = 0xBB
 	_queryjson, _ := json.Marshal(wrongParcelID)
 
 	var req abci.RequestQuery
@@ -236,7 +282,7 @@ func TestQueryParcel(t *testing.T) {
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
 	assert.Equal(t, []byte(nil), res.Value)
-	assert.Equal(t, "error: no parcel", res.Log)
+	assert.Equal(t, "error: no such parcel", res.Log)
 
 	// query
 	req = abci.RequestQuery{Path: "/parcel", Data: queryjson}

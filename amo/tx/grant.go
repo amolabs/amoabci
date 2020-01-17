@@ -77,11 +77,21 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeRequestNotFound, "parcel not requested", nil
 	}
 
+	storage := store.GetStorage(txParam.Target[:types.StorageIDLen], false)
+	if storage == nil || storage.Active == false {
+		return code.TxCodeNoStorage, "no active storage for this parcel", nil
+	}
+
+	balance := store.GetBalance(parcel.Owner, false)
+	if balance.Add(&request.Payment).LessThan(&storage.HostingFee) {
+		return code.TxCodeNotEnoughBalance,
+			"not enough balance for hosting fee", nil
+	}
+
 	store.DeleteRequest(txParam.Grantee, txParam.Target)
 
 	store.SetUsage(txParam.Grantee, txParam.Target, &types.Usage{
 		Custody: txParam.Custody,
-
 		Extra: types.Extra{
 			Register: request.Extra.Register,
 			Request:  request.Extra.Request,
@@ -89,9 +99,15 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		},
 	})
 
-	balance := store.GetBalance(t.GetSender(), false)
-	balance.Add(&request.Payment)
-	store.SetBalance(t.GetSender(), balance)
+	balance = store.GetBalance(parcel.Owner, false)
+	balance.Add(&request.Payment).Sub(&storage.HostingFee)
+	store.SetBalance(parcel.Owner, balance)
+	balance = store.GetBalance(storage.Owner, false)
+	balance.Add(&storage.HostingFee)
+	store.SetBalance(storage.Owner, balance)
+	balance = store.GetBalance(request.Dealer, false)
+	balance.Add(&request.DealerFee)
+	store.SetBalance(request.Dealer, balance)
 
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},

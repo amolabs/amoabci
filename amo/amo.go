@@ -366,6 +366,8 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 		resQuery = queryDelegate(app.store, reqQuery.Data)
 	case "/validator":
 		resQuery = queryValidator(app.store, reqQuery.Data)
+	case "/storage":
+		resQuery = queryStorage(app.store, reqQuery.Data)
 	case "/draft":
 		resQuery = queryDraft(app.store, reqQuery.Data)
 	case "/vote":

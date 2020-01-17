@@ -146,6 +146,37 @@ func queryValidator(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	return
 }
 
+func queryStorage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	var id tm.HexBytes
+	err := json.Unmarshal(queryData, &id)
+	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	storage := s.GetStorage(id, true)
+	if storage == nil {
+		res.Log = "error: no such storage"
+		res.Code = code.QueryCodeNoMatch
+		return
+	}
+
+	jsonstr, _ := json.Marshal(storage)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}
+
 func queryDraft(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Log = "error: no query_data"
@@ -257,7 +288,6 @@ func queryParcel(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	// TODO: parse parcel id from queryData
 	var id tm.HexBytes
 	err := json.Unmarshal(queryData, &id)
 	if err != nil {
@@ -268,7 +298,7 @@ func queryParcel(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 
 	parcel := s.GetParcel(id, true)
 	if parcel == nil {
-		res.Log = "error: no parcel"
+		res.Log = "error: no such parcel"
 		res.Code = code.QueryCodeNoMatch
 		return
 	}
