@@ -12,29 +12,36 @@ func ConvIDFromHex(IDHex tm.HexBytes) (uint32, []byte, error) {
 	var (
 		IDStr       string
 		IDUint      uint32
-		IDByteArray []byte
+		IDByteSlice []byte
 	)
 
 	err := json.Unmarshal(IDHex, &IDStr)
 	if err != nil {
-		return IDUint, IDByteArray, err
+		return IDUint, IDByteSlice, err
 	}
 
-	tmp, err := strconv.ParseUint(IDStr, 10, 32)
+	IDByteSlice, err = ConvIDFromStr(IDStr)
 	if err != nil {
-		return IDUint, IDByteArray, err
+		return IDUint, IDByteSlice, err
 	}
 
-	IDUint = uint32(tmp)
+	return IDUint, IDByteSlice, nil
+}
 
-	IDByteArray = ConvIDFromUint(IDUint)
+func ConvIDFromStr(raw string) ([]byte, error) {
+	tmp, err := strconv.ParseUint(raw, 10, 32)
+	if err != nil {
+		return nil, err
+	}
 
-	return IDUint, IDByteArray, nil
+	IDUint := uint32(tmp)
+
+	return ConvIDFromUint(IDUint), nil
 }
 
 func ConvIDFromUint(raw uint32) []byte {
-	IDByteArray := make([]byte, 4)
-	binary.BigEndian.PutUint32(IDByteArray, raw)
+	IDByteSlice := make([]byte, 4)
+	binary.BigEndian.PutUint32(IDByteSlice, raw)
 
-	return IDByteArray
+	return IDByteSlice
 }

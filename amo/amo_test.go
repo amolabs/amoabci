@@ -181,11 +181,12 @@ func TestQueryStorage(t *testing.T) {
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
-	stoid := cmn.HexBytes(cmn.RandBytes(4))
+	rawID := uint32(123)
+	storageID := types.ConvIDFromUint(rawID)
 	storage := types.Storage{
 		Owner: makeAccAddr("any"),
 	}
-	app.store.SetStorage(stoid, &storage)
+	app.store.SetStorage(storageID, &storage)
 	app.store.Save()
 
 	// query vars
@@ -199,8 +200,8 @@ func TestQueryStorage(t *testing.T) {
 	assert.Equal(t, code.QueryCodeNoKey, res.Code)
 
 	// nonexistent storage id
-	stoid2 := cmn.HexBytes(cmn.RandBytes(4))
-	barr, _ = json.Marshal(stoid2)
+	rawID2 := uint32(456)
+	barr, _ = json.Marshal(rawID2)
 	req = abci.RequestQuery{Path: "/storage", Data: []byte(barr)}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
@@ -208,7 +209,7 @@ func TestQueryStorage(t *testing.T) {
 	assert.Equal(t, "error: no such storage", res.Log)
 
 	// valid match
-	barr, _ = json.Marshal(stoid)
+	barr, _ = json.Marshal(rawID)
 	req = abci.RequestQuery{Path: "/storage", Data: []byte(barr)}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeOK, res.Code)

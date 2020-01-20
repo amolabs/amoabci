@@ -48,6 +48,41 @@ func queryBalance(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	}
 
 	bal := s.GetBalance(addr, true)
+
+	jsonstr, _ := json.Marshal(bal)
+	res.Log = string(jsonstr)
+	// XXX: tendermint will convert this using base64 encoding
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}
+
+func queryUDCBalance(s *store.Store, udc string, queryData []byte) (res abci.ResponseQuery) {
+	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	var addr crypto.Address
+	err := json.Unmarshal(queryData, &addr)
+	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	udcID, err := types.ConvIDFromStr(udc)
+	if err != nil {
+		res.Log = "error: cannot convert udc id"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	bal := s.GetUDCBalance(udcID, addr, true)
+
 	jsonstr, _ := json.Marshal(bal)
 	res.Log = string(jsonstr)
 	// XXX: tendermint will convert this using base64 encoding
@@ -153,15 +188,16 @@ func queryStorage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	var id tm.HexBytes
-	err := json.Unmarshal(queryData, &id)
+	var rawID uint32
+	err := json.Unmarshal(queryData, &rawID)
 	if err != nil {
 		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
-	storage := s.GetStorage(id, true)
+	storageID := types.ConvIDFromUint(rawID)
+	storage := s.GetStorage(storageID, true)
 	if storage == nil {
 		res.Log = "error: no such storage"
 		res.Code = code.QueryCodeNoMatch
@@ -184,7 +220,7 @@ func queryDraft(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	var rawID tm.HexBytes
+	var rawID uint32
 	err := json.Unmarshal(queryData, &rawID)
 	if err != nil {
 		res.Log = "error: unmarshal"
@@ -192,13 +228,7 @@ func queryDraft(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	_, draftID, err := types.ConvIDFromHex(rawID)
-	if err != nil {
-		res.Log = "error: draft_id conversion"
-		res.Code = code.QueryCodeBadKey
-		return
-	}
-
+	draftID := types.ConvIDFromUint(rawID)
 	draft := s.GetDraft(draftID, true)
 	if draft == nil {
 		res.Log = "error: no draft"
@@ -233,39 +263,26 @@ func queryVote(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	keyMap := make(map[string]tm.HexBytes)
-	err := json.Unmarshal(queryData, &keyMap)
+	var param struct {
+		DraftID uint32         `json:"draft_id"`
+		Voter   crypto.Address `json:"voter"`
+	}
+
+	err := json.Unmarshal(queryData, &param)
 	if err != nil {
 		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
-	if _, ok := keyMap["draft_id"]; !ok {
-		res.Log = "error: draft_id is missing"
-		res.Code = code.QueryCodeBadKey
-		return
-	}
-	if _, ok := keyMap["voter"]; !ok {
-		res.Log = "error: voter is missing"
-		res.Code = code.QueryCodeBadKey
-		return
-	}
 
-	_, draftID, err := types.ConvIDFromHex(keyMap["draft_id"])
-	if err != nil {
-		res.Log = "error: draft_id conversion"
-		res.Code = code.QueryCodeBadKey
-		return
-	}
-
-	voter := crypto.Address(keyMap["voter"])
-	if len(voter) != crypto.AddressSize {
+	draftID := types.ConvIDFromUint(param.DraftID)
+	if len(param.Voter) != crypto.AddressSize {
 		res.Log = "error: not avaiable address"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
-	vote := s.GetVote(draftID, voter, true)
+	vote := s.GetVote(draftID, param.Voter, true)
 	if vote == nil {
 		res.Log = "error: no vote"
 		res.Code = code.QueryCodeNoMatch
