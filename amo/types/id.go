@@ -8,14 +8,14 @@ import (
 	tm "github.com/tendermint/tendermint/libs/common"
 )
 
-func ConvIDFromHex(raw tm.HexBytes) (uint32, []byte, error) {
+func ConvIDFromHex(IDHex tm.HexBytes) (uint32, []byte, error) {
 	var (
 		IDStr       string
 		IDUint      uint32
 		IDByteArray []byte
 	)
 
-	err := json.Unmarshal(raw, &IDStr)
+	err := json.Unmarshal(IDHex, &IDStr)
 	if err != nil {
 		return IDUint, IDByteArray, err
 	}

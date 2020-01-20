@@ -12,7 +12,7 @@ import (
 )
 
 type SetupParam struct {
-	Storage         tm.HexBytes    `json:"storage"`
+	Storage         uint32         `json:"storage"`
 	Url             string         `json:"url"`
 	RegistrationFee types.Currency `json:"registration_fee"`
 	HostingFee      types.Currency `json:"hosting_fee"`
@@ -48,7 +48,8 @@ func (t *TxSetup) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 	param := t.Param
 	sender := t.GetSender()
 
-	sto := s.GetStorage(param.Storage, false)
+	storageID := types.ConvIDFromUint(param.Storage)
+	sto := s.GetStorage(storageID, false)
 	if sto == nil {
 		sto = &types.Storage{
 			Owner:           sender,
@@ -68,7 +69,7 @@ func (t *TxSetup) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 		sto.Active = true
 	}
 	// store
-	err := s.SetStorage(param.Storage, sto)
+	err := s.SetStorage(storageID, sto)
 	if err != nil {
 		return code.TxCodeUnknown, err.Error(), nil
 	}
