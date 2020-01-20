@@ -26,7 +26,7 @@ type Draft struct {
 
 type DraftEx struct {
 	Draft *Draft      `json:"draft"`
-	Votes []*VoteInfo `josn:"votes"`
+	Votes []*VoteInfo `json:"votes"`
 }
 
 func ConvDraftIDFromHex(raw tm.HexBytes) (uint32, []byte, error) {
