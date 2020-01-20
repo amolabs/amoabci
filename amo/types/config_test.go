@@ -30,30 +30,30 @@ func TestConfigCheckValue(t *testing.T) {
 	}
 
 	payload := []byte(`{"non_existing_config": "0"}`)
-	ok, _ := cfg.Check(payload)
-	assert.False(t, ok)
+	_, err := cfg.Check(payload)
+	assert.NotNil(t, err)
 
 	payload = []byte(`{"lockup_period": 100}`)
-	ok, _ = cfg.Check(payload)
-	assert.False(t, ok)
+	_, err = cfg.Check(payload)
+	assert.NotNil(t, err)
 
 	payload = []byte(`{"blk_reward": "-1"}`)
-	ok, _ = cfg.Check(payload)
-	assert.False(t, ok)
+	_, err = cfg.Check(payload)
+	assert.NotNil(t, err)
 
 	payload = []byte(`{"lockup_period": 100000}`)
-	ok, changedCfg := cfg.Check(payload)
-	assert.True(t, ok)
+	changedCfg, err := cfg.Check(payload)
+	assert.Nil(t, err)
 	assert.NotEqual(t, changedCfg.LockupPeriod, cfg.LockupPeriod)
 
 	payload = []byte(`{"blk_reward": "0"}`)
-	ok, changedCfg = cfg.Check(payload)
-	assert.True(t, ok)
+	changedCfg, err = cfg.Check(payload)
+	assert.Nil(t, err)
 	assert.NotEqual(t, changedCfg.BlkReward, cfg.BlkReward)
 
 	payload = []byte(`{"blk_reward": "100", "lockup_period": 1000000}`)
-	ok, changedCfg = cfg.Check(payload)
-	assert.True(t, ok)
+	changedCfg, err = cfg.Check(payload)
+	assert.Nil(t, err)
 	assert.NotEqual(t, changedCfg.BlkReward, cfg.BlkReward)
 	assert.NotEqual(t, changedCfg.LockupPeriod, cfg.LockupPeriod)
 }

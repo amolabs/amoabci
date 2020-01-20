@@ -10,9 +10,9 @@ import (
 )
 
 type Draft struct {
-	Proposer crypto.Address  `json:"proposer"`
-	Config   AMOAppConfig    `json:"config"`
-	Desc     json.RawMessage `json:"desc"`
+	Proposer crypto.Address `json:"proposer"`
+	Config   AMOAppConfig   `json:"config"`
+	Desc     string         `json:"desc"`
 
 	OpenCount  uint64   `json:"open_count"`
 	CloseCount uint64   `json:"close_count"`

@@ -645,7 +645,7 @@ func TestDraft(t *testing.T) {
 	draftInput := types.Draft{
 		Proposer: proposer,
 		Config:   types.AMOAppConfig{TxReward: *txReward},
-		Desc:     json.RawMessage("null"),
+		Desc:     "nothing to describe",
 
 		OpenCount:  uint64(100),
 		CloseCount: uint64(10),

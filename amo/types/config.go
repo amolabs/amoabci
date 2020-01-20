@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 type AMOAppConfig struct {
@@ -26,28 +27,28 @@ type AMOAppConfig struct {
 	DraftRefundRate         float64  `json:"draft_refund_rate"`
 }
 
-func (cfg *AMOAppConfig) Check(txCfgRaw json.RawMessage) (bool, AMOAppConfig) {
+func (cfg *AMOAppConfig) Check(txCfgRaw json.RawMessage) (AMOAppConfig, error) {
 	var txCfgMap map[string]interface{}
 
 	// handle exception for allowing empty config field on purpose
 	if len(txCfgRaw) == 0 {
-		return true, *cfg
+		return *cfg, nil
 	}
 
 	cfgMap, err := cfg.getMap()
 	if err != nil {
-		return false, AMOAppConfig{}
+		return AMOAppConfig{}, err
 	}
 
 	err = json.Unmarshal(txCfgRaw, &txCfgMap)
 	if err != nil {
-		return false, AMOAppConfig{}
+		return AMOAppConfig{}, err
 	}
 
 	for key, _ := range txCfgMap {
 		_, exist := cfgMap[key]
 		if !exist {
-			return false, AMOAppConfig{}
+			return AMOAppConfig{}, fmt.Errorf("%s doesn't exist in config map", key)
 		}
 	}
 
@@ -55,7 +56,7 @@ func (cfg *AMOAppConfig) Check(txCfgRaw json.RawMessage) (bool, AMOAppConfig) {
 
 	err = json.Unmarshal(txCfgRaw, &tmpCfg)
 	if err != nil {
-		return false, AMOAppConfig{}
+		return AMOAppConfig{}, err
 	}
 
 	if cmp(tmpCfg.MaxValidators, ">", uint64(0)) &&
@@ -77,10 +78,10 @@ func (cfg *AMOAppConfig) Check(txCfgRaw json.RawMessage) (bool, AMOAppConfig) {
 		cmp(tmpCfg.DraftQuorumRate, ">", float64(0)) &&
 		cmp(tmpCfg.DraftPassRate, ">", float64(0)) &&
 		cmp(tmpCfg.DraftRefundRate, ">", float64(0)) {
-		return true, tmpCfg
+		return tmpCfg, nil
 	}
 
-	return false, AMOAppConfig{}
+	return AMOAppConfig{}, fmt.Errorf("couldn't finish checking config values successfully")
 }
 
 func (cfg *AMOAppConfig) getMap() (map[string]interface{}, error) {

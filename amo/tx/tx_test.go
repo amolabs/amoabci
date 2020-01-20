@@ -1167,7 +1167,7 @@ func TestPropose(t *testing.T) {
 	payload, _ := json.Marshal(ProposeParam{
 		DraftID: []byte(`"2"`),
 		Config:  []byte(`{"min_staking_unit": "0"}`),
-		Desc:    []byte(`"any json"`),
+		Desc:    "any json",
 	})
 	t1 := makeTestTx("propose", "proposer", payload)
 	rc, _ := t1.Check()
@@ -1208,7 +1208,7 @@ func TestPropose(t *testing.T) {
 	payload, _ = json.Marshal(ProposeParam{
 		DraftID: []byte(`"2"`),
 		Config:  []byte(`{"min_staking_unit": "100"}`),
-		Desc:    []byte(`"any json"`),
+		Desc:    "any json",
 	})
 	t1 = makeTestTx("propose", "proposer", payload)
 	rc, _ = t1.Check()
@@ -1241,7 +1241,7 @@ func TestPropose(t *testing.T) {
 	payload, _ = json.Marshal(ProposeParam{
 		DraftID: []byte(`"3"`),
 		Config:  []byte(`{"tx_reward": "0"}`),
-		Desc:    []byte(`"i don't want other vals to earn tx rewards"`),
+		Desc:    "i don't want other vals to earn tx rewards",
 	})
 	t1 = makeTestTx("propose", "proposerDup", payload)
 	rc, _ = t1.Check()
@@ -1258,7 +1258,7 @@ func TestPropose(t *testing.T) {
 	payload, _ = json.Marshal(ProposeParam{
 		DraftID: []byte(`"4"`),
 		Config:  []byte(``),
-		Desc:    []byte(`"empty config is used to give an opinion"`),
+		Desc:    "empty config is used to give an opinion",
 	})
 	t1 = makeTestTx("propose", "proposer", payload)
 	rc, _ = t1.Check()
@@ -1326,7 +1326,7 @@ func TestVote(t *testing.T) {
 	s.SetDraft(draftID, &types.Draft{
 		Proposer: makeAccAddr("proposer"),
 		Config:   cfg,
-		Desc:     []byte(`"any desc"`),
+		Desc:     "any desc",
 
 		// imitate beginning of draft vote situation
 		OpenCount:  uint64(0),
@@ -1374,7 +1374,7 @@ func TestVote(t *testing.T) {
 	s.SetDraft(draftID, &types.Draft{
 		Proposer: makeAccAddr("proposer"),
 		Config:   cfg,
-		Desc:     []byte(`"any desc"`),
+		Desc:     "any desc",
 
 		// imitate ending of draft vote situation
 		OpenCount:  uint64(0),

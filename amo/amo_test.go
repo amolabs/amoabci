@@ -1243,7 +1243,7 @@ func TestGovernance(t *testing.T) {
 	cfg := app.config
 	cfg.TxReward = *types.Zero
 	cfg.LockupPeriod = 10000
-	desc := []byte(`"I want others to get no reward and stay locked shorter"`)
+	desc := "I want others to get no reward and stay locked shorter"
 
 	_, draftIDByteArray, err := types.ConvDraftIDFromHex(draftID)
 	assert.NoError(t, err)
@@ -1353,7 +1353,7 @@ func TestGovernance(t *testing.T) {
 	draftID = []byte(`"2"`)
 	cfg = app.config
 	cfg.BlockBoundTxGracePeriod = uint64(100000000)
-	desc = []byte(`"block_bound_tx_grace_period should be longer for no reason"`)
+	desc = "block_bound_tx_grace_period should be longer for no reason"
 
 	_, draftIDByteArray, err = types.ConvDraftIDFromHex(draftID)
 	assert.NoError(t, err)
