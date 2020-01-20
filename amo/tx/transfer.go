@@ -14,7 +14,7 @@ import (
 
 type TransferParam struct {
 	// TODO: change to human-readable ascii string
-	UDC    tm.HexBytes    `json:"udc,omitempty"`
+	UDC    uint32         `json:"udc,omitempty"`
 	To     crypto.Address `json:"to"`
 	Amount types.Currency `json:"amount"`
 }
@@ -61,8 +61,8 @@ func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	}
 
 	udc := []byte(nil)
-	if len(txParam.UDC) > 0 {
-		udc = txParam.UDC
+	if txParam.UDC != 0 {
+		udc = types.ConvIDFromUint(txParam.UDC)
 	}
 
 	fromBalance := store.GetUDCBalance(udc, t.GetSender(), false)
