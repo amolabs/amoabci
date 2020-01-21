@@ -357,7 +357,12 @@ func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	jsonstr, _ := json.Marshal(request)
+	requestEx := types.RequestEx{
+		Request: request,
+		Buyer:   addr,
+	}
+
+	jsonstr, _ := json.Marshal(requestEx)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
 	res.Code = code.QueryCodeOK
@@ -407,7 +412,12 @@ func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	jsonstr, _ := json.Marshal(usage)
+	usageEx := types.UsageEx{
+		Usage: usage,
+		Buyer: addr,
+	}
+
+	jsonstr, _ := json.Marshal(usageEx)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
 	res.Code = code.QueryCodeOK

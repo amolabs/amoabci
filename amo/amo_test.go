@@ -311,6 +311,11 @@ func TestQueryRequest(t *testing.T) {
 		Payment: *new(types.Currency).Set(400),
 	}
 
+	requestEx := types.RequestEx{
+		Request: &request,
+		Buyer:   addr,
+	}
+
 	app.store.SetRequest(addr, parcelID, &request)
 
 	_, _, err := app.store.Save()
@@ -361,7 +366,7 @@ func TestQueryRequest(t *testing.T) {
 	req = abci.RequestQuery{Path: "/request", Data: key}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeOK, res.Code)
-	jsonstr, _ = json.Marshal(request)
+	jsonstr, _ = json.Marshal(requestEx)
 	assert.Equal(t, []byte(jsonstr), res.Value)
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
@@ -393,6 +398,11 @@ func TestQueryUsage(t *testing.T) {
 
 	usage := types.Usage{
 		Custody: cmn.RandBytes(32),
+	}
+
+	usageEx := types.UsageEx{
+		Usage: &usage,
+		Buyer: addr,
 	}
 
 	app.store.SetUsage(addr, parcelID, &usage)
@@ -445,7 +455,7 @@ func TestQueryUsage(t *testing.T) {
 	req = abci.RequestQuery{Path: "/usage", Data: key}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeOK, res.Code)
-	jsonstr, _ = json.Marshal(usage)
+	jsonstr, _ = json.Marshal(usageEx)
 	assert.Equal(t, []byte(jsonstr), res.Value)
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
