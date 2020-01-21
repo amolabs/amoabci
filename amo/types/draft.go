@@ -20,6 +20,6 @@ type Draft struct {
 }
 
 type DraftEx struct {
-	Draft *Draft      `json:"draft"`
+	*Draft
 	Votes []*VoteInfo `json:"votes"`
 }

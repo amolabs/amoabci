@@ -265,7 +265,12 @@ func queryVote(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	jsonstr, _ := json.Marshal(vote)
+	voteInfo := types.VoteInfo{
+		Voter: param.Voter,
+		Vote:  vote,
+	}
+
+	jsonstr, _ := json.Marshal(voteInfo)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
 	res.Code = code.QueryCodeOK

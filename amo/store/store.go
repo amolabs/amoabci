@@ -1104,7 +1104,7 @@ func (s Store) GetVotes(draftID []byte, committed bool) []*types.VoteInfo {
 
 		voteInfo = append(voteInfo, &types.VoteInfo{
 			Voter: voter,
-			Vote:  vote,
+			Vote:  &vote,
 		})
 
 		return false
