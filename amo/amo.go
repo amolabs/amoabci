@@ -357,8 +357,10 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 // TODO: return proof also
 func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuery) {
 	reqs := strings.Split(reqQuery.Path, "/")
-	reqs = append(reqs[:0], reqs[1:]...) // remove empty string
-	fmt.Println(reqs)
+	if len(reqs) > 1 {
+		reqs = append(reqs[:0], reqs[1:]...) // remove empty string
+	}
+
 	if len(reqs) == 0 || len(reqs) > 2 {
 		resQuery.Code = code.QueryCodeBadPath
 		return resQuery
@@ -370,9 +372,9 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 	case "balance":
 		switch len(reqs) {
 		case 1:
-			resQuery = queryBalance(app.store, reqQuery.Data)
+			resQuery = queryBalance(app.store, "", reqQuery.Data)
 		case 2:
-			resQuery = queryUDCBalance(app.store, reqs[1], reqQuery.Data)
+			resQuery = queryBalance(app.store, reqs[1], reqQuery.Data)
 		default:
 			resQuery.Code = code.QueryCodeBadPath
 			return resQuery

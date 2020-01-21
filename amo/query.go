@@ -32,7 +32,7 @@ func queryAppConfig(config types.AMOAppConfig) (res abci.ResponseQuery) {
 	return
 }
 
-func queryBalance(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+func queryBalance(s *store.Store, udc string, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
@@ -47,38 +47,14 @@ func queryBalance(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	bal := s.GetBalance(addr, true)
-
-	jsonstr, _ := json.Marshal(bal)
-	res.Log = string(jsonstr)
-	// XXX: tendermint will convert this using base64 encoding
-	res.Value = jsonstr
-	res.Code = code.QueryCodeOK
-	res.Key = queryData
-
-	return
-}
-
-func queryUDCBalance(s *store.Store, udc string, queryData []byte) (res abci.ResponseQuery) {
-	if len(queryData) == 0 {
-		res.Log = "error: no query_data"
-		res.Code = code.QueryCodeNoKey
-		return
-	}
-
-	var addr crypto.Address
-	err := json.Unmarshal(queryData, &addr)
-	if err != nil {
-		res.Log = "error: unmarshal"
-		res.Code = code.QueryCodeBadKey
-		return
-	}
-
-	udcID, err := types.ConvIDFromStr(udc)
-	if err != nil {
-		res.Log = "error: cannot convert udc id"
-		res.Code = code.QueryCodeBadKey
-		return
+	udcID := []byte(nil)
+	if udc != "" {
+		udcID, err = types.ConvIDFromStr(udc)
+		if err != nil {
+			res.Log = "error: cannot convert udc id"
+			res.Code = code.QueryCodeBadKey
+			return
+		}
 	}
 
 	bal := s.GetUDCBalance(udcID, addr, true)
