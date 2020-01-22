@@ -199,6 +199,12 @@ func classifyTx(base TxBase) Tx {
 			TxBase: base,
 			Param:  param,
 		}
+	case "burn":
+		param, _ := parseBurnParam(base.Payload)
+		t = &TxBurn{
+			TxBase: base,
+			Param:  param,
+		}
 	default:
 		t = &base
 	}

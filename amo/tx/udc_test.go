@@ -284,25 +284,43 @@ func TestUDCLock(t *testing.T) {
 
 	// set test balance
 	s.SetUDCBalance([]byte("myco"), makeAccAddr("holder"),
-		new(types.Currency).SetAMO(11))
+		new(types.Currency).SetAMO(12))
 
-	// too much
+	// transfer too much
 	payload, _ = json.Marshal(TransferParam{
 		UDC:    []byte("myco"),
 		To:     makeAccAddr("recp"),
-		Amount: *new(types.Currency).SetAMO(2),
+		Amount: *new(types.Currency).SetAMO(3),
 	})
 	tx = makeTestTx("transfer", "holder", payload)
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 
-	// ok
+	// burn too much
+	payload, _ = json.Marshal(BurnParam{
+		UDC:    []byte("myco"),
+		Amount: *new(types.Currency).SetAMO(3),
+	})
+	tx = makeTestTx("burn", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	// transfer ok
 	payload, _ = json.Marshal(TransferParam{
 		UDC:    []byte("myco"),
 		To:     makeAccAddr("recp"),
 		Amount: *new(types.Currency).SetAMO(1),
 	})
 	tx = makeTestTx("transfer", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// burn ok
+	payload, _ = json.Marshal(BurnParam{
+		UDC:    []byte("myco"),
+		Amount: *new(types.Currency).SetAMO(1),
+	})
+	tx = makeTestTx("burn", "holder", payload)
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 
@@ -315,4 +333,69 @@ func TestUDCLock(t *testing.T) {
 	tx = makeTestTx("transfer", "holder", payload)
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+	// same for burn
+	payload, _ = json.Marshal(BurnParam{
+		UDC:    []byte("myco"),
+		Amount: *new(types.Currency).SetAMO(1),
+	})
+	tx = makeTestTx("burn", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+}
+
+func TestParseBurn(t *testing.T) {
+	payload := []byte(`{"udc":"00000001","amount":"1000000"}`)
+
+	expected := BurnParam{
+		UDC:    []byte{0x00, 0x00, 0x00, 0x01},
+		Amount: *new(types.Currency).Set(1000000),
+	}
+	txParam, err := parseBurnParam(payload)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, txParam)
+}
+
+func TestUDCBurn(t *testing.T) {
+	s := store.NewStore(
+		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NotNil(t, s)
+
+	param := BurnParam{
+		UDC:    []byte("myco"),
+		Amount: *new(types.Currency).SetAMO(10),
+	}
+	payload, _ := json.Marshal(param)
+
+	// basic check
+	tx := makeTestTx("burn", "holder", payload)
+	assert.NotNil(t, tx)
+	_, ok := tx.(*TxBurn)
+	assert.True(t, ok)
+	rc, _ := tx.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// no udc
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeUDCNotFound, rc)
+
+	mycoin := &types.UDC{
+		makeAccAddr("issuer"),
+		"mycoin for test",
+		[]crypto.Address{
+			makeAccAddr("op1"),
+		},
+		*new(types.Currency).SetAMO(100),
+	}
+	assert.NotNil(t, mycoin)
+	assert.NoError(t, s.SetUDC([]byte("myco"), mycoin))
+
+	// set test balance
+	s.SetUDCBalance([]byte("myco"), makeAccAddr("holder"),
+		new(types.Currency).SetAMO(11))
+
+	// ok
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	bal := s.GetUDCBalance([]byte("myco"), makeAccAddr("holder"), false)
+	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
 }
