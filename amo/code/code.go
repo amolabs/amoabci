@@ -33,6 +33,7 @@ const (
 	TxCodeVoteNotOpened
 	TxCodeAlreadyVoted
 	TxCodeNoStorage
+	TxCodeUDCNotFound
 	TxCodeNotFound
 	TxCodeUnknown uint32 = 1000
 )

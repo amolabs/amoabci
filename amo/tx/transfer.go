@@ -65,8 +65,11 @@ func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		udc = txParam.UDC
 	}
 
+	udcLock := store.GetUDCLock(udc, t.GetSender(), false)
 	fromBalance := store.GetUDCBalance(udc, t.GetSender(), false)
-	if fromBalance.LessThan(&txParam.Amount) {
+	required := udcLock
+	required.Add(&txParam.Amount)
+	if fromBalance.LessThan(required) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 	toBalance := store.GetUDCBalance(udc, txParam.To, false)

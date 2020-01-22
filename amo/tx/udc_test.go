@@ -213,3 +213,106 @@ func TestTxUDCBalance(t *testing.T) {
 	bal = s.GetUDCBalance([]byte("mycoin"), acc1, false)
 	assert.Equal(t, &tmp, bal)
 }
+
+func TestParseLock(t *testing.T) {
+	payload := []byte(`{"udc":"00000001","holder":"99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","amount":"1000000"}`)
+
+	var holder cmn.HexBytes
+	err := json.Unmarshal(
+		[]byte(`"99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"`),
+		&holder,
+	)
+	assert.NoError(t, err)
+
+	expected := LockParam{
+		UDC:    []byte{0x00, 0x00, 0x00, 0x01},
+		Holder: holder,
+		Amount: *new(types.Currency).Set(1000000),
+	}
+	txParam, err := parseLockParam(payload)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, txParam)
+}
+
+func TestUDCLock(t *testing.T) {
+	s := store.NewStore(
+		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NotNil(t, s)
+
+	param := LockParam{
+		UDC:    []byte("myco"),
+		Holder: makeAccAddr("holder"),
+		Amount: *new(types.Currency).SetAMO(10),
+	}
+	payload, _ := json.Marshal(param)
+
+	// basic check
+	tx := makeTestTx("lock", "issuer", payload)
+	assert.NotNil(t, tx)
+	_, ok := tx.(*TxLock)
+	assert.True(t, ok)
+	rc, _ := tx.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// no udc
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeUDCNotFound, rc)
+
+	mycoin := &types.UDC{
+		makeAccAddr("issuer"),
+		"mycoin for test",
+		[]crypto.Address{
+			makeAccAddr("op1"),
+		},
+		*new(types.Currency).SetAMO(100),
+	}
+	assert.NotNil(t, mycoin)
+	assert.NoError(t, s.SetUDC([]byte("myco"), mycoin))
+
+	// no permission
+	tx = makeTestTx("lock", "anyone", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+
+	// ok
+	tx = makeTestTx("lock", "issuer", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	tx = makeTestTx("lock", "op1", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// set test balance
+	s.SetUDCBalance([]byte("myco"), makeAccAddr("holder"),
+		new(types.Currency).SetAMO(11))
+
+	// too much
+	payload, _ = json.Marshal(TransferParam{
+		UDC:    []byte("myco"),
+		To:     makeAccAddr("recp"),
+		Amount: *new(types.Currency).SetAMO(2),
+	})
+	tx = makeTestTx("transfer", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	// ok
+	payload, _ = json.Marshal(TransferParam{
+		UDC:    []byte("myco"),
+		To:     makeAccAddr("recp"),
+		Amount: *new(types.Currency).SetAMO(1),
+	})
+	tx = makeTestTx("transfer", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// situation changed. balance reduced
+	payload, _ = json.Marshal(TransferParam{
+		UDC:    []byte("myco"),
+		To:     makeAccAddr("recp"),
+		Amount: *new(types.Currency).SetAMO(1),
+	})
+	tx = makeTestTx("transfer", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+}
