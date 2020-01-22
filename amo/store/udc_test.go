@@ -64,3 +64,18 @@ func TestUDCBalance(t *testing.T) {
 	bal = s.GetUDCBalance(udc, tester, false)
 	assert.Equal(t, amo0, bal)
 }
+
+func TestUDCLock(t *testing.T) {
+	s := NewStore(
+		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NotNil(t, s)
+
+	udcid := []byte("mycoin")
+	holder := makeAccAddr("holder")
+	amo10 := new(types.Currency).SetAMO(10)
+
+	assert.NoError(t, s.SetUDCLock(udcid, holder, amo10))
+	assert.Equal(t, amo10, s.GetUDCLock(udcid, holder, false))
+	k := append([]byte("udclock:mycoin:"), holder.Bytes()...)
+	assert.NotNil(t, s.get(k, false))
+}

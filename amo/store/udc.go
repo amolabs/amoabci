@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	prefixUDC = []byte("udc:")
+	prefixUDC     = []byte("udc:")
+	prefixUDCLock = []byte("udclock:")
 )
 
 func getUDCKey(id []byte) []byte {
@@ -83,6 +84,55 @@ func (s Store) GetUDCBalance(udc []byte,
 		return &c
 	}
 	err := json.Unmarshal(balance, &c)
+	if err != nil {
+		return &c
+	}
+	return &c
+}
+
+// UDC Lock store
+func getUDCLockKey(udc []byte, addr tm.Address) []byte {
+	key := append(prefixUDCLock, udc...)
+	if len(udc) > 0 {
+		key = append(key, ':')
+	}
+	key = append(key, addr.Bytes()...)
+	return key
+}
+
+func (s Store) SetUDCLock(udc []byte,
+	addr tm.Address, amount *types.Currency) error {
+	zero := new(types.Currency).Set(0)
+	lockKey := getUDCLockKey(udc, addr)
+
+	if amount.LessThan(zero) {
+		return errors.New("negative amount")
+	}
+
+	// pre-process for setting zero amount, just remove corresponding key
+	if s.has(lockKey) && amount.Equals(zero) {
+		s.remove(lockKey)
+		return nil
+	}
+
+	b, err := json.Marshal(amount)
+	if err != nil {
+		return err
+	}
+
+	s.set(lockKey, b)
+
+	return nil
+}
+
+func (s Store) GetUDCLock(udc []byte,
+	addr tm.Address, committed bool) *types.Currency {
+	c := types.Currency{}
+	b := s.get(getUDCLockKey(udc, addr), committed)
+	if len(b) == 0 {
+		return &c
+	}
+	err := json.Unmarshal(b, &c)
 	if err != nil {
 		return &c
 	}
