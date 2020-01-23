@@ -46,6 +46,54 @@ func TestBlockBindingManager(t *testing.T) {
 	ok = bbm.Check(3)
 	assert.True(t, ok)
 
+	ok = bbm.Check(4)
+	assert.True(t, ok)
+
+	ok = bbm.Check(5)
+	assert.True(t, ok)
+
 	ok = bbm.Check(6)
 	assert.False(t, ok)
+
+	// g: 3 -> g: 2
+	bbm.Set(2)
+
+	// g: 2, f: 5, t: 6
+	bbm.Update()
+
+	ok = bbm.Check(4)
+	assert.False(t, ok)
+
+	ok = bbm.Check(5)
+	assert.True(t, ok)
+
+	ok = bbm.Check(6)
+	assert.True(t, ok)
+
+	ok = bbm.Check(7)
+	assert.False(t, ok)
+
+	// g: 2 -> g: 4
+	bbm.Set(4)
+
+	// g: 4, f: 5, f: 7
+	bbm.Update()
+
+	ok = bbm.Check(5)
+	assert.True(t, ok)
+
+	// g: 4, f: 5, f: 8
+	bbm.Update()
+
+	ok = bbm.Check(5)
+	assert.True(t, ok)
+
+	// g: 4, f: 6, f: 9
+	bbm.Update()
+
+	ok = bbm.Check(5)
+	assert.False(t, ok)
+
+	ok = bbm.Check(6)
+	assert.True(t, ok)
 }

@@ -1159,10 +1159,9 @@ func TestBindingBlock(t *testing.T) {
 	tx5 := makeTxStake(t1, "test1", 10000, "2")
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.blockBindingManager = blockchain.NewBlockBindingManager(
-		app.state.LastHeight,
-		3,
-	)
+	app.config.BlockBoundTxGracePeriod = uint64(3)
+
+	app.InitChain(abci.RequestInitChain{})
 
 	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
 

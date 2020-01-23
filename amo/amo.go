@@ -604,6 +604,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	)
 
 	app.replayPreventer.Index()
+	app.blockBindingManager.Set(app.config.BlockBoundTxGracePeriod)
 
 	app.store.ProcessDraftVotes(
 		app.state.NextDraftID-uint32(1),
