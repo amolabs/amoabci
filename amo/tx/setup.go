@@ -12,7 +12,7 @@ import (
 )
 
 type SetupParam struct {
-	Storage         tm.HexBytes    `json:"storage"`
+	Storage         uint32         `json:"storage"`
 	Url             string         `json:"url"`
 	RegistrationFee types.Currency `json:"registration_fee"`
 	HostingFee      types.Currency `json:"hosting_fee"`

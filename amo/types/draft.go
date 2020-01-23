@@ -1,12 +1,7 @@
 package types
 
 import (
-	"encoding/binary"
-	"encoding/json"
-	"strconv"
-
 	"github.com/tendermint/tendermint/crypto"
-	tm "github.com/tendermint/tendermint/libs/common"
 )
 
 type Draft struct {
@@ -25,37 +20,6 @@ type Draft struct {
 }
 
 type DraftEx struct {
-	Draft *Draft      `json:"draft"`
+	*Draft
 	Votes []*VoteInfo `json:"votes"`
-}
-
-func ConvDraftIDFromHex(raw tm.HexBytes) (uint32, []byte, error) {
-	var (
-		draftIDStr       string
-		draftIDUint      uint32
-		draftIDByteArray []byte
-	)
-
-	err := json.Unmarshal(raw, &draftIDStr)
-	if err != nil {
-		return draftIDUint, draftIDByteArray, err
-	}
-
-	tmp, err := strconv.ParseUint(draftIDStr, 10, 32)
-	if err != nil {
-		return draftIDUint, draftIDByteArray, err
-	}
-
-	draftIDUint = uint32(tmp)
-
-	draftIDByteArray = ConvDraftIDFromUint(draftIDUint)
-
-	return draftIDUint, draftIDByteArray, nil
-}
-
-func ConvDraftIDFromUint(raw uint32) []byte {
-	draftIDByteArray := make([]byte, 4)
-	binary.BigEndian.PutUint32(draftIDByteArray, raw)
-
-	return draftIDByteArray
 }

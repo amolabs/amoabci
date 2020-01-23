@@ -11,7 +11,7 @@ import (
 )
 
 type CloseParam struct {
-	Storage tm.HexBytes `json:"storage"`
+	Storage uint32 `json:"storage"`
 }
 
 func parseCloseParam(raw []byte) (CloseParam, error) {

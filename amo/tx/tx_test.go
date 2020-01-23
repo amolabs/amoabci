@@ -301,8 +301,12 @@ func TestRegister(t *testing.T) {
 	assert.NotNil(t, s)
 
 	// target
+	tmp := make([]byte, 4)
+	binary.BigEndian.PutUint32(tmp, uint32(123))
+	parcelID := append(tmp, []byte("parcel")...)
+
 	payload, _ := json.Marshal(RegisterParam{
-		Target:       []byte("XXXXparcel"),
+		Target:       parcelID,
 		Custody:      []byte("custody"),
 		ProxyAccount: bob.addr,
 		Extra:        []byte(`"any json"`),
@@ -317,7 +321,7 @@ func TestRegister(t *testing.T) {
 
 	// dummy storage setup
 	mysto := &types.Storage{Active: false}
-	assert.NoError(t, s.SetStorage([]byte("XXXX"), mysto))
+	assert.NoError(t, s.SetStorage(uint32(123), mysto))
 
 	// register with inactive storage
 	rc, _, _ = t1.Execute(s)
@@ -331,11 +335,12 @@ func TestRegister(t *testing.T) {
 		HostingFee:      *new(types.Currency).SetAMO(1),
 		Active:          true,
 	}
-	assert.NoError(t, s.SetStorage([]byte("XXXX"), mysto))
+	assert.NoError(t, s.SetStorage(uint32(123), mysto))
 
 	// register with active storage but not enough balance for registration fee
-	rc, _, _ = t1.Execute(s)
+	rc, rs, _ := t1.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+	t.Log(rs)
 
 	// with some balance, do it again
 	s.SetBalance(makeAccAddr("seller"), new(types.Currency).SetAMO(1))
@@ -343,7 +348,7 @@ func TestRegister(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 
 	// check parcel
-	parcel := s.GetParcel([]byte("XXXXparcel"), false)
+	parcel := s.GetParcel(parcelID, false)
 	assert.NotNil(t, parcel)
 	assert.Equal(t, []byte(`"any json"`), []byte(parcel.Extra.Register))
 	// check balances
@@ -364,8 +369,12 @@ func TestRequest(t *testing.T) {
 	assert.NotNil(t, s)
 
 	// target
+	tmp := make([]byte, 4)
+	binary.BigEndian.PutUint32(tmp, uint32(123))
+	parcelID := append(tmp, []byte("parcel")...)
+
 	payload, _ := json.Marshal(RequestParam{
-		Target:  []byte("AAAAparcel"),
+		Target:  parcelID,
 		Payment: *new(types.Currency).SetAMO(1),
 		Extra:   []byte(`"any json for req"`),
 	})
@@ -378,7 +387,7 @@ func TestRequest(t *testing.T) {
 	assert.Equal(t, code.TxCodeParcelNotFound, rc)
 
 	// request for buyer owned parcel
-	s.SetParcel([]byte("AAAAparcel"), &types.Parcel{
+	s.SetParcel(parcelID, &types.Parcel{
 		Owner:        makeAccAddr("buyer"),
 		Custody:      []byte("custody"),
 		ProxyAccount: makeAccAddr("proxy"),
@@ -388,7 +397,7 @@ func TestRequest(t *testing.T) {
 	assert.Equal(t, code.TxCodeSelfTransaction, rc)
 
 	// request for already granted parcel
-	s.SetParcel([]byte("AAAAparcel"), &types.Parcel{
+	s.SetParcel(parcelID, &types.Parcel{
 		Owner:        makeAccAddr("seller"),
 		Custody:      []byte("custody"),
 		ProxyAccount: makeAccAddr("proxy"),
@@ -396,14 +405,14 @@ func TestRequest(t *testing.T) {
 			Register: []byte(`"any json for reg"`),
 		},
 	})
-	s.SetUsage(makeAccAddr("buyer"), []byte("AAAAparcel"), &types.Usage{
+	s.SetUsage(makeAccAddr("buyer"), parcelID, &types.Usage{
 		Custody: []byte("custody"),
 		Extra:   types.Extra{},
 	})
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
 	// clean-up
-	s.DeleteUsage(makeAccAddr("buyer"), []byte("AAAAparcel"))
+	s.DeleteUsage(makeAccAddr("buyer"), parcelID)
 
 	// not enough balance
 	rc, _, _ = t1.Execute(s)
@@ -415,7 +424,7 @@ func TestRequest(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 	bal := s.GetBalance(makeAccAddr("buyer"), false)
 	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
-	req := s.GetRequest(makeAccAddr("buyer"), []byte("AAAAparcel"), false)
+	req := s.GetRequest(makeAccAddr("buyer"), parcelID, false)
 	assert.NotNil(t, req)
 	assert.Equal(t, []byte(`"any json for reg"`), []byte(req.Extra.Register))
 	assert.Equal(t, []byte(`"any json for req"`), []byte(req.Extra.Request))
@@ -424,13 +433,13 @@ func TestRequest(t *testing.T) {
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyRequested, rc)
 	// clean-up
-	s.DeleteRequest(makeAccAddr("buyer"), []byte("AAAAparcel"))
+	s.DeleteRequest(makeAccAddr("buyer"), parcelID)
 
 	// dealer fee
 	// XXX: dealer fee is optional, so the previous tests without dealer fee
 	// are valid also.
 	payload2, _ := json.Marshal(RequestParam{
-		Target:    []byte("AAAAparcel"),
+		Target:    parcelID,
 		Payment:   *new(types.Currency).SetAMO(1),
 		Dealer:    makeAccAddr("dealer"),
 		DealerFee: *new(types.Currency).SetAMO(1),
@@ -449,7 +458,7 @@ func TestRequest(t *testing.T) {
 	// check balance
 	bal = s.GetBalance(makeAccAddr("buyer"), false)
 	assert.Equal(t, types.Zero, bal)
-	req = s.GetRequest(makeAccAddr("buyer"), []byte("AAAAparcel"), false)
+	req = s.GetRequest(makeAccAddr("buyer"), parcelID, false)
 	assert.Equal(t, new(types.Currency).SetAMO(1), &req.Payment)
 	assert.Equal(t, new(types.Currency).SetAMO(1), &req.DealerFee)
 }
@@ -461,8 +470,12 @@ func TestGrant(t *testing.T) {
 	assert.NotNil(t, s)
 
 	// target
+	tmp := make([]byte, 4)
+	binary.BigEndian.PutUint32(tmp, uint32(123))
+	parcelID := append(tmp, []byte("parcel")...)
+
 	payload, _ := json.Marshal(GrantParam{
-		Target:  []byte("AAAAparcel"),
+		Target:  parcelID,
 		Grantee: makeAccAddr("buyer"),
 		Custody: []byte("custody"),
 		Extra:   []byte(`"any json for grant"`),
@@ -476,7 +489,7 @@ func TestGrant(t *testing.T) {
 	assert.Equal(t, code.TxCodeParcelNotFound, rc)
 
 	// grant for non-existent request
-	s.SetParcel([]byte("AAAAparcel"), &types.Parcel{
+	s.SetParcel(parcelID, &types.Parcel{
 		Owner:        makeAccAddr("seller"),
 		Custody:      []byte("custody"),
 		ProxyAccount: makeAccAddr("proxy"),
@@ -488,18 +501,18 @@ func TestGrant(t *testing.T) {
 	assert.Equal(t, code.TxCodeRequestNotFound, rc)
 
 	// grant for already granted parcel
-	s.SetUsage(makeAccAddr("buyer"), []byte("AAAAparcel"), &types.Usage{})
+	s.SetUsage(makeAccAddr("buyer"), parcelID, &types.Usage{})
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
 	// clean-up
-	s.DeleteUsage(makeAccAddr("buyer"), []byte("AAAAparcel"))
+	s.DeleteUsage(makeAccAddr("buyer"), parcelID)
 
 	// grant without permission
 	t2 := makeTestTx("grant", "bogus", payload)
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
 
-	s.SetRequest(makeAccAddr("buyer"), []byte("AAAAparcel"), &types.Request{
+	s.SetRequest(makeAccAddr("buyer"), parcelID, &types.Request{
 		Payment:   *new(types.Currency).SetAMO(1),
 		Dealer:    makeAccAddr("dealer"),
 		DealerFee: *new(types.Currency).SetAMO(1),
@@ -513,7 +526,7 @@ func TestGrant(t *testing.T) {
 	assert.Equal(t, code.TxCodeNoStorage, rc)
 
 	// dummy storage setup
-	assert.NoError(t, s.SetStorage([]byte("AAAA"), &types.Storage{
+	assert.NoError(t, s.SetStorage(uint32(123), &types.Storage{
 		Owner:           makeAccAddr("provider"),
 		Url:             "http://dummy",
 		RegistrationFee: *new(types.Currency).SetAMO(1),
@@ -542,7 +555,7 @@ func TestGrant(t *testing.T) {
 	bal = s.GetBalance(makeAccAddr("dealer"), false)
 	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
 	// check extras
-	usage := s.GetUsage(makeAccAddr("buyer"), []byte("AAAAparcel"), false)
+	usage := s.GetUsage(makeAccAddr("buyer"), parcelID, false)
 	assert.Equal(t, []byte(`"any json for reg"`), []byte(usage.Extra.Register))
 	assert.Equal(t, []byte(`"any json for req"`), []byte(usage.Extra.Request))
 	assert.Equal(t, []byte(`"any json for grant"`), []byte(usage.Extra.Grant))
@@ -1120,23 +1133,6 @@ func TestStakeLockup(t *testing.T) {
 	//assert.Nil(t, stake)
 }
 
-func TestDraftIDConversion(t *testing.T) {
-	draftID := cmn.HexBytes(`"12"`)
-	var (
-		draftIDInt       uint32
-		draftIDByteArray []byte
-	)
-
-	draftIDInt, draftIDByteArray, err := types.ConvDraftIDFromHex(draftID)
-	assert.NoError(t, err)
-
-	assert.Equal(t, []byte{0x0, 0x0, 0x0, 0xc}, draftIDByteArray)
-
-	draftIDInt = binary.BigEndian.Uint32(draftIDByteArray)
-
-	assert.Equal(t, uint32(12), draftIDInt)
-}
-
 func TestPropose(t *testing.T) {
 	// env
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
@@ -1165,7 +1161,7 @@ func TestPropose(t *testing.T) {
 
 	// target
 	payload, _ := json.Marshal(ProposeParam{
-		DraftID: []byte(`"2"`),
+		DraftID: uint32(2),
 		Config:  []byte(`{"min_staking_unit": "0"}`),
 		Desc:    "any json",
 	})
@@ -1206,7 +1202,7 @@ func TestPropose(t *testing.T) {
 
 	// modify draft config to make it proper
 	payload, _ = json.Marshal(ProposeParam{
-		DraftID: []byte(`"2"`),
+		DraftID: uint32(2),
 		Config:  []byte(`{"min_staking_unit": "100"}`),
 		Desc:    "any json",
 	})
@@ -1239,7 +1235,7 @@ func TestPropose(t *testing.T) {
 	// propose other draft while there exists a draft in process
 	StateNextDraftID = 3
 	payload, _ = json.Marshal(ProposeParam{
-		DraftID: []byte(`"3"`),
+		DraftID: uint32(3),
 		Config:  []byte(`{"tx_reward": "0"}`),
 		Desc:    "i don't want other vals to earn tx rewards",
 	})
@@ -1256,7 +1252,7 @@ func TestPropose(t *testing.T) {
 	// propose a draft having config left empty on purpose
 	s.SetBalance(makeAccAddr("proposer"), new(types.Currency).Set(1000))
 	payload, _ = json.Marshal(ProposeParam{
-		DraftID: []byte(`"4"`),
+		DraftID: uint32(4),
 		Config:  []byte(``),
 		Desc:    "empty config is used to give an opinion",
 	})
@@ -1275,7 +1271,7 @@ func TestVote(t *testing.T) {
 
 	// target
 	payload, _ := json.Marshal(VoteParam{
-		DraftID: []byte(`"1"`),
+		DraftID: uint32(1),
 		Approve: true,
 	})
 	t1 := makeTestTx("vote", "voter1", payload)
@@ -1322,7 +1318,7 @@ func TestVote(t *testing.T) {
 	}
 
 	StateNextDraftID = uint32(1)
-	draftID := types.ConvDraftIDFromUint(StateNextDraftID)
+	draftID := StateNextDraftID
 	s.SetDraft(draftID, &types.Draft{
 		Proposer: makeAccAddr("proposer"),
 		Config:   cfg,
