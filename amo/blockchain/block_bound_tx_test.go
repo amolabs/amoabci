@@ -8,7 +8,7 @@ import (
 
 func TestBlockBindingManager(t *testing.T) {
 	// g: 3, f: 1, t: 0
-	bbm := NewBlockBindingManager(3, 0)
+	bbm := NewBlockBindingManager(0, 3)
 
 	ok := bbm.Check(1)
 	assert.False(t, ok)

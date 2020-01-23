@@ -22,7 +22,7 @@ type BlockBindingManager struct {
 	fromHeight, toHeight uint64
 }
 
-func NewBlockBindingManager(gracePeriod uint64, height int64) BlockBindingManager {
+func NewBlockBindingManager(height int64, gracePeriod uint64) BlockBindingManager {
 	bbm := BlockBindingManager{
 		gracePeriod: gracePeriod,
 		fromHeight:  1,

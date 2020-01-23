@@ -58,8 +58,8 @@ type ReplayPreventer struct {
 
 func NewReplayPreventer(
 	store *store.Store,
-	indexRange uint64,
 	height int64,
+	indexRange uint64,
 ) ReplayPreventer {
 
 	rp := ReplayPreventer{

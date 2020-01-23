@@ -12,7 +12,7 @@ import (
 func TestReplayPreventer(t *testing.T) {
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 
-	rp := NewReplayPreventer(s, 3, 0)
+	rp := NewReplayPreventer(s, 0, 3)
 
 	// bunch of txs
 	h1 := [][]byte{[]byte("tx11"), []byte("tx12"), []byte("tx13")}
