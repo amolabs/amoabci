@@ -13,7 +13,7 @@ import (
 )
 
 type IssueParam struct {
-	ID        uint32           `json:"id"`        // required
+	UDC       uint32           `json:"udc"`       // required
 	Desc      string           `json:"desc"`      // optional
 	Operators []crypto.Address `json:"operators"` // optional
 	Amount    types.Currency   `json:"amount"`    // required
@@ -51,7 +51,7 @@ func (t *TxIssue) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 	param := t.Param
 	sender := t.GetSender()
 
-	udc := s.GetUDC(param.ID, false)
+	udc := s.GetUDC(param.UDC, false)
 	if udc == nil {
 		stakes := s.GetTopStakes(ConfigAMOApp.MaxValidators, sender, false)
 		if len(stakes) == 0 {
@@ -82,17 +82,17 @@ func (t *TxIssue) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 		udc.Total.Add(&param.Amount)
 	}
 	// update UDC balance
-	bal := s.GetUDCBalance(param.ID, sender, false)
+	bal := s.GetUDCBalance(param.UDC, sender, false)
 	if bal == nil {
 		bal = new(types.Currency)
 	}
 	after := bal.Add(&param.Amount)
-	err := s.SetUDCBalance(param.ID, sender, after)
+	err := s.SetUDCBalance(param.UDC, sender, after)
 	if err != nil {
 		return code.TxCodeUnknown, err.Error(), nil
 	}
 	// store UDC registry
-	err = s.SetUDC(param.ID, udc)
+	err = s.SetUDC(param.UDC, udc)
 	if err != nil {
 		return code.TxCodeUnknown, err.Error(), nil
 	}

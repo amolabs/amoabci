@@ -20,7 +20,7 @@ func makeAccAddr(seed string) crypto.Address {
 }
 
 func TestParseIssue(t *testing.T) {
-	payload := []byte(`{"id":65342,"operators":["99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"],"desc":"mycoin","amount":"1000000"}`)
+	payload := []byte(`{"udc":65342,"operators":["99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"],"desc":"mycoin","amount":"1000000"}`)
 
 	var operator cmn.HexBytes
 	err := json.Unmarshal(
@@ -30,7 +30,7 @@ func TestParseIssue(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := IssueParam{
-		ID:        65342,
+		UDC:       65342,
 		Operators: []crypto.Address{operator},
 		Desc:      "mycoin",
 		Amount:    *new(types.Currency).Set(1000000),
@@ -46,7 +46,7 @@ func TestTxIssue(t *testing.T) {
 	assert.NotNil(t, s)
 
 	param := IssueParam{
-		ID:        123,
+		UDC:       123,
 		Operators: []crypto.Address{makeAccAddr("oper1")},
 		Desc:      "mycoin",
 		Amount:    *new(types.Currency).Set(1000000),
@@ -90,7 +90,7 @@ func TestTxIssue(t *testing.T) {
 
 	// change fields other than total
 	param = IssueParam{
-		ID:        123,
+		UDC:       123,
 		Operators: []crypto.Address{makeAccAddr("oper2")},
 		Desc:      "my own coin",
 		Amount:    *new(types.Currency).Set(0),
@@ -125,7 +125,7 @@ func TestTxUDCBalance(t *testing.T) {
 
 	// issue
 	param := IssueParam{
-		ID:        123,
+		UDC:       123,
 		Operators: []crypto.Address{makeAccAddr("oper1")},
 		Desc:      "mycoin",
 		Amount:    amoM,
@@ -137,12 +137,12 @@ func TestTxUDCBalance(t *testing.T) {
 	udc := s.GetUDC(123, false)
 	assert.NotNil(t, udc)
 	assert.Equal(t, amoM, udc.Total)
-	bal := s.GetUDCBalance(123, issuer, false)
+	bal := s.GetUDCBalance(param.UDC, issuer, false)
 	assert.Equal(t, &amoM, bal)
 
 	// issue more
 	param = IssueParam{
-		ID:        123,
+		UDC:       123,
 		Operators: nil,
 		Desc:      "mycoin",
 		Amount:    amoK,
@@ -154,7 +154,7 @@ func TestTxUDCBalance(t *testing.T) {
 	tmp := types.Currency{}
 	tmp.Add(&amoM)
 	tmp.Add(&amoK)
-	bal = s.GetUDCBalance(123, issuer, false)
+	bal = s.GetUDCBalance(param.UDC, issuer, false)
 	assert.Equal(t, &tmp, bal)
 
 	// non-UDC balance
@@ -211,4 +211,190 @@ func TestTxUDCBalance(t *testing.T) {
 	assert.Equal(t, &amo0, bal)
 	bal = s.GetUDCBalance(123, acc1, false)
 	assert.Equal(t, &tmp, bal)
+}
+
+func TestParseLock(t *testing.T) {
+	payload := []byte(`{"udc":123,"holder":"99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","amount":"1000000"}`)
+
+	var holder cmn.HexBytes
+	err := json.Unmarshal(
+		[]byte(`"99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"`),
+		&holder,
+	)
+	assert.NoError(t, err)
+
+	expected := LockParam{
+		UDC:    uint32(123),
+		Holder: holder,
+		Amount: *new(types.Currency).Set(1000000),
+	}
+	txParam, err := parseLockParam(payload)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, txParam)
+}
+
+func TestUDCLock(t *testing.T) {
+	s := store.NewStore(
+		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NotNil(t, s)
+
+	param := LockParam{
+		UDC:    uint32(123),
+		Holder: makeAccAddr("holder"),
+		Amount: *new(types.Currency).SetAMO(10),
+	}
+	payload, _ := json.Marshal(param)
+
+	// basic check
+	tx := makeTestTx("lock", "issuer", payload)
+	assert.NotNil(t, tx)
+	_, ok := tx.(*TxLock)
+	assert.True(t, ok)
+	rc, _ := tx.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// no udc
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeUDCNotFound, rc)
+
+	mycoin := &types.UDC{
+		makeAccAddr("issuer"),
+		"mycoin for test",
+		[]crypto.Address{
+			makeAccAddr("op1"),
+		},
+		*new(types.Currency).SetAMO(100),
+	}
+	assert.NotNil(t, mycoin)
+	assert.NoError(t, s.SetUDC(uint32(123), mycoin))
+
+	// no permission
+	tx = makeTestTx("lock", "anyone", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+
+	// ok
+	tx = makeTestTx("lock", "issuer", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	tx = makeTestTx("lock", "op1", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// set test balance
+	s.SetUDCBalance(uint32(123), makeAccAddr("holder"),
+		new(types.Currency).SetAMO(12))
+
+	// transfer too much
+	payload, _ = json.Marshal(TransferParam{
+		UDC:    uint32(123),
+		To:     makeAccAddr("recp"),
+		Amount: *new(types.Currency).SetAMO(3),
+	})
+	tx = makeTestTx("transfer", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	// burn too much
+	payload, _ = json.Marshal(BurnParam{
+		UDC:    uint32(123),
+		Amount: *new(types.Currency).SetAMO(3),
+	})
+	tx = makeTestTx("burn", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+
+	// transfer ok
+	payload, _ = json.Marshal(TransferParam{
+		UDC:    uint32(123),
+		To:     makeAccAddr("recp"),
+		Amount: *new(types.Currency).SetAMO(1),
+	})
+	tx = makeTestTx("transfer", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// burn ok
+	payload, _ = json.Marshal(BurnParam{
+		UDC:    uint32(123),
+		Amount: *new(types.Currency).SetAMO(1),
+	})
+	tx = makeTestTx("burn", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// situation changed. balance reduced
+	payload, _ = json.Marshal(TransferParam{
+		UDC:    uint32(123),
+		To:     makeAccAddr("recp"),
+		Amount: *new(types.Currency).SetAMO(1),
+	})
+	tx = makeTestTx("transfer", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+	// same for burn
+	payload, _ = json.Marshal(BurnParam{
+		UDC:    uint32(123),
+		Amount: *new(types.Currency).SetAMO(1),
+	})
+	tx = makeTestTx("burn", "holder", payload)
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
+}
+
+func TestParseBurn(t *testing.T) {
+	payload := []byte(`{"udc":123,"amount":"1000000"}`)
+
+	expected := BurnParam{
+		UDC:    123,
+		Amount: *new(types.Currency).Set(1000000),
+	}
+	txParam, err := parseBurnParam(payload)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, txParam)
+}
+
+func TestUDCBurn(t *testing.T) {
+	s := store.NewStore(
+		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NotNil(t, s)
+
+	param := BurnParam{
+		UDC:    uint32(123),
+		Amount: *new(types.Currency).SetAMO(10),
+	}
+	payload, _ := json.Marshal(param)
+
+	// basic check
+	tx := makeTestTx("burn", "holder", payload)
+	assert.NotNil(t, tx)
+	_, ok := tx.(*TxBurn)
+	assert.True(t, ok)
+	rc, _ := tx.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	// no udc
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeUDCNotFound, rc)
+
+	mycoin := &types.UDC{
+		makeAccAddr("issuer"),
+		"mycoin for test",
+		[]crypto.Address{
+			makeAccAddr("op1"),
+		},
+		*new(types.Currency).SetAMO(100),
+	}
+	assert.NotNil(t, mycoin)
+	assert.NoError(t, s.SetUDC(uint32(123), mycoin))
+
+	// set test balance
+	s.SetUDCBalance(uint32(123), makeAccAddr("holder"),
+		new(types.Currency).SetAMO(11))
+
+	// ok
+	rc, _, _ = tx.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	bal := s.GetUDCBalance(uint32(123), makeAccAddr("holder"), false)
+	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
 }
