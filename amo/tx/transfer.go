@@ -60,19 +60,14 @@ func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeInvalidAmount, "invalid amount", nil
 	}
 
-	udc := []byte(nil)
-	if txParam.UDC != 0 {
-		udc = types.ConvIDFromUint(txParam.UDC)
-	}
-
-	fromBalance := store.GetUDCBalance(udc, t.GetSender(), false)
+	fromBalance := store.GetUDCBalance(txParam.UDC, t.GetSender(), false)
 	if fromBalance.LessThan(&txParam.Amount) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
-	toBalance := store.GetUDCBalance(udc, txParam.To, false)
+	toBalance := store.GetUDCBalance(txParam.UDC, txParam.To, false)
 	fromBalance.Sub(&txParam.Amount)
 	toBalance.Add(&txParam.Amount)
-	store.SetUDCBalance(udc, t.GetSender(), fromBalance)
-	store.SetUDCBalance(udc, txParam.To, toBalance)
+	store.SetUDCBalance(txParam.UDC, t.GetSender(), fromBalance)
+	store.SetUDCBalance(txParam.UDC, txParam.To, toBalance)
 	return code.TxCodeOK, "ok", nil
 }

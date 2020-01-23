@@ -47,14 +47,15 @@ func queryBalance(s *store.Store, udc string, queryData []byte) (res abci.Respon
 		return
 	}
 
-	udcID := []byte(nil)
+	udcID := uint32(0)
 	if udc != "" {
-		udcID, err = types.ConvIDFromStr(udc)
+		tmp, err := strconv.ParseInt(udc, 10, 32)
 		if err != nil {
 			res.Log = "error: cannot convert udc id"
 			res.Code = code.QueryCodeBadKey
 			return
 		}
+		udcID = uint32(tmp)
 	}
 
 	bal := s.GetUDCBalance(udcID, addr, true)
@@ -164,15 +165,14 @@ func queryStorage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	var rawID uint32
-	err := json.Unmarshal(queryData, &rawID)
+	var storageID uint32
+	err := json.Unmarshal(queryData, &storageID)
 	if err != nil {
 		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
-	storageID := types.ConvIDFromUint(rawID)
 	storage := s.GetStorage(storageID, true)
 	if storage == nil {
 		res.Log = "error: no such storage"
@@ -196,15 +196,14 @@ func queryDraft(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	var rawID uint32
-	err := json.Unmarshal(queryData, &rawID)
+	var draftID uint32
+	err := json.Unmarshal(queryData, &draftID)
 	if err != nil {
 		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
-	draftID := types.ConvIDFromUint(rawID)
 	draft := s.GetDraft(draftID, true)
 	if draft == nil {
 		res.Log = "error: no draft"
@@ -251,14 +250,13 @@ func queryVote(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	draftID := types.ConvIDFromUint(param.DraftID)
 	if len(param.Voter) != crypto.AddressSize {
 		res.Log = "error: not avaiable address"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
-	vote := s.GetVote(draftID, param.Voter, true)
+	vote := s.GetVote(param.DraftID, param.Voter, true)
 	if vote == nil {
 		res.Log = "error: no vote"
 		res.Code = code.QueryCodeNoMatch

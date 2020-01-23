@@ -1,6 +1,7 @@
 package tx
 
 import (
+	"encoding/binary"
 	"encoding/json"
 
 	tm "github.com/tendermint/tendermint/libs/common"
@@ -53,7 +54,8 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	storage := store.GetStorage(txParam.Target[:types.StorageIDLen], false)
+	storageID := binary.BigEndian.Uint32(txParam.Target[:types.StorageIDLen])
+	storage := store.GetStorage(storageID, false)
 	if storage == nil || storage.Active == false {
 		return code.TxCodeNoStorage, "no active storage for this parcel", nil
 	}

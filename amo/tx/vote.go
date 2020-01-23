@@ -51,9 +51,7 @@ func (t *TxVote) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodePermissionDenied, "no permission to vote", nil
 	}
 
-	draftIDByteArray := types.ConvIDFromUint(txParam.DraftID)
-
-	draft := store.GetDraft(draftIDByteArray, false)
+	draft := store.GetDraft(txParam.DraftID, false)
 	if draft == nil {
 		return code.TxCodeNonExistingDraft, "non-existing draft", nil
 	}
@@ -68,13 +66,13 @@ func (t *TxVote) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeVoteNotOpened, "vote is not opened", nil
 	}
 
-	vote := store.GetVote(draftIDByteArray, t.GetSender(), false)
+	vote := store.GetVote(txParam.DraftID, t.GetSender(), false)
 	if vote != nil {
 		return code.TxCodeAlreadyVoted, "already voted", nil
 	}
 
-	store.SetVote(draftIDByteArray, t.GetSender(), &types.Vote{
-		Approve: t.Param.Approve,
+	store.SetVote(txParam.DraftID, t.GetSender(), &types.Vote{
+		Approve: txParam.Approve,
 	})
 
 	return code.TxCodeOK, "ok", nil

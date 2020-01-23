@@ -862,11 +862,11 @@ func (s Store) GetTopStakes(max uint64, peek crypto.Address, committed bool) []*
 }
 
 // Draft store
-func makeDraftKey(draftID []byte) []byte {
-	return append(prefixDraft, draftID...)
+func makeDraftKey(draftID uint32) []byte {
+	return append(prefixDraft, ConvIDFromUint(draftID)...)
 }
 
-func (s Store) SetDraft(draftID []byte, value *types.Draft) error {
+func (s Store) SetDraft(draftID uint32, value *types.Draft) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -877,7 +877,7 @@ func (s Store) SetDraft(draftID []byte, value *types.Draft) error {
 	return nil
 }
 
-func (s Store) GetDraft(draftID []byte, committed bool) *types.Draft {
+func (s Store) GetDraft(draftID uint32, committed bool) *types.Draft {
 	b := s.get(makeDraftKey(draftID), committed)
 	if len(b) == 0 {
 		return nil
@@ -902,8 +902,7 @@ func (s Store) ProcessDraftVotes(
 	applyDraftConfig := false
 
 	// check if there is a draft in process first
-	draftID := types.ConvIDFromUint(latestDraftIDUint)
-	draft := s.GetDraft(draftID, committed)
+	draft := s.GetDraft(latestDraftIDUint, committed)
 
 	// ignore non-existing draft
 	if draft == nil {
@@ -955,12 +954,12 @@ func (s Store) ProcessDraftVotes(
 		pes := s.GetEffStake(draft.Proposer, committed)
 		draft.TallyApprove.Add(&pes.Amount)
 
-		votes := s.GetVotes(draftID, committed)
+		votes := s.GetVotes(latestDraftIDUint, committed)
 		for _, vote := range votes {
 			// if not included in top stakes, ignore and delete vote
 			ts := s.GetTopStakes(maxValidators, vote.Voter, committed)
 			if len(ts) == 0 {
-				s.DeleteVote(draftID, vote.Voter)
+				s.DeleteVote(latestDraftIDUint, vote.Voter)
 				continue
 			}
 
@@ -995,7 +994,7 @@ func (s Store) ProcessDraftVotes(
 			s.SetBalance(draft.Proposer, balance)
 		} else {
 			// distribute deposit to voters
-			votes := s.GetVotes(draftID, committed)
+			votes := s.GetVotes(latestDraftIDUint, committed)
 
 			// distAmount = draft.Deposit / len(votes)
 			df := new(big.Float).SetInt(&draft.Deposit.Int)
@@ -1013,7 +1012,7 @@ func (s Store) ProcessDraftVotes(
 		}
 	}
 
-	s.SetDraft(draftID, draft)
+	s.SetDraft(latestDraftIDUint, draft)
 
 	if applyDraftConfig {
 		// totalTally = draft.TallyApprove + draft.TallyReject
@@ -1049,11 +1048,11 @@ func (s Store) ProcessDraftVotes(
 }
 
 // Vote store
-func makeVoteKey(draftID []byte, voter crypto.Address) []byte {
-	return append(prefixVote, append(draftID, voter...)...)
+func makeVoteKey(draftID uint32, voter crypto.Address) []byte {
+	return append(prefixVote, append(ConvIDFromUint(draftID), voter...)...)
 }
 
-func (s Store) SetVote(draftID []byte, voter crypto.Address, value *types.Vote) error {
+func (s Store) SetVote(draftID uint32, voter crypto.Address, value *types.Vote) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -1064,7 +1063,7 @@ func (s Store) SetVote(draftID []byte, voter crypto.Address, value *types.Vote) 
 	return nil
 }
 
-func (s Store) GetVote(draftID []byte, voter crypto.Address, committed bool) *types.Vote {
+func (s Store) GetVote(draftID uint32, voter crypto.Address, committed bool) *types.Vote {
 	b := s.get(makeVoteKey(draftID, voter), committed)
 	if len(b) == 0 {
 		return nil
@@ -1079,7 +1078,7 @@ func (s Store) GetVote(draftID []byte, voter crypto.Address, committed bool) *ty
 	return &vote
 }
 
-func (s Store) GetVotes(draftID []byte, committed bool) []*types.VoteInfo {
+func (s Store) GetVotes(draftID uint32, committed bool) []*types.VoteInfo {
 	voteKey := makeVoteKey(draftID, []byte{})
 
 	var voteInfo []*types.VoteInfo
@@ -1094,7 +1093,7 @@ func (s Store) GetVotes(draftID []byte, committed bool) []*types.VoteInfo {
 			return false
 		}
 
-		voter := crypto.Address(key[len(prefixVote)+len(draftID):])
+		voter := crypto.Address(key[len(prefixVote)+len(ConvIDFromUint(draftID)):])
 
 		var vote types.Vote
 		err := json.Unmarshal(value, &vote)
@@ -1113,7 +1112,7 @@ func (s Store) GetVotes(draftID []byte, committed bool) []*types.VoteInfo {
 	return voteInfo
 }
 
-func (s Store) DeleteVote(draftID []byte, voter crypto.Address) {
+func (s Store) DeleteVote(draftID uint32, voter crypto.Address) {
 	s.remove(makeVoteKey(draftID, voter))
 }
 

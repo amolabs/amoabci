@@ -46,7 +46,6 @@ func TestTxSetup(t *testing.T) {
 	assert.NotNil(t, s)
 
 	storageID := uint32(1)
-	storageKey := types.ConvIDFromUint(storageID)
 
 	// initial setup
 	param := SetupParam{
@@ -66,7 +65,7 @@ func TestTxSetup(t *testing.T) {
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check store
-	sto := s.GetStorage(storageKey, false)
+	sto := s.GetStorage(storageID, false)
 	assert.NotNil(t, sto)
 	assert.Equal(t, &types.Storage{
 		Owner:           makeAccAddr("provider"),
@@ -91,7 +90,7 @@ func TestTxSetup(t *testing.T) {
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check whether closed
-	sto = s.GetStorage(storageKey, false)
+	sto = s.GetStorage(storageID, false)
 	assert.NotNil(t, sto)
 	assert.Equal(t, &types.Storage{
 		Owner:           makeAccAddr("provider"),
@@ -106,7 +105,7 @@ func TestTxSetup(t *testing.T) {
 	tx = makeTestTx("setup", "provider", payload)
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	sto = s.GetStorage(storageKey, false)
+	sto = s.GetStorage(storageID, false)
 	assert.NotNil(t, sto)
 	assert.Equal(t, &types.Storage{
 		Owner:           makeAccAddr("provider"),

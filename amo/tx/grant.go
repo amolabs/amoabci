@@ -2,6 +2,7 @@ package tx
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 
 	"github.com/tendermint/tendermint/crypto"
@@ -77,7 +78,8 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeRequestNotFound, "parcel not requested", nil
 	}
 
-	storage := store.GetStorage(txParam.Target[:types.StorageIDLen], false)
+	storageID := binary.BigEndian.Uint32(txParam.Target[:types.StorageIDLen])
+	storage := store.GetStorage(storageID, false)
 	if storage == nil || storage.Active == false {
 		return code.TxCodeNoStorage, "no active storage for this parcel", nil
 	}

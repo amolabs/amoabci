@@ -27,18 +27,18 @@ func TestUDCSetGet(t *testing.T) {
 	assert.NotNil(t, mycoin)
 
 	// save and load
-	assert.NoError(t, s.SetUDC([]byte("mycoin"), mycoin))
+	assert.NoError(t, s.SetUDC(123, mycoin))
 
-	udc := s.GetUDC([]byte("mycoin"), true)
+	udc := s.GetUDC(123, true)
 	assert.Nil(t, udc)
 
-	udc = s.GetUDC([]byte("mycoin"), false)
+	udc = s.GetUDC(123, false)
 	assert.NotNil(t, udc)
 	assert.Equal(t, mycoin, udc)
 
 	s.Save()
 
-	udc = s.GetUDC([]byte("mycoin"), true)
+	udc = s.GetUDC(123, true)
 	assert.NotNil(t, udc)
 	assert.Equal(t, mycoin, udc)
 }
@@ -48,7 +48,7 @@ func TestUDCBalance(t *testing.T) {
 		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NotNil(t, s)
 
-	udc := []byte("mycoin")
+	udc := uint32(123)
 	tester := makeAccAddr("tester")
 	amo10 := new(types.Currency).SetAMO(10)
 	amo0 := new(types.Currency)

@@ -23,23 +23,19 @@ func TestStorageSetGet(t *testing.T) {
 	}
 	assert.NotNil(t, mysto)
 
-	// wrong id length
-	assert.Error(t, s.SetStorage([]byte("aaa"), mysto))
-	assert.Error(t, s.SetStorage([]byte("aaaaa"), mysto))
-
 	// save and load
-	assert.NoError(t, s.SetStorage([]byte("aaaa"), mysto))
+	assert.NoError(t, s.SetStorage(123, mysto))
 
-	sto := s.GetStorage([]byte("aaaa"), true)
+	sto := s.GetStorage(123, true)
 	assert.Nil(t, sto)
 
-	sto = s.GetStorage([]byte("aaaa"), false)
+	sto = s.GetStorage(123, false)
 	assert.NotNil(t, sto)
 	assert.Equal(t, mysto, sto)
 
 	s.Save()
 
-	sto = s.GetStorage([]byte("aaaa"), true)
+	sto = s.GetStorage(123, true)
 	assert.NotNil(t, sto)
 	assert.Equal(t, mysto, sto)
 }

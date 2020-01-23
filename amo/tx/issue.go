@@ -51,8 +51,7 @@ func (t *TxIssue) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 	param := t.Param
 	sender := t.GetSender()
 
-	udcID := types.ConvIDFromUint(param.ID)
-	udc := s.GetUDC(udcID, false)
+	udc := s.GetUDC(param.ID, false)
 	if udc == nil {
 		stakes := s.GetTopStakes(ConfigAMOApp.MaxValidators, sender, false)
 		if len(stakes) == 0 {
@@ -83,17 +82,17 @@ func (t *TxIssue) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 		udc.Total.Add(&param.Amount)
 	}
 	// update UDC balance
-	bal := s.GetUDCBalance(udcID, sender, false)
+	bal := s.GetUDCBalance(param.ID, sender, false)
 	if bal == nil {
 		bal = new(types.Currency)
 	}
 	after := bal.Add(&param.Amount)
-	err := s.SetUDCBalance(udcID, sender, after)
+	err := s.SetUDCBalance(param.ID, sender, after)
 	if err != nil {
 		return code.TxCodeUnknown, err.Error(), nil
 	}
 	// store UDC registry
-	err = s.SetUDC(udcID, udc)
+	err = s.SetUDC(param.ID, udc)
 	if err != nil {
 		return code.TxCodeUnknown, err.Error(), nil
 	}

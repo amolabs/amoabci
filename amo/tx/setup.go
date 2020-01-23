@@ -48,8 +48,7 @@ func (t *TxSetup) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 	param := t.Param
 	sender := t.GetSender()
 
-	storageID := types.ConvIDFromUint(param.Storage)
-	sto := s.GetStorage(storageID, false)
+	sto := s.GetStorage(param.Storage, false)
 	if sto == nil {
 		sto = &types.Storage{
 			Owner:           sender,
@@ -69,7 +68,7 @@ func (t *TxSetup) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 		sto.Active = true
 	}
 	// store
-	err := s.SetStorage(storageID, sto)
+	err := s.SetStorage(param.Storage, sto)
 	if err != nil {
 		return code.TxCodeUnknown, err.Error(), nil
 	}

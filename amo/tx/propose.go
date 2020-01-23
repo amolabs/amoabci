@@ -51,14 +51,12 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodePermissionDenied, "no permission to propose a draft", nil
 	}
 
-	draftIDByteArray := types.ConvIDFromUint(txParam.DraftID)
-
 	if txParam.DraftID != StateNextDraftID {
 		return code.TxCodeImproperDraftID, "improper draft ID", nil
 	}
 
-	latestDraftIDByteArray := types.ConvIDFromUint(StateNextDraftID - 1)
-	latestDraft := store.GetDraft(latestDraftIDByteArray, false)
+	latestDraftID := StateNextDraftID - uint32(1)
+	latestDraft := store.GetDraft(latestDraftID, false)
 	if latestDraft != nil {
 		if !(latestDraft.OpenCount == 0 &&
 			latestDraft.CloseCount == 0 &&
@@ -67,7 +65,7 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		}
 	}
 
-	draft := store.GetDraft(draftIDByteArray, false)
+	draft := store.GetDraft(txParam.DraftID, false)
 	if draft != nil {
 		return code.TxCodeProposedDraft, "already proposed draft", nil
 	}
@@ -85,7 +83,7 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	}
 
 	// set draft
-	store.SetDraft(draftIDByteArray, &types.Draft{
+	store.SetDraft(txParam.DraftID, &types.Draft{
 		Proposer: t.GetSender(),
 		Config:   cfg,
 		Desc:     t.Param.Desc,

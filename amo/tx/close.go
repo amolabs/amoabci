@@ -8,7 +8,6 @@ import (
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
-	"github.com/amolabs/amoabci/amo/types"
 )
 
 type CloseParam struct {
@@ -45,8 +44,7 @@ func (t *TxClose) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 	param := t.Param
 	sender := t.GetSender()
 
-	storageID := types.ConvIDFromUint(param.Storage)
-	sto := s.GetStorage(storageID, false)
+	sto := s.GetStorage(param.Storage, false)
 	if sto == nil {
 		return code.TxCodeNotFound, "not found", nil
 	} else {
@@ -57,7 +55,7 @@ func (t *TxClose) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 		sto.Active = false
 	}
 	// store
-	err := s.SetStorage(storageID, sto)
+	err := s.SetStorage(param.Storage, sto)
 	if err != nil {
 		return code.TxCodeUnknown, err.Error(), nil
 	}

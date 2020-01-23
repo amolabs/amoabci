@@ -70,7 +70,7 @@ func TestTxIssue(t *testing.T) {
 	s.SetUnlockedStake(makeAccAddr("issuer"), &newStake)
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	udc := s.GetUDC(types.ConvIDFromUint(123), false)
+	udc := s.GetUDC(123, false)
 	assert.NotNil(t, udc)
 	assert.Equal(t, *new(types.Currency).Set(1000000), udc.Total)
 
@@ -84,7 +84,7 @@ func TestTxIssue(t *testing.T) {
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check
-	udc = s.GetUDC(types.ConvIDFromUint(123), false)
+	udc = s.GetUDC(123, false)
 	assert.NotNil(t, udc)
 	assert.Equal(t, *new(types.Currency).Set(2000000), udc.Total)
 
@@ -100,7 +100,7 @@ func TestTxIssue(t *testing.T) {
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check
-	udc = s.GetUDC(types.ConvIDFromUint(123), false)
+	udc = s.GetUDC(123, false)
 	assert.NotNil(t, udc)
 	assert.Equal(t, []crypto.Address{makeAccAddr("oper2")}, udc.Operators)
 	assert.Equal(t, "my own coin", udc.Desc)
@@ -134,10 +134,10 @@ func TestTxUDCBalance(t *testing.T) {
 	tx := makeTestTx("issue", "issuer", payload)
 	tx.Execute(s)
 	// check
-	udc := s.GetUDC(types.ConvIDFromUint(123), false)
+	udc := s.GetUDC(123, false)
 	assert.NotNil(t, udc)
 	assert.Equal(t, amoM, udc.Total)
-	bal := s.GetUDCBalance(types.ConvIDFromUint(123), issuer, false)
+	bal := s.GetUDCBalance(123, issuer, false)
 	assert.Equal(t, &amoM, bal)
 
 	// issue more
@@ -154,11 +154,11 @@ func TestTxUDCBalance(t *testing.T) {
 	tmp := types.Currency{}
 	tmp.Add(&amoM)
 	tmp.Add(&amoK)
-	bal = s.GetUDCBalance(types.ConvIDFromUint(123), issuer, false)
+	bal = s.GetUDCBalance(123, issuer, false)
 	assert.Equal(t, &tmp, bal)
 
 	// non-UDC balance
-	bal = s.GetUDCBalance(nil, issuer, false)
+	bal = s.GetUDCBalance(0, issuer, false)
 	assert.Equal(t, &amo0, bal)
 
 	// parser test for optional tx field
@@ -183,9 +183,9 @@ func TestTxUDCBalance(t *testing.T) {
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check
-	bal = s.GetUDCBalance(types.ConvIDFromUint(123), issuer, false)
+	bal = s.GetUDCBalance(123, issuer, false)
 	assert.Equal(t, &amoM, bal)
-	bal = s.GetUDCBalance(types.ConvIDFromUint(123), acc1, false)
+	bal = s.GetUDCBalance(123, acc1, false)
 	assert.Equal(t, &amoK, bal)
 	// not enough  balance
 	payload, _ = json.Marshal(TransferParam{
@@ -207,8 +207,8 @@ func TestTxUDCBalance(t *testing.T) {
 	tx = makeTestTx("transfer", "issuer", payload)
 	tx.Execute(s)
 	// check
-	bal = s.GetUDCBalance(types.ConvIDFromUint(123), issuer, false)
+	bal = s.GetUDCBalance(123, issuer, false)
 	assert.Equal(t, &amo0, bal)
-	bal = s.GetUDCBalance(types.ConvIDFromUint(123), acc1, false)
+	bal = s.GetUDCBalance(123, acc1, false)
 	assert.Equal(t, &tmp, bal)
 }

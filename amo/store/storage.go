@@ -2,7 +2,6 @@ package store
 
 import (
 	"encoding/json"
-	"errors"
 
 	"github.com/amolabs/amoabci/amo/types"
 )
@@ -11,14 +10,11 @@ var (
 	prefixStorage = []byte("storage:")
 )
 
-func getStorageKey(id []byte) []byte {
-	return append(prefixStorage, id...)
+func getStorageKey(id uint32) []byte {
+	return append(prefixStorage, ConvIDFromUint(id)...)
 }
 
-func (s Store) SetStorage(id []byte, sto *types.Storage) error {
-	if len(id) != types.StorageIDLen {
-		return errors.New("wrong storage ID length")
-	}
+func (s Store) SetStorage(id uint32, sto *types.Storage) error {
 	b, err := json.Marshal(sto)
 	if err != nil {
 		return err
@@ -28,7 +24,7 @@ func (s Store) SetStorage(id []byte, sto *types.Storage) error {
 	return nil
 }
 
-func (s Store) GetStorage(id []byte, committed bool) *types.Storage {
+func (s Store) GetStorage(id uint32, committed bool) *types.Storage {
 	b := s.get(getStorageKey(id), committed)
 	if len(b) == 0 {
 		return nil
