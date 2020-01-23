@@ -214,7 +214,7 @@ func TestTxUDCBalance(t *testing.T) {
 }
 
 func TestParseLock(t *testing.T) {
-	payload := []byte(`{"udc":"00000001","holder":"99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","amount":"1000000"}`)
+	payload := []byte(`{"udc":123,"holder":"99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","amount":"1000000"}`)
 
 	var holder cmn.HexBytes
 	err := json.Unmarshal(
@@ -224,7 +224,7 @@ func TestParseLock(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := LockParam{
-		UDC:    []byte{0x00, 0x00, 0x00, 0x01},
+		UDC:    uint32(123),
 		Holder: holder,
 		Amount: *new(types.Currency).Set(1000000),
 	}
@@ -239,7 +239,7 @@ func TestUDCLock(t *testing.T) {
 	assert.NotNil(t, s)
 
 	param := LockParam{
-		UDC:    []byte("myco"),
+		UDC:    uint32(123),
 		Holder: makeAccAddr("holder"),
 		Amount: *new(types.Currency).SetAMO(10),
 	}
@@ -266,7 +266,7 @@ func TestUDCLock(t *testing.T) {
 		*new(types.Currency).SetAMO(100),
 	}
 	assert.NotNil(t, mycoin)
-	assert.NoError(t, s.SetUDC([]byte("myco"), mycoin))
+	assert.NoError(t, s.SetUDC(uint32(123), mycoin))
 
 	// no permission
 	tx = makeTestTx("lock", "anyone", payload)
@@ -282,12 +282,12 @@ func TestUDCLock(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 
 	// set test balance
-	s.SetUDCBalance([]byte("myco"), makeAccAddr("holder"),
+	s.SetUDCBalance(uint32(123), makeAccAddr("holder"),
 		new(types.Currency).SetAMO(12))
 
 	// transfer too much
 	payload, _ = json.Marshal(TransferParam{
-		UDC:    []byte("myco"),
+		UDC:    uint32(123),
 		To:     makeAccAddr("recp"),
 		Amount: *new(types.Currency).SetAMO(3),
 	})
@@ -297,7 +297,7 @@ func TestUDCLock(t *testing.T) {
 
 	// burn too much
 	payload, _ = json.Marshal(BurnParam{
-		UDC:    []byte("myco"),
+		UDC:    uint32(123),
 		Amount: *new(types.Currency).SetAMO(3),
 	})
 	tx = makeTestTx("burn", "holder", payload)
@@ -306,7 +306,7 @@ func TestUDCLock(t *testing.T) {
 
 	// transfer ok
 	payload, _ = json.Marshal(TransferParam{
-		UDC:    []byte("myco"),
+		UDC:    uint32(123),
 		To:     makeAccAddr("recp"),
 		Amount: *new(types.Currency).SetAMO(1),
 	})
@@ -316,7 +316,7 @@ func TestUDCLock(t *testing.T) {
 
 	// burn ok
 	payload, _ = json.Marshal(BurnParam{
-		UDC:    []byte("myco"),
+		UDC:    uint32(123),
 		Amount: *new(types.Currency).SetAMO(1),
 	})
 	tx = makeTestTx("burn", "holder", payload)
@@ -325,7 +325,7 @@ func TestUDCLock(t *testing.T) {
 
 	// situation changed. balance reduced
 	payload, _ = json.Marshal(TransferParam{
-		UDC:    []byte("myco"),
+		UDC:    uint32(123),
 		To:     makeAccAddr("recp"),
 		Amount: *new(types.Currency).SetAMO(1),
 	})
@@ -334,7 +334,7 @@ func TestUDCLock(t *testing.T) {
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 	// same for burn
 	payload, _ = json.Marshal(BurnParam{
-		UDC:    []byte("myco"),
+		UDC:    uint32(123),
 		Amount: *new(types.Currency).SetAMO(1),
 	})
 	tx = makeTestTx("burn", "holder", payload)
@@ -343,10 +343,10 @@ func TestUDCLock(t *testing.T) {
 }
 
 func TestParseBurn(t *testing.T) {
-	payload := []byte(`{"udc":"00000001","amount":"1000000"}`)
+	payload := []byte(`{"udc":123,"amount":"1000000"}`)
 
 	expected := BurnParam{
-		UDC:    []byte{0x00, 0x00, 0x00, 0x01},
+		UDC:    123,
 		Amount: *new(types.Currency).Set(1000000),
 	}
 	txParam, err := parseBurnParam(payload)
@@ -360,7 +360,7 @@ func TestUDCBurn(t *testing.T) {
 	assert.NotNil(t, s)
 
 	param := BurnParam{
-		UDC:    []byte("myco"),
+		UDC:    uint32(123),
 		Amount: *new(types.Currency).SetAMO(10),
 	}
 	payload, _ := json.Marshal(param)
@@ -386,15 +386,15 @@ func TestUDCBurn(t *testing.T) {
 		*new(types.Currency).SetAMO(100),
 	}
 	assert.NotNil(t, mycoin)
-	assert.NoError(t, s.SetUDC([]byte("myco"), mycoin))
+	assert.NoError(t, s.SetUDC(uint32(123), mycoin))
 
 	// set test balance
-	s.SetUDCBalance([]byte("myco"), makeAccAddr("holder"),
+	s.SetUDCBalance(uint32(123), makeAccAddr("holder"),
 		new(types.Currency).SetAMO(11))
 
 	// ok
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	bal := s.GetUDCBalance([]byte("myco"), makeAccAddr("holder"), false)
+	bal := s.GetUDCBalance(uint32(123), makeAccAddr("holder"), false)
 	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
 }

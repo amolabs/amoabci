@@ -91,16 +91,14 @@ func (s Store) GetUDCBalance(udc uint32,
 }
 
 // UDC Lock store
-func getUDCLockKey(udc []byte, addr tm.Address) []byte {
-	key := append(prefixUDCLock, udc...)
-	if len(udc) > 0 {
-		key = append(key, ':')
-	}
+func getUDCLockKey(udc uint32, addr tm.Address) []byte {
+	key := append(prefixUDCLock, ConvIDFromUint(udc)...)
+	key = append(key, ':')
 	key = append(key, addr.Bytes()...)
 	return key
 }
 
-func (s Store) SetUDCLock(udc []byte,
+func (s Store) SetUDCLock(udc uint32,
 	addr tm.Address, amount *types.Currency) error {
 	zero := new(types.Currency).Set(0)
 	lockKey := getUDCLockKey(udc, addr)
@@ -125,7 +123,7 @@ func (s Store) SetUDCLock(udc []byte,
 	return nil
 }
 
-func (s Store) GetUDCLock(udc []byte,
+func (s Store) GetUDCLock(udc uint32,
 	addr tm.Address, committed bool) *types.Currency {
 	c := types.Currency{}
 	b := s.get(getUDCLockKey(udc, addr), committed)

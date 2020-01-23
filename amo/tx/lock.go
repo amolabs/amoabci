@@ -13,7 +13,7 @@ import (
 )
 
 type LockParam struct {
-	UDC    tm.HexBytes    `json:"udc"`
+	UDC    uint32         `json:"udc"`
 	Holder crypto.Address `json:"holder"`
 	Amount types.Currency `json:"amount"`
 }
@@ -36,9 +36,6 @@ var _ Tx = &TxLock{}
 
 func (t *TxLock) Check() (uint32, string) {
 	param := t.Param
-	if len(param.UDC) == 0 {
-		return code.TxCodeBadParam, "UDC must be given"
-	}
 	if len(param.Holder) != crypto.AddressSize {
 		return code.TxCodeBadParam, "wrong size of operator address"
 	}

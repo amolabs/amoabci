@@ -11,7 +11,7 @@ import (
 )
 
 type BurnParam struct {
-	UDC    tm.HexBytes    `json:"udc"`
+	UDC    uint32         `json:"udc"`
 	Amount types.Currency `json:"amount"`
 }
 
@@ -32,9 +32,9 @@ type TxBurn struct {
 var _ Tx = &TxBurn{}
 
 func (t *TxBurn) Check() (uint32, string) {
-	param := t.Param
-	if len(param.UDC) == 0 {
-		return code.TxCodeBadParam, "UDC must be given"
+	_, err := parseTransferParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
 	}
 	return code.TxCodeOK, "ok"
 }
