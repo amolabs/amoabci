@@ -2,10 +2,10 @@ package tx
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	tm "github.com/tendermint/tendermint/libs/common"
 	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -14,12 +14,11 @@ import (
 )
 
 func TestParseSetup(t *testing.T) {
-	b := tm.HexBytes([]byte("aaaa"))
-	id, _ := json.Marshal(b)
-	payload := []byte(`{"storage":` + string(id) + `,"url": "http://need_to_check_url_format","registration_fee":"1000000000000000000","hosting_fee":"1000000000000000000"}`)
+	id := uint32(1)
+	payload := []byte(fmt.Sprintf(`{"storage": %d,"url": "http://need_to_check_url_format","registration_fee":"1000000000000000000","hosting_fee":"1000000000000000000"}`, id))
 
 	expected := SetupParam{
-		Storage:         b,
+		Storage:         id,
 		Url:             "http://need_to_check_url_format",
 		RegistrationFee: *new(types.Currency).SetAMO(1),
 		HostingFee:      *new(types.Currency).SetAMO(1),
@@ -30,12 +29,11 @@ func TestParseSetup(t *testing.T) {
 }
 
 func TestParseClose(t *testing.T) {
-	b := tm.HexBytes([]byte("aaaa"))
-	id, _ := json.Marshal(b)
-	payload := []byte(`{"storage":` + string(id) + `}`)
+	id := uint32(1)
+	payload := []byte(fmt.Sprintf(`{"storage": %d}`, id))
 
 	expected := CloseParam{
-		Storage: b,
+		Storage: 1,
 	}
 	txParam, err := parseCloseParam(payload)
 	assert.NoError(t, err)
@@ -47,9 +45,11 @@ func TestTxSetup(t *testing.T) {
 		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NotNil(t, s)
 
+	storageID := uint32(1)
+
 	// initial setup
 	param := SetupParam{
-		Storage:         []byte("aaaa"),
+		Storage:         storageID,
 		Url:             "http://need_to_check_url_format",
 		RegistrationFee: *new(types.Currency).SetAMO(1),
 		HostingFee:      *new(types.Currency).SetAMO(1),
@@ -65,7 +65,7 @@ func TestTxSetup(t *testing.T) {
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check store
-	sto := s.GetStorage([]byte("aaaa"), false)
+	sto := s.GetStorage(storageID, false)
 	assert.NotNil(t, sto)
 	assert.Equal(t, &types.Storage{
 		Owner:           makeAccAddr("provider"),
@@ -77,7 +77,7 @@ func TestTxSetup(t *testing.T) {
 
 	// close
 	param2 := CloseParam{
-		Storage: []byte("aaaa"),
+		Storage: storageID,
 	}
 	payload, _ = json.Marshal(param2)
 	//
@@ -90,7 +90,7 @@ func TestTxSetup(t *testing.T) {
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check whether closed
-	sto = s.GetStorage([]byte("aaaa"), false)
+	sto = s.GetStorage(storageID, false)
 	assert.NotNil(t, sto)
 	assert.Equal(t, &types.Storage{
 		Owner:           makeAccAddr("provider"),
@@ -105,7 +105,7 @@ func TestTxSetup(t *testing.T) {
 	tx = makeTestTx("setup", "provider", payload)
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	sto = s.GetStorage([]byte("aaaa"), false)
+	sto = s.GetStorage(storageID, false)
 	assert.NotNil(t, sto)
 	assert.Equal(t, &types.Storage{
 		Owner:           makeAccAddr("provider"),

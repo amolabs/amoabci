@@ -181,11 +181,11 @@ func TestQueryStorage(t *testing.T) {
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
-	stoid := cmn.HexBytes(cmn.RandBytes(4))
+	storageID1 := uint32(123)
 	storage := types.Storage{
 		Owner: makeAccAddr("any"),
 	}
-	app.store.SetStorage(stoid, &storage)
+	app.store.SetStorage(storageID1, &storage)
 	app.store.Save()
 
 	// query vars
@@ -199,8 +199,8 @@ func TestQueryStorage(t *testing.T) {
 	assert.Equal(t, code.QueryCodeNoKey, res.Code)
 
 	// nonexistent storage id
-	stoid2 := cmn.HexBytes(cmn.RandBytes(4))
-	barr, _ = json.Marshal(stoid2)
+	storageID2 := uint32(456)
+	barr, _ = json.Marshal(storageID2)
 	req = abci.RequestQuery{Path: "/storage", Data: []byte(barr)}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
@@ -208,7 +208,7 @@ func TestQueryStorage(t *testing.T) {
 	assert.Equal(t, "error: no such storage", res.Log)
 
 	// valid match
-	barr, _ = json.Marshal(stoid)
+	barr, _ = json.Marshal(storageID1)
 	req = abci.RequestQuery{Path: "/storage", Data: []byte(barr)}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeOK, res.Code)
@@ -310,6 +310,11 @@ func TestQueryRequest(t *testing.T) {
 		Payment: *new(types.Currency).Set(400),
 	}
 
+	requestEx := types.RequestEx{
+		Request: &request,
+		Buyer:   addr,
+	}
+
 	app.store.SetRequest(addr, parcelID, &request)
 
 	_, _, err := app.store.Save()
@@ -360,7 +365,7 @@ func TestQueryRequest(t *testing.T) {
 	req = abci.RequestQuery{Path: "/request", Data: key}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeOK, res.Code)
-	jsonstr, _ = json.Marshal(request)
+	jsonstr, _ = json.Marshal(requestEx)
 	assert.Equal(t, []byte(jsonstr), res.Value)
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
@@ -392,6 +397,11 @@ func TestQueryUsage(t *testing.T) {
 
 	usage := types.Usage{
 		Custody: cmn.RandBytes(32),
+	}
+
+	usageEx := types.UsageEx{
+		Usage: &usage,
+		Buyer: addr,
 	}
 
 	app.store.SetUsage(addr, parcelID, &usage)
@@ -444,7 +454,7 @@ func TestQueryUsage(t *testing.T) {
 	req = abci.RequestQuery{Path: "/usage", Data: key}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeOK, res.Code)
-	jsonstr, _ = json.Marshal(usage)
+	jsonstr, _ = json.Marshal(usageEx)
 	assert.Equal(t, []byte(jsonstr), res.Value)
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
@@ -1239,17 +1249,14 @@ func TestGovernance(t *testing.T) {
 	// proposer propose a draft in height 1
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 1}})
 
-	draftID := []byte(`"1"`)
+	draftID := uint32(1)
 	cfg := app.config
 	cfg.TxReward = *types.Zero
 	cfg.LockupPeriod = 10000
 	desc := "I want others to get no reward and stay locked shorter"
 
-	_, draftIDByteArray, err := types.ConvDraftIDFromHex(draftID)
-	assert.NoError(t, err)
-
 	// imitate 'propose' tx
-	app.store.SetDraft(draftIDByteArray, &types.Draft{
+	app.store.SetDraft(draftID, &types.Draft{
 		Proposer:     p,
 		Config:       cfg,
 		Desc:         desc,
@@ -1274,7 +1281,7 @@ func TestGovernance(t *testing.T) {
 	app.EndBlock(abci.RequestEndBlock{Height: 1})
 
 	// check if draft is properly stored
-	draft := app.store.GetDraft(draftIDByteArray, false)
+	draft := app.store.GetDraft(draftID, false)
 	assert.Equal(t, uint64(0), draft.OpenCount)
 	assert.Equal(t, uint64(1), draft.CloseCount)
 	assert.Equal(t, uint64(1), draft.ApplyCount)
@@ -1282,20 +1289,20 @@ func TestGovernance(t *testing.T) {
 	// voters vote for the draft in height 2
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 2}})
 
-	app.store.SetVote(draftIDByteArray, v1, &types.Vote{Approve: true})
-	app.store.SetVote(draftIDByteArray, v2, &types.Vote{Approve: true})
-	app.store.SetVote(draftIDByteArray, v3, &types.Vote{Approve: true})
-	app.store.SetVote(draftIDByteArray, v4, &types.Vote{Approve: true})
-	app.store.SetVote(draftIDByteArray, v5, &types.Vote{Approve: true})
-	app.store.SetVote(draftIDByteArray, v6, &types.Vote{Approve: false})
-	app.store.SetVote(draftIDByteArray, v7, &types.Vote{Approve: false})
-	app.store.SetVote(draftIDByteArray, v8, &types.Vote{Approve: false})
-	app.store.SetVote(draftIDByteArray, v9, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v1, &types.Vote{Approve: true})
+	app.store.SetVote(draftID, v2, &types.Vote{Approve: true})
+	app.store.SetVote(draftID, v3, &types.Vote{Approve: true})
+	app.store.SetVote(draftID, v4, &types.Vote{Approve: true})
+	app.store.SetVote(draftID, v5, &types.Vote{Approve: true})
+	app.store.SetVote(draftID, v6, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v7, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v8, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v9, &types.Vote{Approve: false})
 
 	app.EndBlock(abci.RequestEndBlock{Height: 2})
 
 	// check if vote is closed and tally_* values are properly calculated
-	draft = app.store.GetDraft(draftIDByteArray, false)
+	draft = app.store.GetDraft(draftID, false)
 	assert.Equal(t, uint64(0), draft.OpenCount)
 	assert.Equal(t, uint64(0), draft.CloseCount)
 	assert.Equal(t, uint64(1), draft.ApplyCount)
@@ -1326,7 +1333,7 @@ func TestGovernance(t *testing.T) {
 	app.EndBlock(abci.RequestEndBlock{Height: 3})
 
 	// check if draft's counts are proper
-	draft = app.store.GetDraft(draftIDByteArray, false)
+	draft = app.store.GetDraft(draftID, false)
 	assert.Equal(t, uint64(0), draft.OpenCount)
 	assert.Equal(t, uint64(0), draft.CloseCount)
 	assert.Equal(t, uint64(0), draft.ApplyCount)
@@ -1350,16 +1357,13 @@ func TestGovernance(t *testing.T) {
 	// proposer propose a draft in height 4
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 4}})
 
-	draftID = []byte(`"2"`)
+	draftID = uint32(2)
 	cfg = app.config
 	cfg.BlockBoundTxGracePeriod = uint64(100000000)
 	desc = "block_bound_tx_grace_period should be longer for no reason"
 
-	_, draftIDByteArray, err = types.ConvDraftIDFromHex(draftID)
-	assert.NoError(t, err)
-
 	// imitate 'propose' tx
-	app.store.SetDraft(draftIDByteArray, &types.Draft{
+	app.store.SetDraft(draftID, &types.Draft{
 		Proposer:     p,
 		Config:       cfg,
 		Desc:         desc,
@@ -1384,7 +1388,7 @@ func TestGovernance(t *testing.T) {
 	app.EndBlock(abci.RequestEndBlock{Height: 4})
 
 	// check if draft is properly stored
-	draft = app.store.GetDraft(draftIDByteArray, false)
+	draft = app.store.GetDraft(draftID, false)
 	assert.Equal(t, uint64(0), draft.OpenCount)
 	assert.Equal(t, uint64(1), draft.CloseCount)
 	assert.Equal(t, uint64(1), draft.ApplyCount)
@@ -1392,20 +1396,20 @@ func TestGovernance(t *testing.T) {
 	// voters vote for the draft in height 5
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 5}})
 
-	app.store.SetVote(draftIDByteArray, v1, &types.Vote{Approve: true})
-	app.store.SetVote(draftIDByteArray, v2, &types.Vote{Approve: false})
-	app.store.SetVote(draftIDByteArray, v3, &types.Vote{Approve: false})
-	app.store.SetVote(draftIDByteArray, v4, &types.Vote{Approve: false})
-	app.store.SetVote(draftIDByteArray, v5, &types.Vote{Approve: false})
-	app.store.SetVote(draftIDByteArray, v6, &types.Vote{Approve: false})
-	app.store.SetVote(draftIDByteArray, v7, &types.Vote{Approve: false})
-	app.store.SetVote(draftIDByteArray, v8, &types.Vote{Approve: false})
-	app.store.SetVote(draftIDByteArray, v9, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v1, &types.Vote{Approve: true})
+	app.store.SetVote(draftID, v2, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v3, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v4, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v5, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v6, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v7, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v8, &types.Vote{Approve: false})
+	app.store.SetVote(draftID, v9, &types.Vote{Approve: false})
 
 	app.EndBlock(abci.RequestEndBlock{Height: 5})
 
 	// check if vote is closed and tally_* values are properly calculated
-	draft = app.store.GetDraft(draftIDByteArray, false)
+	draft = app.store.GetDraft(draftID, false)
 	assert.Equal(t, uint64(0), draft.OpenCount)
 	assert.Equal(t, uint64(0), draft.CloseCount)
 	assert.Equal(t, uint64(1), draft.ApplyCount)
@@ -1436,7 +1440,7 @@ func TestGovernance(t *testing.T) {
 	app.EndBlock(abci.RequestEndBlock{Height: 6})
 
 	// check if draft's counts are proper
-	draft = app.store.GetDraft(draftIDByteArray, false)
+	draft = app.store.GetDraft(draftID, false)
 	assert.Equal(t, uint64(0), draft.OpenCount)
 	assert.Equal(t, uint64(0), draft.CloseCount)
 	assert.Equal(t, uint64(0), draft.ApplyCount)

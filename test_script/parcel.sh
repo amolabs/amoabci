@@ -9,7 +9,10 @@
 
 AMO1=1000000000000000000
 
-P1="7465737470617263656C6964"
+STOID=1
+STOURL="https://amo.foundation"
+
+P1="000000017465737470617263656C6964"
 CUSTODY="11ffeeff"
 
 fail() {
@@ -20,6 +23,11 @@ fail() {
 
 echo "faucet transfer coin to tu2: 1 AMO"
 out=$($CLI tx --broadcast=commit transfer $CLIOPT --user tgenesis "$tu2" "$AMO1" | sed 's/\^\@//g')
+h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
+if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
+
+echo "setup storage"
+out=$($CLI tx --broadcast=commit setup $CLIOPT --user tu1 "$STOID" "$STOURL" 0 0 | sed 's/\^\@//g')
 h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
 if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
 

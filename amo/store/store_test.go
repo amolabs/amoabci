@@ -637,7 +637,7 @@ func TestDraft(t *testing.T) {
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 
 	proposer := p256.GenPrivKey().PubKey().Address()
-	draftID := cmn.RandBytes(32)
+	draftID := uint32(123)
 
 	txReward, err := new(types.Currency).SetString("1000000000000000000000", 10)
 	assert.NoError(t, err)
@@ -675,7 +675,7 @@ func TestVote(t *testing.T) {
 	voter2 := p256.GenPrivKey().PubKey().Address()
 	voter3 := p256.GenPrivKey().PubKey().Address()
 
-	draftID := cmn.RandBytes(32)
+	draftID := uint32(123)
 
 	voteInput := types.Vote{
 		Approve: true,

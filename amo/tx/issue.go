@@ -13,7 +13,7 @@ import (
 )
 
 type IssueParam struct {
-	UDC       tm.HexBytes      `json:"udc"`       // required
+	UDC       uint32           `json:"udc"`       // required
 	Desc      string           `json:"desc"`      // optional
 	Operators []crypto.Address `json:"operators"` // optional
 	Amount    types.Currency   `json:"amount"`    // required

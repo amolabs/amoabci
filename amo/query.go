@@ -32,7 +32,7 @@ func queryAppConfig(config types.AMOAppConfig) (res abci.ResponseQuery) {
 	return
 }
 
-func queryBalance(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+func queryBalance(s *store.Store, udc string, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Log = "error: no query_data"
 		res.Code = code.QueryCodeNoKey
@@ -47,7 +47,19 @@ func queryBalance(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	bal := s.GetBalance(addr, true)
+	udcID := uint32(0)
+	if udc != "" {
+		tmp, err := strconv.ParseInt(udc, 10, 32)
+		if err != nil {
+			res.Log = "error: cannot convert udc id"
+			res.Code = code.QueryCodeBadKey
+			return
+		}
+		udcID = uint32(tmp)
+	}
+
+	bal := s.GetUDCBalance(udcID, addr, true)
+
 	jsonstr, _ := json.Marshal(bal)
 	res.Log = string(jsonstr)
 	// XXX: tendermint will convert this using base64 encoding
@@ -153,15 +165,15 @@ func queryStorage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	var id tm.HexBytes
-	err := json.Unmarshal(queryData, &id)
+	var storageID uint32
+	err := json.Unmarshal(queryData, &storageID)
 	if err != nil {
 		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
-	storage := s.GetStorage(id, true)
+	storage := s.GetStorage(storageID, true)
 	if storage == nil {
 		res.Log = "error: no such storage"
 		res.Code = code.QueryCodeNoMatch
@@ -184,17 +196,10 @@ func queryDraft(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	var rawID tm.HexBytes
-	err := json.Unmarshal(queryData, &rawID)
+	var draftID uint32
+	err := json.Unmarshal(queryData, &draftID)
 	if err != nil {
 		res.Log = "error: unmarshal"
-		res.Code = code.QueryCodeBadKey
-		return
-	}
-
-	_, draftID, err := types.ConvDraftIDFromHex(rawID)
-	if err != nil {
-		res.Log = "error: draft_id conversion"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
@@ -233,46 +238,37 @@ func queryVote(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	keyMap := make(map[string]tm.HexBytes)
-	err := json.Unmarshal(queryData, &keyMap)
+	var param struct {
+		DraftID uint32         `json:"draft_id"`
+		Voter   crypto.Address `json:"voter"`
+	}
+
+	err := json.Unmarshal(queryData, &param)
 	if err != nil {
 		res.Log = "error: unmarshal"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
-	if _, ok := keyMap["draft_id"]; !ok {
-		res.Log = "error: draft_id is missing"
-		res.Code = code.QueryCodeBadKey
-		return
-	}
-	if _, ok := keyMap["voter"]; !ok {
-		res.Log = "error: voter is missing"
-		res.Code = code.QueryCodeBadKey
-		return
-	}
 
-	_, draftID, err := types.ConvDraftIDFromHex(keyMap["draft_id"])
-	if err != nil {
-		res.Log = "error: draft_id conversion"
-		res.Code = code.QueryCodeBadKey
-		return
-	}
-
-	voter := crypto.Address(keyMap["voter"])
-	if len(voter) != crypto.AddressSize {
+	if len(param.Voter) != crypto.AddressSize {
 		res.Log = "error: not avaiable address"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
 
-	vote := s.GetVote(draftID, voter, true)
+	vote := s.GetVote(param.DraftID, param.Voter, true)
 	if vote == nil {
 		res.Log = "error: no vote"
 		res.Code = code.QueryCodeNoMatch
 		return
 	}
 
-	jsonstr, _ := json.Marshal(vote)
+	voteInfo := types.VoteInfo{
+		Voter: param.Voter,
+		Vote:  vote,
+	}
+
+	jsonstr, _ := json.Marshal(voteInfo)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
 	res.Code = code.QueryCodeOK
@@ -359,7 +355,12 @@ func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	jsonstr, _ := json.Marshal(request)
+	requestEx := types.RequestEx{
+		Request: request,
+		Buyer:   addr,
+	}
+
+	jsonstr, _ := json.Marshal(requestEx)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
 	res.Code = code.QueryCodeOK
@@ -409,7 +410,12 @@ func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	jsonstr, _ := json.Marshal(usage)
+	usageEx := types.UsageEx{
+		Usage: usage,
+		Buyer: addr,
+	}
+
+	jsonstr, _ := json.Marshal(usageEx)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
 	res.Code = code.QueryCodeOK

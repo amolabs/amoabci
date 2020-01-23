@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
@@ -355,37 +356,56 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 
 // TODO: return proof also
 func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuery) {
-	switch reqQuery.Path {
-	case "/config":
+	reqs := strings.Split(reqQuery.Path, "/")
+	if len(reqs) > 1 {
+		reqs = append(reqs[:0], reqs[1:]...) // remove empty string
+	}
+
+	if len(reqs) == 0 || len(reqs) > 2 {
+		resQuery.Code = code.QueryCodeBadPath
+		return resQuery
+	}
+
+	switch reqs[0] {
+	case "config":
 		resQuery = queryAppConfig(app.config)
-	case "/balance":
-		resQuery = queryBalance(app.store, reqQuery.Data)
-	case "/stake":
+	case "balance":
+		switch len(reqs) {
+		case 1:
+			resQuery = queryBalance(app.store, "", reqQuery.Data)
+		case 2:
+			resQuery = queryBalance(app.store, reqs[1], reqQuery.Data)
+		default:
+			resQuery.Code = code.QueryCodeBadPath
+			return resQuery
+		}
+	case "stake":
 		resQuery = queryStake(app.store, reqQuery.Data)
-	case "/delegate":
+	case "delegate":
 		resQuery = queryDelegate(app.store, reqQuery.Data)
-	case "/validator":
+	case "validator":
 		resQuery = queryValidator(app.store, reqQuery.Data)
-	case "/storage":
+	case "storage":
 		resQuery = queryStorage(app.store, reqQuery.Data)
-	case "/draft":
+	case "draft":
 		resQuery = queryDraft(app.store, reqQuery.Data)
-	case "/vote":
+	case "vote":
 		resQuery = queryVote(app.store, reqQuery.Data)
-	case "/parcel":
+	case "parcel":
 		resQuery = queryParcel(app.store, reqQuery.Data)
-	case "/request":
+	case "request":
 		resQuery = queryRequest(app.store, reqQuery.Data)
-	case "/usage":
+	case "usage":
 		resQuery = queryUsage(app.store, reqQuery.Data)
-	case "/inc_block":
+	case "inc_block":
 		resQuery = queryBlockIncentives(app.store, reqQuery.Data)
-	case "/inc_address":
+	case "inc_address":
 		resQuery = queryAddressIncentives(app.store, reqQuery.Data)
-	case "/inc":
+	case "inc":
 		resQuery = queryIncentive(app.store, reqQuery.Data)
 	default:
 		resQuery.Code = code.QueryCodeBadPath
+		return resQuery
 	}
 
 	app.logger.Debug("Query: "+reqQuery.Path, "query_data", reqQuery.Data,

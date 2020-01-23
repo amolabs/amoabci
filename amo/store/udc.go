@@ -14,11 +14,11 @@ var (
 	prefixUDCLock = []byte("udclock:")
 )
 
-func getUDCKey(id []byte) []byte {
-	return append(prefixUDC, id...)
+func getUDCKey(id uint32) []byte {
+	return append(prefixUDC, ConvIDFromUint(id)...)
 }
 
-func (s Store) SetUDC(id []byte, udc *types.UDC) error {
+func (s Store) SetUDC(id uint32, udc *types.UDC) error {
 	b, err := json.Marshal(udc)
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ func (s Store) SetUDC(id []byte, udc *types.UDC) error {
 	return nil
 }
 
-func (s Store) GetUDC(id []byte, committed bool) *types.UDC {
+func (s Store) GetUDC(id uint32, committed bool) *types.UDC {
 	b := s.get(getUDCKey(id), committed)
 	if len(b) == 0 {
 		return nil
@@ -42,16 +42,16 @@ func (s Store) GetUDC(id []byte, committed bool) *types.UDC {
 }
 
 // UDC Balance store
-func getUDCBalanceKey(udc []byte, addr tm.Address) []byte {
-	key := append(prefixBalance, udc...)
-	if len(udc) > 0 {
-		key = append(key, ':')
+func getUDCBalanceKey(udc uint32, addr tm.Address) []byte {
+	key := prefixBalance
+	if udc != 0 {
+		key = append(append(key, ConvIDFromUint(udc)...), ':')
 	}
 	key = append(key, addr.Bytes()...)
 	return key
 }
 
-func (s Store) SetUDCBalance(udc []byte,
+func (s Store) SetUDCBalance(udc uint32,
 	addr tm.Address, balance *types.Currency) error {
 	zero := new(types.Currency).Set(0)
 	balanceKey := getUDCBalanceKey(udc, addr)
@@ -76,7 +76,7 @@ func (s Store) SetUDCBalance(udc []byte,
 	return nil
 }
 
-func (s Store) GetUDCBalance(udc []byte,
+func (s Store) GetUDCBalance(udc uint32,
 	addr tm.Address, committed bool) *types.Currency {
 	c := types.Currency{}
 	balance := s.get(getUDCBalanceKey(udc, addr), committed)
