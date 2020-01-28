@@ -86,7 +86,43 @@ func queryUDC(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	}
 
 	udc := s.GetUDC(udcID, true)
+
 	jsonstr, _ := json.Marshal(udc)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}
+
+func queryUDCLock(s *store.Store, udc string, queryData []byte) (res abci.ResponseQuery) {
+	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	var addr crypto.Address
+	err := json.Unmarshal(queryData, &addr)
+	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	var udcID uint32
+	tmp, err := strconv.ParseInt(udc, 10, 32)
+	if err != nil {
+		res.Log = "error: cannot convert udc id"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+	udcID = uint32(tmp)
+
+	udcLock := s.GetUDCLock(udcID, addr, true)
+
+	jsonstr, _ := json.Marshal(udcLock)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
 	res.Code = code.QueryCodeOK
