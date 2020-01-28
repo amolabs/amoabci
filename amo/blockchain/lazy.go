@@ -21,6 +21,9 @@ type LazinessCounter struct {
 	Due   int64   `json:"due"`   // from state
 	Size  int64   `json:"size"`  // from config
 	Ratio float64 `json:"ratio"` // from config
+
+	pendingSize  int64   `json:"pending_size"`
+	pendingRatio float64 `json:"pending_ratio"`
 }
 
 // LazinessCounter
@@ -45,6 +48,9 @@ func NewLazinessCounter(store *store.Store, height, due, size int64, ratio float
 		Due:    due,
 		Size:   size,
 		Ratio:  ratio,
+
+		pendingSize:  size,
+		pendingRatio: ratio,
 	}
 
 	lc.Candidates = lc.store.GroupCounterGetLazyValidators()
@@ -56,6 +62,9 @@ func (lc *LazinessCounter) Investigate(height int64, commitInfo abci.LastCommitI
 	var lazyValidators []crypto.Address
 
 	if lc.checkEnd() {
+		lc.Size = lc.pendingSize
+		lc.Ratio = lc.pendingRatio
+
 		lazyValidators = lc.get()
 		lc.purge()
 		lc.Due = lc.Height + lc.Size
@@ -78,6 +87,11 @@ func (lc *LazinessCounter) Investigate(height int64, commitInfo abci.LastCommitI
 	}
 
 	return lazyValidators, lc.Due
+}
+
+func (lc *LazinessCounter) Set(size int64, ratio float64) {
+	lc.pendingSize = size
+	lc.pendingRatio = ratio
 }
 
 func (lc *LazinessCounter) add(validator abci.Validator) {

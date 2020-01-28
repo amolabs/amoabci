@@ -604,7 +604,6 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	)
 
 	app.replayPreventer.Index()
-	app.blockBindingManager.Set(app.config.BlockBoundTxGracePeriod)
 
 	app.store.ProcessDraftVotes(
 		app.state.NextDraftID-uint32(1),
@@ -648,6 +647,9 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	}
 
 	tx.ConfigAMOApp = app.config
+
+	app.lazinessCounter.Set(app.config.LazinessCounterWindow, app.config.LazinessThreshold)
+	app.blockBindingManager.Set(app.config.BlockBoundTxGracePeriod)
 
 	app.save()
 
