@@ -70,6 +70,31 @@ func queryBalance(s *store.Store, udc string, queryData []byte) (res abci.Respon
 	return
 }
 
+func queryUDC(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	var udcID uint32
+	err := json.Unmarshal(queryData, &udcID)
+	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	udc := s.GetUDC(udcID, true)
+	jsonstr, _ := json.Marshal(udc)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}
+
 func queryStake(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Log = "error: no query_data"
