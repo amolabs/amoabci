@@ -650,6 +650,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 
 	app.lazinessCounter.Set(app.config.LazinessCounterWindow, app.config.LazinessThreshold)
 	app.blockBindingManager.Set(app.config.BlockBoundTxGracePeriod)
+	app.replayPreventer.Set(app.config.BlockBoundTxGracePeriod)
 
 	app.save()
 
