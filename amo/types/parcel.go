@@ -18,6 +18,7 @@ type Parcel struct {
 	Custody      cmn.HexBytes   `json:"custody"`
 	ProxyAccount crypto.Address `json:"proxy_account,omitempty"`
 	Extra        Extra          `json:"extra,omitempty"`
+	OnSale       bool           `json:"on_sale"`
 }
 
 type ParcelEx struct {
