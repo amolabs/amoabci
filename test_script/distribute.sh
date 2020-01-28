@@ -22,26 +22,26 @@ for ((i=FROM; i<=NODENUM; i++)); do
 
 	echo "faucet to tval$i: $(bc <<< "$AMOUNT / $AMO1") AMO"
 	out=$($CLI tx --broadcast=commit transfer $CLIOPT --user tgenesis "${!valaddr}" "$AMOUNT")
-	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
-	if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
+	info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+	if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
     
     deladdr=tdel$i
 
 	echo "faucet to tdel$i: $(bc <<< "$AMOUNT / $AMO1") AMO"
 	out=$($CLI tx --broadcast=commit transfer $CLIOPT --user tgenesis "${!deladdr}" "$AMOUNT")
-	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
-	if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
+	info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+	if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
 done
 
 echo "faucet to tu1: $(bc <<< "$AMOUNT / $AMO1") AMO"
 out=$($CLI tx --broadcast=commit transfer $CLIOPT --user tgenesis "$tu1" "$AMOUNT")
-h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
-if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
+info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
 
 echo "faucet to tu2: $(bc <<< "$AMOUNT / $AMO1") AMO"
 out=$($CLI tx --broadcast=commit transfer $CLIOPT --user tgenesis "$tu2" "$AMOUNT")
-h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
-if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
+info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
 
 $ROOT/qb.sh 
 

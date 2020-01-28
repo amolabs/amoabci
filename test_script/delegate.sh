@@ -26,8 +26,9 @@ do
 
 	echo "delegate from tdel$i to tval$i: $(bc <<< "$AMOUNT / $AMO1") AMO"
 	out=$($CLI tx --broadcast=commit delegate $CLIOPT --user tdel$i "${!addr}" "$AMOUNT")
-	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['height']")
-	if [ -z "$h" -o "$h" == "0" ]; then fail $out; fi
+	info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+	if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
+
 done
 
 $ROOT/qd.sh "$NODENUM"

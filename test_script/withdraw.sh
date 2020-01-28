@@ -24,10 +24,10 @@ do
     printf "withdraw val$i: $(bc <<< "$AMOUNT / $AMO1") AMO - "
 
 	out=$($CLI tx --broadcast=commit withdraw $CLIOPT --user tval$i "$AMOUNT")
-	h=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
-	if [ -z "$h" -o "$h" != "$RESULT" ]; then fail $out; fi
+	info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+	if [ -z "$info" -o "$info" != "$RESULT" ]; then fail $out; fi
 
-	printf "$h\n"
+	printf "$info\n"
 done
 
 $ROOT/qs.sh "$NODENUM"
