@@ -61,7 +61,7 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	}
 
 	parcel := store.GetParcel(txParam.Target, false)
-	if parcel != nil {
+	if parcel != nil && parcel.OnSale {
 		return code.TxCodeAlreadyRegistered, "parcel already registered", nil
 	}
 
