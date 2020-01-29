@@ -1,6 +1,7 @@
 package tx
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 
@@ -60,14 +61,25 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodeNoStorage, "no active storage for this parcel", nil
 	}
 
-	parcel := store.GetParcel(txParam.Target, false)
-	if parcel != nil {
-		return code.TxCodeAlreadyRegistered, "parcel already registered", nil
-	}
-
 	sender := t.GetSender()
-	if store.GetBalance(sender, false).LessThan(&storage.RegistrationFee) {
-		return code.TxCodeNotEnoughBalance, "not enough balance for registration fee", nil
+	parcel := store.GetParcel(txParam.Target, false)
+
+	if parcel == nil {
+		if store.GetBalance(sender, false).LessThan(&storage.RegistrationFee) {
+			return code.TxCodeNotEnoughBalance, "not enough balance for registration fee", nil
+		}
+
+		balance := store.GetBalance(sender, false)
+		balance.Sub(&storage.RegistrationFee)
+		store.SetBalance(sender, balance)
+		balance = store.GetBalance(storage.Owner, false)
+		balance.Add(&storage.RegistrationFee)
+		store.SetBalance(storage.Owner, balance)
+	} else {
+		if !bytes.Equal(sender, parcel.Owner) &&
+			!bytes.Equal(sender, parcel.ProxyAccount) {
+			return code.TxCodePermissionDenied, "permission denied", nil
+		}
 	}
 
 	store.SetParcel(txParam.Target, &types.Parcel{
@@ -78,13 +90,6 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 			Register: txParam.Extra,
 		},
 	})
-
-	balance := store.GetBalance(sender, false)
-	balance.Sub(&storage.RegistrationFee)
-	store.SetBalance(sender, balance)
-	balance = store.GetBalance(storage.Owner, false)
-	balance.Add(&storage.RegistrationFee)
-	store.SetBalance(storage.Owner, balance)
 
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},

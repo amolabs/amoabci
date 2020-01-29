@@ -357,9 +357,9 @@ func TestRegister(t *testing.T) {
 	bal = s.GetBalance(makeAccAddr("provider"), false)
 	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
 
-	// reigster already registered parcel
+	// update already registered parcel
 	rc, _, _ = t1.Execute(s)
-	assert.Equal(t, code.TxCodeAlreadyRegistered, rc)
+	assert.Equal(t, code.TxCodeOK, rc)
 }
 
 func TestRequest(t *testing.T) {
