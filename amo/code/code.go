@@ -9,7 +9,6 @@ const (
 	TxCodeNotEnoughBalance
 	TxCodeSelfTransaction
 	TxCodePermissionDenied
-	TxCodeAlreadyRegistered
 	TxCodeAlreadyRequested
 	TxCodeAlreadyGranted
 	TxCodeParcelNotFound
