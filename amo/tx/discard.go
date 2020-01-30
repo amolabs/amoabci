@@ -57,7 +57,8 @@ func (t *TxDiscard) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		return code.TxCodePermissionDenied, "permission denied", nil
 	}
 
-	store.DeleteParcel(txParam.Target)
+	parcel.OnSale = false
+	store.SetParcel(txParam.Target, parcel)
 
 	tags := []tm.KVPair{
 		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},

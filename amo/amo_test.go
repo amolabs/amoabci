@@ -1088,8 +1088,8 @@ func TestReplayAttack(t *testing.T) {
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.replayPreventer = blockchain.NewReplayPreventer(
 		app.store,
-		3,
 		app.state.LastHeight,
+		3,
 	)
 
 	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
@@ -1159,12 +1159,10 @@ func TestBindingBlock(t *testing.T) {
 	tx5 := makeTxStake(t1, "test1", 10000, "2")
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.blockBindingManager = blockchain.NewBlockBindingManager(
-		3,
-		app.state.LastHeight,
-	)
-
+	app.config.BlockBoundTxGracePeriod = uint64(3)
 	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
+
+	app.blockBindingManager = blockchain.NewBlockBindingManager(app.state.LastHeight, app.config.BlockBoundTxGracePeriod)
 
 	app.store.SetBalance(t1.PubKey().Address(), new(types.Currency).Set(50000))
 

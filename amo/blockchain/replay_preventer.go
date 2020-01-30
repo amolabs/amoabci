@@ -58,8 +58,8 @@ type ReplayPreventer struct {
 
 func NewReplayPreventer(
 	store *store.Store,
-	indexRange uint64,
 	height int64,
+	indexRange uint64,
 ) ReplayPreventer {
 
 	rp := ReplayPreventer{
@@ -70,6 +70,10 @@ func NewReplayPreventer(
 		txBucket:   make(TxBucket),
 	}
 
+	if rp.toHeight != 0 && rp.toHeight-rp.fromHeight >= rp.indexRange {
+		rp.fromHeight = rp.toHeight - rp.indexRange + 1
+	}
+
 	return rp
 }
 
@@ -77,8 +81,17 @@ func NewReplayPreventer(
 func (rp *ReplayPreventer) Update() {
 	rp.toHeight += 1
 
-	if rp.toHeight-rp.fromHeight == rp.indexRange {
+	length := rp.toHeight - rp.fromHeight
+	if length == rp.indexRange {
 		rp.fromHeight += 1
+	} else if length > rp.indexRange {
+		tmp := rp.toHeight - rp.indexRange + 1
+		// flush orphan data
+		for i := rp.fromHeight; i < tmp; i++ {
+			rp.store.TxIndexerDelete(int64(i))
+		}
+		// shrink length
+		rp.fromHeight = tmp
 	}
 }
 
@@ -130,4 +143,9 @@ func (rp *ReplayPreventer) Index() {
 	for key, _ := range rp.txBucket {
 		delete(rp.txBucket, key)
 	}
+}
+
+// Set() is called at Commit()
+func (rp *ReplayPreventer) Set(indexRange uint64) {
+	rp.indexRange = indexRange
 }

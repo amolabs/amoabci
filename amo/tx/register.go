@@ -89,6 +89,7 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		Extra: types.Extra{
 			Register: txParam.Extra,
 		},
+		OnSale: true,
 	})
 
 	tags := []tm.KVPair{
