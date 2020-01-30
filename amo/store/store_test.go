@@ -565,7 +565,7 @@ func TestMerkleTree(t *testing.T) {
 	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 
 	// make transactions to put into merkleTree
-	hash := "375f04eef66e278098bd35a697de8a3a38999f41de27564753a43a56ec0a5b98"
+	hash := "144d3380c65caa4991eeb365b907f7de609dab65301017ae985deca101ea73c2"
 	expectedHash, err := hex.DecodeString(hash)
 	assert.NoError(t, err)
 
