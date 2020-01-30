@@ -379,6 +379,14 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 			resQuery.Code = code.QueryCodeBadPath
 			return resQuery
 		}
+	case "udc":
+		resQuery = queryUDC(app.store, reqQuery.Data)
+	case "udclock":
+		if len(reqs) != 2 {
+			resQuery.Code = code.QueryCodeBadPath
+			return resQuery
+		}
+		resQuery = queryUDCLock(app.store, reqs[1], reqQuery.Data)
 	case "stake":
 		resQuery = queryStake(app.store, reqQuery.Data)
 	case "delegate":
