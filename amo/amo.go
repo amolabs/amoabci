@@ -156,14 +156,14 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 	)
 
 	app.blockBindingManager = blockchain.NewBlockBindingManager(
-		app.config.BlockBoundTxGracePeriod,
 		app.state.LastHeight,
+		app.config.BlockBoundTxGracePeriod,
 	)
 
 	app.replayPreventer = blockchain.NewReplayPreventer(
 		app.store,
-		app.config.BlockBoundTxGracePeriod,
 		app.state.LastHeight,
+		app.config.BlockBoundTxGracePeriod,
 	)
 
 	app.save()
@@ -332,14 +332,14 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	)
 
 	app.blockBindingManager = blockchain.NewBlockBindingManager(
-		app.config.BlockBoundTxGracePeriod,
 		app.state.LastHeight,
+		app.config.BlockBoundTxGracePeriod,
 	)
 
 	app.replayPreventer = blockchain.NewReplayPreventer(
 		app.store,
-		app.config.BlockBoundTxGracePeriod,
 		app.state.LastHeight,
+		app.config.BlockBoundTxGracePeriod,
 	)
 
 	// initialize
@@ -647,6 +647,10 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	}
 
 	tx.ConfigAMOApp = app.config
+
+	app.lazinessCounter.Set(app.config.LazinessCounterWindow, app.config.LazinessThreshold)
+	app.blockBindingManager.Set(app.config.BlockBoundTxGracePeriod)
+	app.replayPreventer.Set(app.config.BlockBoundTxGracePeriod)
 
 	app.save()
 

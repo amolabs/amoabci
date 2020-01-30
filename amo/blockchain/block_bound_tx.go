@@ -16,13 +16,16 @@ package blockchain
 //   =========^ (h:11, f:2, t:11)
 //    =========^ (h:12, f:3, t:12)
 //     =========^ (h:13, f:4, t:13)
+// gracePeriod: 5
+//           ====^ (h:14, f: 10, t:14)
+//            ====^ (h:15, f: 11, t:15)
 
 type BlockBindingManager struct {
 	gracePeriod          uint64
 	fromHeight, toHeight uint64
 }
 
-func NewBlockBindingManager(gracePeriod uint64, height int64) BlockBindingManager {
+func NewBlockBindingManager(height int64, gracePeriod uint64) BlockBindingManager {
 	bbm := BlockBindingManager{
 		gracePeriod: gracePeriod,
 		fromHeight:  1,
@@ -40,8 +43,12 @@ func NewBlockBindingManager(gracePeriod uint64, height int64) BlockBindingManage
 func (bbm *BlockBindingManager) Update() {
 	bbm.toHeight += 1
 
-	if bbm.toHeight-bbm.fromHeight == bbm.gracePeriod {
+	length := bbm.toHeight - bbm.fromHeight
+	if length == bbm.gracePeriod {
 		bbm.fromHeight += 1
+	} else if length > bbm.gracePeriod {
+		// shrink length
+		bbm.fromHeight = bbm.toHeight - bbm.gracePeriod + 1
 	}
 }
 
@@ -54,4 +61,9 @@ func (bbm *BlockBindingManager) Check(height int64) bool {
 	}
 
 	return false
+}
+
+// Set() is called at Commit()
+func (bbm *BlockBindingManager) Set(gracePeriod uint64) {
+	bbm.gracePeriod = gracePeriod
 }
