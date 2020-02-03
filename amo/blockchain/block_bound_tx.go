@@ -1,6 +1,6 @@
 package blockchain
 
-// BlockBindingManager: check avaiability of given height
+// CheckBlockBindingTx: check avaiability of given txHeight
 // - gracePeriod: period for which tx can be accepted
 
 // gracePeriod: 10
@@ -20,50 +20,19 @@ package blockchain
 //           ====^ (h:14, f: 10, t:14)
 //            ====^ (h:15, f: 11, t:15)
 
-type BlockBindingManager struct {
-	gracePeriod          uint64
-	fromHeight, toHeight uint64
-}
+func CheckBlockBindingTx(txHeight, blockHeight, gracePeriod int64) bool {
+	var (
+		fromHeight int64 = 0
+		toHeight   int64 = blockHeight
+	)
 
-func NewBlockBindingManager(height int64, gracePeriod uint64) BlockBindingManager {
-	bbm := BlockBindingManager{
-		gracePeriod: gracePeriod,
-		fromHeight:  1,
-		toHeight:    uint64(height),
+	if gracePeriod < blockHeight {
+		fromHeight = blockHeight - gracePeriod
 	}
 
-	if bbm.toHeight != 0 && bbm.toHeight-bbm.fromHeight >= bbm.gracePeriod {
-		bbm.fromHeight = bbm.toHeight - bbm.gracePeriod + 1
-	}
-
-	return bbm
-}
-
-// Update() is called at BeginBlock()
-func (bbm *BlockBindingManager) Update() {
-	bbm.toHeight += 1
-
-	length := bbm.toHeight - bbm.fromHeight
-	if length == bbm.gracePeriod {
-		bbm.fromHeight += 1
-	} else if length > bbm.gracePeriod {
-		// shrink length
-		bbm.fromHeight = bbm.toHeight - bbm.gracePeriod + 1
-	}
-}
-
-// Check() is called at CheckTx()
-func (bbm *BlockBindingManager) Check(height int64) bool {
-	heightU := uint64(height)
-
-	if bbm.fromHeight <= heightU && heightU <= bbm.toHeight {
+	if fromHeight <= txHeight && txHeight <= toHeight {
 		return true
 	}
 
 	return false
-}
-
-// Set() is called at Commit()
-func (bbm *BlockBindingManager) Set(gracePeriod uint64) {
-	bbm.gracePeriod = gracePeriod
 }
