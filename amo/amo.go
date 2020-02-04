@@ -454,7 +454,7 @@ func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 		}
 	}
 
-	_, err = app.replayPreventer.Check(req.Tx, t.GetLastHeight(), app.state.Height)
+	err = app.replayPreventer.Check(req.Tx, t.GetLastHeight(), app.state.Height)
 	if err != nil {
 		return abci.ResponseCheckTx{
 			Code:      code.TxCodeImproperTx,

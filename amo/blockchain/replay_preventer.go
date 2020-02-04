@@ -94,35 +94,36 @@ func (rp *ReplayPreventer) Update(blockHeight, indexRange int64) {
 }
 
 // Check() is called at CheckTx()
-func (rp *ReplayPreventer) Check(tx []byte, txHeight, blockHeight int64) (TxHash, error) {
+func (rp *ReplayPreventer) Check(tx []byte, txHeight, blockHeight int64) error {
 	// check if given tx is block bound
 	err := checkBlockBindingTx(txHeight, blockHeight, rp.indexRange)
 	if err != nil {
-		return TxHash{}, err
+		return err
 	}
 
 	txHash := sha256.Sum256(tx)
 
 	// check if given tx already exists in txBucket
 	if _, exist := rp.txBucket[txHash]; exist {
-		return TxHash{}, errors.New("already processed tx")
+		return errors.New("already processed tx")
 	}
 
 	// check if given tx already exists in txIndexer
 	if rp.store.TxIndexerGetHeight(txHash[:]) > 0 {
-		return TxHash{}, errors.New("already processed tx")
+		return errors.New("already processed tx")
 	}
 
-	return txHash, nil
+	return nil
 }
 
 // Append() is called at DeliverTx()
 func (rp *ReplayPreventer) Append(tx []byte, txHeight, blockHeight int64) error {
-	txHash, err := rp.Check(tx, txHeight, blockHeight)
+	err := rp.Check(tx, txHeight, blockHeight)
 	if err != nil {
 		return err
 	}
 
+	txHash := sha256.Sum256(tx)
 	rp.txBucket[txHash] = true
 
 	return nil
