@@ -1,7 +1,7 @@
 #!/bin/bash
 
 get_block_height() {
-	out=$($CLI query node)
+	out=$($CLI query node $CLIOPT)
 	height=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['sync_info']['latest_block_height']")
 
 	echo "$height"
@@ -67,5 +67,4 @@ echo "wait for block progresses sufficiently"
 check_block_height "2"
 
 echo "update config set of amocli with the one from amo node"
-out=$($CLI query node $CLIOPT)
 out=$($CLI query config $CLIOPT)
