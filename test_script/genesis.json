@@ -34,7 +34,7 @@
         "penalty_ratio_l": 0.5,
         "laziness_counter_window": 4, 
         "laziness_threshold": 0.5,
-        "block_bound_tx_grace_period":25,
+        "block_binding_window":25,
         "lockup_period": 20 
     },
     "balances": [
