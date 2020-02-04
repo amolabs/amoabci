@@ -75,8 +75,8 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	if genState.Config.LazinessThreshold == 0 {
 		genState.Config.LazinessThreshold = defaultLazinessThreshold
 	}
-	if genState.Config.BlockBoundTxGracePeriod == 0 {
-		genState.Config.BlockBoundTxGracePeriod = defaultBlockBoundTxGracePeriod
+	if genState.Config.BlockBindingWindow == 0 {
+		genState.Config.BlockBindingWindow = defaultBlockBindingWindow
 	}
 	if genState.Config.LockupPeriod == 0 {
 		genState.Config.LockupPeriod = defaultLockupPeriod
