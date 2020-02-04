@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"crypto/sha256"
+	"errors"
 
 	"github.com/amolabs/amoabci/amo/store"
 )
@@ -50,102 +51,99 @@ type ReplayPreventer struct {
 	store *store.Store
 	// TODO: maybe caching txs is required ?
 
-	indexRange           uint64
-	fromHeight, toHeight uint64
+	indexRange int64
+	fromHeight int64
 
 	txBucket TxBucket
 }
 
 func NewReplayPreventer(
 	store *store.Store,
-	height int64,
-	indexRange uint64,
+	blockHeight int64,
+	indexRange int64,
 ) ReplayPreventer {
 
-	rp := ReplayPreventer{
+	fromHeight := int64(1)
+	if blockHeight != 0 && blockHeight-fromHeight >= indexRange {
+		fromHeight = blockHeight - indexRange + 1
+	}
+
+	return ReplayPreventer{
 		store:      store,
 		indexRange: indexRange,
-		fromHeight: 1,
-		toHeight:   uint64(height),
+		fromHeight: fromHeight,
 		txBucket:   make(TxBucket),
 	}
-
-	if rp.toHeight != 0 && rp.toHeight-rp.fromHeight >= rp.indexRange {
-		rp.fromHeight = rp.toHeight - rp.indexRange + 1
-	}
-
-	return rp
 }
 
 // Update() is called at BeginBlock()
-func (rp *ReplayPreventer) Update() {
-	rp.toHeight += 1
-
-	length := rp.toHeight - rp.fromHeight
-	if length == rp.indexRange {
-		rp.fromHeight += 1
-	} else if length > rp.indexRange {
-		tmp := rp.toHeight - rp.indexRange + 1
+func (rp *ReplayPreventer) Update(blockHeight, indexRange int64) {
+	// indexRange gets shrinked
+	if rp.indexRange > indexRange {
 		// flush orphan data
-		for i := rp.fromHeight; i < tmp; i++ {
+		for i := rp.fromHeight; i <= blockHeight-indexRange; i++ {
 			rp.store.TxIndexerDelete(int64(i))
 		}
-		// shrink length
-		rp.fromHeight = tmp
+	}
+
+	rp.indexRange = indexRange
+
+	if blockHeight > indexRange {
+		rp.fromHeight = blockHeight - indexRange + 1
 	}
 }
 
 // Check() is called at CheckTx()
-func (rp *ReplayPreventer) Check(tx []byte) bool {
+func (rp *ReplayPreventer) Check(tx []byte, txHeight, blockHeight int64) (TxHash, error) {
+	// check if given tx is block bound
+	err := checkBlockBindingTx(txHeight, blockHeight, rp.indexRange)
+	if err != nil {
+		return TxHash{}, err
+	}
+
 	txHash := sha256.Sum256(tx)
 
 	// check if given tx already exists in txBucket
 	if _, exist := rp.txBucket[txHash]; exist {
-		return false
+		return TxHash{}, errors.New("already processed tx")
 	}
 
 	// check if given tx already exists in txIndexer
-	height := rp.store.TxIndexerGetHeight(txHash[:])
-	if height > 0 {
-		return false
+	if rp.store.TxIndexerGetHeight(txHash[:]) > 0 {
+		return TxHash{}, errors.New("already processed tx")
 	}
 
-	return true
+	return txHash, nil
 }
 
 // Append() is called at DeliverTx()
-func (rp *ReplayPreventer) Append(tx []byte) bool {
-	if ok := rp.Check(tx); !ok {
-		return false
+func (rp *ReplayPreventer) Append(tx []byte, txHeight, blockHeight int64) error {
+	txHash, err := rp.Check(tx, txHeight, blockHeight)
+	if err != nil {
+		return err
 	}
 
-	txHash := sha256.Sum256(tx)
 	rp.txBucket[txHash] = true
 
-	return true
+	return nil
 }
 
 // Index() is called at EndBlock()
-func (rp *ReplayPreventer) Index() {
+func (rp *ReplayPreventer) Index(blockHeight int64) {
 	txs := make([][]byte, 0, len(rp.txBucket))
 	for key, _ := range rp.txBucket {
 		tx := key
 		txs = append(txs, tx[:])
 	}
 
-	rp.store.AddTxIndexer(int64(rp.toHeight), txs)
+	rp.store.AddTxIndexer(blockHeight, txs)
 
-	if rp.toHeight-rp.fromHeight+1 == rp.indexRange {
-		rp.store.TxIndexerDelete(int64(rp.fromHeight))
+	if blockHeight-rp.fromHeight+1 == rp.indexRange {
+		rp.store.TxIndexerDelete(rp.fromHeight)
 	}
 
 	// clear txBucket
 	for key, _ := range rp.txBucket {
 		delete(rp.txBucket, key)
 	}
-}
-
-// Set() is called at Commit()
-func (rp *ReplayPreventer) Set(indexRange uint64) {
-	rp.indexRange = indexRange
 }

@@ -105,9 +105,8 @@ type AMOApp struct {
 	pendingEvidences      []abci.Evidence
 	pendingLazyValidators []crypto.Address
 
-	lazinessCounter     blockchain.LazinessCounter
-	blockBindingManager blockchain.BlockBindingManager
-	replayPreventer     blockchain.ReplayPreventer
+	lazinessCounter blockchain.LazinessCounter
+	replayPreventer blockchain.ReplayPreventer
 }
 
 var _ abci.Application = (*AMOApp)(nil)
@@ -155,15 +154,10 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 		app.config.LazinessThreshold,
 	)
 
-	app.blockBindingManager = blockchain.NewBlockBindingManager(
-		app.state.LastHeight,
-		app.config.BlockBoundTxGracePeriod,
-	)
-
 	app.replayPreventer = blockchain.NewReplayPreventer(
 		app.store,
 		app.state.LastHeight,
-		app.config.BlockBoundTxGracePeriod,
+		app.config.BlockBindingWindow,
 	)
 
 	app.save()
@@ -189,8 +183,8 @@ const (
 	defaultLazinessCounterWindow = int64(10000)
 	defaultLazinessThreshold     = float64(0.8)
 
-	defaultBlockBoundTxGracePeriod = uint64(10000)
-	defaultLockupPeriod            = uint64(1000000)
+	defaultBlockBindingWindow = int64(10000)
+	defaultLockupPeriod       = uint64(1000000)
 
 	defaultDraftOpenCount  = uint64(10000)
 	defaultDraftCloseCount = uint64(10000)
@@ -203,21 +197,21 @@ const (
 
 func (app *AMOApp) loadAppConfig() error {
 	cfg := types.AMOAppConfig{
-		MaxValidators:           defaultMaxValidators,
-		WeightValidator:         defaultWeightValidator,
-		WeightDelegator:         defaultWeightDelegator,
-		PenaltyRatioM:           defaultPenaltyRatioM,
-		PenaltyRatioL:           defaultPenaltyRatioL,
-		LazinessCounterWindow:   defaultLazinessCounterWindow,
-		LazinessThreshold:       defaultLazinessThreshold,
-		BlockBoundTxGracePeriod: defaultBlockBoundTxGracePeriod,
-		LockupPeriod:            defaultLockupPeriod,
-		DraftOpenCount:          defaultDraftOpenCount,
-		DraftCloseCount:         defaultDraftCloseCount,
-		DraftApplyCount:         defaultDraftApplyCount,
-		DraftQuorumRate:         defaultDraftQuorumRate,
-		DraftPassRate:           defaultDraftPassRate,
-		DraftRefundRate:         defaultDraftRefundRate,
+		MaxValidators:         defaultMaxValidators,
+		WeightValidator:       defaultWeightValidator,
+		WeightDelegator:       defaultWeightDelegator,
+		PenaltyRatioM:         defaultPenaltyRatioM,
+		PenaltyRatioL:         defaultPenaltyRatioL,
+		LazinessCounterWindow: defaultLazinessCounterWindow,
+		LazinessThreshold:     defaultLazinessThreshold,
+		BlockBindingWindow:    defaultBlockBindingWindow,
+		LockupPeriod:          defaultLockupPeriod,
+		DraftOpenCount:        defaultDraftOpenCount,
+		DraftCloseCount:       defaultDraftCloseCount,
+		DraftApplyCount:       defaultDraftApplyCount,
+		DraftQuorumRate:       defaultDraftQuorumRate,
+		DraftPassRate:         defaultDraftPassRate,
+		DraftRefundRate:       defaultDraftRefundRate,
 	}
 
 	tmp, err := new(types.Currency).SetString(defaultMinStakingUnit, 10)
@@ -331,20 +325,11 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		app.config.LazinessThreshold,
 	)
 
-	app.blockBindingManager = blockchain.NewBlockBindingManager(
-		app.state.LastHeight,
-		app.config.BlockBoundTxGracePeriod,
-	)
-
 	app.replayPreventer = blockchain.NewReplayPreventer(
 		app.store,
 		app.state.LastHeight,
-		app.config.BlockBoundTxGracePeriod,
+		app.config.BlockBindingWindow,
 	)
-
-	// initialize
-	app.blockBindingManager.Update()
-	app.replayPreventer.Update()
 
 	app.save()
 	app.logger.Info("InitChain: new genesis app state applied.")
@@ -425,9 +410,6 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.state.Height = req.Header.Height
 
-	app.blockBindingManager.Update()
-	app.replayPreventer.Update()
-
 	app.doValUpdate = false
 	app.oldVals = app.store.GetValidators(app.config.MaxValidators, false)
 
@@ -437,6 +419,8 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	app.feeAccumulated = *new(types.Currency).Set(0)
 	app.numDeliveredTxs = int64(0)
 
+	// blockchain modules
+	app.replayPreventer.Update(app.state.Height, app.config.BlockBindingWindow)
 	app.pendingEvidences = req.GetByzantineValidators()
 	app.pendingLazyValidators, app.state.CounterDue = app.lazinessCounter.Investigate(app.state.Height, req.GetLastCommitInfo())
 
@@ -470,20 +454,12 @@ func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 		}
 	}
 
-	if !app.blockBindingManager.Check(t.GetLastHeight()) {
+	_, err = app.replayPreventer.Check(req.Tx, t.GetLastHeight(), app.state.Height)
+	if err != nil {
 		return abci.ResponseCheckTx{
-			Code:      code.TxCodeTooOldTx,
-			Log:       "Binding tx to block failed",
-			Info:      "Binding tx to block failed",
-			Codespace: "amo",
-		}
-	}
-
-	if !app.replayPreventer.Check(req.Tx) {
-		return abci.ResponseCheckTx{
-			Code:      code.TxCodeAlreadyProcessedTx,
-			Log:       "Tx was processed before",
-			Info:      "Tx was processed before",
+			Code:      code.TxCodeImproperTx,
+			Log:       err.Error(),
+			Info:      err.Error(),
 			Codespace: "amo",
 		}
 	}
@@ -509,20 +485,12 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 		}
 	}
 
-	if !app.blockBindingManager.Check(t.GetLastHeight()) {
+	err = app.replayPreventer.Append(req.Tx, t.GetLastHeight(), app.state.Height)
+	if err != nil {
 		return abci.ResponseDeliverTx{
-			Code:      code.TxCodeTooOldTx,
-			Log:       "Binding tx to block failed",
-			Info:      "Binding tx to block failed",
-			Codespace: "amo",
-		}
-	}
-
-	if !app.replayPreventer.Append(req.Tx) {
-		return abci.ResponseDeliverTx{
-			Code:      code.TxCodeAlreadyProcessedTx,
-			Log:       "Tx was processed before",
-			Info:      "Tx was processed before",
+			Code:      code.TxCodeImproperTx,
+			Log:       err.Error(),
+			Info:      err.Error(),
 			Codespace: "amo",
 		}
 	}
@@ -611,7 +579,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.config.PenaltyRatioM, app.config.PenaltyRatioL,
 	)
 
-	app.replayPreventer.Index()
+	app.replayPreventer.Index(app.state.Height)
 
 	app.store.ProcessDraftVotes(
 		app.state.NextDraftID-uint32(1),
@@ -657,8 +625,6 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	tx.ConfigAMOApp = app.config
 
 	app.lazinessCounter.Set(app.config.LazinessCounterWindow, app.config.LazinessThreshold)
-	app.blockBindingManager.Set(app.config.BlockBoundTxGracePeriod)
-	app.replayPreventer.Set(app.config.BlockBoundTxGracePeriod)
 
 	app.save()
 

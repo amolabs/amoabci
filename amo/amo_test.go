@@ -523,7 +523,6 @@ func TestSignedTransactionTest(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.blockBindingManager.Update()
 
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
@@ -543,6 +542,8 @@ func TestSignedTransactionTest(t *testing.T) {
 		Fee:        *new(types.Currency).Set(0),
 		LastHeight: "1",
 	}
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 1}})
 
 	// not signed transaction
 	rawMsg, err := json.Marshal(msg)
@@ -804,7 +805,6 @@ func TestEndBlock(t *testing.T) {
 	defer tearDownTest(t)
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.blockBindingManager.Update()
 
 	// setup
 	tx.ConfigAMOApp.LockupPeriod = 1                               // manipulate
@@ -819,7 +819,7 @@ func TestEndBlock(t *testing.T) {
 	assert.NoError(t, err)
 
 	// begin block
-	blkRequest := abci.RequestBeginBlock{}
+	blkRequest := abci.RequestBeginBlock{Header: abci.Header{Height: 1}}
 	app.BeginBlock(blkRequest) // we need this
 
 	// deliver stake tx
@@ -1030,13 +1030,13 @@ func TestEmptyBlock(t *testing.T) {
 	app.InitChain(abci.RequestInitChain{})
 
 	// begin block
-	app.BeginBlock(abci.RequestBeginBlock{})
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 1}})
 
 	rawTx := makeTxStake(priv, "test", 500, "1")
 	app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 
 	// end block
-	app.EndBlock(abci.RequestEndBlock{})
+	app.EndBlock(abci.RequestEndBlock{Height: 1})
 
 	// commit
 	app.Commit()
@@ -1048,8 +1048,8 @@ func TestEmptyBlock(t *testing.T) {
 	prevHash := app.state.LastAppHash
 
 	// simulate no txs to process in this block
-	app.BeginBlock(abci.RequestBeginBlock{})
-	app.EndBlock(abci.RequestEndBlock{})
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 2}})
+	app.EndBlock(abci.RequestEndBlock{Height: 2})
 	app.Commit()
 
 	// get hash to compare
@@ -1065,8 +1065,8 @@ func TestEmptyBlock(t *testing.T) {
 	prevHash = app.state.LastAppHash
 
 	// simulate no txs to process in this block
-	app.BeginBlock(abci.RequestBeginBlock{})
-	app.EndBlock(abci.RequestEndBlock{})
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 3}})
+	app.EndBlock(abci.RequestEndBlock{Height: 3})
 	app.Commit()
 
 	// get hash to compare
@@ -1086,10 +1086,11 @@ func TestReplayAttack(t *testing.T) {
 	tx3 := makeTxStake(t1, "test1", 10000, "1")
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app.config.BlockBindingWindow = int64(3)
 	app.replayPreventer = blockchain.NewReplayPreventer(
 		app.store,
 		app.state.LastHeight,
-		3,
+		app.config.BlockBindingWindow,
 	)
 
 	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
@@ -1101,50 +1102,38 @@ func TestReplayAttack(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
 	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
 
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
 
 	app.EndBlock(abci.RequestEndBlock{Height: 1})
 
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 2}})
 
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
 
 	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
 	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
 
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
 
 	app.EndBlock(abci.RequestEndBlock{Height: 2})
 
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 3}})
 
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
 
 	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx3}).Code)
 	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx3}).Code)
 
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx3}).Code)
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx3}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.CheckTx(abci.RequestCheckTx{Tx: tx3}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx3}).Code)
 
 	app.EndBlock(abci.RequestEndBlock{Height: 3})
-
-	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 4}})
-
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx2}).Code)
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx2}).Code)
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.CheckTx(abci.RequestCheckTx{Tx: tx3}).Code)
-	assert.Equal(t, code.TxCodeAlreadyProcessedTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx3}).Code)
-
-	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx1}).Code)
-	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx1}).Code)
-
-	app.EndBlock(abci.RequestEndBlock{Height: 4})
 }
 
 func TestBindingBlock(t *testing.T) {
@@ -1159,10 +1148,14 @@ func TestBindingBlock(t *testing.T) {
 	tx5 := makeTxStake(t1, "test1", 10000, "2")
 
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.config.BlockBoundTxGracePeriod = uint64(3)
-	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
+	app.config.BlockBindingWindow = int64(3)
+	app.replayPreventer = blockchain.NewReplayPreventer(
+		app.store,
+		app.state.LastHeight,
+		app.config.BlockBindingWindow,
+	)
 
-	app.blockBindingManager = blockchain.NewBlockBindingManager(app.state.LastHeight, app.config.BlockBoundTxGracePeriod)
+	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
 
 	app.store.SetBalance(t1.PubKey().Address(), new(types.Currency).Set(50000))
 
@@ -1189,8 +1182,8 @@ func TestBindingBlock(t *testing.T) {
 
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 4}})
 
-	assert.Equal(t, code.TxCodeTooOldTx, app.CheckTx(abci.RequestCheckTx{Tx: tx4}).Code)
-	assert.Equal(t, code.TxCodeTooOldTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx4}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.CheckTx(abci.RequestCheckTx{Tx: tx4}).Code)
+	assert.Equal(t, code.TxCodeImproperTx, app.DeliverTx(abci.RequestDeliverTx{Tx: tx4}).Code)
 
 	assert.Equal(t, code.TxCodeOK, app.CheckTx(abci.RequestCheckTx{Tx: tx5}).Code)
 	assert.Equal(t, code.TxCodeOK, app.DeliverTx(abci.RequestDeliverTx{Tx: tx5}).Code)
@@ -1350,14 +1343,14 @@ func TestGovernance(t *testing.T) {
 	// total: 15, voters: 10(yay: 2, nay: 8), non-voters: 5
 
 	// check target value before draft application
-	assert.Equal(t, defaultBlockBoundTxGracePeriod, app.config.BlockBoundTxGracePeriod)
+	assert.Equal(t, defaultBlockBindingWindow, app.config.BlockBindingWindow)
 
 	// proposer propose a draft in height 4
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 4}})
 
 	draftID = uint32(2)
 	cfg = app.config
-	cfg.BlockBoundTxGracePeriod = uint64(100000000)
+	cfg.BlockBindingWindow = int64(100000000)
 	desc = "block_bound_tx_grace_period should be longer for no reason"
 
 	// imitate 'propose' tx
@@ -1450,7 +1443,7 @@ func TestGovernance(t *testing.T) {
 	assert.NoError(t, err)
 
 	// after target: should be same as befor drafte
-	assert.Equal(t, defaultBlockBoundTxGracePeriod, app.config.BlockBoundTxGracePeriod)
+	assert.Equal(t, defaultBlockBindingWindow, app.config.BlockBindingWindow)
 }
 
 func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64, lastHeight string) []byte {

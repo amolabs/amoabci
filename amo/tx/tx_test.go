@@ -338,9 +338,8 @@ func TestRegister(t *testing.T) {
 	assert.NoError(t, s.SetStorage(uint32(123), mysto))
 
 	// register with active storage but not enough balance for registration fee
-	rc, rs, _ := t1.Execute(s)
+	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
-	t.Log(rs)
 
 	// with some balance, do it again
 	s.SetBalance(makeAccAddr("seller"), new(types.Currency).SetAMO(1))
@@ -1138,25 +1137,25 @@ func TestPropose(t *testing.T) {
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NotNil(t, s)
 	ConfigAMOApp = types.AMOAppConfig{
-		MaxValidators:           uint64(100),
-		WeightValidator:         uint64(2),
-		WeightDelegator:         uint64(1),
-		MinStakingUnit:          *new(types.Currency).Set(100),
-		BlkReward:               *new(types.Currency).Set(1000),
-		TxReward:                *new(types.Currency).Set(1000),
-		PenaltyRatioM:           float64(0.1),
-		PenaltyRatioL:           float64(0.1),
-		LazinessCounterWindow:   int64(10000),
-		LazinessThreshold:       float64(0.9),
-		BlockBoundTxGracePeriod: uint64(10000),
-		LockupPeriod:            uint64(10000),
-		DraftOpenCount:          uint64(10000),
-		DraftCloseCount:         uint64(10000),
-		DraftApplyCount:         uint64(10000),
-		DraftDeposit:            *new(types.Currency).Set(1000),
-		DraftQuorumRate:         float64(0.1),
-		DraftPassRate:           float64(0.7),
-		DraftRefundRate:         float64(0.2),
+		MaxValidators:         uint64(100),
+		WeightValidator:       uint64(2),
+		WeightDelegator:       uint64(1),
+		MinStakingUnit:        *new(types.Currency).Set(100),
+		BlkReward:             *new(types.Currency).Set(1000),
+		TxReward:              *new(types.Currency).Set(1000),
+		PenaltyRatioM:         float64(0.1),
+		PenaltyRatioL:         float64(0.1),
+		LazinessCounterWindow: int64(10000),
+		LazinessThreshold:     float64(0.9),
+		BlockBindingWindow:    int64(10000),
+		LockupPeriod:          uint64(10000),
+		DraftOpenCount:        uint64(10000),
+		DraftCloseCount:       uint64(10000),
+		DraftApplyCount:       uint64(10000),
+		DraftDeposit:          *new(types.Currency).Set(1000),
+		DraftQuorumRate:       float64(0.1),
+		DraftPassRate:         float64(0.7),
+		DraftRefundRate:       float64(0.2),
 	}
 
 	// target
@@ -1296,25 +1295,25 @@ func TestVote(t *testing.T) {
 
 	// set dummy draft
 	cfg := types.AMOAppConfig{
-		MaxValidators:           uint64(100),
-		WeightValidator:         uint64(2),
-		WeightDelegator:         uint64(1),
-		MinStakingUnit:          *new(types.Currency).Set(100),
-		BlkReward:               *new(types.Currency).Set(1000),
-		TxReward:                *new(types.Currency).Set(1000),
-		PenaltyRatioM:           float64(0.1),
-		PenaltyRatioL:           float64(0.1),
-		LazinessCounterWindow:   int64(10000),
-		LazinessThreshold:       float64(0.9),
-		BlockBoundTxGracePeriod: uint64(10000),
-		LockupPeriod:            uint64(10000),
-		DraftOpenCount:          uint64(10000),
-		DraftCloseCount:         uint64(10000),
-		DraftApplyCount:         uint64(10000),
-		DraftDeposit:            *new(types.Currency).Set(1000),
-		DraftQuorumRate:         float64(0.1),
-		DraftPassRate:           float64(0.7),
-		DraftRefundRate:         float64(0.2),
+		MaxValidators:         uint64(100),
+		WeightValidator:       uint64(2),
+		WeightDelegator:       uint64(1),
+		MinStakingUnit:        *new(types.Currency).Set(100),
+		BlkReward:             *new(types.Currency).Set(1000),
+		TxReward:              *new(types.Currency).Set(1000),
+		PenaltyRatioM:         float64(0.1),
+		PenaltyRatioL:         float64(0.1),
+		LazinessCounterWindow: int64(10000),
+		LazinessThreshold:     float64(0.9),
+		BlockBindingWindow:    int64(10000),
+		LockupPeriod:          uint64(10000),
+		DraftOpenCount:        uint64(10000),
+		DraftCloseCount:       uint64(10000),
+		DraftApplyCount:       uint64(10000),
+		DraftDeposit:          *new(types.Currency).Set(1000),
+		DraftQuorumRate:       float64(0.1),
+		DraftPassRate:         float64(0.7),
+		DraftRefundRate:       float64(0.2),
 	}
 
 	StateNextDraftID = uint32(1)

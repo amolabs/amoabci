@@ -7,13 +7,18 @@ import (
 )
 
 func TestBlockBindingTx(t *testing.T) {
-	ok := CheckBlockBindingTx(1, 10, 5)
-	assert.False(t, ok)
-	ok = CheckBlockBindingTx(1, 10, 20)
-	assert.True(t, ok)
+	err := checkBlockBindingTx(1, 10, 5)
+	assert.Error(t, err)
+	err = checkBlockBindingTx(1, 10, 20)
+	assert.NoError(t, err)
 
-	ok = CheckBlockBindingTx(11, 10, 20)
-	assert.False(t, ok)
-	ok = CheckBlockBindingTx(11, 20, 20)
-	assert.True(t, ok)
+	err = checkBlockBindingTx(11, 10, 20)
+	assert.Error(t, err)
+	err = checkBlockBindingTx(11, 20, 20)
+	assert.NoError(t, err)
+
+	err = checkBlockBindingTx(10, 30, 20)
+	assert.Error(t, err)
+	err = checkBlockBindingTx(11, 20, 20)
+	assert.NoError(t, err)
 }

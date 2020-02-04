@@ -1,5 +1,9 @@
 package blockchain
 
+import (
+	"errors"
+)
+
 // CheckBlockBindingTx: check avaiability of given txHeight
 // - gracePeriod: period for which tx can be accepted
 
@@ -20,19 +24,19 @@ package blockchain
 //           ====^ (h:14, f: 10, t:14)
 //            ====^ (h:15, f: 11, t:15)
 
-func CheckBlockBindingTx(txHeight, blockHeight, gracePeriod int64) bool {
+func checkBlockBindingTx(txHeight, blockHeight, gracePeriod int64) error {
 	var (
 		fromHeight int64 = 0
 		toHeight   int64 = blockHeight
 	)
 
 	if gracePeriod < blockHeight {
-		fromHeight = blockHeight - gracePeriod
+		fromHeight = blockHeight - gracePeriod + 1
 	}
 
-	if fromHeight <= txHeight && txHeight <= toHeight {
-		return true
+	if !(fromHeight <= txHeight && txHeight <= toHeight) {
+		return errors.New("failed to bind tx to block")
 	}
 
-	return false
+	return nil
 }
