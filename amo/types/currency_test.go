@@ -56,8 +56,17 @@ func TestCurrencyAdd(t *testing.T) {
 }
 
 func TestCurrencyMax(t *testing.T) {
-	_, err := new(Currency).SetString("7" + maxCurrencyHex[1:] , 16)
+	_, err := new(Currency).SetString("7"+maxCurrencyHex[1:], 16)
 	assert.NoError(t, err)
-	_, err = new(Currency).SetString(maxCurrencyHex + "FF" , 16)
+	_, err = new(Currency).SetString(maxCurrencyHex+"FF", 16)
 	assert.Error(t, err)
+}
+
+func TestCurrencyClone(t *testing.T) {
+	c := new(Currency).SetAMO(50)
+	cc, err := c.Clone()
+	assert.NoError(t, err)
+	c.Add(new(Currency).SetAMO(25))
+	assert.Equal(t, new(Currency).SetAMO(75), c)
+	assert.Equal(t, new(Currency).SetAMO(50), cc)
 }

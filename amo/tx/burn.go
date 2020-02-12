@@ -60,6 +60,8 @@ func (t *TxBurn) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
 	}
 	balance.Sub(&param.Amount)
 	s.SetUDCBalance(param.UDC, t.GetSender(), balance)
+	udc.Total.Sub(&param.Amount)
+	s.SetUDC(param.UDC, udc)
 
 	return code.TxCodeOK, "ok", nil
 }

@@ -390,11 +390,14 @@ func TestUDCBurn(t *testing.T) {
 
 	// set test balance
 	s.SetUDCBalance(uint32(123), makeAccAddr("holder"),
-		new(types.Currency).SetAMO(11))
+		new(types.Currency).SetAMO(11),
+	)
 
 	// ok
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	bal := s.GetUDCBalance(uint32(123), makeAccAddr("holder"), false)
 	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
+	mycoinAfter := s.GetUDC(uint32(123), false)
+	assert.Equal(t, *mycoin.Total.Sub(new(types.Currency).SetAMO(10)), mycoinAfter.Total)
 }

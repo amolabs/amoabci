@@ -439,9 +439,9 @@ func TestRequest(t *testing.T) {
 	// are valid also.
 	payload2, _ := json.Marshal(RequestParam{
 		Target:    parcelID,
-		Payment:   *new(types.Currency).SetAMO(1),
+		Payment:   *new(types.Currency).SetAMO(25),
 		Dealer:    makeAccAddr("dealer"),
-		DealerFee: *new(types.Currency).SetAMO(1),
+		DealerFee: *new(types.Currency).SetAMO(50),
 		Extra:     []byte(`"any json for req"`),
 	})
 	t2 := makeTestTx("request", "buyer", payload2)
@@ -451,15 +451,15 @@ func TestRequest(t *testing.T) {
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 	// do again with more money
-	s.SetBalance(makeAccAddr("buyer"), new(types.Currency).SetAMO(2))
+	s.SetBalance(makeAccAddr("buyer"), new(types.Currency).SetAMO(75))
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check balance
 	bal = s.GetBalance(makeAccAddr("buyer"), false)
 	assert.Equal(t, types.Zero, bal)
 	req = s.GetRequest(makeAccAddr("buyer"), parcelID, false)
-	assert.Equal(t, new(types.Currency).SetAMO(1), &req.Payment)
-	assert.Equal(t, new(types.Currency).SetAMO(1), &req.DealerFee)
+	assert.Equal(t, new(types.Currency).SetAMO(25), &req.Payment)
+	assert.Equal(t, new(types.Currency).SetAMO(50), &req.DealerFee)
 }
 
 func TestGrant(t *testing.T) {

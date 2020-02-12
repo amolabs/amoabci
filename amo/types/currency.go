@@ -73,6 +73,15 @@ func (c *Currency) SetBytes(x []byte) (*Currency, error) {
 	return c, nil
 }
 
+func (c *Currency) Clone() (*Currency, error) {
+	cc, err := new(Currency).SetString(c.String(), 10)
+	if err != nil {
+		return nil, err
+	}
+
+	return cc, nil
+}
+
 func (c Currency) String() string {
 	return c.Text(10)
 }
