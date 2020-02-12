@@ -80,9 +80,12 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	}
 
 	balance := store.GetBalance(t.GetSender(), false)
-	wanted := txParam.Payment
+	wanted, err := txParam.Payment.Clone()
+	if err != nil {
+		return code.TxCodeInvalidAmount, err.Error(), nil
+	}
 	wanted.Add(&txParam.DealerFee)
-	if balance.LessThan(&wanted) {
+	if balance.LessThan(wanted) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 
@@ -96,7 +99,7 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		},
 	})
 
-	balance.Sub(&wanted)
+	balance.Sub(wanted)
 	store.SetBalance(t.GetSender(), balance)
 
 	tags := []tm.KVPair{
