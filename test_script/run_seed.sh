@@ -33,7 +33,7 @@ if [ $? -ne 0 ]; then fail $out; fi
 check_docker_status "seed"
 
 echo "get val1's tendermint node addr"
-out=$(docker exec -it seed tendermint show_node_id | tr -d '\015' | tr -d '^@')
+out=$(docker exec -it seed amod tendermint show_node_id | tr -d '\015' | tr -d '^@')
 if [ $? -ne 0 ]; then fail $out; fi
 
 echo "update validator nodes' peer set with val1addr on docker-compose.yml"

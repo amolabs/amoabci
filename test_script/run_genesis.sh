@@ -56,7 +56,7 @@ if [ $? -ne 0 ]; then fail $out; fi
 check_rpc_status
 
 echo "get val1's tendermint node addr"
-out=$(docker exec -it val1 tendermint show_node_id | tr -d '\015' | tr -d '^@')
+out=$(docker exec -it val1 amod tendermint show_node_id | tr -d '\015' | tr -d '^@')
 if [ $? -ne 0 ]; then fail $out; fi
 
 echo "update seed node's peer set with val1addr on docker-compose.yml"
