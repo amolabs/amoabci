@@ -2,7 +2,7 @@
 
 #### builder image
 
-FROM golang:1.12-alpine3.9
+FROM golang:1.13-alpine3.11
 
 # tools
 RUN apk add bash git make gcc g++
@@ -29,7 +29,7 @@ RUN make -C amoabci build_c
 
 #### runner image
 
-FROM alpine:3.9
+FROM alpine:3.11
 
 # tools & libs
 RUN apk add bash snappy
