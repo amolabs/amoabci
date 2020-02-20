@@ -18,10 +18,9 @@ var (
 	defaultIncentiveDB    = "incentive"
 	defaultGroupCounterDB = "group_counter"
 
-	defaultStateFile  = "state.json"
-	defaultConfigFile = "config.toml"
+	defaultStateFile = "state.json"
 
-	defaultAMODirPath = filepath.Join(os.ExpandEnv("$HOME"), defaultAMODir)
+	DefaultAMODirPath = filepath.Join(os.ExpandEnv("$HOME"), defaultAMODir)
 )
 
 var RootCmd = &cobra.Command{

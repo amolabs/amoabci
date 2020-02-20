@@ -19,12 +19,12 @@ echo "run seed node"
 out=$(docker-compose up --no-start seed)
 if [ $? -ne 0 ]; then fail $out; fi
 
-out=$(docker-compose run --rm seed mkdir -p /tendermint/config)
+out=$(docker-compose run --rm seed mkdir -p /amo/config)
 if [ $? -ne 0 ]; then fail $out; fi
 
 WD=$(dirname $0)
 
-out=$(docker cp $WD/genesis.json seed:/tendermint/config/)
+out=$(docker cp $WD/genesis.json seed:/amo/config/)
 if [ $? -ne 0 ]; then fail $out; fi
 
 out=$(docker-compose up -d seed)

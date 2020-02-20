@@ -21,16 +21,11 @@ import (
 	"github.com/amolabs/amoabci/amo/store"
 )
 
-/* Commands (expected hierarchy)
- *
- * amod |- run
- */
-
 var RunCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Execute the daemon",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		amoDirPath, err := cmd.Flags().GetString("amo-home")
+		amoDirPath, err := cmd.Flags().GetString("home")
 		if err != nil {
 			return err
 		}
@@ -56,21 +51,29 @@ var RunCmd = &cobra.Command{
 }
 
 func initApp(amoDirPath string) (*nm.Node, error) {
-	// amo dir
-	if _, err := os.Stat(amoDirPath); os.IsNotExist(err) {
-		os.Mkdir(amoDirPath, os.FileMode(0700))
+	// parse config
+	config := cfg.DefaultConfig()
+	err := viper.Unmarshal(config)
+	if err != nil {
+		return nil, err
+	}
+	config.SetRoot(config.RootDir)
+	cfg.EnsureRoot(config.RootDir)
+	err = config.ValidateBasic()
+	if err != nil {
+		return nil, err
 	}
 
+	dataDirPath := filepath.Join(config.RootDir, defaultDataDir)
+
 	// state file
-	stateFilePath := filepath.Join(amoDirPath, defaultStateFile)
+	stateFilePath := filepath.Join(dataDirPath, defaultStateFile)
 	stateFile, err := os.OpenFile(stateFilePath, os.O_CREATE, os.FileMode(0644))
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: do not use hard-coded value. use value from configuration.
-	dataDirPath := filepath.Join(amoDirPath, defaultDataDir)
-
 	merkleDB, err := store.NewDBProxy(defaultMerkleDB, dataDirPath)
 	if err != nil {
 		return nil, err
@@ -101,7 +104,7 @@ func initApp(amoDirPath string) (*nm.Node, error) {
 		appLogger.With("module", "abci-app"),
 	)
 
-	node, err := newTM(app)
+	node, err := newTM(app, config)
 	if err != nil {
 		return nil, err
 	}
@@ -109,23 +112,10 @@ func initApp(amoDirPath string) (*nm.Node, error) {
 	return node, nil
 }
 
-func newTM(app abci.Application) (*nm.Node, error) {
-	// parse config
-	config := cfg.DefaultConfig()
-	err := viper.Unmarshal(config)
-	if err != nil {
-		return nil, err
-	}
-	config.SetRoot(config.RootDir)
-	cfg.EnsureRoot(config.RootDir)
-	err = config.ValidateBasic()
-	if err != nil {
-		return nil, err
-	}
-
+func newTM(app abci.Application, config *cfg.Config) (*nm.Node, error) {
 	// logger
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-	logger, err = tmflags.ParseLogLevel(config.LogLevel, logger, cfg.DefaultLogLevel())
+	logger, err := tmflags.ParseLogLevel(config.LogLevel, logger, cfg.DefaultLogLevel())
 	if err != nil {
 		return nil, err
 	}
@@ -157,5 +147,4 @@ func newTM(app abci.Application) (*nm.Node, error) {
 
 func init() {
 	// init here
-	RunCmd.Flags().String("amo-home", defaultAMODirPath, "AMO home directory")
 }

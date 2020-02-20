@@ -2,18 +2,17 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 
 	"github.com/amolabs/amoabci/cmd/amod/cmd"
 	"github.com/spf13/cobra"
 	tm "github.com/tendermint/tendermint/cmd/tendermint/commands"
-	cfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/libs/cli"
 )
 
 /* Commands (expected hierarchy)
  *
  * amod |- run
+ *      |- tendermint
  */
 
 func main() {
@@ -38,8 +37,8 @@ func main() {
 		tm.VersionCmd,
 	)
 
-	cli.PrepareBaseCmd(runCmd, "TM", os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir)))
-	cli.PrepareBaseCmd(tmCmd, "TM", os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir)))
+	cli.PrepareBaseCmd(runCmd, "AMO", cmd.DefaultAMODirPath)
+	cli.PrepareBaseCmd(tmCmd, "AMO", cmd.DefaultAMODirPath)
 
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(tmCmd)

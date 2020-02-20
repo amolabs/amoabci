@@ -38,14 +38,11 @@ RUN apk add bash snappy
 COPY --from=0 /usr/lib/libleveldb.so* /usr/lib/
 COPY --from=0 /usr/lib/libgcc_s.so* /usr/lib/
 COPY --from=0 /usr/lib/libstdc++.so* /usr/lib/
-#COPY --from=0 /src/tendermint/build/tendermint /usr/bin/
 COPY --from=0 /src/amoabci/amod /usr/bin/
 COPY DOCKER/run_node.sh DOCKER/config/* /
 
 ENV AMOHOME /amo
-ENV TMHOME /tendermint
 VOLUME [ $AMOHOME ]
-VOLUME [ $TMHOME ]
 
 WORKDIR /
 

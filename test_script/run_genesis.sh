@@ -36,18 +36,18 @@ echo "run val1(genesis) node"
 out=$(docker-compose up --no-start val1)
 if [ $? -ne 0 ]; then fail $out; fi
 
-out=$(docker-compose run --rm val1 mkdir -p /tendermint/config)
+out=$(docker-compose run --rm val1 mkdir -p /amo/config)
 if [ $? -ne 0 ]; then fail $out; fi
-out=$(docker-compose run --rm val1 mkdir -p /tendermint/data)
+out=$(docker-compose run --rm val1 mkdir -p /amo/data)
 if [ $? -ne 0 ]; then fail $out; fi
 
 WD=$(dirname $0)
 
-out=$(docker cp $WD/genesis.json val1:/tendermint/config/)
+out=$(docker cp $WD/genesis.json val1:/amo/config/)
 if [ $? -ne 0 ]; then fail $out; fi
-out=$(docker cp $WD/priv_validator_key.json val1:/tendermint/config/)
+out=$(docker cp $WD/priv_validator_key.json val1:/amo/config/)
 if [ $? -ne 0 ]; then fail $out; fi
-out=$(docker cp $WD/priv_validator_state.json val1:/tendermint/data/)
+out=$(docker cp $WD/priv_validator_state.json val1:/amo/data/)
 if [ $? -ne 0 ]; then fail $out; fi
 
 out=$(docker-compose up -d val1)

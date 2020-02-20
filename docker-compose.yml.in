@@ -15,7 +15,6 @@ services:
       - MONIKER=seed
       - PEERS=__val1_addr__@val1:26656
     volumes:
-      - __dataroot__/seed/tendermint:/tendermint:Z
       - __dataroot__/seed/amo:/amo:Z
 
   val1:
@@ -29,7 +28,6 @@ services:
     ports:
       - "26656-26657:26656-26657"
     volumes:
-      - __dataroot__/val1/tendermint:/tendermint:Z
       - __dataroot__/val1/amo:/amo:Z
 
   val2:
@@ -41,7 +39,6 @@ services:
       - MONIKER=val2
       - PEERS=__seed_addr__@seed:26656
     volumes:
-      - __dataroot__/val2/tendermint:/tendermint:Z
       - __dataroot__/val2/amo:/amo:Z
 
   val3:
@@ -53,7 +50,6 @@ services:
       - MONIKER=val3
       - PEERS=__seed_addr__@seed:26656
     volumes:
-      - __dataroot__/val3/tendermint:/tendermint:Z
       - __dataroot__/val3/amo:/amo:Z
 
   val4:
@@ -65,7 +61,6 @@ services:
       - MONIKER=val4
       - PEERS=__seed_addr__@seed:26656
     volumes:
-        - __dataroot__/val4/tendermint:/tendermint:Z
         - __dataroot__/val4/amo:/amo:Z
 
   val5:
@@ -77,7 +72,6 @@ services:
       - MONIKER=val5
       - PEERS=__seed_addr__@seed:26656
     volumes:
-        - __dataroot__/val5/tendermint:/tendermint:Z
         - __dataroot__/val5/amo:/amo:Z
 
   val6:
@@ -89,7 +83,6 @@ services:
       - MONIKER=val6
       - PEERS=__seed_addr__@seed:26656
     volumes:
-        - __dataroot__/val6/tendermint:/tendermint:Z
         - __dataroot__/val6/amo:/amo:Z
 
 
