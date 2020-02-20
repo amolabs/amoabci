@@ -19,10 +19,6 @@ RUN tar zxvf v1.20.tar.gz
 RUN cp -a leveldb-1.20/include/leveldb /usr/include/
 COPY contrib/leveldb/bin/libleveldb.so* /usr/lib/ 
 
-# tendermint
-RUN git clone -b v0.32.8 https://github.com/tendermint/tendermint
-RUN make -C tendermint build_c
-
 # amod
 RUN mkdir -p amoabci
 COPY Makefile go.mod go.sum amoabci/
@@ -42,7 +38,7 @@ RUN apk add bash snappy
 COPY --from=0 /usr/lib/libleveldb.so* /usr/lib/
 COPY --from=0 /usr/lib/libgcc_s.so* /usr/lib/
 COPY --from=0 /usr/lib/libstdc++.so* /usr/lib/
-COPY --from=0 /src/tendermint/build/tendermint /usr/bin/
+#COPY --from=0 /src/tendermint/build/tendermint /usr/bin/
 COPY --from=0 /src/amoabci/amod /usr/bin/
 COPY DOCKER/run_node.sh DOCKER/config/* /
 

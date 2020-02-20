@@ -15,10 +15,9 @@ if [ ! -f /tendermint/config/config.toml -a ! -z "$MONIKER" ]; then
 	mv -f config.toml /tendermint/config/
 fi
 
-/usr/bin/tendermint init
+/usr/bin/amod tendermint init
 
 # TODO: ensure directory
 mkdir -p /amo/data
 
-/usr/bin/amod --home=/amo run &
-/usr/bin/tendermint --home /tendermint node
+/usr/bin/amod --amo-home=/amo --home=/tendermint run
