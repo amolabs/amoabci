@@ -24,12 +24,12 @@ do
 	out=$(docker-compose up --no-start val$i)
 	if [ $? -ne 0 ]; then fail $out; fi
 
-	out=$(docker-compose run --rm val$i mkdir -p /tendermint/config)
+	out=$(docker-compose run --rm val$i mkdir -p /amo/config)
 	if [ $? -ne 0 ]; then fail $out; fi
 
 	WD=$(dirname $0)
 	
-	out=$(docker cp $WD/genesis.json val$i:/tendermint/config/)
+	out=$(docker cp $WD/genesis.json val$i:/amo/config/)
 	if [ $? -ne 0 ]; then fail $out; fi
 
 	out=$(docker-compose up -d val$i)

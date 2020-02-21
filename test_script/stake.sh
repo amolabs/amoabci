@@ -21,7 +21,7 @@ $ROOT/qs.sh "$NODENUM"
 for ((i=FROM; i<=NODENUM; i++))
 do
     addr=tval$i
-    out=$(docker exec -it val$i tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
+    out=$(docker exec -it val$i amod tendermint show_validator | python -c "import sys, json; print json.load(sys.stdin)['value']")
 	if [ $? -ne 0 ]; then fail $out; fi
 
 	echo "stake to tval$i: $(bc <<< "$AMOUNT / $AMO1") AMO"

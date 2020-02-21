@@ -1,4 +1,4 @@
-if [ ! -f /tendermint/config/config.toml -a ! -z "$MONIKER" ]; then
+if [ ! -f /amo/config/config.toml -a ! -z "$MONIKER" ]; then
 	echo "set moniker = $MONIKER"
 	echo "set peers = $PEERS"
 
@@ -11,14 +11,13 @@ if [ ! -f /tendermint/config/config.toml -a ! -z "$MONIKER" ]; then
 	sed -e s/@peers@/$PEERS/ -i.tmp config.toml
 	sed -e s/@external@/tcp:\\/\\/$extaddr:26656/ -i.tmp config.toml
 
-	mkdir -p /tendermint/config/
-	mv -f config.toml /tendermint/config/
+	mkdir -p /amo/config/
+	mv -f config.toml /amo/config/
 fi
 
-/usr/bin/tendermint init
+/usr/bin/amod tendermint init
 
 # TODO: ensure directory
 mkdir -p /amo/data
 
-/usr/bin/amod --home=/amo run &
-/usr/bin/tendermint --home /tendermint node
+/usr/bin/amod run

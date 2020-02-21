@@ -1,34 +1,33 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:              "amod",
-	Short:            "AMO daemon management",
-	PersistentPreRun: nil,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := cmd.Help(); err != nil {
-			return err
-		}
+var (
+	defaultAMODir = ".amo"
 
-		return nil
-	},
+	defaultDataDir   = "data"
+	defaultConfigDir = "config"
+
+	defaultMerkleDB       = "merkle"
+	defaultIndexDB        = "index"
+	defaultIncentiveDB    = "incentive"
+	defaultGroupCounterDB = "group_counter"
+
+	defaultStateFile = "state.json"
+
+	DefaultAMODirPath = filepath.Join(os.ExpandEnv("$HOME"), defaultAMODir)
+)
+
+var RootCmd = &cobra.Command{
+	Use:   "amod",
+	Short: "AMO daemon management",
 }
 
-// Execute function is the main gate to this app
-func Execute() {
-	cobra.EnableCommandSorting = false
-
-	rootCmd.AddCommand(runCmd)
-	rootCmd.PersistentFlags().String("home", defaultAMODirPath, "AMO home directory")
-
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+func init() {
+	// init here
 }

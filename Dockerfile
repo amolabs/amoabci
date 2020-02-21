@@ -2,7 +2,7 @@
 
 #### builder image
 
-FROM golang:1.12-alpine3.9
+FROM golang:1.13-alpine3.11
 
 # tools
 RUN apk add bash git make gcc g++
@@ -19,10 +19,6 @@ RUN tar zxvf v1.20.tar.gz
 RUN cp -a leveldb-1.20/include/leveldb /usr/include/
 COPY contrib/leveldb/bin/libleveldb.so* /usr/lib/ 
 
-# tendermint
-RUN git clone -b v0.32.8 https://github.com/tendermint/tendermint
-RUN make -C tendermint build_c
-
 # amod
 RUN mkdir -p amoabci
 COPY Makefile go.mod go.sum amoabci/
@@ -33,7 +29,7 @@ RUN make -C amoabci build_c
 
 #### runner image
 
-FROM alpine:3.9
+FROM alpine:3.11
 
 # tools & libs
 RUN apk add bash snappy
@@ -42,14 +38,11 @@ RUN apk add bash snappy
 COPY --from=0 /usr/lib/libleveldb.so* /usr/lib/
 COPY --from=0 /usr/lib/libgcc_s.so* /usr/lib/
 COPY --from=0 /usr/lib/libstdc++.so* /usr/lib/
-COPY --from=0 /src/tendermint/build/tendermint /usr/bin/
 COPY --from=0 /src/amoabci/amod /usr/bin/
 COPY DOCKER/run_node.sh DOCKER/config/* /
 
 ENV AMOHOME /amo
-ENV TMHOME /tendermint
 VOLUME [ $AMOHOME ]
-VOLUME [ $TMHOME ]
 
 WORKDIR /
 
