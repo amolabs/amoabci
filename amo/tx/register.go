@@ -15,8 +15,8 @@ import (
 type RegisterParam struct {
 	Target       tm.HexBytes     `json:"target"`
 	Custody      tm.HexBytes     `json:"custody"`
-	ProxyAccount tm.HexBytes     `json:"proxy_account"`
-	Extra        json.RawMessage `json:"extra"`
+	ProxyAccount tm.HexBytes     `json:"proxy_account,omitempty"`
+	Extra        json.RawMessage `json:"extra,omitempty"`
 }
 
 func parseRegisterParam(raw []byte) (RegisterParam, error) {

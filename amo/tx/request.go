@@ -17,7 +17,7 @@ type RequestParam struct {
 	Payment   types.Currency  `json:"payment"`
 	Dealer    crypto.Address  `json:"dealer,omitempty"`
 	DealerFee types.Currency  `json:"dealer_fee,omitempty"`
-	Extra     json.RawMessage `json:"extra"`
+	Extra     json.RawMessage `json:"extra,omitempty"`
 }
 
 func parseRequestParam(raw []byte) (RequestParam, error) {
