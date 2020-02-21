@@ -14,11 +14,10 @@ import (
 )
 
 type GrantParam struct {
-	Target  tm.HexBytes    `json:"target"`
-	Grantee crypto.Address `json:"grantee"`
-	Custody tm.HexBytes    `json:"custody"`
-
-	Extra json.RawMessage `json:"extra"`
+	Target  tm.HexBytes     `json:"target"`
+	Grantee crypto.Address  `json:"grantee"`
+	Custody tm.HexBytes     `json:"custody"`
+	Extra   json.RawMessage `json:"extra,omitempty"`
 }
 
 func parseGrantParam(raw []byte) (GrantParam, error) {
