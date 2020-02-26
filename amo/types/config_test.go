@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/amolabs/amoabci/amo"
 )
 
 func TestConfigCheckValue(t *testing.T) {
@@ -29,31 +31,55 @@ func TestConfigCheckValue(t *testing.T) {
 		DraftRefundRate:       float64(0.2),
 	}
 
+	state := amo.State{Height: 1, ProtocolVersion: 2}
+
 	payload := []byte(`{"non_existing_config": "0"}`)
-	_, err := cfg.Check(payload)
-	assert.NotNil(t, err)
+	_, err := cfg.Check(state, payload)
+	assert.Error(t, err)
 
 	payload = []byte(`{"lockup_period": 100}`)
-	_, err = cfg.Check(payload)
-	assert.NotNil(t, err)
+	_, err = cfg.Check(state, payload)
+	assert.Error(t, err)
 
 	payload = []byte(`{"blk_reward": "-1"}`)
-	_, err = cfg.Check(payload)
-	assert.NotNil(t, err)
+	_, err = cfg.Check(state, payload)
+	assert.Error(t, err)
 
 	payload = []byte(`{"lockup_period": 100000}`)
-	changedCfg, err := cfg.Check(payload)
-	assert.Nil(t, err)
+	changedCfg, err := cfg.Check(state, payload)
+	assert.NoError(t, err)
 	assert.NotEqual(t, changedCfg.LockupPeriod, cfg.LockupPeriod)
 
 	payload = []byte(`{"blk_reward": "0"}`)
-	changedCfg, err = cfg.Check(payload)
-	assert.Nil(t, err)
+	changedCfg, err = cfg.Check(state, payload)
+	assert.NoError(t, err)
 	assert.NotEqual(t, changedCfg.BlkReward, cfg.BlkReward)
 
 	payload = []byte(`{"blk_reward": "100", "lockup_period": 1000000}`)
-	changedCfg, err = cfg.Check(payload)
-	assert.Nil(t, err)
+	changedCfg, err = cfg.Check(state, payload)
+	assert.NoError(t, err)
 	assert.NotEqual(t, changedCfg.BlkReward, cfg.BlkReward)
 	assert.NotEqual(t, changedCfg.LockupPeriod, cfg.LockupPeriod)
+
+	payload = []byte(`{"upgrade_protocol_height": 10}`)
+	_, err = cfg.Check(state, payload)
+	assert.Error(t, err)
+
+	payload = []byte(`{"upgrade_protocol_version": 1}`)
+	_, err = cfg.Check(state, payload)
+	assert.Error(t, err)
+
+	payload = []byte(`{"upgrade_protocol_version": 2}`)
+	_, err = cfg.Check(state, payload)
+	assert.Error(t, err)
+
+	payload = []byte(`{"upgrade_protocol_version": 4}`)
+	_, err = cfg.Check(state, payload)
+	assert.Error(t, err)
+
+	payload = []byte(`{"upgrade_protocol_height": 30005, "upgrade_protocol_version": 3}`)
+	changedCfg, err = cfg.Check(state, payload)
+	assert.NoError(t, err)
+	assert.NotEqual(t, changedCfg.UpgradeProtocolHeight, cfg.UpgradeProtocolHeight)
+	assert.NotEqual(t, changedCfg.UpgradeProtocolVersion, cfg.UpgradeProtocolVersion)
 }
