@@ -1459,16 +1459,19 @@ func TestProtocolUpgrade(t *testing.T) {
 	app.config.UpgradeProtocolVersion = 2
 
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 9}})
-	app.Commit()
 	app.EndBlock(abci.RequestEndBlock{Height: 9})
+	app.Commit()
 
 	assert.Equal(t, 1, app.state.ProtocolVersion)
 
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 10}})
-	app.Commit()
 	app.EndBlock(abci.RequestEndBlock{Height: 10})
+	app.Commit()
 
 	assert.Equal(t, 2, app.state.ProtocolVersion)
+
+	err := app.checkProtocolVersion(AMOProtocolVersion)
+	assert.Error(t, err)
 }
 
 func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64, lastHeight string) []byte {
