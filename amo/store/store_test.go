@@ -647,9 +647,9 @@ func TestDraft(t *testing.T) {
 		Config:   types.AMOAppConfig{TxReward: *txReward},
 		Desc:     "nothing to describe",
 
-		OpenCount:  uint64(100),
-		CloseCount: uint64(10),
-		ApplyCount: uint64(100),
+		OpenCount:  int64(100),
+		CloseCount: int64(10),
+		ApplyCount: int64(100),
 		Deposit:    *new(types.Currency).Set(1000),
 
 		TallyQuorum:  *new(types.Currency).Set(100000),

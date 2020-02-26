@@ -18,9 +18,9 @@ type AMOAppConfig struct {
 	LazinessThreshold     float64  `json:"laziness_threshold"`
 	BlockBindingWindow    int64    `json:"block_binding_window"`
 	LockupPeriod          uint64   `json:"lockup_period"`
-	DraftOpenCount        uint64   `json:"draft_open_count"`
-	DraftCloseCount       uint64   `json:"draft_close_count"`
-	DraftApplyCount       uint64   `json:"draft_apply_count"`
+	DraftOpenCount        int64    `json:"draft_open_count"`
+	DraftCloseCount       int64    `json:"draft_close_count"`
+	DraftApplyCount       int64    `json:"draft_apply_count"`
 	DraftDeposit          Currency `json:"draft_deposit"`
 	DraftQuorumRate       float64  `json:"draft_quorum_rate"`
 	DraftPassRate         float64  `json:"draft_pass_rate"`
@@ -71,9 +71,9 @@ func (cfg *AMOAppConfig) Check(txCfgRaw json.RawMessage) (AMOAppConfig, error) {
 		cmp(tmpCfg.LazinessThreshold, ">", float64(0)) &&
 		cmp(tmpCfg.BlockBindingWindow, ">=", int64(10000)) &&
 		cmp(tmpCfg.LockupPeriod, ">=", uint64(10000)) &&
-		cmp(tmpCfg.DraftOpenCount, ">=", uint64(10000)) &&
-		cmp(tmpCfg.DraftCloseCount, ">=", uint64(10000)) &&
-		cmp(tmpCfg.DraftApplyCount, ">=", uint64(10000)) &&
+		cmp(tmpCfg.DraftOpenCount, ">=", int64(10000)) &&
+		cmp(tmpCfg.DraftCloseCount, ">=", int64(10000)) &&
+		cmp(tmpCfg.DraftApplyCount, ">=", int64(10000)) &&
 		cmp(tmpCfg.DraftDeposit, ">=", *Zero) &&
 		cmp(tmpCfg.DraftQuorumRate, ">", float64(0)) &&
 		cmp(tmpCfg.DraftPassRate, ">", float64(0)) &&

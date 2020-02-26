@@ -1149,9 +1149,9 @@ func TestPropose(t *testing.T) {
 		LazinessThreshold:     float64(0.9),
 		BlockBindingWindow:    int64(10000),
 		LockupPeriod:          uint64(10000),
-		DraftOpenCount:        uint64(10000),
-		DraftCloseCount:       uint64(10000),
-		DraftApplyCount:       uint64(10000),
+		DraftOpenCount:        int64(10000),
+		DraftCloseCount:       int64(10000),
+		DraftApplyCount:       int64(10000),
 		DraftDeposit:          *new(types.Currency).Set(1000),
 		DraftQuorumRate:       float64(0.1),
 		DraftPassRate:         float64(0.7),
@@ -1307,9 +1307,9 @@ func TestVote(t *testing.T) {
 		LazinessThreshold:     float64(0.9),
 		BlockBindingWindow:    int64(10000),
 		LockupPeriod:          uint64(10000),
-		DraftOpenCount:        uint64(10000),
-		DraftCloseCount:       uint64(10000),
-		DraftApplyCount:       uint64(10000),
+		DraftOpenCount:        int64(10000),
+		DraftCloseCount:       int64(10000),
+		DraftApplyCount:       int64(10000),
 		DraftDeposit:          *new(types.Currency).Set(1000),
 		DraftQuorumRate:       float64(0.1),
 		DraftPassRate:         float64(0.7),
@@ -1324,9 +1324,9 @@ func TestVote(t *testing.T) {
 		Desc:     "any desc",
 
 		// imitate beginning of draft vote situation
-		OpenCount:  uint64(0),
-		CloseCount: uint64(1000),
-		ApplyCount: uint64(10000),
+		OpenCount:  int64(0),
+		CloseCount: int64(1000),
+		ApplyCount: int64(10000),
 		Deposit:    *new(types.Currency).Set(100),
 
 		TallyQuorum:  *new(types.Currency).Set(0),
@@ -1372,9 +1372,9 @@ func TestVote(t *testing.T) {
 		Desc:     "any desc",
 
 		// imitate ending of draft vote situation
-		OpenCount:  uint64(0),
-		CloseCount: uint64(0),
-		ApplyCount: uint64(10000),
+		OpenCount:  int64(0),
+		CloseCount: int64(0),
+		ApplyCount: int64(10000),
 		Deposit:    *new(types.Currency).Set(100),
 
 		TallyQuorum:  *new(types.Currency).Set(0),

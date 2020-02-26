@@ -916,14 +916,14 @@ func (s Store) ProcessDraftVotes(
 
 	// decrement draft's open, close, apply counts
 	if draft.OpenCount > 0 && draft.CloseCount > 0 && draft.ApplyCount > 0 {
-		draft.OpenCount -= uint64(1)
+		draft.OpenCount -= int64(1)
 	} else if draft.OpenCount == 0 && draft.CloseCount > 0 && draft.ApplyCount > 0 {
-		draft.CloseCount -= uint64(1)
+		draft.CloseCount -= int64(1)
 		if draft.CloseCount == 0 {
 			voteJustGotClosed = true
 		}
 	} else if draft.OpenCount == 0 && draft.CloseCount == 0 && draft.ApplyCount > 0 {
-		draft.ApplyCount -= uint64(1)
+		draft.ApplyCount -= int64(1)
 		if draft.ApplyCount == 0 {
 			applyDraftConfig = true
 		}

@@ -186,9 +186,9 @@ const (
 	defaultBlockBindingWindow = int64(10000)
 	defaultLockupPeriod       = uint64(1000000)
 
-	defaultDraftOpenCount  = uint64(10000)
-	defaultDraftCloseCount = uint64(10000)
-	defaultDraftApplyCount = uint64(10000)
+	defaultDraftOpenCount  = int64(10000)
+	defaultDraftCloseCount = int64(10000)
+	defaultDraftApplyCount = int64(10000)
 	defaultDraftDeposit    = "1000000000000000000000000"
 	defaultDraftQuorumRate = float64(0.3)
 	defaultDraftPassRate   = float64(0.51)

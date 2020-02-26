@@ -9,9 +9,9 @@ type Draft struct {
 	Config   AMOAppConfig   `json:"config"`
 	Desc     string         `json:"desc"`
 
-	OpenCount  uint64   `json:"open_count"`
-	CloseCount uint64   `json:"close_count"`
-	ApplyCount uint64   `json:"apply_count"`
+	OpenCount  int64    `json:"open_count"`
+	CloseCount int64    `json:"close_count"`
+	ApplyCount int64    `json:"apply_count"`
 	Deposit    Currency `json:"deposit"`
 
 	TallyQuorum  Currency `json:"tally_quorum"`

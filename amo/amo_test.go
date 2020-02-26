@@ -1251,9 +1251,9 @@ func TestGovernance(t *testing.T) {
 		Proposer:     p,
 		Config:       cfg,
 		Desc:         desc,
-		OpenCount:    uint64(1),
-		CloseCount:   uint64(1),
-		ApplyCount:   uint64(1),
+		OpenCount:    int64(1),
+		CloseCount:   int64(1),
+		ApplyCount:   int64(1),
 		Deposit:      app.config.DraftDeposit,
 		TallyQuorum:  *types.Zero,
 		TallyApprove: *types.Zero,
@@ -1273,9 +1273,9 @@ func TestGovernance(t *testing.T) {
 
 	// check if draft is properly stored
 	draft := app.store.GetDraft(draftID, false)
-	assert.Equal(t, uint64(0), draft.OpenCount)
-	assert.Equal(t, uint64(1), draft.CloseCount)
-	assert.Equal(t, uint64(1), draft.ApplyCount)
+	assert.Equal(t, int64(0), draft.OpenCount)
+	assert.Equal(t, int64(1), draft.CloseCount)
+	assert.Equal(t, int64(1), draft.ApplyCount)
 
 	// voters vote for the draft in height 2
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 2}})
@@ -1294,9 +1294,9 @@ func TestGovernance(t *testing.T) {
 
 	// check if vote is closed and tally_* values are properly calculated
 	draft = app.store.GetDraft(draftID, false)
-	assert.Equal(t, uint64(0), draft.OpenCount)
-	assert.Equal(t, uint64(0), draft.CloseCount)
-	assert.Equal(t, uint64(1), draft.ApplyCount)
+	assert.Equal(t, int64(0), draft.OpenCount)
+	assert.Equal(t, int64(0), draft.CloseCount)
+	assert.Equal(t, int64(1), draft.ApplyCount)
 	assert.Equal(t, *new(types.Currency).Set(6000), draft.TallyApprove)
 	assert.Equal(t, *new(types.Currency).Set(4000), draft.TallyReject)
 
@@ -1325,9 +1325,9 @@ func TestGovernance(t *testing.T) {
 
 	// check if draft's counts are proper
 	draft = app.store.GetDraft(draftID, false)
-	assert.Equal(t, uint64(0), draft.OpenCount)
-	assert.Equal(t, uint64(0), draft.CloseCount)
-	assert.Equal(t, uint64(0), draft.ApplyCount)
+	assert.Equal(t, int64(0), draft.OpenCount)
+	assert.Equal(t, int64(0), draft.CloseCount)
+	assert.Equal(t, int64(0), draft.ApplyCount)
 
 	// imitate Commit() to load new app config
 	_, _, err = app.store.Save()
@@ -1358,9 +1358,9 @@ func TestGovernance(t *testing.T) {
 		Proposer:     p,
 		Config:       cfg,
 		Desc:         desc,
-		OpenCount:    uint64(1),
-		CloseCount:   uint64(1),
-		ApplyCount:   uint64(1),
+		OpenCount:    int64(1),
+		CloseCount:   int64(1),
+		ApplyCount:   int64(1),
 		Deposit:      app.config.DraftDeposit,
 		TallyQuorum:  *types.Zero,
 		TallyApprove: *types.Zero,
@@ -1380,9 +1380,9 @@ func TestGovernance(t *testing.T) {
 
 	// check if draft is properly stored
 	draft = app.store.GetDraft(draftID, false)
-	assert.Equal(t, uint64(0), draft.OpenCount)
-	assert.Equal(t, uint64(1), draft.CloseCount)
-	assert.Equal(t, uint64(1), draft.ApplyCount)
+	assert.Equal(t, int64(0), draft.OpenCount)
+	assert.Equal(t, int64(1), draft.CloseCount)
+	assert.Equal(t, int64(1), draft.ApplyCount)
 
 	// voters vote for the draft in height 5
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 5}})
@@ -1401,9 +1401,9 @@ func TestGovernance(t *testing.T) {
 
 	// check if vote is closed and tally_* values are properly calculated
 	draft = app.store.GetDraft(draftID, false)
-	assert.Equal(t, uint64(0), draft.OpenCount)
-	assert.Equal(t, uint64(0), draft.CloseCount)
-	assert.Equal(t, uint64(1), draft.ApplyCount)
+	assert.Equal(t, int64(0), draft.OpenCount)
+	assert.Equal(t, int64(0), draft.CloseCount)
+	assert.Equal(t, int64(1), draft.ApplyCount)
 	assert.Equal(t, *new(types.Currency).Set(2000), draft.TallyApprove)
 	assert.Equal(t, *new(types.Currency).Set(8000), draft.TallyReject)
 
@@ -1432,9 +1432,9 @@ func TestGovernance(t *testing.T) {
 
 	// check if draft's counts are proper
 	draft = app.store.GetDraft(draftID, false)
-	assert.Equal(t, uint64(0), draft.OpenCount)
-	assert.Equal(t, uint64(0), draft.CloseCount)
-	assert.Equal(t, uint64(0), draft.ApplyCount)
+	assert.Equal(t, int64(0), draft.OpenCount)
+	assert.Equal(t, int64(0), draft.CloseCount)
+	assert.Equal(t, int64(0), draft.ApplyCount)
 
 	// imitate Commit() to load new app config
 	_, _, err = app.store.Save()
