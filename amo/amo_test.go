@@ -1446,6 +1446,31 @@ func TestGovernance(t *testing.T) {
 	assert.Equal(t, defaultBlockBindingWindow, app.config.BlockBindingWindow)
 }
 
+func TestProtocolUpgrade(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	// manipulate
+	app.state.LastHeight = 8
+	app.state.ProtocolVersion = 1
+	app.config.UpgradeProtocolHeight = 10
+	app.config.UpgradeProtocolVersion = 2
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 9}})
+	app.Commit()
+	app.EndBlock(abci.RequestEndBlock{Height: 9})
+
+	assert.Equal(t, 1, app.state.ProtocolVersion)
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 10}})
+	app.Commit()
+	app.EndBlock(abci.RequestEndBlock{Height: 10})
+
+	assert.Equal(t, 2, app.state.ProtocolVersion)
+}
+
 func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64, lastHeight string) []byte {
 	validator, _ := ed25519.GenPrivKeyFromSecret([]byte(val)).
 		PubKey().(ed25519.PubKeyEd25519)
