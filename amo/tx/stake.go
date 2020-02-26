@@ -84,7 +84,7 @@ func (t *TxStake) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		Validator: k,
 	}
 
-	err = store.SetLockedStake(t.GetSender(), stake, int64(ConfigAMOApp.LockupPeriod))
+	err = store.SetLockedStake(t.GetSender(), stake, ConfigAMOApp.LockupPeriod)
 	if err != nil {
 		switch err {
 		case code.TxErrBadParam:

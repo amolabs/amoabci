@@ -184,7 +184,7 @@ const (
 	defaultLazinessThreshold     = float64(0.8)
 
 	defaultBlockBindingWindow = int64(10000)
-	defaultLockupPeriod       = uint64(1000000)
+	defaultLockupPeriod       = int64(1000000)
 
 	defaultDraftOpenCount  = int64(10000)
 	defaultDraftCloseCount = int64(10000)

@@ -19,7 +19,7 @@ func TestConfigCheckValue(t *testing.T) {
 		LazinessCounterWindow: int64(10000),
 		LazinessThreshold:     float64(0.9),
 		BlockBindingWindow:    int64(10000),
-		LockupPeriod:          uint64(10000),
+		LockupPeriod:          int64(10000),
 		DraftOpenCount:        int64(10000),
 		DraftCloseCount:       int64(10000),
 		DraftApplyCount:       int64(10000),

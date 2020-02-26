@@ -17,7 +17,7 @@ type AMOAppConfig struct {
 	LazinessCounterWindow int64    `json:"laziness_counter_window"`
 	LazinessThreshold     float64  `json:"laziness_threshold"`
 	BlockBindingWindow    int64    `json:"block_binding_window"`
-	LockupPeriod          uint64   `json:"lockup_period"`
+	LockupPeriod          int64    `json:"lockup_period"`
 	DraftOpenCount        int64    `json:"draft_open_count"`
 	DraftCloseCount       int64    `json:"draft_close_count"`
 	DraftApplyCount       int64    `json:"draft_apply_count"`
@@ -70,7 +70,7 @@ func (cfg *AMOAppConfig) Check(txCfgRaw json.RawMessage) (AMOAppConfig, error) {
 		cmp(tmpCfg.LazinessCounterWindow, ">=", int64(10000)) &&
 		cmp(tmpCfg.LazinessThreshold, ">", float64(0)) &&
 		cmp(tmpCfg.BlockBindingWindow, ">=", int64(10000)) &&
-		cmp(tmpCfg.LockupPeriod, ">=", uint64(10000)) &&
+		cmp(tmpCfg.LockupPeriod, ">=", int64(10000)) &&
 		cmp(tmpCfg.DraftOpenCount, ">=", int64(10000)) &&
 		cmp(tmpCfg.DraftCloseCount, ">=", int64(10000)) &&
 		cmp(tmpCfg.DraftApplyCount, ">=", int64(10000)) &&

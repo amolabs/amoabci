@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	defaultLockupPeriod   = uint64(1000000)
+	defaultLockupPeriod   = int64(1000000)
 	defaultMinStakingUnit = "1000000000000000000000000"
 	defaultMaxValidators  = uint64(100)
 	defaultDraftDeposit   = "1000000000000000000000000"

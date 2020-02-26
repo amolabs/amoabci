@@ -69,7 +69,7 @@ func TestAppConfig(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, *tmp, app.config.TxReward)
 
-	assert.Equal(t, uint64(2), app.config.LockupPeriod)
+	assert.Equal(t, int64(2), app.config.LockupPeriod)
 }
 
 func TestInitChain(t *testing.T) {
@@ -1337,7 +1337,7 @@ func TestGovernance(t *testing.T) {
 
 	// after target
 	assert.Equal(t, *types.Zero, app.config.TxReward)
-	assert.Equal(t, uint64(10000), app.config.LockupPeriod)
+	assert.Equal(t, int64(10000), app.config.LockupPeriod)
 
 	// test for draft being rejected, deposit distributed to voters
 	// total: 15, voters: 10(yay: 2, nay: 8), non-voters: 5
