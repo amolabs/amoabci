@@ -145,6 +145,7 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 
 	// TODO: use something more elegant
 	tx.ConfigAMOApp = app.config
+	tx.StateNextDraftID = app.state.NextDraftID
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -316,6 +317,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	}
 
 	tx.ConfigAMOApp = app.config
+	tx.StateNextDraftID = app.state.NextDraftID
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -623,6 +625,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	}
 
 	tx.ConfigAMOApp = app.config
+	tx.StateNextDraftID = app.state.NextDraftID
 
 	app.lazinessCounter.Set(app.config.LazinessCounterWindow, app.config.LazinessThreshold)
 
