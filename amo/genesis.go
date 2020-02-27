@@ -106,6 +106,12 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	if genState.Config.DraftRefundRate == 0 {
 		genState.Config.DraftRefundRate = defaultDraftRefundRate
 	}
+	if genState.Config.UpgradeProtocolHeight == 0 {
+		genState.Config.UpgradeProtocolHeight = defaultUpgradeProtocolHeight
+	}
+	if genState.Config.UpgradeProtocolVersion == 0 {
+		genState.Config.UpgradeProtocolVersion = defaultUpgradeProtocolVersion
+	}
 
 	return &genState, nil
 }

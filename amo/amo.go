@@ -146,6 +146,7 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 	// TODO: use something more elegant
 	tx.ConfigAMOApp = app.config
 	tx.StateNextDraftID = app.state.NextDraftID
+	tx.StateBlockHeight = app.state.Height
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -194,25 +195,30 @@ const (
 	defaultDraftQuorumRate = float64(0.3)
 	defaultDraftPassRate   = float64(0.51)
 	defaultDraftRefundRate = float64(0.2)
+
+	defaultUpgradeProtocolHeight  = int64(1)
+	defaultUpgradeProtocolVersion = uint64(AMOProtocolVersion)
 )
 
 func (app *AMOApp) loadAppConfig() error {
 	cfg := types.AMOAppConfig{
-		MaxValidators:         defaultMaxValidators,
-		WeightValidator:       defaultWeightValidator,
-		WeightDelegator:       defaultWeightDelegator,
-		PenaltyRatioM:         defaultPenaltyRatioM,
-		PenaltyRatioL:         defaultPenaltyRatioL,
-		LazinessCounterWindow: defaultLazinessCounterWindow,
-		LazinessThreshold:     defaultLazinessThreshold,
-		BlockBindingWindow:    defaultBlockBindingWindow,
-		LockupPeriod:          defaultLockupPeriod,
-		DraftOpenCount:        defaultDraftOpenCount,
-		DraftCloseCount:       defaultDraftCloseCount,
-		DraftApplyCount:       defaultDraftApplyCount,
-		DraftQuorumRate:       defaultDraftQuorumRate,
-		DraftPassRate:         defaultDraftPassRate,
-		DraftRefundRate:       defaultDraftRefundRate,
+		MaxValidators:          defaultMaxValidators,
+		WeightValidator:        defaultWeightValidator,
+		WeightDelegator:        defaultWeightDelegator,
+		PenaltyRatioM:          defaultPenaltyRatioM,
+		PenaltyRatioL:          defaultPenaltyRatioL,
+		LazinessCounterWindow:  defaultLazinessCounterWindow,
+		LazinessThreshold:      defaultLazinessThreshold,
+		BlockBindingWindow:     defaultBlockBindingWindow,
+		LockupPeriod:           defaultLockupPeriod,
+		DraftOpenCount:         defaultDraftOpenCount,
+		DraftCloseCount:        defaultDraftCloseCount,
+		DraftApplyCount:        defaultDraftApplyCount,
+		DraftQuorumRate:        defaultDraftQuorumRate,
+		DraftPassRate:          defaultDraftPassRate,
+		DraftRefundRate:        defaultDraftRefundRate,
+		UpgradeProtocolHeight:  defaultUpgradeProtocolHeight,
+		UpgradeProtocolVersion: defaultUpgradeProtocolVersion,
 	}
 
 	tmp, err := new(types.Currency).SetString(defaultMinStakingUnit, 10)
@@ -318,6 +324,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 
 	tx.ConfigAMOApp = app.config
 	tx.StateNextDraftID = app.state.NextDraftID
+	tx.StateBlockHeight = app.state.Height
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
 		app.store,
@@ -411,6 +418,7 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 
 func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.state.Height = req.Header.Height
+	tx.StateBlockHeight = app.state.Height
 
 	app.doValUpdate = false
 	app.oldVals = app.store.GetValidators(app.config.MaxValidators, false)
