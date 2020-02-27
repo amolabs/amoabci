@@ -11,6 +11,7 @@ import (
 )
 
 type GenAmoAppState struct {
+	State    State              `json:"state"`
 	Config   types.AMOAppConfig `json:"config"`
 	Balances []GenAccBalance    `json:"balances"`
 	Stakes   []GenAccStake      `json:"stakes"`
@@ -32,6 +33,9 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	err := json.Unmarshal(data, &genState)
 	if err != nil {
 		return nil, err
+	}
+	if genState.State.ProtocolVersion == 0 {
+		genState.State.ProtocolVersion = uint64(AMOProtocolVersion)
 	}
 	if genState.Config.MaxValidators == 0 {
 		genState.Config.MaxValidators = defaultMaxValidators
@@ -116,11 +120,14 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	return &genState, nil
 }
 
-func FillGenesisState(s *store.Store, genState *GenAmoAppState) error {
+func FillGenesisState(st *State, s *store.Store, genState *GenAmoAppState) error {
 	err := s.Purge()
 	if err != nil {
 		return err
 	}
+
+	// state
+	st.ProtocolVersion = genState.State.ProtocolVersion
 
 	// app config
 	// TODO: use reflect package

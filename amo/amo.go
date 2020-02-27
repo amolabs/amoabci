@@ -303,7 +303,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		return abci.ResponseInitChain{}
 	}
 	// fill state db
-	if FillGenesisState(app.store, genAppState) != nil {
+	if FillGenesisState(&app.state, app.store, genAppState) != nil {
 		return abci.ResponseInitChain{}
 	}
 

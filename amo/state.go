@@ -7,13 +7,14 @@ import (
 )
 
 type State struct {
-	MerkleVersion int64  `json:"merkle_version"`
-	Height        int64  `json:"height"` // current block height
-	AppHash       []byte `json:"app_hash"`
-	LastHeight    int64  `json:"last_height"` // last completed block height
-	LastAppHash   []byte `json:"last_app_hash"`
-	CounterDue    int64  `json:"counter_due"`
-	NextDraftID   uint32 `json:"next_draft_id"`
+	ProtocolVersion uint64 `json:"protocol_version"`
+	MerkleVersion   int64  `json:"merkle_version"`
+	Height          int64  `json:"height"` // current block height
+	AppHash         []byte `json:"app_hash"`
+	LastHeight      int64  `json:"last_height"` // last completed block height
+	LastAppHash     []byte `json:"last_app_hash"`
+	CounterDue      int64  `json:"counter_due"`
+	NextDraftID     uint32 `json:"next_draft_id"`
 }
 
 func (s *State) LoadFrom(f *os.File) error {

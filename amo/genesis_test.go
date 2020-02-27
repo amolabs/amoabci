@@ -100,6 +100,7 @@ func TestParseGenesisStateBytes(t *testing.T) {
 
 func TestFillGenesisState(t *testing.T) {
 	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	st := State{}
 
 	// first fill the test store with some values
 	addr1 := p256.GenPrivKey().PubKey().Address()
@@ -112,7 +113,7 @@ func TestFillGenesisState(t *testing.T) {
 	genState, err := ParseGenesisStateBytes([]byte(t0json))
 	assert.NoError(t, err)
 	// this will purge previous data and fill with newly provided genesis state
-	err = FillGenesisState(s, genState)
+	err = FillGenesisState(&st, s, genState)
 	assert.NoError(t, err)
 
 	// check if the store has been purged prior to fill with genesis state
@@ -127,7 +128,7 @@ func TestFillGenesisState(t *testing.T) {
 	// genesis with stakes
 	genState, err = ParseGenesisStateBytes([]byte(s0json))
 	assert.NoError(t, err)
-	err = FillGenesisState(s, genState)
+	err = FillGenesisState(&st, s, genState)
 	assert.NoError(t, err)
 	stake := s.GetStake(addr0, false)
 	assert.NotNil(t, stake)
