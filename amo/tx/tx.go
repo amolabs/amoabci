@@ -20,7 +20,9 @@ const (
 	defaultMaxValidators  = uint64(100)
 	defaultDraftDeposit   = "1000000000000000000000000"
 
-	defaultNextDraftID = uint32(1)
+	defaultNextDraftID     = uint32(1)
+	defaultBlockHeight     = int64(1)
+	defaultProtocolVersion = uint64(1)
 )
 
 var (
@@ -31,7 +33,9 @@ var (
 	}
 
 	// state from the app
-	StateNextDraftID = defaultNextDraftID
+	StateNextDraftID     = defaultNextDraftID
+	StateBlockHeight     = defaultBlockHeight
+	StateProtocolVersion = defaultProtocolVersion
 
 	c    = elliptic.P256()
 	zero = new(types.Currency).Set(0)

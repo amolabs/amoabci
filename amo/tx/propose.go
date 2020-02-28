@@ -77,7 +77,7 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	balance.Sub(&ConfigAMOApp.DraftDeposit)
 
 	// config check
-	cfg, err := ConfigAMOApp.Check(t.Param.Config)
+	cfg, err := ConfigAMOApp.Check(StateBlockHeight, StateProtocolVersion, t.Param.Config)
 	if err != nil {
 		return code.TxCodeImproperDraftConfig, err.Error(), nil
 	}

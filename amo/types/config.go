@@ -6,28 +6,34 @@ import (
 )
 
 type AMOAppConfig struct {
-	MaxValidators         uint64   `json:"max_validators"`
-	WeightValidator       uint64   `json:"weight_validator"`
-	WeightDelegator       uint64   `json:"weight_delegator"`
-	MinStakingUnit        Currency `json:"min_staking_unit"`
-	BlkReward             Currency `json:"blk_reward"`
-	TxReward              Currency `json:"tx_reward"`
-	PenaltyRatioM         float64  `json:"penalty_ratio_m"` // malicious validator
-	PenaltyRatioL         float64  `json:"penalty_ratio_l"` // lazy validators
-	LazinessCounterWindow int64    `json:"laziness_counter_window"`
-	LazinessThreshold     float64  `json:"laziness_threshold"`
-	BlockBindingWindow    int64    `json:"block_binding_window"`
-	LockupPeriod          int64    `json:"lockup_period"`
-	DraftOpenCount        int64    `json:"draft_open_count"`
-	DraftCloseCount       int64    `json:"draft_close_count"`
-	DraftApplyCount       int64    `json:"draft_apply_count"`
-	DraftDeposit          Currency `json:"draft_deposit"`
-	DraftQuorumRate       float64  `json:"draft_quorum_rate"`
-	DraftPassRate         float64  `json:"draft_pass_rate"`
-	DraftRefundRate       float64  `json:"draft_refund_rate"`
+	MaxValidators          uint64   `json:"max_validators"`
+	WeightValidator        uint64   `json:"weight_validator"`
+	WeightDelegator        uint64   `json:"weight_delegator"`
+	MinStakingUnit         Currency `json:"min_staking_unit"`
+	BlkReward              Currency `json:"blk_reward"`
+	TxReward               Currency `json:"tx_reward"`
+	PenaltyRatioM          float64  `json:"penalty_ratio_m"` // malicious validator
+	PenaltyRatioL          float64  `json:"penalty_ratio_l"` // lazy validators
+	LazinessCounterWindow  int64    `json:"laziness_counter_window"`
+	LazinessThreshold      float64  `json:"laziness_threshold"`
+	BlockBindingWindow     int64    `json:"block_binding_window"`
+	LockupPeriod           int64    `json:"lockup_period"`
+	DraftOpenCount         int64    `json:"draft_open_count"`
+	DraftCloseCount        int64    `json:"draft_close_count"`
+	DraftApplyCount        int64    `json:"draft_apply_count"`
+	DraftDeposit           Currency `json:"draft_deposit"`
+	DraftQuorumRate        float64  `json:"draft_quorum_rate"`
+	DraftPassRate          float64  `json:"draft_pass_rate"`
+	DraftRefundRate        float64  `json:"draft_refund_rate"`
+	UpgradeProtocolHeight  int64    `json:"upgrade_protocol_height"`
+	UpgradeProtocolVersion uint64   `json:"upgrade_protocol_version"`
 }
 
-func (cfg *AMOAppConfig) Check(txCfgRaw json.RawMessage) (AMOAppConfig, error) {
+func (cfg *AMOAppConfig) Check(
+	blockHeight int64,
+	protocolVersion uint64,
+	txCfgRaw json.RawMessage,
+) (AMOAppConfig, error) {
 	var txCfgMap map[string]interface{}
 
 	// handle exception for allowing empty config field on purpose
@@ -45,15 +51,43 @@ func (cfg *AMOAppConfig) Check(txCfgRaw json.RawMessage) (AMOAppConfig, error) {
 		return AMOAppConfig{}, err
 	}
 
+	// check UpgradeProtocol* first
+	if len(txCfgMap) == 2 && existUpgradeProtocolCfg(txCfgMap, true) {
+		tmpCfg := *cfg
+		err = json.Unmarshal(txCfgRaw, &tmpCfg)
+		if err != nil {
+			return AMOAppConfig{}, err
+		}
+
+		blockHeight += cfg.DraftOpenCount + cfg.DraftCloseCount + cfg.DraftApplyCount
+		protocolVersion += uint64(1)
+
+		if !(tmpCfg.UpgradeProtocolHeight > blockHeight) {
+			return AMOAppConfig{}, fmt.Errorf("%d: improper upgrade protocol height",
+				tmpCfg.UpgradeProtocolHeight,
+			)
+		}
+
+		if !(tmpCfg.UpgradeProtocolVersion == protocolVersion) {
+			return AMOAppConfig{}, fmt.Errorf("%d: improper upgrade protocol version",
+				tmpCfg.UpgradeProtocolVersion,
+			)
+		}
+
+		return tmpCfg, nil
+	}
+
+	// check other configs
+	if existUpgradeProtocolCfg(txCfgMap, false) {
+		return AMOAppConfig{}, fmt.Errorf("upgrade protocol config is included")
+	}
 	for key, _ := range txCfgMap {
-		_, exist := cfgMap[key]
-		if !exist {
+		if _, exist := cfgMap[key]; !exist {
 			return AMOAppConfig{}, fmt.Errorf("%s doesn't exist in config map", key)
 		}
 	}
 
 	tmpCfg := *cfg
-
 	err = json.Unmarshal(txCfgRaw, &tmpCfg)
 	if err != nil {
 		return AMOAppConfig{}, err
@@ -154,4 +188,13 @@ func cmp(targetA interface{}, operator string, targetB interface{}) bool {
 	default:
 		return false
 	}
+}
+
+func existUpgradeProtocolCfg(cfgMap map[string]interface{}, andOpt bool) bool {
+	_, existHeight := cfgMap["upgrade_protocol_height"]
+	_, existVersion := cfgMap["upgrade_protocol_version"]
+	if andOpt {
+		return existHeight && existVersion
+	}
+	return existHeight || existVersion
 }
