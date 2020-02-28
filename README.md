@@ -38,22 +38,6 @@ requiring docker, you need install the following:
 * [docker](https://www.docker.com) (In Debian or Ubuntu, install `docker.io`)
 * [docker-compose](https://www.docker.com)
 
-### Install tendermint
-ABCI app for AMO blockchain requires a
-[tendermint](https://github.com/tendermint/tendermint) daemon running in the
-same host. So, we need to install tendermint first. Current version of AMO ABCI
-app requires tendermint v0.32.8.
-
-Run the following commands to install tendermint daemon:
-```bash
-mkdir -p $GOPATH/src/github.com/tendermint
-cd $GOPATH/src/github.com/tendermint
-git clone https://github.com/tendermint/tendermint
-cd tendermint
-make get_tools
-make install_c
-```
-
 ### Install amod
 Run the following commands to install amod:
 ```bash
@@ -61,7 +45,6 @@ mkdir -p $GOPATH/src/github.com/amolabs
 cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
-make get_tools
 make install
 ```
 
@@ -105,34 +88,31 @@ initial state of the chain.
 * Testnet information: http://testnet.amolabs.io
 
 ### Prepare data directory
-Both of `tendermint` and `amod` need a data directory where they keep
-configuration file and internal databases. Although `tendermint` and `amod` do
-not share the data directory, a combination of the two directories defines a
-complete snapshot of an AMO blockchain. So, it recommended to a keep directory
+`amod` need a data directory where they keep configuration file and internal
+databases of `tendermint` and `amoabci`. The directory defines a complete
+snapshot of an AMO blockchain. So, it is recommended to a keep directory
 structure something like the following:
 ```
 (node_data_root)
-├── amo
-│   └── data
-└── tendermint
+└── amo 
     ├── config
     └── data
 ```
 
-`dataroot/tendermint/config` directory stores some sensitive files such as
+`dataroot/amo/config` directory stores some sensitive files such as
 `node_key.json` and `priv_validator_key.json`. You need to keep these files
-secure by control read permission of them. **Note that his applies to the case
+secure by control read permission of them. **Note that this applies to the case
 when you run daemons using a docker container**.
 
 ### Prepare necessary files
-`tendermint` needs several files to operate properly:
+`amod` needs several files to operate properly:
 - `config.toml`<sup>&dagger;</sup>: configuration
 - `genesis.json`<sup>&dagger;</sup>: initial blockchain and app state
 - `node_key.json`<sup>&dagger;&dagger;</sup>: node key for p2p connection
 - `priv_validator_key.json`<sup>&dagger;&dagger;</sup>: validator key for
   conesnsus process
 
-&dagger; These files must be prepared before launching `tendermint` or `amod`.
+&dagger; These files must be prepared before launching `amod`.
 Some notable configuration options are as follows:
 - `moniker`
 - `rpc.laddr`
@@ -145,30 +125,19 @@ Some notable configuration options are as follows:
 For more information, see [Tendermint
 document](https://tendermint.com/docs/tendermint-core/configuration.html).
 
-&dagger;&dagger; `tendermint` will generate on its own if not prepared before
+&dagger;&dagger; `amod` will generate on its own if not prepared before
 launching. But, if you want to use specific keys, of course you need to prepare
 it before launching. One possible way to do this is to generate these keys
-using `tendermint init` command and put them in a configuration directory along
-with `config.toml` and `genesis.json`.
+using `amod tendermint init` command and put them in a configuration directory
+along with `config.toml` and `genesis.json`.
 
 ## Run daemons manually
-It is safer to run `amod` first.
 ```bash
 amod --home <dataroot>/amo run
 ```
 To run the daemon in background mode, use `amod run &`. Here, `<dataroot>` is a
-data directory prepared previously. `amod` will open port 26658 for incoming
-ABCI connection.
-
-And then run `tendermint`.
-```bash
-tendermint --home <dataroot>/tendermint node
-```
-Of course, you can run the daemon in background mode using `tendermint node &`.
-Here, `<dataroot>` is a data directory prepared previously. `tendermint` will
-open port 26656 for incoming P2P connection and port 26657 for incoming RPC
-connection. It will connect to port 26658 on localhost for ABCI daemon, `amod`
-in our case.
+data directory prepared previously. `amod` will open port 26656 for incoming
+P2P connection and port 26657 for incoming RPC connection.
 
 ## Run daemons using docker
 ### Pre-requisites
@@ -179,19 +148,8 @@ You may download the official `amod` docker image(`amolabs/amod`) released from
 AMO Labs from [Docker hub](https://hub.docker.com). Of cource, you can build
 your own local docker image.
 
-Before building a `amod` docker image, you need to build `tendermint` first.
-You can do it yourself as following or let the `amod` Makefile do it for you.
-If you want to build on your own:
-```bash
-mkdir -p $GOPATH/src/github.com/tendermint
-cd $GOPATH/src/github.com/tendermint
-git clone https://github.com/tendermint/tendermint
-cd tendermint
-git checkout v0.31.7
-make get_tools
-make build-linux
-cp build/tendermint $GOPATH/src/github.com/amolabs/amoabci/
-```
+You can build a `amod` docker image by yourself as following or let the `amod`
+Makefile do it for you.
 
 To build a `amod` docker image, do the followings:
 ```bash
@@ -199,24 +157,21 @@ mkdir -p $GOPATH/src/github.com/amolabs
 cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
-make get_tools
 make docker
 ```
-The image will be tagged as `amolabs/amod:latest`. This image include both of
-`tendermint` and `amod`, so you just need one image (and one container).
+The image will be tagged as `amolabs/amod:latest`. This image includes `amod`,
+so you just need one image (and one container).
 
 ### Run
 Run the daemons in a container as follows:
 ```bash
-docker run -it --rm -p 26656-26657 -v <dataroot>/tendermint:/tendermint:Z -v <dataroot>/amo:/amo:Z -d amolabs/amod:latest
+docker run -it --rm -p 26656-26657 -v <dataroot>/amo:/amo:Z -d amolabs/amod:latest
 ```
 Options above have the following meaning:
 - `-it`: make sure the terminal connects correctly
 - `--rm`: remove the container after daemons stop
 - `-p 26656-26657`: publish the container's ports to the host machine. This
   make sure that other nodes in the network can connect to our node.
-- `-v <dataroot>/tendermint:/tendermint:Z`: mount tendermint data directory.
-  **`<dataroot>` must be an absolute path.**
 - `-v <dataroot>/amo:/amo:Z`: mount amod data directory.
   **`<dataroot>` must be an absolute path.**
 - `amolabs/amod:latest`: use this docker image when creating a container
