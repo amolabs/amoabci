@@ -26,9 +26,11 @@ jobs:
 
     - name: Wrap
       run: |
-        echo "::set-env name=RELEASE_VERSION::${GITHUB_REF:10}"
-        echo "::set-env name=ASSET::amod-${RELEASE_VERSION/v/''}-linux-x86_64.tar.gz"
-        tar -czf $ASSET amod
+        echo ::set-env name=RELEASE_VERSION::${GITHUB_REF:10}
+        echo ${{ env.RELEASE_VERSION }}
+        echo ::set-env name=ASSET::amod-${env.RELEASE_VERSION/v/''}-linux-x86_64.tar.gz
+        echo ${{ env.ASSET }}
+        tar -czf ${{ env.ASSET}} amod
 
     - name: Create Release
       id: create_release
@@ -36,8 +38,8 @@ jobs:
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-          tag_name: $RELEASE_VERSION
-          release_name: $RELEASE_VERSION release
+          tag_name: ${{ env.RELEASE_VERSION }}
+          release_name: ${{ env.RELEASE_VERSION }} release
           draft: true 
           prerelease: false
 
@@ -47,7 +49,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./$ASSET
-          asset_name: $ASSET 
+          asset_path: ./${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
           asset_content_type: application/gzip
       
