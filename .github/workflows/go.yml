@@ -1,0 +1,50 @@
+name: build-deploy
+on:
+  push:
+    tags:
+    - 'v*'
+jobs:
+  build:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Unit Test
+      run: make test
+
+    - name: Build
+      run: make TARGET=linux build
+
+    - name: Wrap
+      run: tar -czf amod-${github.ref/v/''}-linux-x86_64.tar.gz amod
+
+    - name: Create Release
+      id: create-release
+      uses: actions/create-release@v1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }} release
+          draft: true 
+          prerelease: false
+
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./amod-${github.ref/v/''}-linux-x86_64.tar.gz
+          asset_name: amod-${github.ref/v/''}-linux-x86_64.tar.gz
+          asset_content_type: application/gzip
+      
