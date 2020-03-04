@@ -25,7 +25,7 @@ jobs:
       run: make TARGET=linux build
 
     - name: Wrap
-      run: tar -czf amod-${github.ref/v/''}-linux-x86_64.tar.gz amod
+      run: tar -czf amod-${{ github.ref/v/'' }}-linux-x86_64.tar.gz amod
 
     - name: Create Release
       id: create-release
@@ -44,7 +44,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./amod-${github.ref/v/''}-linux-x86_64.tar.gz
-          asset_name: amod-${github.ref/v/''}-linux-x86_64.tar.gz
+          asset_path: ./amod-${ github.ref/v/'' }}-linux-x86_64.tar.gz
+          asset_name: amod-${{ github.ref/v/'' }}-linux-x86_64.tar.gz
           asset_content_type: application/gzip
       
