@@ -13,19 +13,13 @@ RUN apk add snappy
 RUN mkdir /src
 WORKDIR /src
 
-# leveldb
-RUN wget https://github.com/google/leveldb/archive/v1.20.tar.gz
-RUN tar zxvf v1.20.tar.gz 
-RUN cp -a leveldb-1.20/include/leveldb /usr/include/
-COPY contrib/leveldb/bin/libleveldb.so* /usr/lib/ 
-
 # amod
 RUN mkdir -p amoabci
 COPY Makefile go.mod go.sum amoabci/
 COPY cmd amoabci/cmd
 COPY amo amoabci/amo
 COPY crypto amoabci/crypto
-RUN make -C amoabci build_c
+RUN make -C amoabci build
 
 #### runner image
 
@@ -34,10 +28,6 @@ FROM alpine:3.11
 # tools & libs
 RUN apk add bash snappy
 
-#COPY tendermint amod /usr/bin/
-COPY --from=0 /usr/lib/libleveldb.so* /usr/lib/
-COPY --from=0 /usr/lib/libgcc_s.so* /usr/lib/
-COPY --from=0 /usr/lib/libstdc++.so* /usr/lib/
 COPY --from=0 /src/amoabci/amod /usr/bin/
 COPY DOCKER/run_node.sh DOCKER/config/* /
 
