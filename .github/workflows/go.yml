@@ -30,8 +30,8 @@ jobs:
       run: |
           wget https://github.com/google/leveldb/archive/v1.20.tar.gz
           tar -xzf v1.20.tar.gz
-          cp -a leveldb-1.20/include/leveldb /usr/include/
-          cp contrib/leveldb/bin/libleveldb.so* /usr/lib/
+          sudo cp -a leveldb-1.20/include/leveldb /usr/include/
+          sudo cp contrib/leveldb/bin/libleveldb.so* /usr/lib/
 
     - name: Build
       run: make TARGET=linux build_c
