@@ -28,6 +28,7 @@ jobs:
 
     - name: Install cleveldb
       run: |
+          sudo apt install musl-dev
           wget https://github.com/google/leveldb/archive/v1.20.tar.gz
           tar -xzf v1.20.tar.gz
           sudo cp -a leveldb-1.20/include/leveldb /usr/include/
