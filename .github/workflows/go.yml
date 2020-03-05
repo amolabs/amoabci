@@ -13,7 +13,6 @@ jobs:
       uses: actions/setup-go@v1
       with:
         go-version: 1.13
-      id: go
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
@@ -31,7 +30,7 @@ jobs:
       run: make TARGET=linux build
 
     - name: Wrap
-      run: tar -czf $ASSET amod
+      run: tar -czf ${{ env.ASSET }} amod
 
     - name: Create Release
       id: create_release
@@ -39,8 +38,8 @@ jobs:
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-          tag_name: $RELEASE_VERSION
-          release_name: $RELEASE_VERSION release
+          tag_name: ${{ env.RELEASE_VERSION }}
+          release_name: ${{ env.RELEASE_VERSION }} release
           draft: true 
           prerelease: false
 
@@ -50,7 +49,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./$ASSET
-          asset_name: $ASSET 
+          asset_path: ./${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
           asset_content_type: application/gzip
       
