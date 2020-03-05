@@ -1,7 +1,6 @@
 package amo
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -154,11 +153,7 @@ func queryStake(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	stakeEx := types.StakeEx{
-		Validator: hex.EncodeToString(stake.Validator[:]),
-		Amount:    stake.Amount,
-		Delegates: s.GetDelegatesByDelegatee(addr, true),
-	}
+	stakeEx := types.StakeEx{stake, s.GetDelegatesByDelegatee(addr, true)}
 	jsonstr, _ := json.Marshal(stakeEx)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
