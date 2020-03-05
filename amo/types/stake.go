@@ -10,6 +10,7 @@ type Stake struct {
 }
 
 type StakeEx struct {
-	*Stake
+	Validator string        `json:"validator"`
+	Amount    Currency      `json:"amount"`
 	Delegates []*DelegateEx `json:"delegates,omitempty"`
 }
