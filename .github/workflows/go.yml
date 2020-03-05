@@ -27,7 +27,7 @@ jobs:
       run: make test
 
     - name: Build
-      run: make TARGET=linux build
+      run: make TARGET=linux build_c
 
     - name: Wrap
       run: tar -czf ${{ env.ASSET }} amod
