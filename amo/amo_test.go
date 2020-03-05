@@ -514,6 +514,10 @@ func TestQueryValidator(t *testing.T) {
 	assert.Equal(t, []byte(jsonstr), res.Value)
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
+
+	req = abci.RequestQuery{Path: "/stake", Data: []byte("\"BCECB223B976F27D77B0E03E95602DABCC28D876\"")}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeOK, res.Code)
 }
 
 func TestSignedTransactionTest(t *testing.T) {
