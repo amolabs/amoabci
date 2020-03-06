@@ -13,12 +13,27 @@ abstract blockchain state; validator control; and client query for blockchain
 state. This repository holds a collection of codes implementing *Tendermint
 ABCI app for AMO blockchain* (`amoabci`) and necessary helper scripts.
 
-## Install from pre-built binary
-TBA
+## Getting Started 
 
-## Install from source
+### Common prerequisites
+* [leveldb](https://github.com/google/leveldb)
+  * For Debian or Ubuntu linux, you can install `libleveldb-dev` package.
+  * In case you use different servers for building and production, install
+	`libleveldb1v5` package in the production server.
 
-### Prerequisites
+### Install from pre-built binary
+Run the following commands to install pre-built amod:
+```bash
+wget https://github.com/amolabs/amoabci/releases/download/v1.5.0/amod-<version>-linux-x86_64.tar.gz
+tar -xzf amod-<version>-linux-x86_64.tar.gz
+sudo cp ./amod /usr/bin/amod
+```
+Specify `<version>` of `amod`. Check out its [latest
+releases](https://github.com/amolabs/amoabci/releases)
+
+### Install from source
+
+#### Prerequisites
 To build from source, you need to install the followings:
 * [git](https://git-scm.com)
 * [make](https://www.gnu.org/software/make/)
@@ -28,17 +43,13 @@ To build from source, you need to install the followings:
 * [golang](https://golang.org/dl/)
   * In some cases, you need to set `GOPATH` and `GOBIN` environment variables
 	manually. Check these variables before you proceed.
-* [leveldb](https://github.com/google/leveldb)
-  * For Debian or Ubuntu linux, you can install `libleveldb-dev` package.
-  * In case you use different servers for building and production, install
-	`libleveldb1v5` package in the production server.
 
 If you want to run daemons in a docker container or execute some tests
 requiring docker, you need install the following:
 * [docker](https://www.docker.com) (In Debian or Ubuntu, install `docker.io`)
 * [docker-compose](https://www.docker.com)
 
-### Install amod
+#### Install amod
 Run the following commands to install amod:
 ```bash
 mkdir -p $GOPATH/src/github.com/amolabs
@@ -88,10 +99,10 @@ initial state of the chain.
 * Testnet information: http://testnet.amolabs.io
 
 ### Prepare data directory
-`amod` need a data directory where they keep configuration file and internal
-databases of `tendermint` and `amoabci`. The directory defines a complete
-snapshot of an AMO blockchain. So, it is recommended to a keep directory
-structure something like the following:
+`amod` needs a data directory where they keep configuration file and internal
+databases of `amod`. The directory defines a complete snapshot of an AMO
+blockchain. So, it is recommended to a keep directory structure something like
+the following:
 ```
 (node_data_root)
 └── amo 
@@ -131,7 +142,14 @@ it before launching. One possible way to do this is to generate these keys
 using `amod tendermint init` command and put them in a configuration directory
 along with `config.toml` and `genesis.json`.
 
-## Run daemons manually
+## Run initialization
+```bash
+amod --home <dataroot>/amo tendermint init
+```
+*NOTE*: To execute tendermint commands, simply append `tendermint` at the end
+of `amod`. 
+
+## Run daemon
 ```bash
 amod --home <dataroot>/amo run
 ```

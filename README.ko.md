@@ -13,12 +13,27 @@ This document is available in [English](README.md) also.
 Tendermint ABCI 앱*을 구현하는 코드(`amoabci`)와 그외 필요한 스크립트의
 조합으로 구성된다.
 
-## 컴파일된 바이너리 설치
-TBA
+## 시작하기
 
-## 소스코드로부터 설치
+### 공통 사전 조건
+* [leveldb](https://github.com/google/leveldb)
+  * Debian이나 Ubuntu 리눅수의 경우에는 `libleveldb-dev` 패키지를 설치한다.
+  * 컴파일하는 서버와 실행하는 서버가 다를 경우 실행하는 서버에는
+	`libleveldb1v5` 패키지를 설치한다.
 
-### 사전 조건
+### 컴파일된 바이너리 설치
+다음 명령을 실행해서 컴파일된 바이너리를 설치한다:
+```bash
+wget https://github.com/amolabs/amoabci/releases/download/v1.5.0/amod-<version>-linux-x86_64.tar.gz
+tar -xzf amod-<version>-linux-x86_64.tar.gz
+sudo cp ./amod /usr/bin/amod
+```
+`amod`의 `<version>`을 명시해야 한다. [최신
+릴리즈](https://github.com/amolabs/amoabci/releases)를 확인해야 한다.
+
+### 소스코드로부터 설치
+
+#### 사전 조건
 소스코드로부터 컴파일을 하기 위해서는 다음을 설치해야 한다:
 * [git](https://git-scm.com)
 * [make](https://www.gnu.org/software/make/)
@@ -28,17 +43,13 @@ TBA
 * [golang](https://golang.org/dl/)
   * 경우에 따라서 `GOPATH`와 `GOBIN` 환경변수를 수동으로 설정해 줘야 할 수
 	있다. 이후 더 진행하기 전에 이 변수들을 확인하도록 한다.
-* [leveldb](https://github.com/google/leveldb)
-  * Debian이나 Ubuntu 리눅수의 경우에는 `libleveldb-dev` 패키지를 설치한다.
-  * 컴파일하는 서버와 실행하는 서버가 다를 경우 실행하는 서버에는
-	`libleveldb1v5` 패키지를 설치한다.
 
 데몬 프로그램들을 docker 컨테이너에서 실행하거나 docker를 필요로 하는
 테스트들을 실행하기 위해서는 다음을 설치한다:
 * [docker](https://www.docker.com) (Debian이나 Ubuntu에서는 `docker.io`를 설치)
 * [docker-compose](https://www.docker.com)
 
-### amod 설치
+#### amod 설치
 다음 명령을 실행해서 amod를 설치한다:
 ```bash
 mkdir -p $GOPATH/src/github.com/amolabs
@@ -88,7 +99,7 @@ AMO 블록체인 노드는 네트워크 응용프로그램이다. 다른 노드�
 * 테스트넷 정보: http://testnet.amolabs.io
 
 ### 데이터 디렉토리 준비
-`amod`는 데이터 디렉토리가 필요하며, 여기에 설정 파일과 내부
+`amod`는 데이터 디렉토리가 필요하며, 여기에 `amod`의 설정 파일과 내부
 데이터베이스를 저장한다. 해당 디렉토리는 AMO 블록체인의 완전한 스냅샷이 된다.
 따라서 디렉토리 구조는 다음과 같은 형태가 되도록 할 것을 권장한다:
 ```
@@ -130,7 +141,14 @@ AMO 블록체인 노드는 네트워크 응용프로그램이다. 다른 노드�
 방법중 한가지는 `amod tendermint init` 명령으로 키들을 생성한 후
 `config.toml`과 `genesis.json` 파일이 있는 설정 디렉토리에 넣어 두는 것이다.
 
-## 데몬 직접 실행
+## 초기화 실행
+```bash
+amod --home <dataroot>/amo tendermint init
+```
+*참고사항*: tendermint 명렁어를 실행하기 위해서는 단순히 `amod` 끝에
+`tendermint`를 붙이면 된다.
+
+## 데몬 실행
 ```bash
 amod --home <dataroot>/amo run
 ```
