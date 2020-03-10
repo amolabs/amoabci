@@ -23,8 +23,8 @@ import (
 
 const (
 	// versions
-	AMOAppVersion      = "v1.5.0"
-	AMOProtocolVersion = 0x3
+	AMOAppVersion      = "v1.5.1-rc1"
+	AMOProtocolVersion = uint64(0x4)
 )
 
 // Output are sorted by voting power.
@@ -198,7 +198,7 @@ const (
 	defaultDraftRefundRate = float64(0.2)
 
 	defaultUpgradeProtocolHeight  = int64(1)
-	defaultUpgradeProtocolVersion = uint64(AMOProtocolVersion)
+	defaultUpgradeProtocolVersion = AMOProtocolVersion
 )
 
 func (app *AMOApp) loadAppConfig() error {
