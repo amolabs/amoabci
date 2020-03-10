@@ -287,6 +287,25 @@ func (app *AMOApp) save() {
 	}
 }
 
+func (app *AMOApp) upgradeProtocol(migration func(protocolVersion uint64)) {
+	if app.state.Height == app.config.UpgradeProtocolHeight {
+		if migration != nil {
+			migration(app.config.UpgradeProtocolVersion)
+		}
+
+		hash, version, err := app.store.Save()
+		if err != nil {
+			panic(err)
+		}
+
+		app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
+		app.state.MerkleVersion = version
+		app.state.LastAppHash = hash
+
+		app.save()
+	}
+}
+
 func (app *AMOApp) checkProtocolVersion(protocolVersion uint64) error {
 	if app.state.ProtocolVersion != protocolVersion {
 		return fmt.Errorf("protocol version(%d) doesn't match supported version(%d)",
@@ -432,17 +451,15 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	tx.StateBlockHeight = app.state.Height
 	tx.StateProtocolVersion = app.state.ProtocolVersion
 
+	// upgrade protocol version
+	// if migration for protocol version X is needed,
+	// implement app.MigrateToX and app.upgradeProtocol(app.MigrateToX)
+	app.upgradeProtocol(nil)
+
 	// check if app's protocol version matches supported version
 	err := app.checkProtocolVersion(AMOProtocolVersion)
 	if err != nil {
 		panic(err)
-	}
-
-	// upgrade protocol version
-	if app.state.Height == app.config.UpgradeProtocolHeight {
-		app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
-		// TODO: migration would happen here
-		// app.MigrateToX()
 	}
 
 	app.doValUpdate = false
