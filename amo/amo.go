@@ -287,10 +287,18 @@ func (app *AMOApp) save() {
 	}
 }
 
-func (app *AMOApp) checkProtocolVersion(protocolVersion uint64) error {
-	if app.state.ProtocolVersion != protocolVersion {
+func (app *AMOApp) upgradeProtocol() {
+	if app.state.Height != app.config.UpgradeProtocolHeight {
+		return
+	}
+	app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
+	app.save()
+}
+
+func (app *AMOApp) checkProtocolVersion() error {
+	if app.state.ProtocolVersion != AMOProtocolVersion {
 		return fmt.Errorf("protocol version(%d) doesn't match supported version(%d)",
-			protocolVersion, app.state.ProtocolVersion)
+			AMOProtocolVersion, app.state.ProtocolVersion)
 	}
 
 	return nil
@@ -432,18 +440,17 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	tx.StateBlockHeight = app.state.Height
 	tx.StateProtocolVersion = app.state.ProtocolVersion
 
+	// upgrade protocol version
+	app.upgradeProtocol()
+
 	// check if app's protocol version matches supported version
-	err := app.checkProtocolVersion(AMOProtocolVersion)
+	err := app.checkProtocolVersion()
 	if err != nil {
 		panic(err)
 	}
 
-	// upgrade protocol version
-	if app.state.Height == app.config.UpgradeProtocolHeight {
-		app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
-		// TODO: migration would happen here
-		// app.MigrateToX()
-	}
+	// migrate to X if needed
+	// app.MigrateToX()
 
 	app.doValUpdate = false
 	app.oldVals = app.store.GetValidators(app.config.MaxValidators, false)

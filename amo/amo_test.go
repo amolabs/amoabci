@@ -1482,13 +1482,13 @@ func TestProtocolUpgrade(t *testing.T) {
 
 	assert.Equal(t, uint64(AMOProtocolVersion), app.state.ProtocolVersion)
 
-	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 10}})
-	app.EndBlock(abci.RequestEndBlock{Height: 10})
-	app.Commit()
+	// manipulate to avoid panic
+	app.state.Height = 10
+	app.upgradeProtocol()
 
 	assert.Equal(t, uint64(AMOProtocolVersion+1), app.state.ProtocolVersion)
 
-	err = app.checkProtocolVersion(AMOProtocolVersion)
+	err = app.checkProtocolVersion()
 	assert.Error(t, err)
 }
 
