@@ -1484,11 +1484,11 @@ func TestProtocolUpgrade(t *testing.T) {
 
 	// manipulate to avoid panic
 	app.state.Height = 10
-	app.upgradeProtocol(app.MigrateToX)
+	app.upgradeProtocol()
 
 	assert.Equal(t, uint64(AMOProtocolVersion+1), app.state.ProtocolVersion)
 
-	err = app.checkProtocolVersion(AMOProtocolVersion)
+	err = app.checkProtocolVersion()
 	assert.Error(t, err)
 }
 

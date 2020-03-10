@@ -287,29 +287,18 @@ func (app *AMOApp) save() {
 	}
 }
 
-func (app *AMOApp) upgradeProtocol(migration func(protocolVersion uint64)) {
-	if app.state.Height == app.config.UpgradeProtocolHeight {
-		if migration != nil {
-			migration(app.config.UpgradeProtocolVersion)
-		}
-
-		hash, version, err := app.store.Save()
-		if err != nil {
-			panic(err)
-		}
-
-		app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
-		app.state.MerkleVersion = version
-		app.state.LastAppHash = hash
-
-		app.save()
+func (app *AMOApp) upgradeProtocol() {
+	if app.state.Height != app.config.UpgradeProtocolHeight {
+		return
 	}
+	app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
+	app.save()
 }
 
-func (app *AMOApp) checkProtocolVersion(protocolVersion uint64) error {
-	if app.state.ProtocolVersion != protocolVersion {
+func (app *AMOApp) checkProtocolVersion() error {
+	if app.state.ProtocolVersion != AMOProtocolVersion {
 		return fmt.Errorf("protocol version(%d) doesn't match supported version(%d)",
-			protocolVersion, app.state.ProtocolVersion)
+			AMOProtocolVersion, app.state.ProtocolVersion)
 	}
 
 	return nil
@@ -452,15 +441,16 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	tx.StateProtocolVersion = app.state.ProtocolVersion
 
 	// upgrade protocol version
-	// if migration for protocol version X is needed,
-	// implement app.MigrateToX and app.upgradeProtocol(app.MigrateToX)
-	app.upgradeProtocol(nil)
+	app.upgradeProtocol()
 
 	// check if app's protocol version matches supported version
-	err := app.checkProtocolVersion(AMOProtocolVersion)
+	err := app.checkProtocolVersion()
 	if err != nil {
 		panic(err)
 	}
+
+	// migrate to X if needed
+	// app.MigrateToX()
 
 	app.doValUpdate = false
 	app.oldVals = app.store.GetValidators(app.config.MaxValidators, false)
