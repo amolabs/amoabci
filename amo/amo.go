@@ -537,9 +537,14 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 		}
 	}
 
-	tags := []tm.KVPair{
-		{Key: []byte("tx.type"), Value: []byte(t.GetType())},
-		{Key: []byte("tx.sender"), Value: []byte(t.GetSender().String())},
+	events := []abci.Event{
+		abci.Event{
+			Type: "tx",
+			Attributes: []tm.KVPair{
+				{Key: []byte("type"), Value: []byte(t.GetType())},
+				{Key: []byte("sender"), Value: []byte(t.GetSender().String())},
+			},
+		},
 	}
 
 	fee := t.GetFee()
@@ -557,7 +562,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	app.store.SetBalance(t.GetSender(), balance.Sub(&fee))
 	app.feeAccumulated.Add(&fee)
 
-	rc, info, opTags := t.Execute(app.store)
+	rc, info, opEvent := t.Execute(app.store)
 
 	// if the operation was not successful,
 	// change nothing and rollback the fee
@@ -571,21 +576,19 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 			app.state.NextDraftID += uint32(1)
 		}
 
-		tags = append(tags, opTags...)
+		events = append(events, opEvent...)
 		app.numDeliveredTxs += 1
+
 	} else {
 		app.feeAccumulated.Sub(&fee)
 		app.store.SetBalance(t.GetSender(), balance)
 	}
 
 	return abci.ResponseDeliverTx{
-		Code: rc,
-		Log:  info,
-		Info: info,
-		Events: []abci.Event{abci.Event{
-			Type:       "default",
-			Attributes: tags,
-		}},
+		Code:      rc,
+		Log:       info,
+		Info:      info,
+		Events:    events,
 		Codespace: "amo",
 	}
 }

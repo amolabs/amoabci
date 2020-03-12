@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strconv"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
 
@@ -74,7 +75,7 @@ type Tx interface {
 	Sign(privKey crypto.PrivKey) error
 	Verify() bool
 	Check() (uint32, string)
-	Execute(store *store.Store) (uint32, string, []tm.KVPair)
+	Execute(store *store.Store) (uint32, string, []abci.Event)
 }
 
 var _ Tx = &TxBase{}
@@ -305,10 +306,10 @@ func (t *TxBase) Check() (uint32, string) {
 	return rc, info
 }
 
-func (t *TxBase) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxBase) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	rc := code.TxCodeUnknown
 	info := "unknown transaction type"
-	tags := []tm.KVPair(nil)
+	events := []abci.Event(nil)
 
-	return rc, info, tags
+	return rc, info, events
 }

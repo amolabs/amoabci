@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	tm "github.com/tendermint/tendermint/libs/common"
 
@@ -47,7 +48,7 @@ func (t *TxStake) Check() (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func (t *TxStake) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxStake) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	txParam, err := parseStakeParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

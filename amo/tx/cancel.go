@@ -3,6 +3,7 @@ package tx
 import (
 	"encoding/json"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -40,7 +41,7 @@ func (t *TxCancel) Check() (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func (t *TxCancel) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxCancel) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	txParam, err := parseCancelParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
@@ -68,9 +69,14 @@ func (t *TxCancel) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	balance.Add(&request.DealerFee)
 	store.SetBalance(t.GetSender(), balance)
 
-	tags := []tm.KVPair{
-		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
+	events := []abci.Event{
+		abci.Event{
+			Type: "parcel",
+			Attributes: []tm.KVPair{
+				{Key: []byte("id"), Value: []byte(txParam.Target.String())},
+			},
+		},
 	}
 
-	return code.TxCodeOK, "ok", tags
+	return code.TxCodeOK, "ok", events
 }

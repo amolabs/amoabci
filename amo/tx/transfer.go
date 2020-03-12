@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
-	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -50,7 +50,7 @@ func (t *TxTransfer) Check() (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	txParam, err := parseTransferParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil

@@ -3,7 +3,7 @@ package tx
 import (
 	"encoding/json"
 
-	tm "github.com/tendermint/tendermint/libs/common"
+	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -40,7 +40,7 @@ func (t *TxPropose) Check() (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func (t *TxPropose) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxPropose) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	txParam, err := parseProposeParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
