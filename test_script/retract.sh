@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 ROOT=$(dirname $0)
 
 FROM=$1

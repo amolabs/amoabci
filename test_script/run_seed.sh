@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 check_docker_status() {
 	printf "wait for %s	to fully wake up " $1
 	until [ $(docker inspect -f {{.State.Running}} $1) == "true" ]; do

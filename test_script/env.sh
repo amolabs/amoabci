@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 DATAROOT=$1
 NODENUM=$2
 

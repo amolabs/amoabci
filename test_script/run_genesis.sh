@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 get_block_height() {
 	out=$($CLI query node $CLIOPT)
 	height=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['sync_info']['latest_block_height']")

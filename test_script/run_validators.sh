@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 NODENUM=$1
 
 check_docker_status() {
