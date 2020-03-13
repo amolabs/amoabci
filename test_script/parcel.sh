@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 #if [ $# != 0 ]; then
 #	echo "usage: $(basename $0) <recipient_user>"
 #	exit 0

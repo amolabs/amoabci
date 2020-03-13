@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # < key set >
 #
 # 01. tgenesis

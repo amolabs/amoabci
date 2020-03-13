@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 NODENUM=$1
 
 AMOUNT=1000
