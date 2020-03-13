@@ -310,12 +310,12 @@ func TestLockedStake(t *testing.T) {
 	// height does not matter here
 	err = s.SetLockedStake(holder2, stake11, 1)
 	// conflict: holder mismatch
-	assert.Equal(t, code.TxErrPermissionDenied, err)
+	assert.Equal(t, code.GetError(code.TxCodePermissionDenied), err)
 
 	// height does not matter here
 	err = s.SetLockedStake(holder1, stake2, 1)
 	// conflict: validator mismatch
-	assert.Equal(t, code.TxErrBadValidator, err)
+	assert.Equal(t, code.GetError(code.TxCodeBadValidator), err)
 
 	stake = s.GetStake(holder1, false)
 	assert.NotNil(t, stake)

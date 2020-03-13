@@ -1387,5 +1387,5 @@ func TestVote(t *testing.T) {
 	rc, _ = t3.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	rc, _, _ = t3.Execute(s)
-	assert.Equal(t, code.TxCodeVoteNotOpened, rc)
+	assert.Equal(t, code.TxCodeVoteNotOpen, rc)
 }

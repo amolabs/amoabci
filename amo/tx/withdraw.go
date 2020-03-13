@@ -66,13 +66,13 @@ func (t *TxWithdraw) Execute(store *store.Store) (uint32, string, []abci.Event) 
 
 	if err := store.SetUnlockedStake(t.GetSender(), unlocked); err != nil {
 		switch err {
-		case code.TxErrBadParam:
+		case code.GetError(code.TxCodeBadParam):
 			return code.TxCodeBadParam, err.Error(), nil
-		case code.TxErrPermissionDenied:
+		case code.GetError(code.TxCodePermissionDenied):
 			return code.TxCodePermissionDenied, err.Error(), nil
-		case code.TxErrDelegateExists:
+		case code.GetError(code.TxCodeDelegateExists):
 			return code.TxCodeDelegateExists, err.Error(), nil
-		case code.TxErrLastValidator:
+		case code.GetError(code.TxCodeLastValidator):
 			return code.TxCodeLastValidator, err.Error(), nil
 		default:
 			return code.TxCodeUnknown, err.Error(), nil

@@ -89,7 +89,7 @@ func (t *TxDelegate) Execute(store *store.Store) (uint32, string, []abci.Event) 
 	}
 	if err := store.SetDelegate(t.GetSender(), delegate); err != nil {
 		switch err {
-		case code.TxErrNoStake:
+		case code.GetError(code.TxCodeNoStake):
 			return code.TxCodeNoStake, err.Error(), nil
 		default:
 			return code.TxCodeUnknown, err.Error(), nil

@@ -63,7 +63,7 @@ func (t *TxVote) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	if !(draft.OpenCount == 0 &&
 		draft.CloseCount > 0 &&
 		draft.ApplyCount > 0) {
-		return code.TxCodeVoteNotOpened, "vote is not opened", nil
+		return code.TxCodeVoteNotOpen, "vote is not opened", nil
 	}
 
 	vote := store.GetVote(txParam.DraftID, t.GetSender(), false)
