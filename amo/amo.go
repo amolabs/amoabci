@@ -562,7 +562,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	app.store.SetBalance(t.GetSender(), balance.Sub(&fee))
 	app.feeAccumulated.Add(&fee)
 
-	rc, info, opEvent := t.Execute(app.store)
+	rc, info, opEvents := t.Execute(app.store)
 
 	// if the operation was not successful,
 	// change nothing and rollback the fee
@@ -576,7 +576,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 			app.state.NextDraftID += uint32(1)
 		}
 
-		events = append(events, opEvent...)
+		events = append(events, opEvents...)
 		app.numDeliveredTxs += 1
 
 	} else {
