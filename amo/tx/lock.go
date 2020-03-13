@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
-	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -42,7 +42,7 @@ func (t *TxLock) Check() (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func (t *TxLock) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxLock) Execute(s *store.Store) (uint32, string, []abci.Event) {
 	param := t.Param
 	sender := t.GetSender()
 

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -49,7 +50,7 @@ func (t *TxRegister) Check() (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxRegister) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	txParam, err := parseRegisterParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
@@ -92,10 +93,15 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 		OnSale: true,
 	})
 
-	tags := []tm.KVPair{
-		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
-		{Key: []byte("parcel.owner"), Value: t.GetSender()},
+	events := []abci.Event{
+		abci.Event{
+			Type: "parcel",
+			Attributes: []tm.KVPair{
+				{Key: []byte("id"), Value: []byte(txParam.Target.String())},
+				{Key: []byte("owner"), Value: []byte(t.GetSender())},
+			},
+		},
 	}
 
-	return code.TxCodeOK, "ok", tags
+	return code.TxCodeOK, "ok", events
 }

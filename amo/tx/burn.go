@@ -3,7 +3,7 @@ package tx
 import (
 	"encoding/json"
 
-	tm "github.com/tendermint/tendermint/libs/common"
+	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -39,7 +39,7 @@ func (t *TxBurn) Check() (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func (t *TxBurn) Execute(s *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxBurn) Execute(s *store.Store) (uint32, string, []abci.Event) {
 	param := t.Param
 
 	udc := s.GetUDC(param.UDC, false)

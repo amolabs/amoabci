@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	tm "github.com/tendermint/tendermint/libs/common"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -41,7 +42,7 @@ func (t *TxDiscard) Check() (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func (t *TxDiscard) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxDiscard) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	txParam, err := parseDiscardParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
@@ -60,9 +61,14 @@ func (t *TxDiscard) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	parcel.OnSale = false
 	store.SetParcel(txParam.Target, parcel)
 
-	tags := []tm.KVPair{
-		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
+	events := []abci.Event{
+		abci.Event{
+			Type: "parcel",
+			Attributes: []tm.KVPair{
+				{Key: []byte("id"), Value: []byte(txParam.Target.String())},
+			},
+		},
 	}
 
-	return code.TxCodeOK, "ok", tags
+	return code.TxCodeOK, "ok", events
 }

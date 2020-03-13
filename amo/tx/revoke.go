@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	tm "github.com/tendermint/tendermint/libs/common"
 
@@ -48,7 +49,7 @@ func (t *TxRevoke) Check() (uint32, string) {
 }
 
 // TODO: fix: use GetUsage
-func (t *TxRevoke) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
+func (t *TxRevoke) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	txParam, err := parseRevokeParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
@@ -69,8 +70,15 @@ func (t *TxRevoke) Execute(store *store.Store) (uint32, string, []tm.KVPair) {
 	}
 
 	store.DeleteUsage(txParam.Grantee, txParam.Target)
-	tags := []tm.KVPair{
-		{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
+
+	events := []abci.Event{
+		abci.Event{
+			Type: "parcel",
+			Attributes: []tm.KVPair{
+				{Key: []byte("id"), Value: []byte(txParam.Target.String())},
+			},
+		},
 	}
-	return code.TxCodeOK, "ok", tags
+
+	return code.TxCodeOK, "ok", events
 }
