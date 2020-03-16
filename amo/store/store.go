@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	// division by 2 is for safeguarding. tendermint code is not so safe.
+	// division by 2 is for safeguarding. tendermint code.GetError(is not so safe.
 	MaxTotalVotingPower = tm.MaxTotalVotingPower / 2
 
 	merkleTreeCacheSize = 10000
@@ -338,12 +338,12 @@ func (s Store) checkValidatorMatch(holder crypto.Address, stake *types.Stake) er
 	// TODO: use s.GetHolderByValidator(stake.Validator)
 	prevHolder := s.indexValidator.Get(stake.Validator.Address())
 	if prevHolder != nil && !bytes.Equal(prevHolder, holder) {
-		return code.TxErrPermissionDenied
+		return code.GetError(code.TxCodePermissionDenied)
 	}
 	prevStake := s.GetStake(holder, false)
 	if prevStake != nil &&
 		!bytes.Equal(prevStake.Validator[:], stake.Validator[:]) {
-		return code.TxErrBadValidator
+		return code.GetError(code.TxCodeBadValidator)
 	}
 	return nil
 }
@@ -361,7 +361,7 @@ func (s Store) checkStakeDeletion(holder crypto.Address, stake *types.Stake, hei
 		} else if height > 0 {
 			target = s.GetLockedStake(holder, height, false)
 		} else { // height must not be negative
-			return code.TxErrUnknown
+			return code.GetError(code.TxCodeUnknown)
 		}
 		whole.Amount.Sub(&target.Amount)
 		if whole.Amount.Sign() == 0 {
@@ -371,14 +371,14 @@ func (s Store) checkStakeDeletion(holder crypto.Address, stake *types.Stake, hei
 			// check if there is a delegate appointed to this stake
 			ds := s.GetDelegatesByDelegatee(holder, false)
 			if len(ds) > 0 {
-				return code.TxErrDelegateExists
+				return code.GetError(code.TxCodeDelegateExists)
 			}
 
 			// check if this is the last stake
 			ts := s.GetTopStakes(2, nil, false)
 			if len(ts) == 1 {
 				// requested 2 but got 1. it means this is the last validator.
-				return code.TxErrLastValidator
+				return code.GetError(code.TxCodeLastValidator)
 			}
 		}
 	}
@@ -389,7 +389,7 @@ func (s Store) checkStakeDeletion(holder crypto.Address, stake *types.Stake, hei
 func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error {
 	b, err := json.Marshal(stake)
 	if err != nil {
-		return code.TxErrBadParam
+		return code.GetError(code.TxCodeBadParam)
 	}
 
 	// condition checks
@@ -429,7 +429,7 @@ func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error
 func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height int64) error {
 	b, err := json.Marshal(stake)
 	if err != nil {
-		return code.TxErrBadParam
+		return code.GetError(code.TxCodeBadParam)
 	}
 
 	// condition checks
@@ -750,12 +750,12 @@ func makeDelegateKey(holder []byte) []byte {
 func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) error {
 	b, err := json.Marshal(delegate)
 	if err != nil {
-		return code.TxErrBadParam
+		return code.GetError(code.TxCodeBadParam)
 	}
 	// before state update
 	es := s.GetEffStake(delegate.Delegatee, false)
 	if es == nil {
-		return code.TxErrNoStake
+		return code.GetError(code.TxCodeNoStake)
 	}
 
 	// make effStakeKey to find its corresponding value
