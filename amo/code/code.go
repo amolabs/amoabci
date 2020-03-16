@@ -44,15 +44,16 @@ const (
 
 // query codes
 const (
-	QueryCodeOK uint32 = iota + 1001
-	QueryCodeBadPath
+	QueryCodeOK      uint32 = 0
+	QueryCodeBadPath uint32 = iota + 1001 // offset
 	QueryCodeNoKey
 	QueryCodeBadKey
 	QueryCodeNoMatch
 )
 
 var errMap map[uint32]error = map[uint32]error{
-	TxCodeOK:                    nil,
+	0: nil, // TxCodeOK, QueryCodeOK
+
 	TxCodeBadParam:              errors.New("BadParam"),
 	TxCodeImproperTx:            errors.New("ImproperTx"),
 	TxCodeInvalidAmount:         errors.New("InvalidAmount"),
@@ -86,7 +87,6 @@ var errMap map[uint32]error = map[uint32]error{
 	TxCodeNotFound:              errors.New("NotFound"),
 	TxCodeUnknown:               errors.New("Unknown"),
 
-	QueryCodeOK:      nil,
 	QueryCodeBadPath: errors.New("BadPath"),
 	QueryCodeNoKey:   errors.New("NoKey"),
 	QueryCodeBadKey:  errors.New("BadKey"),
