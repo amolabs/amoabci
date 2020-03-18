@@ -68,14 +68,14 @@ func DistributeIncentive(
 		store.SetBalance(d.Delegator, b)                     // update balance
 		store.AddIncentiveRecord(height, d.Delegator, &tmp2) // update incentive record
 		logger.Debug("Block reward",
-			"delegator", hex.EncodeToString(d.Delegator), "reward", tmp2.Int64())
+			"delegator", hex.EncodeToString(d.Delegator), "reward", tmp2.String())
 	}
 	tmp2.Int.Sub(&incentive.Int, &tmp.Int) // calc validator reward
 	b := store.GetBalance(staker, false).Add(&tmp2)
 	store.SetBalance(staker, b)                     // update balance
 	store.AddIncentiveRecord(height, staker, &tmp2) // update incentive record
 	logger.Debug("Block reward",
-		"proposer", hex.EncodeToString(staker), "reward", tmp2.Int64())
+		"proposer", hex.EncodeToString(staker), "reward", tmp2.String())
 
 	return nil
 }

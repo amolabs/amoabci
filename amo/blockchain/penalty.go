@@ -104,11 +104,11 @@ func penalize(
 
 		store.SetDelegate(d.Delegator, d.Delegate)
 		logger.Debug(penaltyType,
-			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmp2.Int64())
+			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmp2.String())
 	}
 	tmp2.Int.Sub(&penalty.Int, &tmp.Int) // calc voter(validator) penalty
 	store.SlashStakes(holder, tmp2, false)
 
 	logger.Debug(penaltyType,
-		"validator", hex.EncodeToString(holder), "penalty", tmp2.Int64())
+		"validator", hex.EncodeToString(holder), "penalty", tmp2.String())
 }
