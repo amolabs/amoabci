@@ -23,7 +23,7 @@ import (
 
 const (
 	// versions
-	AMOAppVersion      = "v1.5.4-rc1"
+	AMOAppVersion      = "v1.5.4"
 	AMOProtocolVersion = uint64(0x3)
 )
 
