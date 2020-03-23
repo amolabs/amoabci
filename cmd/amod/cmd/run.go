@@ -16,9 +16,9 @@ import (
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/privval"
 	"github.com/tendermint/tendermint/proxy"
+	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo"
-	"github.com/amolabs/amoabci/amo/store"
 )
 
 var RunCmd = &cobra.Command{
@@ -74,22 +74,22 @@ func initApp(amoDirPath string) (*nm.Node, error) {
 	}
 
 	// TODO: do not use hard-coded value. use value from configuration.
-	merkleDB, err := store.NewDBProxy(defaultMerkleDB, dataDirPath)
+	merkleDB, err := tmdb.NewGoLevelDB(defaultMerkleDB, dataDirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	indexDB, err := store.NewDBProxy(defaultIndexDB, dataDirPath)
+	indexDB, err := tmdb.NewGoLevelDB(defaultIndexDB, dataDirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	incentiveDB, err := store.NewDBProxy(defaultIncentiveDB, dataDirPath)
+	incentiveDB, err := tmdb.NewGoLevelDB(defaultIncentiveDB, dataDirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	groupCounterDB, err := store.NewDBProxy(defaultGroupCounterDB, dataDirPath)
+	groupCounterDB, err := tmdb.NewGoLevelDB(defaultGroupCounterDB, dataDirPath)
 	if err != nil {
 		return nil, err
 	}
