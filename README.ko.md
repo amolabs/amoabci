@@ -15,12 +15,6 @@ Tendermint ABCI 앱*을 구현하는 코드(`amoabci`)와 그외 필요한 스�
 
 ## 시작하기
 
-### 공통 사전 조건
-* [leveldb](https://github.com/google/leveldb)
-  * Debian이나 Ubuntu 리눅수의 경우에는 `libleveldb-dev` 패키지를 설치한다.
-  * 컴파일하는 서버와 실행하는 서버가 다를 경우 실행하는 서버에는
-	`libleveldb1v5` 패키지를 설치한다.
-
 ### 컴파일된 바이너리 설치
 다음 명령을 실행해서 컴파일된 바이너리를 설치한다:
 ```bash

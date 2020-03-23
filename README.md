@@ -15,12 +15,6 @@ ABCI app for AMO blockchain* (`amoabci`) and necessary helper scripts.
 
 ## Getting Started 
 
-### Common prerequisites
-* [leveldb](https://github.com/google/leveldb)
-  * For Debian or Ubuntu linux, you can install `libleveldb-dev` package.
-  * In case you use different servers for building and production, install
-	`libleveldb1v5` package in the production server.
-
 ### Install from pre-built binary
 Run the following commands to install pre-built amod:
 ```bash
