@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tm "github.com/tendermint/tendermint/libs/common"
+	tmdb "github.com/tendermint/tm-db"
 
-	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/tx"
 	"github.com/amolabs/amoabci/amo/types"
 	"github.com/amolabs/amoabci/crypto/p256"
@@ -40,22 +40,22 @@ func BenchmarkCheckTransferTx(b *testing.B) {
 	setUpBench(b)
 	defer tearDownBench(b)
 
-	sdb, err := store.NewDBProxy("state", benchTest)
+	sdb, err := tmdb.NewGoLevelDB("state", benchTest)
 	assert.NoError(b, err)
 	assert.NotNil(b, sdb)
 	defer sdb.Close()
 
-	idxdb, err := store.NewDBProxy("index", benchTest)
+	idxdb, err := tmdb.NewGoLevelDB("index", benchTest)
 	assert.NoError(b, err)
 	assert.NotNil(b, idxdb)
 	defer idxdb.Close()
 
-	incdb, err := store.NewDBProxy("incentive", benchTest)
+	incdb, err := tmdb.NewGoLevelDB("incentive", benchTest)
 	assert.NoError(b, err)
 	assert.NotNil(b, incdb)
 	defer incdb.Close()
 
-	gcdb, err := store.NewDBProxy("group_counter", benchTest)
+	gcdb, err := tmdb.NewGoLevelDB("group_counter", benchTest)
 	assert.NoError(b, err)
 	assert.NotNil(b, gcdb)
 	defer incdb.Close()
@@ -90,22 +90,22 @@ func BenchmarkDeliverTransferTx(b *testing.B) {
 	setUpBench(b)
 	defer tearDownBench(b)
 
-	sdb, err := store.NewDBProxy("state", benchTest)
+	sdb, err := tmdb.NewGoLevelDB("state", benchTest)
 	assert.NoError(b, err)
 	assert.NotNil(b, sdb)
 	defer sdb.Close()
 
-	idxdb, err := store.NewDBProxy("index", benchTest)
+	idxdb, err := tmdb.NewGoLevelDB("index", benchTest)
 	assert.NoError(b, err)
 	assert.NotNil(b, idxdb)
 	defer idxdb.Close()
 
-	incdb, err := store.NewDBProxy("incentive", benchTest)
+	incdb, err := tmdb.NewGoLevelDB("incentive", benchTest)
 	assert.NoError(b, err)
 	assert.NotNil(b, incdb)
 	defer incdb.Close()
 
-	gcdb, err := store.NewDBProxy("group_counter", benchTest)
+	gcdb, err := tmdb.NewGoLevelDB("group_counter", benchTest)
 	assert.NoError(b, err)
 	assert.NotNil(b, gcdb)
 	defer incdb.Close()

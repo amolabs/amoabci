@@ -81,13 +81,13 @@ func TestPurge(t *testing.T) {
 	setUp(t)
 	defer tearDown(t)
 
-	sdb, err := NewDBProxy("state", testRoot)
+	sdb, err := tmdb.NewGoLevelDB("state", testRoot)
 	assert.NoError(t, err)
-	idxdb, err := NewDBProxy("index", testRoot)
+	idxdb, err := tmdb.NewGoLevelDB("index", testRoot)
 	assert.NoError(t, err)
-	incdb, err := NewDBProxy("incentive", testRoot)
+	incdb, err := tmdb.NewGoLevelDB("incentive", testRoot)
 	assert.NoError(t, err)
-	gcdb, err := NewDBProxy("group_counter", testRoot)
+	gcdb, err := tmdb.NewGoLevelDB("group_counter", testRoot)
 	assert.NoError(t, err)
 
 	s := NewStore(sdb, idxdb, incdb, gcdb)
