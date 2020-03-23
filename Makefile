@@ -16,7 +16,7 @@ ifneq ($(TARGET),)
   BUILDENV += GOOS=$(TARGET)
 endif
 
-PROFCMD=go test -cpuprofile=cpu.prof -tags "$(BUILDTAGS) cleveldb" -bench .
+PROFCMD=go test -cpuprofile=cpu.prof -bench .
 
 tags: $(GOSRCS)
 	gotags -R -f tags .
@@ -25,25 +25,12 @@ build:
 	@echo "--> Building amo daemon (amod)"
 	$(BUILDENV) go build ./cmd/amod
 
-# compatibility target
-build_c:
-	@echo "--> Building amo daemon (amod)"
-	$(BUILDENV) go build -tags "$(BUILDTAGS) cleveldb" ./cmd/amod
-
 install:
 	@echo "--> Installing amo daemon (amod)"
 	$(BUILDENV) go install ./cmd/amod
 
-# compatibility target
-install_c:
-	@echo "--> Installing amo daemon (amod)"
-	$(BUILDENV) go install -tags "$(BUILDTAGS) cleveldb" ./cmd/amod
-
 test:
 	go test ./...
-
-test_c:
-	go test -tags "$(BUILDTAGS) cleveldb" ./...
 
 bench:
 	cd amo; $(PROFCMD)
