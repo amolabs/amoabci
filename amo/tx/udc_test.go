@@ -6,7 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
+	tmrand "github.com/tendermint/tendermint/libs/rand"
 	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -22,7 +23,7 @@ func makeAccAddr(seed string) crypto.Address {
 func TestParseIssue(t *testing.T) {
 	payload := []byte(`{"udc":65342,"operators":["99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"],"desc":"mycoin","amount":"1000000"}`)
 
-	var operator cmn.HexBytes
+	var operator tmbytes.HexBytes
 	err := json.Unmarshal(
 		[]byte(`"99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"`),
 		&operator,
@@ -41,8 +42,8 @@ func TestParseIssue(t *testing.T) {
 }
 
 func TestTxIssue(t *testing.T) {
-	s := store.NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	param := IssueParam{
@@ -66,7 +67,7 @@ func TestTxIssue(t *testing.T) {
 	// make enough stake and try again
 	newStake := types.Stake{}
 	newStake.Amount = *new(types.Currency).Set(2000)
-	copy(newStake.Validator[:], cmn.RandBytes(32))
+	copy(newStake.Validator[:], tmrand.Bytes(32))
 	s.SetUnlockedStake(makeAccAddr("issuer"), &newStake)
 	rc, _, _ = tx.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
@@ -108,8 +109,8 @@ func TestTxIssue(t *testing.T) {
 }
 
 func TestTxUDCBalance(t *testing.T) {
-	s := store.NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	amo0 := *new(types.Currency)
@@ -120,7 +121,7 @@ func TestTxUDCBalance(t *testing.T) {
 	// make necessary stake
 	newStake := types.Stake{}
 	newStake.Amount = *new(types.Currency).Set(2000)
-	copy(newStake.Validator[:], cmn.RandBytes(32))
+	copy(newStake.Validator[:], tmrand.Bytes(32))
 	s.SetUnlockedStake(makeAccAddr("issuer"), &newStake)
 
 	// issue
@@ -216,7 +217,7 @@ func TestTxUDCBalance(t *testing.T) {
 func TestParseLock(t *testing.T) {
 	payload := []byte(`{"udc":123,"holder":"99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","amount":"1000000"}`)
 
-	var holder cmn.HexBytes
+	var holder tmbytes.HexBytes
 	err := json.Unmarshal(
 		[]byte(`"99FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"`),
 		&holder,
@@ -234,8 +235,8 @@ func TestParseLock(t *testing.T) {
 }
 
 func TestUDCLock(t *testing.T) {
-	s := store.NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	param := LockParam{
@@ -355,8 +356,8 @@ func TestParseBurn(t *testing.T) {
 }
 
 func TestUDCBurn(t *testing.T) {
-	s := store.NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	param := BurnParam{

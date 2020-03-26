@@ -39,8 +39,14 @@ func (s Store) AddIncentiveRecord(height int64, address crypto.Address, amount *
 	abKey := makeAddressFirstKey(address, height)
 	amountValue := amount.Bytes()
 
-	s.incentiveHeight.Set(baKey, amountValue)
+	err := s.incentiveHeight.Set(baKey, amountValue)
+	if err != nil {
+		return err
+	}
 	s.incentiveAddress.Set(abKey, amountValue)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -54,14 +60,19 @@ func (s Store) GetBlockIncentiveRecords(height int64) []IncentiveInfo {
 	hb := make([]byte, 8)
 	binary.BigEndian.PutUint64(hb, uint64(height))
 
-	itr = s.incentiveHeight.Iterator(hb, nil)
+	itr, err := s.incentiveHeight.Iterator(hb, nil)
+	if err != nil {
+		s.logger.Error("Store", "GetBlockIncentiveRecords", err.Error())
+		return []IncentiveInfo{}
+	}
 	defer itr.Close()
 
 	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), hb); itr.Next() {
 		address := crypto.Address(itr.Key()[len(hb):])
 		amount, err := new(types.Currency).SetBytes(itr.Value())
 		if err != nil {
-			continue
+			s.logger.Error("Store", "GetBlockIncentiveRecords", err.Error())
+			return []IncentiveInfo{}
 		}
 
 		incentive := IncentiveInfo{
@@ -84,14 +95,19 @@ func (s Store) GetAddressIncentiveRecords(address crypto.Address) []IncentiveInf
 
 	ab := address.Bytes()
 
-	itr = s.incentiveAddress.Iterator(ab, nil)
+	itr, err := s.incentiveAddress.Iterator(ab, nil)
+	if err != nil {
+		s.logger.Error("Store", "GetAddressIncentiveRecords", err.Error())
+		return []IncentiveInfo{}
+	}
 	defer itr.Close()
 
 	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), ab); itr.Next() {
 		blockHeight := int64(binary.BigEndian.Uint64(itr.Key()[len(ab):]))
 		amount, err := new(types.Currency).SetBytes(itr.Value())
 		if err != nil {
-			continue
+			s.logger.Error("Store", "GetAddressIncentiveRecords", err.Error())
+			return []IncentiveInfo{}
 		}
 
 		incentive := IncentiveInfo{
@@ -109,7 +125,10 @@ func (s Store) GetAddressIncentiveRecords(address crypto.Address) []IncentiveInf
 func (s Store) GetIncentiveRecord(height int64, address crypto.Address) IncentiveInfo {
 	ba := makeHeightFirstKey(height, address)
 
-	value := s.incentiveHeight.Get(ba)
+	value, err := s.incentiveHeight.Get(ba)
+	if err != nil {
+		return IncentiveInfo{}
+	}
 	if value == nil {
 		return IncentiveInfo{}
 	}

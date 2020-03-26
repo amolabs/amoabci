@@ -8,7 +8,7 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
-	tm "github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/bytes"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -345,7 +345,7 @@ func queryParcel(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	var id tm.HexBytes
+	var id bytes.HexBytes
 	err := json.Unmarshal(queryData, &id)
 	if err != nil {
 		res.Log = "error: unmarshal"
@@ -382,7 +382,7 @@ func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	keyMap := make(map[string]tm.HexBytes)
+	keyMap := make(map[string]bytes.HexBytes)
 	err := json.Unmarshal(queryData, &keyMap)
 	if err != nil {
 		res.Log = "error: unmarshal"
@@ -437,7 +437,7 @@ func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	keyMap := make(map[string]tm.HexBytes)
+	keyMap := make(map[string]bytes.HexBytes)
 	err := json.Unmarshal(queryData, &keyMap)
 	if err != nil {
 		res.Log = "error: unmarshal"

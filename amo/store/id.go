@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"strconv"
 
-	tm "github.com/tendermint/tendermint/libs/common"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
 )
 
-func ConvIDFromHex(IDHex tm.HexBytes) (uint32, []byte, error) {
+func ConvIDFromHex(IDHex tmbytes.HexBytes) (uint32, []byte, error) {
 	var (
 		IDStr       string
 		IDUint      uint32

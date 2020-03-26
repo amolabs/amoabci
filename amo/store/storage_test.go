@@ -10,8 +10,8 @@ import (
 )
 
 func TestStorageSetGet(t *testing.T) {
-	s := NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	mysto := &types.Storage{

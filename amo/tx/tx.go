@@ -3,11 +3,12 @@ package tx
 import (
 	"crypto/elliptic"
 	"encoding/json"
+	"errors"
 	"strconv"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
-	tm "github.com/tendermint/tendermint/libs/common"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -57,8 +58,8 @@ func init() {
 }
 
 type Signature struct {
-	PubKey   p256.PubKeyP256 `json:"pubkey"`
-	SigBytes tm.HexBytes     `json:"sig_bytes"`
+	PubKey   p256.PubKeyP256  `json:"pubkey"`
+	SigBytes tmbytes.HexBytes `json:"sig_bytes"`
 }
 
 type Tx interface {
@@ -276,7 +277,7 @@ func (t *TxBase) Sign(privKey crypto.PrivKey) error {
 	pubKey := privKey.PubKey()
 	p256PubKey, ok := pubKey.(p256.PubKeyP256)
 	if !ok {
-		return tm.NewError("Fail to convert public key to p256 public key")
+		return errors.New("Fail to convert public key to p256 public key")
 	}
 	sb := t.getSigningBytes()
 	sig, err := privKey.Sign(sb)

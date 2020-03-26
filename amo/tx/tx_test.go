@@ -8,7 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
+	tmrand "github.com/tendermint/tendermint/libs/rand"
 	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -38,13 +39,13 @@ var (
 	eve   = newUser(p256.GenPrivKeyFromSecret([]byte("eve")))
 )
 
-var parcelID = []cmn.HexBytes{
+var parcelID = []tmbytes.HexBytes{
 	[]byte{0xA, 0xA, 0xA, 0xA},
 	[]byte{0xB, 0xB, 0xB, 0xB},
 	[]byte{0x1, 0x1, 0x1, 0x1},
 }
 
-var custody = []cmn.HexBytes{
+var custody = []tmbytes.HexBytes{
 	[]byte{0xC, 0xC, 0xC, 0xC},
 	[]byte{0xD, 0xD, 0xD, 0xD},
 	[]byte{0x2, 0x2, 0x2, 0x2},
@@ -69,7 +70,7 @@ func makeTestAddress(seed string) crypto.Address {
 }
 
 func getTestStore() *store.Store {
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, _ := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	s.SetBalanceUint64(alice.addr, 3000)
 	s.SetBalanceUint64(bob.addr, 1000)
 	s.SetBalanceUint64(eve.addr, 50)
@@ -91,7 +92,7 @@ func getTestStore() *store.Store {
 		Custody: custody[0],
 	})
 	var k ed25519.PubKeyEd25519
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
@@ -105,7 +106,7 @@ func getTestStore() *store.Store {
 
 func TestParseTx(t *testing.T) {
 	bytes := []byte(`{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"},"signature":{"pubkey":"0485FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B185FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B1EF1D55E9B1EF1D","sig_bytes":"FFFFFFFF"}}`)
-	var sender, tmp, sigbytes cmn.HexBytes
+	var sender, tmp, sigbytes tmbytes.HexBytes
 	err := json.Unmarshal(
 		[]byte(`"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"`),
 		&sender,
@@ -177,7 +178,8 @@ func TestTxSignature(t *testing.T) {
 
 func TestValidCancel(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:   alice.addr,
 		Custody: custody[0],
@@ -203,7 +205,8 @@ func TestValidCancel(t *testing.T) {
 
 func TestNonValidCancel(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:        alice.addr,
 		Custody:      custody[0],
@@ -227,7 +230,8 @@ func TestNonValidCancel(t *testing.T) {
 
 func TestValidDiscard(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:   alice.addr,
 		Custody: custody[0],
@@ -266,7 +270,8 @@ func TestValidDiscard(t *testing.T) {
 
 func TestNonValidDiscard(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:        alice.addr,
 		Custody:      custody[0],
@@ -296,8 +301,8 @@ func TestNonValidDiscard(t *testing.T) {
 
 func TestRegister(t *testing.T) {
 	// env
-	s := store.NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	// target
@@ -363,8 +368,8 @@ func TestRegister(t *testing.T) {
 
 func TestRequest(t *testing.T) {
 	// env
-	s := store.NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	// target
@@ -464,8 +469,8 @@ func TestRequest(t *testing.T) {
 
 func TestGrant(t *testing.T) {
 	// env
-	s := store.NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	// target
@@ -562,7 +567,8 @@ func TestGrant(t *testing.T) {
 
 func TestValidRevoke(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:   alice.addr,
 		Custody: custody[0],
@@ -608,7 +614,8 @@ func TestValidRevoke(t *testing.T) {
 
 func TestNonValidRevoke(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	s.SetParcel(parcelID[0], &types.Parcel{
 		Owner:        alice.addr,
 		Custody:      custody[0],
@@ -643,7 +650,8 @@ func TestNonValidRevoke(t *testing.T) {
 
 func TestValidTransfer(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	s.SetBalanceUint64(makeTestAddress("alice"), 1230)
 
 	// target
@@ -669,7 +677,8 @@ func TestValidTransfer(t *testing.T) {
 
 func TestNonValidTransfer(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 
 	// target
 	payload, _ := json.Marshal(TransferParam{
@@ -718,11 +727,12 @@ func TestNonValidTransfer(t *testing.T) {
 
 func TestValidStake(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	s.SetBalanceUint64(alice.addr, 3000)
 	ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(500)
 
-	validator := cmn.RandBytes(32)
+	validator := tmrand.Bytes(32)
 
 	// target
 	payload, _ := json.Marshal(StakeParam{
@@ -755,20 +765,21 @@ func TestValidStake(t *testing.T) {
 
 func TestNonValidStake(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	s.SetBalanceUint64(alice.addr, 1000)
 	ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(500)
 
 	// target
 	payload, _ := json.Marshal(StakeParam{
-		Validator: cmn.RandBytes(32),
+		Validator: tmrand.Bytes(32),
 		Amount:    *new(types.Currency).Set(0),
 	})
 
 	t1 := makeTestTx("stake", "alice", payload)
 
 	payload, _ = json.Marshal(StakeParam{
-		Validator: cmn.RandBytes(32),
+		Validator: tmrand.Bytes(32),
 		Amount:    *new(types.Currency).Set(2000),
 	})
 
@@ -796,7 +807,7 @@ func TestNonValidStake(t *testing.T) {
 
 	// env
 	payload, _ = json.Marshal(StakeParam{
-		Validator: cmn.RandBytes(32),
+		Validator: tmrand.Bytes(32),
 		Amount:    *new(types.Currency).Set(2345),
 	})
 	s.SetBalanceUint64(eve.addr, 3000)
@@ -810,9 +821,10 @@ func TestNonValidStake(t *testing.T) {
 
 func TestValidWithdraw(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	var k ed25519.PubKeyEd25519
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
@@ -835,7 +847,7 @@ func TestValidWithdraw(t *testing.T) {
 
 	// add more stakeholder to test stake deletion
 	//var k ed25519.PubKeyEd25519
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	s.SetUnlockedStake(bob.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
@@ -853,9 +865,10 @@ func TestValidWithdraw(t *testing.T) {
 
 func TestNonValidWithdraw(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	var k ed25519.PubKeyEd25519
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
@@ -899,9 +912,10 @@ func TestNonValidWithdraw(t *testing.T) {
 
 func TestValidDelegate(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	var k ed25519.PubKeyEd25519
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
@@ -928,14 +942,15 @@ func TestValidDelegate(t *testing.T) {
 
 func TestNonValidDelegate(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	var k ed25519.PubKeyEd25519
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
 	})
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	s.SetUnlockedStake(eve.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
@@ -1000,9 +1015,10 @@ func TestNonValidDelegate(t *testing.T) {
 
 func TestValidRetract(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	var k ed25519.PubKeyEd25519
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
@@ -1043,9 +1059,10 @@ func TestValidRetract(t *testing.T) {
 
 func TestNonValidRetract(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	var k ed25519.PubKeyEd25519
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	s.SetUnlockedStake(alice.addr, &types.Stake{
 		Amount:    *new(types.Currency).Set(2000),
 		Validator: k,
@@ -1082,7 +1099,8 @@ func TestNonValidRetract(t *testing.T) {
 }
 
 func TestStakeLockup(t *testing.T) {
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	s.SetBalanceUint64(alice.addr, 3000)
 
 	// setup lock-up period config
@@ -1090,7 +1108,7 @@ func TestStakeLockup(t *testing.T) {
 
 	// deposit stake
 	stakeParam := StakeParam{
-		Validator: cmn.RandBytes(32),
+		Validator: tmrand.Bytes(32),
 		Amount:    *new(types.Currency).Set(2000),
 	}
 	payload, _ := json.Marshal(stakeParam)
@@ -1134,7 +1152,8 @@ func TestStakeLockup(t *testing.T) {
 
 func TestPropose(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 	ConfigAMOApp = types.AMOAppConfig{
 		MaxValidators:         uint64(100),
@@ -1174,7 +1193,7 @@ func TestPropose(t *testing.T) {
 
 	// proposer stake
 	var k ed25519.PubKeyEd25519
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 
 	assert.NoError(t, s.SetUnlockedStake(makeAccAddr("proposer"), &types.Stake{
 		Validator: k,
@@ -1218,7 +1237,7 @@ func TestPropose(t *testing.T) {
 	assert.Equal(t, types.Zero, bal)
 
 	// propose same draft by proposerDup
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	s.SetBalance(makeAccAddr("proposerDup"), new(types.Currency).Set(1000))
 	assert.NoError(t, s.SetUnlockedStake(makeAccAddr("proposerDup"), &types.Stake{
 		Validator: k,
@@ -1265,7 +1284,8 @@ func TestPropose(t *testing.T) {
 
 func TestVote(t *testing.T) {
 	// env
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	// target
@@ -1283,7 +1303,7 @@ func TestVote(t *testing.T) {
 
 	// voter1 stake
 	var k ed25519.PubKeyEd25519
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	assert.NoError(t, s.SetUnlockedStake(makeAccAddr("voter1"), &types.Stake{
 		Validator: k,
 		Amount:    *new(types.Currency).Set(10000000),
@@ -1335,7 +1355,7 @@ func TestVote(t *testing.T) {
 	})
 
 	// proposer stake
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	assert.NoError(t, s.SetUnlockedStake(makeAccAddr("proposer"), &types.Stake{
 		Validator: k,
 		Amount:    *new(types.Currency).Set(10000000),
@@ -1359,7 +1379,7 @@ func TestVote(t *testing.T) {
 	assert.Equal(t, code.TxCodeAlreadyVoted, rc)
 
 	// voter2 stake
-	copy(k[:], cmn.RandBytes(32))
+	copy(k[:], tmrand.Bytes(32))
 	assert.NoError(t, s.SetUnlockedStake(makeAccAddr("voter2"), &types.Stake{
 		Validator: k,
 		Amount:    *new(types.Currency).Set(10000000),

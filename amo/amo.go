@@ -10,7 +10,7 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
-	tm "github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/kv"
 	"github.com/tendermint/tendermint/libs/log"
 	tmdb "github.com/tendermint/tm-db"
 
@@ -111,7 +111,7 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger) (*AMOApp, error) {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -128,16 +128,20 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 		gcdb = tmdb.NewMemDB()
 	}
 
+	s, err := astore.NewStore(l, mdb, idxdb, incdb, gcdb)
+	if err != nil {
+		return nil, err
+	}
+
 	app := &AMOApp{
 		logger:         l,
 		stateFile:      stateFile,
 		state:          State{},
+		store:          s,
 		merkleDB:       mdb,
 		indexDB:        idxdb,
 		incentiveDB:    incdb,
 		groupCounterDB: gcdb,
-
-		store: astore.NewStore(mdb, idxdb, incdb, gcdb),
 	}
 
 	// load state, db and config
@@ -165,7 +169,7 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 
 	app.save()
 
-	return app
+	return app, nil
 }
 
 const (
@@ -540,7 +544,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	events := []abci.Event{
 		abci.Event{
 			Type: "tx",
-			Attributes: []tm.KVPair{
+			Attributes: []kv.Pair{
 				{Key: []byte("type"), Value: []byte(t.GetType())},
 				{Key: []byte("sender"), Value: []byte(t.GetSender().String())},
 			},

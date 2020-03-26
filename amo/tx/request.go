@@ -6,7 +6,8 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
-	tm "github.com/tendermint/tendermint/libs/common"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
+	"github.com/tendermint/tendermint/libs/kv"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -14,11 +15,11 @@ import (
 )
 
 type RequestParam struct {
-	Target    tm.HexBytes     `json:"target"`
-	Payment   types.Currency  `json:"payment"`
-	Dealer    crypto.Address  `json:"dealer,omitempty"`
-	DealerFee types.Currency  `json:"dealer_fee,omitempty"`
-	Extra     json.RawMessage `json:"extra,omitempty"`
+	Target    tmbytes.HexBytes `json:"target"`
+	Payment   types.Currency   `json:"payment"`
+	Dealer    crypto.Address   `json:"dealer,omitempty"`
+	DealerFee types.Currency   `json:"dealer_fee,omitempty"`
+	Extra     json.RawMessage  `json:"extra,omitempty"`
 }
 
 func parseRequestParam(raw []byte) (RequestParam, error) {
@@ -106,7 +107,7 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	events := []abci.Event{
 		abci.Event{
 			Type: "parcel",
-			Attributes: []tm.KVPair{
+			Attributes: []kv.Pair{
 				{Key: []byte("id"), Value: []byte(txParam.Target.String())},
 			},
 		},

@@ -6,7 +6,7 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
-	tm "github.com/tendermint/tendermint/libs/common"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -14,8 +14,8 @@ import (
 )
 
 type StakeParam struct {
-	Validator tm.HexBytes    `json:"validator"`
-	Amount    types.Currency `json:"amount"`
+	Validator tmbytes.HexBytes `json:"validator"`
+	Amount    types.Currency   `json:"amount"`
 }
 
 func parseStakeParam(raw []byte) (StakeParam, error) {

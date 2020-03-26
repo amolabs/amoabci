@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	tm "github.com/tendermint/tendermint/libs/common"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
+	"github.com/tendermint/tendermint/libs/kv"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
 )
 
 type CancelParam struct {
-	Target tm.HexBytes `json:"target"`
+	Target tmbytes.HexBytes `json:"target"`
 }
 
 func parseCancelParam(raw []byte) (CancelParam, error) {
@@ -72,7 +73,7 @@ func (t *TxCancel) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	events := []abci.Event{
 		abci.Event{
 			Type: "parcel",
-			Attributes: []tm.KVPair{
+			Attributes: []kv.Pair{
 				{Key: []byte("id"), Value: []byte(txParam.Target.String())},
 			},
 		},

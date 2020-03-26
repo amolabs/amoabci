@@ -7,7 +7,8 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
-	tm "github.com/tendermint/tendermint/libs/common"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
+	"github.com/tendermint/tendermint/libs/kv"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -15,10 +16,10 @@ import (
 )
 
 type GrantParam struct {
-	Target  tm.HexBytes     `json:"target"`
-	Grantee crypto.Address  `json:"grantee"`
-	Custody tm.HexBytes     `json:"custody"`
-	Extra   json.RawMessage `json:"extra,omitempty"`
+	Target  tmbytes.HexBytes `json:"target"`
+	Grantee crypto.Address   `json:"grantee"`
+	Custody tmbytes.HexBytes `json:"custody"`
+	Extra   json.RawMessage  `json:"extra,omitempty"`
 }
 
 func parseGrantParam(raw []byte) (GrantParam, error) {
@@ -114,7 +115,7 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	events := []abci.Event{
 		abci.Event{
 			Type: "parcel",
-			Attributes: []tm.KVPair{
+			Attributes: []kv.Pair{
 				{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
 			},
 		},

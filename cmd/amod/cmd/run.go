@@ -98,11 +98,14 @@ func initApp(amoDirPath string) (*nm.Node, error) {
 	appLogger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 
 	// create app
-	app := amo.NewAMOApp(
+	app, err := amo.NewAMOApp(
 		stateFile,
 		merkleDB, indexDB, incentiveDB, groupCounterDB,
 		appLogger.With("module", "abci-app"),
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	node, err := newTM(app, config)
 	if err != nil {

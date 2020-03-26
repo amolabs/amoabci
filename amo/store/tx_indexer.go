@@ -42,12 +42,16 @@ func (s Store) TxIndexerGetHash(height int64) [][]byte {
 
 	hb := make([]byte, 8)
 	binary.BigEndian.PutUint64(hb, uint64(height))
-	value := s.indexBlockTx.Get(hb)
+	value, err := s.indexBlockTx.Get(hb)
+	if err != nil {
+		s.logger.Error("Store", "TxIndexerGetHash", err.Error())
+		return nil
+	}
 	if value == nil {
 		return nil
 	}
 
-	err := json.Unmarshal(value, &txs)
+	err = json.Unmarshal(value, &txs)
 	if err != nil {
 		return nil
 	}
@@ -58,11 +62,20 @@ func (s Store) TxIndexerGetHash(height int64) [][]byte {
 func (s Store) TxIndexerGetHeight(txHash []byte) int64 {
 	height := int64(0)
 
-	if !s.indexTxBlock.Has(txHash) {
-		return height
+	exist, err := s.indexTxBlock.Has(txHash)
+	if err != nil {
+		s.logger.Error("Store", "TxIndexerGetHeight", err.Error())
+		return int64(0)
+	}
+	if !exist {
+		return int64(0)
 	}
 
-	value := s.indexTxBlock.Get(txHash)
+	value, err := s.indexTxBlock.Get(txHash)
+	if err != nil {
+		s.logger.Error("Store", "TxIndexerGetHeight", err.Error())
+		return int64(0)
+	}
 	height = int64(binary.BigEndian.Uint64(value))
 
 	return height
@@ -72,7 +85,12 @@ func (s Store) TxIndexerDelete(height int64) {
 	hb := make([]byte, 8)
 	binary.BigEndian.PutUint64(hb, uint64(height))
 
-	if !s.indexBlockTx.Has(hb) {
+	exist, err := s.indexBlockTx.Has(hb)
+	if err != nil {
+		s.logger.Error("Store", "TxIndexerDelete", err.Error())
+		return
+	}
+	if !exist {
 		return
 	}
 
@@ -80,23 +98,39 @@ func (s Store) TxIndexerDelete(height int64) {
 	txs := s.TxIndexerGetHash(height)
 
 	// delete indexBlockTx of given height
-	s.indexBlockTx.Delete(hb)
+	err = s.indexBlockTx.Delete(hb)
+	if err != nil {
+		s.logger.Error("Store", "TxIndexerDelete", err.Error())
+		return
+	}
 
 	// delete txs of given height
 	for _, tx := range txs {
-		s.indexTxBlock.Delete(tx)
+		err = s.indexTxBlock.Delete(tx)
+		if err != nil {
+			s.logger.Error("Store", "TxIndexerDelete", err.Error())
+			return
+		}
 	}
 }
 
 func (s Store) TxIndexerPurge() {
-	itr := s.indexBlockTx.Iterator(nil, nil)
+	itr, err := s.indexBlockTx.Iterator(nil, nil)
+	if err != nil {
+		s.logger.Error("Store", "TxIndexerPurge", err.Error())
+		return
+	}
 	defer itr.Close()
 
 	for ; itr.Valid(); itr.Next() {
 		s.indexBlockTx.Delete(itr.Key())
 	}
 
-	itr = s.indexTxBlock.Iterator(nil, nil)
+	itr, err = s.indexTxBlock.Iterator(nil, nil)
+	if err != nil {
+		s.logger.Error("Store", "TxIndexerPurge", err.Error())
+		return
+	}
 	defer itr.Close()
 
 	for ; itr.Valid(); itr.Next() {

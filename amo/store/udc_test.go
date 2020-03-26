@@ -11,8 +11,8 @@ import (
 )
 
 func TestUDCSetGet(t *testing.T) {
-	s := NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	mycoin := &types.UDC{
@@ -44,8 +44,8 @@ func TestUDCSetGet(t *testing.T) {
 }
 
 func TestUDCBalance(t *testing.T) {
-	s := NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	udc := uint32(123)
@@ -53,7 +53,7 @@ func TestUDCBalance(t *testing.T) {
 	amo10 := new(types.Currency).SetAMO(10)
 	amo0 := new(types.Currency)
 
-	err := s.SetUDCBalance(udc, tester, amo10)
+	err = s.SetUDCBalance(udc, tester, amo10)
 	assert.NoError(t, err)
 	bal := s.GetUDCBalance(udc, tester, false)
 	assert.NotNil(t, bal)
@@ -66,8 +66,8 @@ func TestUDCBalance(t *testing.T) {
 }
 
 func TestUDCLock(t *testing.T) {
-	s := NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	udcid := uint32(123)
