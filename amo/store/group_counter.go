@@ -60,7 +60,7 @@ func (s Store) GroupCounterPurge() {
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
 
-		err := s.lazinessCounterDB.Delete(k)
+		err := s.lazinessCounterDB.DeleteSync(k)
 		if err != nil {
 			s.logger.Error("Store", "GroupCounterPurge", err.Error())
 			continue

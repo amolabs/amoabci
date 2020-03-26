@@ -24,7 +24,7 @@ func (s Store) AddTxIndexer(height int64, txs [][]byte) {
 	txsJSON, _ := json.Marshal(txs)
 
 	// update indexBlockTx
-	s.indexBlockTx.Set(hb, txsJSON)
+	s.indexBlockTx.SetSync(hb, txsJSON)
 
 	batch := s.indexTxBlock.NewBatch()
 	defer batch.Close()
@@ -34,7 +34,10 @@ func (s Store) AddTxIndexer(height int64, txs [][]byte) {
 		batch.Set(tx, hb)
 	}
 
-	batch.WriteSync()
+	err := batch.WriteSync()
+	if err != nil {
+		s.logger.Error("Store", "AddTxIndexer", err.Error())
+	}
 }
 
 func (s Store) TxIndexerGetHash(height int64) [][]byte {
@@ -98,7 +101,7 @@ func (s Store) TxIndexerDelete(height int64) {
 	txs := s.TxIndexerGetHash(height)
 
 	// delete indexBlockTx of given height
-	err = s.indexBlockTx.Delete(hb)
+	err = s.indexBlockTx.DeleteSync(hb)
 	if err != nil {
 		s.logger.Error("Store", "TxIndexerDelete", err.Error())
 		return
@@ -106,7 +109,7 @@ func (s Store) TxIndexerDelete(height int64) {
 
 	// delete txs of given height
 	for _, tx := range txs {
-		err = s.indexTxBlock.Delete(tx)
+		err = s.indexTxBlock.DeleteSync(tx)
 		if err != nil {
 			s.logger.Error("Store", "TxIndexerDelete", err.Error())
 			return
@@ -123,7 +126,7 @@ func (s Store) TxIndexerPurge() {
 	defer itr.Close()
 
 	for ; itr.Valid(); itr.Next() {
-		s.indexBlockTx.Delete(itr.Key())
+		s.indexBlockTx.DeleteSync(itr.Key())
 	}
 
 	itr, err = s.indexTxBlock.Iterator(nil, nil)
@@ -134,6 +137,6 @@ func (s Store) TxIndexerPurge() {
 	defer itr.Close()
 
 	for ; itr.Valid(); itr.Next() {
-		s.indexTxBlock.Delete(itr.Key())
+		s.indexTxBlock.DeleteSync(itr.Key())
 	}
 }

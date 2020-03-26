@@ -145,7 +145,7 @@ func (s Store) Purge() error {
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
 		// XXX: not sure if this will confuse the iterator
-		s.indexDB.Delete(k)
+		s.indexDB.DeleteSync(k)
 	}
 
 	// TODO: need some method like s.stateDB.Size() to check if the DB has been
@@ -160,7 +160,7 @@ func (s Store) Purge() error {
 
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
-		s.incentiveDB.Delete(k)
+		s.incentiveDB.DeleteSync(k)
 	}
 
 	// lazinessCounterDB
@@ -171,7 +171,7 @@ func (s Store) Purge() error {
 	defer itr.Close()
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
-		s.lazinessCounterDB.Delete(k)
+		s.lazinessCounterDB.DeleteSync(k)
 	}
 
 	return nil
@@ -428,7 +428,7 @@ func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error
 			return code.GetError(code.TxCodeUnknown)
 		}
 		if exist {
-			err := s.indexEffStake.Delete(before)
+			err := s.indexEffStake.DeleteSync(before)
 			if err != nil {
 				s.logger.Error("Store", "SetUnlockedStake", err.Error())
 				return code.GetError(code.TxCodeUnknown)
@@ -438,7 +438,7 @@ func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error
 	// update
 	if stake.Amount.Sign() == 0 {
 		s.remove(makeStakeKey(holder))
-		err := s.indexValidator.Delete(stake.Validator.Address())
+		err := s.indexValidator.DeleteSync(stake.Validator.Address())
 		if err != nil {
 			s.logger.Error("Store", "SetUnlockedStake", err.Error())
 			return code.GetError(code.TxCodeUnknown)
@@ -489,7 +489,7 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 			return code.GetError(code.TxCodeUnknown)
 		}
 		if exist {
-			err := s.indexEffStake.Delete(before)
+			err := s.indexEffStake.DeleteSync(before)
 			if err != nil {
 				s.logger.Error("Store", "SetLockedStake", err.Error())
 				return code.GetError(code.TxCodeUnknown)
@@ -500,7 +500,7 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 	// update
 	if stake.Amount.Sign() == 0 {
 		s.remove(makeLockedStakeKey(holder, height))
-		err := s.indexValidator.Delete(stake.Validator.Address())
+		err := s.indexValidator.DeleteSync(stake.Validator.Address())
 		if err != nil {
 			s.logger.Error("Store", "SetLockedStake", err.Error())
 			return code.GetError(code.TxCodeUnknown)
@@ -830,7 +830,7 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 		return code.GetError(code.TxCodeUnknown)
 	}
 	if exist {
-		err := s.indexEffStake.Delete(before)
+		err := s.indexEffStake.DeleteSync(before)
 		if err != nil {
 			s.logger.Error("Store", "SetDelegate", err.Error())
 			return code.GetError(code.TxCodeUnknown)
@@ -840,7 +840,7 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 	// upadate
 	if delegate.Amount.Sign() == 0 {
 		s.remove(makeDelegateKey(holder))
-		err := s.indexDelegator.Delete(append(delegate.Delegatee, holder...))
+		err := s.indexDelegator.DeleteSync(append(delegate.Delegatee, holder...))
 		if err != nil {
 			s.logger.Error("Store", "SetDelegate", err.Error())
 			return code.GetError(code.TxCodeUnknown)
