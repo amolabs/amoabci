@@ -9,26 +9,26 @@ import (
 )
 
 func TestGroupCounter(t *testing.T) {
-	val1 := AddrSliceToArray(makeValAddr("val1"))
-	val2 := AddrSliceToArray(makeValAddr("val2"))
-	val3 := AddrSliceToArray(makeValAddr("val3"))
+	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
+	assert.NotNil(t, s)
 
 	lazyValidators := LazyValidators{
-		val1: 1,
-		val2: 2,
-		val3: 3,
+		AddrSliceToArray(makeValAddr("val1")): 1,
+		AddrSliceToArray(makeValAddr("val2")): 2,
+		AddrSliceToArray(makeValAddr("val3")): 3,
 	}
 
-	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s.GroupCounterPurge()
+	output := s.GroupCounterGetLazyValidators()
+	assert.Equal(t, 0, len(output))
 
 	s.GroupCounterSet(lazyValidators)
-	output := s.GroupCounterGetLazyValidators()
-
+	output = s.GroupCounterGetLazyValidators()
 	assert.Equal(t, lazyValidators, output)
 
 	s.GroupCounterPurge()
 	output = s.GroupCounterGetLazyValidators()
-
 	assert.Equal(t, 0, len(output))
 }
 
