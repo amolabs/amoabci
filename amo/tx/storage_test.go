@@ -41,8 +41,8 @@ func TestParseClose(t *testing.T) {
 }
 
 func TestTxSetup(t *testing.T) {
-	s := store.NewStore(
-		tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	storageID := uint32(1)

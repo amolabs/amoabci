@@ -2,12 +2,12 @@ package types
 
 import (
 	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/bytes"
 )
 
 type Usage struct {
-	Custody cmn.HexBytes `json:"custody"`
-	Extra   Extra        `json:"extra,omitempty"`
+	Custody bytes.HexBytes `json:"custody"`
+	Extra   Extra          `json:"extra,omitempty"`
 }
 
 type UsageEx struct {

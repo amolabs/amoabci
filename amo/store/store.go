@@ -11,6 +11,7 @@ import (
 	"github.com/tendermint/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/log"
 	tm "github.com/tendermint/tendermint/types"
 	tmdb "github.com/tendermint/tm-db"
 
@@ -41,6 +42,8 @@ var (
 )
 
 type Store struct {
+	logger log.Logger
+
 	// merkle tree for blockchain state
 	merkleTree *iavl.MutableTree
 
@@ -82,25 +85,30 @@ type Store struct {
 	lazinessCounterDB tmdb.DB
 }
 
-func NewStore(merkleDB, indexDB, incentiveDB, lazinessCounterDB tmdb.DB) *Store {
+func NewStore(logger log.Logger, merkleDB, indexDB, incentiveDB, lazinessCounterDB tmdb.DB) (*Store, error) {
+	mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Store{
-		merkleTree: iavl.NewMutableTree(merkleDB, merkleTreeCacheSize),
+		logger: logger,
 
-		indexDB: indexDB,
+		merkleTree: mt,
 
+		indexDB:        indexDB,
 		indexDelegator: tmdb.NewPrefixDB(indexDB, prefixIndexDelegator),
 		indexValidator: tmdb.NewPrefixDB(indexDB, prefixIndexValidator),
 		indexEffStake:  tmdb.NewPrefixDB(indexDB, prefixIndexEffStake),
-
-		indexBlockTx: tmdb.NewPrefixDB(indexDB, prefixIndexBlockTx),
-		indexTxBlock: tmdb.NewPrefixDB(indexDB, prefixIndexTxBlock),
+		indexBlockTx:   tmdb.NewPrefixDB(indexDB, prefixIndexBlockTx),
+		indexTxBlock:   tmdb.NewPrefixDB(indexDB, prefixIndexTxBlock),
 
 		incentiveDB:      incentiveDB,
 		incentiveHeight:  tmdb.NewPrefixDB(incentiveDB, prefixIncentiveHeight),
 		incentiveAddress: tmdb.NewPrefixDB(incentiveDB, prefixIncentiveAddress),
 
 		lazinessCounterDB: lazinessCounterDB,
-	}
+	}, nil
 }
 
 func (s Store) Purge() error {
@@ -127,34 +135,43 @@ func (s Store) Purge() error {
 	}
 
 	// indexDB
-	itr = s.indexDB.Iterator(nil, nil)
+	itr, err = s.indexDB.Iterator(nil, nil)
+	if err != nil {
+		return err
+	}
 	defer itr.Close()
 	// TODO: cannot guarantee in multi-thread environment
 	// need some sync mechanism
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
 		// XXX: not sure if this will confuse the iterator
-		s.indexDB.Delete(k)
+		s.indexDB.DeleteSync(k)
 	}
 
 	// TODO: need some method like s.stateDB.Size() to check if the DB has been
 	// really emptied.
 
 	// incentiveDB
-	itr = s.incentiveDB.Iterator(nil, nil)
+	itr, err = s.incentiveDB.Iterator(nil, nil)
+	if err != nil {
+		return err
+	}
 	defer itr.Close()
 
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
-		s.incentiveDB.Delete(k)
+		s.incentiveDB.DeleteSync(k)
 	}
 
 	// lazinessCounterDB
-	itr = s.lazinessCounterDB.Iterator(nil, nil)
+	itr, err = s.lazinessCounterDB.Iterator(nil, nil)
+	if err != nil {
+		return err
+	}
 	defer itr.Close()
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
-		s.lazinessCounterDB.Delete(k)
+		s.lazinessCounterDB.DeleteSync(k)
 	}
 
 	return nil
@@ -334,13 +351,12 @@ func splitLockedStakeKey(key []byte) (crypto.Address, int64) {
 	return key[len(prefixStake) : len(prefixStake)+crypto.AddressSize], int64(h)
 }
 
-func (s Store) checkValidatorMatch(holder crypto.Address, stake *types.Stake) error {
-	// TODO: use s.GetHolderByValidator(stake.Validator)
-	prevHolder := s.indexValidator.Get(stake.Validator.Address())
+func (s Store) checkValidatorMatch(holder crypto.Address, stake *types.Stake, committed bool) error {
+	prevHolder := s.GetHolderByValidator(stake.Validator.Address(), committed)
 	if prevHolder != nil && !bytes.Equal(prevHolder, holder) {
 		return code.GetError(code.TxCodePermissionDenied)
 	}
-	prevStake := s.GetStake(holder, false)
+	prevStake := s.GetStake(holder, committed)
 	if prevStake != nil &&
 		!bytes.Equal(prevStake.Validator[:], stake.Validator[:]) {
 		return code.GetError(code.TxCodeBadValidator)
@@ -348,18 +364,18 @@ func (s Store) checkValidatorMatch(holder crypto.Address, stake *types.Stake) er
 	return nil
 }
 
-func (s Store) checkStakeDeletion(holder crypto.Address, stake *types.Stake, height int64) error {
+func (s Store) checkStakeDeletion(holder crypto.Address, stake *types.Stake, height int64, committed bool) error {
 	if stake.Amount.Sign() == 0 {
-		whole := s.GetStake(holder, false)
+		whole := s.GetStake(holder, committed)
 		if whole == nil {
 			// something wrong. but harmless for now.
 			return nil
 		}
 		var target *types.Stake
 		if height == 0 {
-			target = s.GetUnlockedStake(holder, false)
+			target = s.GetUnlockedStake(holder, committed)
 		} else if height > 0 {
-			target = s.GetLockedStake(holder, height, false)
+			target = s.GetLockedStake(holder, height, committed)
 		} else { // height must not be negative
 			return code.GetError(code.TxCodeUnknown)
 		}
@@ -369,13 +385,13 @@ func (s Store) checkStakeDeletion(holder crypto.Address, stake *types.Stake, hei
 			// allowed.
 
 			// check if there is a delegate appointed to this stake
-			ds := s.GetDelegatesByDelegatee(holder, false)
+			ds := s.GetDelegatesByDelegatee(holder, committed)
 			if len(ds) > 0 {
 				return code.GetError(code.TxCodeDelegateExists)
 			}
 
 			// check if this is the last stake
-			ts := s.GetTopStakes(2, nil, false)
+			ts := s.GetTopStakes(2, nil, committed)
 			if len(ts) == 1 {
 				// requested 2 but got 1. it means this is the last validator.
 				return code.GetError(code.TxCodeLastValidator)
@@ -393,11 +409,11 @@ func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error
 	}
 
 	// condition checks
-	err = s.checkValidatorMatch(holder, stake)
+	err = s.checkValidatorMatch(holder, stake, false)
 	if err != nil {
 		return err
 	}
-	err = s.checkStakeDeletion(holder, stake, 0)
+	err = s.checkStakeDeletion(holder, stake, 0, false)
 	if err != nil {
 		return err
 	}
@@ -406,19 +422,40 @@ func (s Store) SetUnlockedStake(holder crypto.Address, stake *types.Stake) error
 	es := s.GetEffStake(holder, false)
 	if es != nil {
 		before := makeEffStakeKey(s.GetEffStake(holder, false).Amount, holder)
-		if s.indexEffStake.Has(before) {
-			s.indexEffStake.Delete(before)
+		exist, err := s.indexEffStake.Has(before)
+		if err != nil {
+			s.logger.Error("Store", "SetUnlockedStake", err.Error())
+			return code.GetError(code.TxCodeUnknown)
+		}
+		if exist {
+			err := s.indexEffStake.DeleteSync(before)
+			if err != nil {
+				s.logger.Error("Store", "SetUnlockedStake", err.Error())
+				return code.GetError(code.TxCodeUnknown)
+			}
 		}
 	}
 	// update
 	if stake.Amount.Sign() == 0 {
 		s.remove(makeStakeKey(holder))
-		s.indexValidator.Delete(stake.Validator.Address())
+		err := s.indexValidator.DeleteSync(stake.Validator.Address())
+		if err != nil {
+			s.logger.Error("Store", "SetUnlockedStake", err.Error())
+			return code.GetError(code.TxCodeUnknown)
+		}
 	} else {
 		s.set(makeStakeKey(holder), b)
-		s.indexValidator.SetSync(stake.Validator.Address(), holder)
+		err := s.indexValidator.SetSync(stake.Validator.Address(), holder)
+		if err != nil {
+			s.logger.Error("Store", "SetUnlockedStake", err.Error())
+			return code.GetError(code.TxCodeUnknown)
+		}
 		after := makeEffStakeKey(s.GetEffStake(holder, false).Amount, holder)
-		s.indexEffStake.SetSync(after, nil)
+		err = s.indexEffStake.SetSync(after, nil)
+		if err != nil {
+			s.logger.Error("Store", "SetUnlockedStake", err.Error())
+			return code.GetError(code.TxCodeUnknown)
+		}
 	}
 
 	return nil
@@ -433,11 +470,11 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 	}
 
 	// condition checks
-	err = s.checkValidatorMatch(holder, stake)
+	err = s.checkValidatorMatch(holder, stake, false)
 	if err != nil {
 		return err
 	}
-	err = s.checkStakeDeletion(holder, stake, height)
+	err = s.checkStakeDeletion(holder, stake, height, false)
 	if err != nil {
 		return err
 	}
@@ -446,20 +483,41 @@ func (s Store) SetLockedStake(holder crypto.Address, stake *types.Stake, height 
 	es := s.GetEffStake(holder, false)
 	if es != nil {
 		before := makeEffStakeKey(s.GetEffStake(holder, false).Amount, holder)
-		if s.indexEffStake.Has(before) {
-			s.indexEffStake.Delete(before)
+		exist, err := s.indexEffStake.Has(before)
+		if err != nil {
+			s.logger.Error("Store", "SetLockedStake", err.Error())
+			return code.GetError(code.TxCodeUnknown)
+		}
+		if exist {
+			err := s.indexEffStake.DeleteSync(before)
+			if err != nil {
+				s.logger.Error("Store", "SetLockedStake", err.Error())
+				return code.GetError(code.TxCodeUnknown)
+			}
 		}
 	}
 
 	// update
 	if stake.Amount.Sign() == 0 {
 		s.remove(makeLockedStakeKey(holder, height))
-		s.indexValidator.Delete(stake.Validator.Address())
+		err := s.indexValidator.DeleteSync(stake.Validator.Address())
+		if err != nil {
+			s.logger.Error("Store", "SetLockedStake", err.Error())
+			return code.GetError(code.TxCodeUnknown)
+		}
 	} else {
 		s.set(makeLockedStakeKey(holder, height), b)
-		s.indexValidator.SetSync(stake.Validator.Address(), holder)
+		err := s.indexValidator.SetSync(stake.Validator.Address(), holder)
+		if err != nil {
+			s.logger.Error("Store", "SetLockedStake", err.Error())
+			return code.GetError(code.TxCodeUnknown)
+		}
 		after := makeEffStakeKey(s.GetEffStake(holder, false).Amount, holder)
-		s.indexEffStake.SetSync(after, nil)
+		err = s.indexEffStake.SetSync(after, nil)
+		if err != nil {
+			s.logger.Error("Store", "SetLockedStake", err.Error())
+			return code.GetError(code.TxCodeUnknown)
+		}
 	}
 
 	return nil
@@ -738,7 +796,13 @@ func (s Store) GetStakeByValidator(addr crypto.Address, committed bool) *types.S
 }
 
 func (s Store) GetHolderByValidator(addr crypto.Address, committed bool) []byte {
-	return s.indexValidator.Get(addr)
+	holder, err := s.indexValidator.Get(addr)
+	if err != nil {
+		s.logger.Error("Store", "GetHolderByValidator", err.Error())
+		return nil
+	}
+
+	return holder
 }
 
 // Delegate store
@@ -760,17 +824,34 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 
 	// make effStakeKey to find its corresponding value
 	before := makeEffStakeKey(es.Amount, delegate.Delegatee)
-	if s.indexEffStake.Has(before) {
-		s.indexEffStake.Delete(before)
+	exist, err := s.indexEffStake.Has(before)
+	if err != nil {
+		s.logger.Error("Store", "SetDelegate", err.Error())
+		return code.GetError(code.TxCodeUnknown)
+	}
+	if exist {
+		err := s.indexEffStake.DeleteSync(before)
+		if err != nil {
+			s.logger.Error("Store", "SetDelegate", err.Error())
+			return code.GetError(code.TxCodeUnknown)
+		}
 	}
 
 	// upadate
 	if delegate.Amount.Sign() == 0 {
 		s.remove(makeDelegateKey(holder))
-		s.indexDelegator.Delete(append(delegate.Delegatee, holder...))
+		err := s.indexDelegator.DeleteSync(append(delegate.Delegatee, holder...))
+		if err != nil {
+			s.logger.Error("Store", "SetDelegate", err.Error())
+			return code.GetError(code.TxCodeUnknown)
+		}
 	} else {
 		s.set(makeDelegateKey(holder), b)
-		s.indexDelegator.SetSync(append(delegate.Delegatee, holder...), nil)
+		err := s.indexDelegator.SetSync(append(delegate.Delegatee, holder...), nil)
+		if err != nil {
+			s.logger.Error("Store", "SetDelegate", err.Error())
+			return code.GetError(code.TxCodeUnknown)
+		}
 	}
 
 	after := makeEffStakeKey(
@@ -778,7 +859,11 @@ func (s Store) SetDelegate(holder crypto.Address, delegate *types.Delegate) erro
 		delegate.Delegatee,
 	)
 
-	s.indexEffStake.SetSync(after, nil)
+	err = s.indexEffStake.SetSync(after, nil)
+	if err != nil {
+		s.logger.Error("Store", "SetDelegate", err.Error())
+		return code.GetError(code.TxCodeUnknown)
+	}
 
 	return nil
 }
@@ -805,7 +890,11 @@ func (s Store) GetDelegateEx(holder crypto.Address, committed bool) *types.Deleg
 }
 
 func (s Store) GetDelegatesByDelegatee(delegatee crypto.Address, committed bool) []*types.DelegateEx {
-	var itr tmdb.Iterator = s.indexDelegator.Iterator(delegatee, nil)
+	itr, err := s.indexDelegator.Iterator(delegatee, nil)
+	if err != nil {
+		s.logger.Error("Store", "GetDelegatesByDelegatee", err.Error())
+		return nil
+	}
 	defer itr.Close()
 
 	var delegates []*types.DelegateEx
@@ -832,9 +921,15 @@ func (s Store) GetEffStake(delegatee crypto.Address, committed bool) *types.Stak
 }
 
 func (s Store) GetTopStakes(max uint64, peek crypto.Address, committed bool) []*types.Stake {
-	var stakes []*types.Stake
-	var itr tmdb.Iterator = s.indexEffStake.ReverseIterator(nil, nil)
-	var cnt uint64 = 0
+	var (
+		stakes []*types.Stake
+		cnt    uint64 = 0
+	)
+	itr, err := s.indexEffStake.ReverseIterator(nil, nil)
+	if err != nil {
+		s.logger.Error("Store", "GetTopStakes", err.Error())
+		return nil
+	}
 	for ; itr.Valid(); itr.Next() {
 		if cnt >= max {
 			break

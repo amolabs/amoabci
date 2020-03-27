@@ -62,7 +62,6 @@ func penalize(
 	zeroAmount := new(types.Currency).Set(0)
 
 	holder := store.GetHolderByValidator(validator, false)
-
 	vs := store.GetStake(holder, false) // validator's stake
 	if vs == nil {
 		return

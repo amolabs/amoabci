@@ -6,15 +6,16 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
-	tm "github.com/tendermint/tendermint/libs/common"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
+	"github.com/tendermint/tendermint/libs/kv"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
 )
 
 type RevokeParam struct {
-	Grantee crypto.Address `json:"grantee"`
-	Target  tm.HexBytes    `json:"target"`
+	Grantee crypto.Address   `json:"grantee"`
+	Target  tmbytes.HexBytes `json:"target"`
 }
 
 func parseRevokeParam(raw []byte) (RevokeParam, error) {
@@ -74,7 +75,7 @@ func (t *TxRevoke) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	events := []abci.Event{
 		abci.Event{
 			Type: "parcel",
-			Attributes: []tm.KVPair{
+			Attributes: []kv.Pair{
 				{Key: []byte("id"), Value: []byte(txParam.Target.String())},
 			},
 		},

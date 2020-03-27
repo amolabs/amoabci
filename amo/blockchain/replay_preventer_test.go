@@ -10,7 +10,8 @@ import (
 )
 
 func TestReplayPreventer(t *testing.T) {
-	s := store.NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 
 	rp := NewReplayPreventer(s, 0, 3)
 
@@ -23,7 +24,7 @@ func TestReplayPreventer(t *testing.T) {
 	// r: 3, f: 1, t: 1
 	rp.Update(1, 3)
 
-	err := rp.Check(h1[0], 1, 1)
+	err = rp.Check(h1[0], 1, 1)
 	assert.NoError(t, err)
 	err = rp.Check(h1[1], 1, 1)
 	assert.NoError(t, err, 1, 1)

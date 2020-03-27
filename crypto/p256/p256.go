@@ -5,12 +5,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/hex"
+	"errors"
 	"math/big"
 	"strings"
 
 	tmc "github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/tmhash"
-	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 var (
@@ -110,7 +110,7 @@ func (privKey PrivKeyP256) MarshalJSON() ([]byte, error) {
 
 func (privKey *PrivKeyP256) UnmarshalJSON(data []byte) error {
 	if len(data) != PrivKeyP256Size*2+2 {
-		return cmn.NewError("Invalid private key format")
+		return errors.New("Invalid private key format")
 	}
 	_, err := hex.Decode(privKey[:], data[1:len(data)-1])
 	if err != nil {
@@ -165,7 +165,7 @@ func (pubKey PubKeyP256) MarshalJSON() ([]byte, error) {
 
 func (pubKey *PubKeyP256) UnmarshalJSON(data []byte) error {
 	if len(data) != PubKeyP256Size*2+2 {
-		return cmn.NewError("Invalid public key format")
+		return errors.New("Invalid public key format")
 	}
 	_, err := hex.Decode(pubKey[:], data[1:len(data)-1])
 	if err != nil {

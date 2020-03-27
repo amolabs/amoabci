@@ -8,7 +8,8 @@ import (
 )
 
 func TestTxIndexer(t *testing.T) {
-	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 
 	// bunch of txs
 	h1 := [][]byte{[]byte("tx11"), []byte("tx12"), []byte("tx13")}

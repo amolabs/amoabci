@@ -19,10 +19,11 @@ func TestIncentiveRecord(t *testing.T) {
 		{4, makeAccAddr("acc2"), new(types.Currency).Set(3)},
 	}
 
-	s := NewStore(tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
 
 	// unavailable height
-	err := s.AddIncentiveRecord(-1, makeAccAddr("test"), new(types.Currency).Set(1))
+	err = s.AddIncentiveRecord(-1, makeAccAddr("test"), new(types.Currency).Set(1))
 	assert.Error(t, err)
 
 	// missing address

@@ -6,7 +6,8 @@ import (
 	"encoding/json"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	tm "github.com/tendermint/tendermint/libs/common"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
+	"github.com/tendermint/tendermint/libs/kv"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -14,10 +15,10 @@ import (
 )
 
 type RegisterParam struct {
-	Target       tm.HexBytes     `json:"target"`
-	Custody      tm.HexBytes     `json:"custody"`
-	ProxyAccount tm.HexBytes     `json:"proxy_account,omitempty"`
-	Extra        json.RawMessage `json:"extra,omitempty"`
+	Target       tmbytes.HexBytes `json:"target"`
+	Custody      tmbytes.HexBytes `json:"custody"`
+	ProxyAccount tmbytes.HexBytes `json:"proxy_account,omitempty"`
+	Extra        json.RawMessage  `json:"extra,omitempty"`
 }
 
 func parseRegisterParam(raw []byte) (RegisterParam, error) {
@@ -96,7 +97,7 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []abci.Event) 
 	events := []abci.Event{
 		abci.Event{
 			Type: "parcel",
-			Attributes: []tm.KVPair{
+			Attributes: []kv.Pair{
 				{Key: []byte("id"), Value: []byte(txParam.Target.String())},
 				{Key: []byte("owner"), Value: []byte(t.GetSender())},
 			},

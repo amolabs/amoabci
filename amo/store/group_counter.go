@@ -13,18 +13,32 @@ type (
 
 // Record map[Address]int64
 func (s Store) GroupCounterSet(candidates LazyValidators) {
+	batch := s.lazinessCounterDB.NewBatch()
+	defer batch.Close()
+
 	for address, count := range candidates {
+		ab := make([]byte, len(address))
 		cb := make([]byte, 8)
+		copy(ab, address[:]) // deep copy
 		binary.BigEndian.PutUint64(cb, uint64(count))
 
-		s.lazinessCounterDB.Set(address[:], cb)
+		batch.Set(ab, cb)
+	}
+
+	err := batch.WriteSync()
+	if err != nil {
+		s.logger.Error("Store", "GroupCounterSet", err.Error())
 	}
 }
 
 func (s Store) GroupCounterGetLazyValidators() LazyValidators {
 	lazyValidators := LazyValidators{}
 
-	itr := s.lazinessCounterDB.Iterator(nil, nil)
+	itr, err := s.lazinessCounterDB.Iterator(nil, nil)
+	if err != nil {
+		s.logger.Error("Store", "GroupCounterGetLazyValidators", err.Error())
+		return LazyValidators{}
+	}
 	for ; itr.Valid(); itr.Next() {
 		address := Address{}
 		copy(address[:], itr.Key())
@@ -37,11 +51,19 @@ func (s Store) GroupCounterGetLazyValidators() LazyValidators {
 }
 
 func (s Store) GroupCounterPurge() {
-	itr := s.lazinessCounterDB.Iterator(nil, nil)
+	itr, err := s.lazinessCounterDB.Iterator(nil, nil)
+	if err != nil {
+		s.logger.Error("Store", "GroupCounterPurge", err.Error())
+		return
+	}
 	defer itr.Close()
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
 
-		s.lazinessCounterDB.Delete(k)
+		err := s.lazinessCounterDB.DeleteSync(k)
+		if err != nil {
+			s.logger.Error("Store", "GroupCounterPurge", err.Error())
+			continue
+		}
 	}
 }
