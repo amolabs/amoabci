@@ -23,7 +23,7 @@ func PenalizeConvicts(
 	evidences []abci.Evidence,
 	lazyValidators []crypto.Address,
 
-	weightValidator, weightDelegator uint64,
+	weightValidator, weightDelegator float64,
 	penaltyRatioM, penaltyRatioL float64,
 ) error {
 
@@ -53,7 +53,7 @@ func penalize(
 	store *store.Store,
 	logger log.Logger,
 
-	weightValidator, weightDelegator uint64,
+	weightValidator, weightDelegator float64,
 	validator crypto.Address,
 	ratio float64,
 	penaltyType string,
@@ -68,46 +68,52 @@ func penalize(
 	}
 
 	ds := store.GetDelegatesByDelegatee(holder, false) // delegators' stake
-
 	es := store.GetEffStake(holder, false)
+
+	// itof
+	vsf := new(big.Float).SetInt(&vs.Amount.Int)
 	esf := new(big.Float).SetInt(&es.Amount.Int)
+
 	prf := new(big.Float).SetFloat64(ratio)
 
 	penalty := types.Currency{}
 	pf := esf.Mul(esf, prf) // penalty = effStake * penaltyRatio
 	pf.Int(&penalty.Int)
 
-	// weighted sum
 	var (
-		wsum, w   big.Int
-		tmp, tmp2 types.Currency
+		wsumf, wf   big.Float // weighted sum
+		tmpf        big.Float // tmp
+		tmpc, tmpc2 types.Currency
 	)
-	w.SetUint64(weightValidator)
-	wsum.Mul(&w, &vs.Amount.Int)
-	w.SetUint64(weightDelegator)
+
+	wf.SetFloat64(weightValidator)
+	wsumf.Mul(&wf, vsf)
+	wf.SetFloat64(weightDelegator)
 	for _, d := range ds {
-		tmp.Mul(&w, &d.Amount.Int)
-		wsum.Add(&wsum, &tmp.Int)
+		df := new(big.Float).SetInt(&d.Amount.Int)
+		tmpf.Mul(&wf, df)
+		wsumf.Add(&wsumf, &tmpf)
 	}
 
 	// individual penalties for delegators
-	tmp.Set(0) // subtotal for delegate holders
+	tmpc.Set(0) // subtotal for delegate holders
 	for _, d := range ds {
-		tmp2 = *partialAmount(weightDelegator, &d.Amount.Int, &wsum, &penalty)
-		tmp.Add(&tmp2) // update subtotal
-		d.Delegate.Amount.Sub(&tmp2)
+		df := new(big.Float).SetInt(&d.Amount.Int)
+		tmpc2 = *partialAmount(weightDelegator, df, &wsumf, &penalty)
+		tmpc.Add(&tmpc2) // update subtotal
 
+		d.Delegate.Amount.Sub(&tmpc2)
 		if d.Delegate.Amount.LessThan(zeroAmount) {
 			d.Delegate.Amount.Set(0)
 		}
 
 		store.SetDelegate(d.Delegator, d.Delegate)
 		logger.Debug(penaltyType,
-			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmp2.String())
+			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmpc.String())
 	}
-	tmp2.Int.Sub(&penalty.Int, &tmp.Int) // calc voter(validator) penalty
-	store.SlashStakes(holder, tmp2, false)
+	tmpc2.Int.Sub(&penalty.Int, &tmpc.Int) // calc voter(validator) penalty
+	store.SlashStakes(holder, tmpc2, false)
 
 	logger.Debug(penaltyType,
-		"validator", hex.EncodeToString(holder), "penalty", tmp2.String())
+		"validator", hex.EncodeToString(holder), "penalty", tmpc2.String())
 }
