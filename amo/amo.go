@@ -111,7 +111,7 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger) (*AMOApp, error) {
+func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -130,7 +130,7 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 
 	s, err := astore.NewStore(l, mdb, idxdb, incdb, gcdb)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	app := &AMOApp{
@@ -169,7 +169,7 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 
 	app.save()
 
-	return app, nil
+	return app
 }
 
 const (

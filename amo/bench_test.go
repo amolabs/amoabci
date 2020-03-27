@@ -60,8 +60,7 @@ func BenchmarkCheckTransferTx(b *testing.B) {
 	assert.NotNil(b, gcdb)
 	defer incdb.Close()
 
-	app, err := NewAMOApp(tmpFile, sdb, idxdb, incdb, gcdb, nil)
-	assert.NoError(b, err)
+	app := NewAMOApp(tmpFile, sdb, idxdb, incdb, gcdb, nil)
 
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 	//app.store.SetBalanceUint64(from.PubKey().Address(), 1000000000)
@@ -111,7 +110,7 @@ func BenchmarkDeliverTransferTx(b *testing.B) {
 	assert.NotNil(b, gcdb)
 	defer incdb.Close()
 
-	app, err := NewAMOApp(tmpFile, sdb, idxdb, incdb, gcdb, nil)
+	app := NewAMOApp(tmpFile, sdb, idxdb, incdb, gcdb, nil)
 	assert.NoError(b, err)
 
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
