@@ -7,8 +7,8 @@ import (
 
 type AMOAppConfig struct {
 	MaxValidators          uint64   `json:"max_validators"`
-	WeightValidator        uint64   `json:"weight_validator"`
-	WeightDelegator        uint64   `json:"weight_delegator"`
+	WeightValidator        float64  `json:"weight_validator"`
+	WeightDelegator        float64  `json:"weight_delegator"`
 	MinStakingUnit         Currency `json:"min_staking_unit"`
 	BlkReward              Currency `json:"blk_reward"`
 	TxReward               Currency `json:"tx_reward"`
@@ -94,8 +94,8 @@ func (cfg *AMOAppConfig) Check(
 	}
 
 	if cmp(tmpCfg.MaxValidators, ">", uint64(0)) &&
-		cmp(tmpCfg.WeightValidator, ">", uint64(0)) &&
-		cmp(tmpCfg.WeightDelegator, ">", uint64(0)) &&
+		cmp(tmpCfg.WeightValidator, ">", float64(0)) &&
+		cmp(tmpCfg.WeightDelegator, ">", float64(0)) &&
 		cmp(tmpCfg.MinStakingUnit, ">", *Zero) &&
 		cmp(tmpCfg.BlkReward, ">=", *Zero) &&
 		cmp(tmpCfg.TxReward, ">=", *Zero) &&

@@ -9,8 +9,8 @@ import (
 func TestConfigCheckValue(t *testing.T) {
 	cfg := AMOAppConfig{
 		MaxValidators:         uint64(100),
-		WeightValidator:       uint64(2),
-		WeightDelegator:       uint64(1),
+		WeightValidator:       float64(2),
+		WeightDelegator:       float64(1),
 		MinStakingUnit:        *new(Currency).Set(100),
 		BlkReward:             *new(Currency).Set(1000),
 		TxReward:              *new(Currency).Set(1000),

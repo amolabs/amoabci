@@ -1157,8 +1157,8 @@ func TestPropose(t *testing.T) {
 	assert.NotNil(t, s)
 	ConfigAMOApp = types.AMOAppConfig{
 		MaxValidators:         uint64(100),
-		WeightValidator:       uint64(2),
-		WeightDelegator:       uint64(1),
+		WeightValidator:       float64(2),
+		WeightDelegator:       float64(1),
 		MinStakingUnit:        *new(types.Currency).Set(100),
 		BlkReward:             *new(types.Currency).Set(1000),
 		TxReward:              *new(types.Currency).Set(1000),
@@ -1316,8 +1316,8 @@ func TestVote(t *testing.T) {
 	// set dummy draft
 	cfg := types.AMOAppConfig{
 		MaxValidators:         uint64(100),
-		WeightValidator:       uint64(2),
-		WeightDelegator:       uint64(1),
+		WeightValidator:       float64(2),
+		WeightDelegator:       float64(1),
 		MinStakingUnit:        *new(types.Currency).Set(100),
 		BlkReward:             *new(types.Currency).Set(1000),
 		TxReward:              *new(types.Currency).Set(1000),

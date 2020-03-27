@@ -175,8 +175,8 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 const (
 	// hard-coded configs
 	defaultMaxValidators   = uint64(100)
-	defaultWeightValidator = uint64(2)
-	defaultWeightDelegator = uint64(1)
+	defaultWeightValidator = float64(2)
+	defaultWeightDelegator = float64(1)
 
 	defaultMinStakingUnit = "1000000000000000000000000"
 

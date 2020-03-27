@@ -16,7 +16,7 @@ func DistributeIncentive(
 	store *store.Store,
 	logger log.Logger,
 
-	weightValidator, weightDelegator uint64,
+	weightValidator, weightDelegator float64,
 	blkReward, txReward types.Currency,
 	height, numDeliveredTxs int64,
 	staker crypto.Address,
@@ -29,7 +29,10 @@ func DistributeIncentive(
 	}
 	ds := store.GetDelegatesByDelegatee(staker, true)
 
-	var tmp, tmp2 types.Currency
+	// itof
+	sf := new(big.Float).SetInt(&stake.Amount.Int)
+
+	var tmpc, tmpc2 types.Currency
 	var incentive, rTotal, rTx types.Currency
 
 	// reward = BlkReward + TxReward * numDeliveredTxs
@@ -38,9 +41,9 @@ func DistributeIncentive(
 	// total reward
 	rTotal = blkReward
 	rTx = txReward
-	tmp.SetInt64(numDeliveredTxs)
-	tmp.Mul(&tmp.Int, &rTx.Int)
-	rTotal.Add(&tmp)
+	tmpc.SetInt64(numDeliveredTxs)
+	tmpc.Mul(&tmpc.Int, &rTx.Int)
+	rTotal.Add(&tmpc)
 
 	incentive.Set(0)
 	incentive.Add(rTotal.Add(&feeAccumulated))
@@ -50,32 +53,39 @@ func DistributeIncentive(
 		return nil
 	}
 
-	// weighted sum
-	var wsum, w big.Int
-	w.SetUint64(weightValidator)
-	wsum.Mul(&w, &stake.Amount.Int)
-	w.SetUint64(weightDelegator)
+	var (
+		wsumf, wf big.Float // weighted sum
+		tmpf      big.Float // tmp
+	)
+
+	wf.SetFloat64(weightValidator)
+	wsumf.Mul(&wf, sf)
+	wf.SetFloat64(weightDelegator)
 	for _, d := range ds {
-		tmp.Mul(&w, &d.Amount.Int)
-		wsum.Add(&wsum, &tmp.Int)
+		df := new(big.Float).SetInt(&d.Amount.Int)
+		tmpf.Mul(&wf, df)
+		wsumf.Add(&wsumf, &tmpf)
 	}
+
 	// individual rewards
-	tmp.Set(0) // subtotal for delegate holders
+	tmpc.Set(0) // subtotal for delegate holders
 	for _, d := range ds {
-		tmp2 = *partialAmount(weightDelegator, &d.Amount.Int, &wsum, &incentive)
-		tmp.Add(&tmp2) // update subtotal
-		b := store.GetBalance(d.Delegator, false).Add(&tmp2)
-		store.SetBalance(d.Delegator, b)                     // update balance
-		store.AddIncentiveRecord(height, d.Delegator, &tmp2) // update incentive record
+		df := new(big.Float).SetInt(&d.Amount.Int)
+		tmpc2 = *partialAmount(weightDelegator, df, &wsumf, &incentive)
+		tmpc.Add(&tmpc2) // update subtotal
+
+		b := store.GetBalance(d.Delegator, false).Add(&tmpc2)
+		store.SetBalance(d.Delegator, b)                      // update balance
+		store.AddIncentiveRecord(height, d.Delegator, &tmpc2) // update incentive record
 		logger.Debug("Block reward",
-			"delegator", hex.EncodeToString(d.Delegator), "reward", tmp2.String())
+			"delegator", hex.EncodeToString(d.Delegator), "reward", tmpc2.String())
 	}
-	tmp2.Int.Sub(&incentive.Int, &tmp.Int) // calc validator reward
-	b := store.GetBalance(staker, false).Add(&tmp2)
-	store.SetBalance(staker, b)                     // update balance
-	store.AddIncentiveRecord(height, staker, &tmp2) // update incentive record
+	tmpc2.Int.Sub(&incentive.Int, &tmpc.Int) // calc validator reward
+	b := store.GetBalance(staker, false).Add(&tmpc2)
+	store.SetBalance(staker, b)                      // update balance
+	store.AddIncentiveRecord(height, staker, &tmpc2) // update incentive record
 	logger.Debug("Block reward",
-		"proposer", hex.EncodeToString(staker), "reward", tmp2.String())
+		"proposer", hex.EncodeToString(staker), "reward", tmpc2.String())
 
 	return nil
 }

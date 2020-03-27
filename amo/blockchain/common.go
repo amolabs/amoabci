@@ -8,12 +8,12 @@ import (
 
 // r = (weight * stake / total) * base
 // TODO: eliminate ambiguity in float computation
-func partialAmount(weight uint64, stake, total *big.Int, base *types.Currency) *types.Currency {
+func partialAmount(weight float64, stake, total *big.Float, base *types.Currency) *types.Currency {
 	var wf, t1f, t2f big.Float
-	wf.SetUint64(weight)
-	t1f.SetInt(stake)
+	wf.SetFloat64(weight)
+	t1f.Set(stake)
 	t1f.Mul(&wf, &t1f)
-	t2f.SetInt(total)
+	t2f.Set(total)
 	t1f.Quo(&t1f, &t2f)
 	t2f.SetInt(&base.Int)
 	t1f.Mul(&t1f, &t2f)
