@@ -18,9 +18,9 @@ Tendermint ABCI 앱*을 구현하는 코드(`amoabci`)와 그외 필요한 스�
 ### 컴파일된 바이너리 설치
 다음 명령을 실행해서 컴파일된 바이너리를 설치한다:
 ```bash
-wget https://github.com/amolabs/amoabci/releases/download/v1.5.0/amod-<version>-linux-x86_64.tar.gz
+wget https://github.com/amolabs/amoabci/releases/download/<version>/amod-<version>-linux-x86_64.tar.gz
 tar -xzf amod-<version>-linux-x86_64.tar.gz
-sudo cp ./amod /usr/bin/amod
+sudo cp ./amod /usr/local/bin/amod
 ```
 `amod`의 `<version>`을 명시해야 한다. [최신
 릴리즈](https://github.com/amolabs/amoabci/releases)를 확인해야 한다.
