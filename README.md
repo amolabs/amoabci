@@ -18,7 +18,7 @@ ABCI app for AMO blockchain* (`amoabci`) and necessary helper scripts.
 ### Install from pre-built binary
 Run the following commands to install pre-built amod:
 ```bash
-wget https://github.com/amolabs/amoabci/releases/download/<version>/amod-<version>-linux-x86_64.tar.gz
+wget https://github.com/amolabs/amoabci/releases/download/v<version>/amod-<version>-linux-x86_64.tar.gz
 tar -xzf amod-<version>-linux-x86_64.tar.gz
 sudo cp ./amod /usr/local/bin/amod
 ```
