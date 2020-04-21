@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/tendermint/iavl"
 	tmstate "github.com/tendermint/tendermint/state"
 	tmstore "github.com/tendermint/tendermint/store"
 	tmdb "github.com/tendermint/tm-db"
