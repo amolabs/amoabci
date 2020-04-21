@@ -24,6 +24,7 @@ tags: $(GOSRCS)
 build:
 	@echo "--> Building amo daemon (amod)"
 	$(BUILDENV) go build ./cmd/amod
+	$(BUILDENV) go build ./cmd/repair
 
 install:
 	@echo "--> Installing amo daemon (amod)"
