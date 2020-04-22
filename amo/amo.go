@@ -271,7 +271,7 @@ func (app *AMOApp) load() {
 		panic(err)
 	}
 
-	version, err := app.store.Load()
+	version, err := app.store.LoadVersion(app.state.Height + 1)
 	if err != nil {
 		panic(err)
 	}

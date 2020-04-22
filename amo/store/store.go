@@ -227,6 +227,10 @@ func (s Store) Load() (int64, error) {
 	return s.merkleTree.Load()
 }
 
+func (s Store) LoadVersion(version int64) (int64, error) {
+	return s.merkleTree.LoadVersionForOverwriting(version)
+}
+
 func (s Store) Root() []byte {
 	// NOTES
 	// Hash() : Hash returns the hash of the latest saved version of the tree,
