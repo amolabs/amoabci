@@ -2,15 +2,17 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
+	//"encoding/hex"
 	//"encoding/json"
 	"fmt"
 	"os"
-	"strings"
+	//"strings"
+	"errors"
 
 	"github.com/tendermint/iavl"
 	tmstate "github.com/tendermint/tendermint/state"
 	tmstore "github.com/tendermint/tendermint/store"
+	tmtypes "github.com/tendermint/tendermint/types"
 	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo"
@@ -21,10 +23,17 @@ const (
 	merkleTreeCacheSize = 10000
 )
 
-func inspect(amoRoot string) {
+func repair(amoRoot string, doFix bool) {
 	fmt.Println("Inspecting data root:", amoRoot)
+
+	//// open
+
 	fn := amoRoot + "/data/state.json"
-	amoStateFile, err := os.OpenFile(fn, os.O_RDONLY, 0)
+	flag := os.O_RDONLY
+	if doFix {
+		flag = os.O_RDWR
+	}
+	amoStateFile, err := os.OpenFile(fn, flag, 0)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -52,6 +61,8 @@ func inspect(amoRoot string) {
 	}
 	defer sdb.Close()
 
+	//// load
+
 	amoState := amo.State{}
 	err = amoState.LoadFrom(amoStateFile)
 	if err != nil {
@@ -59,34 +70,193 @@ func inspect(amoRoot string) {
 		return
 	}
 
-	amoMerkleTree, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
+	amoMt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	amoMt.Load()
 
-	amoMerkleTree.Load()
-
+	tmBlockStore := tmstore.NewBlockStore(bsdb)
 	tmBlockStoreState := tmstore.LoadBlockStoreStateJSON(bsdb)
 	tmState := tmstate.LoadState(sdb)
 
-	fmt.Printf("amoMerkleTree\n")
-	fmt.Printf("  .Version         = %d\n", amoMerkleTree.Version())
-	fmt.Printf("  .Hash            = %x\n", amoMerkleTree.Hash())
-	fmt.Printf("amoState\n")
-	fmt.Printf("  .LastHeight      = %d\n", amoState.LastHeight)
-	fmt.Printf("  .Height          = %d\n", amoState.Height)
-	fmt.Printf("  .LastAppHash     = %x\n", amoState.LastAppHash)
-	fmt.Printf("  .AppHash         = %x\n", amoState.AppHash)
-	fmt.Printf("tmBlockStoreState\n")
-	fmt.Printf("  .height          = %d\n", tmBlockStoreState.Height)
-	fmt.Printf("tmState\n")
-	fmt.Printf("  .LastBlockID     = %s\n", tmState.LastBlockID)
-	fmt.Printf("  .LastBlockHeight = %d\n", tmState.LastBlockHeight)
-	fmt.Printf("  .LastBlockTime   = %s\n", tmState.LastBlockTime)
-	fmt.Printf("  .AppHash         = %x\n", tmState.AppHash)
+	//// display
+
+	display(amoMt, amoState, tmBlockStoreState, tmState)
+
+	/*
+		responses, err := tmstate.LoadABCIResponses(sdb, amoState.LastHeight)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		b, err := json.MarshalIndent(responses, "", "  ")
+		fmt.Println("abci responses for block", amoState.LastHeight, string(b))
+	*/
+
+	//// repair
+
+	fmt.Println("Repair TM state from block store...")
+
+	orgHeight := tmState.LastBlockHeight
+	nblk := tmBlockStore.LoadBlock(tmState.LastBlockHeight + 1)
+	if nblk == nil {
+		fmt.Println("Seems to be at the tip of the chain")
+		return
+	}
+	for matchStateAndBlock(tmState, nblk) == false {
+		// rewind to find the matching state
+		nblk = tmBlockStore.LoadBlock(tmState.LastBlockHeight + 1)
+		if nblk == nil {
+			fmt.Println("Unable to get rewind target block")
+			return
+		}
+		// tmState.height will be nblk.height - 1 after this.
+		curBlk := tmBlockStore.LoadBlock(nblk.Height - 1)
+		tmState, err = stateFromBlock(tmState, nblk, curBlk)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+	fmt.Printf("Rewinded %d blocks\n", orgHeight-tmState.LastBlockHeight)
+
+	if tmBlockStoreState.Height > tmState.LastBlockHeight {
+		tmBlockStoreState.Height = tmState.LastBlockHeight
+	}
+
+	fmt.Println("Repair AMO merkle tree...")
+
+	ver, _ := amoMt.Load()
+	appHash := amoMt.Hash()
+	prevHash := appHash // should be null?
+	// amoMt.Version equals to the block height where the app hash is written.
+	// Hence, greater by one than the last block height.
+	for ver > tmState.LastBlockHeight+1 {
+		prevHash = appHash
+		ver, err = amoMt.LoadVersion(ver - 1)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		appHash = amoMt.Hash()
+		if !bytes.Equal(appHash, prevHash) {
+			fmt.Println("Unable to rewind merkle db")
+			return
+		}
+		// Ok. No change in appHash, so no change in index db. We don't have to
+		// touch index db. Rewind was safe in this case.
+	}
+
+	fmt.Println("Repair AMO state...")
+
+	amoState.MerkleVersion = amoMt.Version()
+	amoState.LastHeight = tmState.LastBlockHeight
+	amoState.Height = tmState.LastBlockHeight
+	amoState.LastAppHash = tmState.AppHash
+	amoState.AppHash = tmState.AppHash
+	// TODO: ProtocolVersion, CounterDue, NextDraftID
+
+	display(amoMt, amoState, tmBlockStoreState, tmState)
+
+	//// save
+
+	if !doFix {
+		fmt.Println("repair result not saved. provide -f flag to save.")
+		return
+	}
+
+	fmt.Println("saving repair result...")
+	amoState.SaveTo(amoStateFile)
+	amoMt.LoadVersionForOverwriting(amoState.MerkleVersion)
+	tmBlockStoreState.Save(bsdb)
+	tmstate.SaveState(sdb, tmState)
 }
 
+func matchStateAndBlock(tmState tmstate.State, blk *tmtypes.Block) bool {
+	if !tmState.LastBlockID.Equals(blk.LastBlockID) {
+		fmt.Println("LastBlockID mismatch!!!!")
+		return false
+	}
+	if !bytes.Equal(tmState.NextValidators.Hash(), blk.NextValidatorsHash) {
+		fmt.Println("NextValidatorsHash mismatch!!!!")
+		return false
+	}
+	if !bytes.Equal(tmState.Validators.Hash(), blk.ValidatorsHash) {
+		fmt.Println("ValidatorsHash mismatch!!!!")
+		return false
+	}
+	if !bytes.Equal(tmState.ConsensusParams.Hash(), blk.ConsensusHash) {
+		fmt.Println("ConsensusParamsHash mismatch!!!!")
+		return false
+	}
+	if !bytes.Equal(tmState.LastResultsHash, blk.LastResultsHash) {
+		fmt.Println("LastResultsHash mismatch!!!!")
+		return false
+	}
+	if !bytes.Equal(tmState.AppHash, blk.AppHash) {
+		fmt.Println("AppHash mismatch!!!!")
+		return false
+	}
+	return true
+}
+
+func stateFromBlock(tmState tmstate.State, nextBlk *tmtypes.Block, curBlk *tmtypes.Block) (tmstate.State, error) {
+	if tmState.LastHeightValidatorsChanged >= nextBlk.Height ||
+		tmState.LastHeightConsensusParamsChanged >= nextBlk.Height {
+		return tmState, errors.New("unable to rewind")
+	}
+	tmState.LastBlockHeight = nextBlk.Height - 1
+	tmState.LastBlockID = nextBlk.LastBlockID
+	if curBlk != nil {
+		tmState.LastBlockTime = curBlk.Time
+	}
+	// tmState.NextValidators
+	// tmState.Validators
+	// tmState.ConsensusParams
+	tmState.LastResultsHash = nextBlk.LastResultsHash
+	tmState.AppHash = nextBlk.AppHash
+	return tmState, nil
+}
+
+func display(mt *iavl.MutableTree, amoState amo.State, tmBsj tmstore.BlockStoreStateJSON, tmState tmstate.State) {
+	mtVersion := mt.Version()
+
+	fmt.Printf("AMO merkle tree ----------------------------\n")
+	fmt.Printf("  .Version         = %d\n", mtVersion)
+	fmt.Printf("  .Hash            = %X\n", mt.Hash())
+	mt.LazyLoadVersion(mtVersion - 1)
+	fmt.Printf("  .Hash    (-1)    = %X\n", mt.Hash())
+	mt.LazyLoadVersion(mtVersion - 2)
+	fmt.Printf("  .Hash    (-2)    = %X\n", mt.Hash())
+	mt.LazyLoadVersion(mtVersion - 3)
+	fmt.Printf("  .Hash    (-3)    = %X\n", mt.Hash())
+	mt.Load()
+	fmt.Printf("AMO state ----------------------------------\n")
+	fmt.Printf("  .MerkleVersion   = %d\n", amoState.MerkleVersion)
+	fmt.Printf("  .LastHeight      = %d\n", amoState.LastHeight)
+	fmt.Printf("  .Height          = %d\n", amoState.Height)
+	fmt.Printf("  .LastAppHash     = %X\n", amoState.LastAppHash)
+	fmt.Printf("  .AppHash         = %X\n", amoState.AppHash)
+	fmt.Printf("TM block store state -----------------------\n")
+	fmt.Printf("  .height          = %d\n", tmBsj.Height)
+	fmt.Printf("TM state -----------------------------------\n")
+	fmt.Printf("  .LastBlockHeight = %d\n", tmState.LastBlockHeight)
+	fmt.Printf("  .LastBlockID     = %s\n", tmState.LastBlockID)
+	fmt.Printf("  .LastBlockTime   = %s\n", tmState.LastBlockTime)
+	fmt.Printf("  .NextValidators  = %X\n", tmState.NextValidators.Hash())
+	fmt.Printf("  .Validators      = %X\n", tmState.Validators.Hash())
+	fmt.Printf("  .LastValidators  = %X\n", tmState.LastValidators.Hash())
+	fmt.Printf("   (vals changed)  = %d\n", tmState.LastHeightValidatorsChanged)
+	fmt.Printf("  .ConsensusParams = %X\n", tmState.ConsensusParams.Hash())
+	fmt.Printf("   (cons changed)  = %d\n", tmState.LastHeightConsensusParamsChanged)
+	fmt.Printf("  .LastResultsHash = %X\n", tmState.LastResultsHash)
+	fmt.Printf("  .AppHash         = %X\n", tmState.AppHash)
+
+}
+
+/*
 func repair(amoRoot string) {
 	fmt.Println("Reparing data root:", amoRoot)
 
@@ -254,3 +424,4 @@ func repair(amoRoot string) {
 	tmBlockStoreState.Save(bsdb)
 	fmt.Printf(" - Done !\n")
 }
+*/

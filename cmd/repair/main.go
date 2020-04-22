@@ -12,17 +12,18 @@ var rootCmd = &cobra.Command{
 	Short: "AMO state repair tool",
 	Args:  cobra.ExactValidArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		doFix, err := cmd.Flags().GetBool("fix")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		amoRoot := args[0]
-		inspect(amoRoot)
-		repair(amoRoot)
-		inspect(amoRoot)
+		repair(amoRoot, doFix)
 	},
 }
 
 func main() {
-	//rootCmd.PersistentFlags().String("root", "",
-	//	"data root (contains config and data)")
-	//rootCmd.MarkFlagRequired("root")
+	rootCmd.PersistentFlags().BoolP("fix", "f", false, "do fix")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
