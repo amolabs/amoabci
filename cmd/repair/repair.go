@@ -14,6 +14,7 @@ import (
 	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo"
+	//amostore "github.com/amolabs/amoabci/amo/store"
 )
 
 const (
@@ -28,26 +29,7 @@ func inspect(amoRoot string) {
 		fmt.Println(err)
 		return
 	}
-
-	amoState := amo.State{}
-	amoState.LoadFrom(amoStateFile)
 	defer amoStateFile.Close()
-
-	/*
-		j, err := json.MarshalIndent(amoState, "", "  ")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Println(string(j))
-	*/
-
-	fmt.Println("AMO state height =", amoState.Height)
-	fmt.Println("AppHash =", strings.ToUpper(
-		hex.EncodeToString(amoState.AppHash)))
-
-	targetHeight := amoState.LastHeight - 1
-	targetVersion := targetHeight + 1
 
 	merkleDB, err := tmdb.NewGoLevelDB("merkle", amoRoot+"/data")
 	if err != nil {
@@ -56,58 +38,172 @@ func inspect(amoRoot string) {
 	}
 	defer merkleDB.Close()
 
-	mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
-	_, err = mt.LoadVersionForOverwriting(targetVersion)
+	bsdb, err := tmdb.NewGoLevelDB("blockstore", amoRoot+"/data")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer bsdb.Close()
+
+	sdb, err := tmdb.NewGoLevelDB("state", amoRoot+"/data")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer sdb.Close()
+
+	amoState := amo.State{}
+	err = amoState.LoadFrom(amoStateFile)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	amoState.MerkleVersion = targetVersion
-	amoState.LastAppHash = mt.Hash()
-	amoState.AppHash = mt.Hash()
-	amoState.LastHeight = targetHeight
-	amoState.Height = targetHeight
+	amoMerkleTree, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	fmt.Printf("fixed amoState.MerkleVersion = %d\n", amoState.MerkleVersion)
-	fmt.Printf("fixed amoState.LastAppHash   = %x\n", amoState.LastAppHash)
-	fmt.Printf("fixed amoState.AppHash       = %x\n", amoState.AppHash)
-	fmt.Printf("fixed amoState.LastHeight    = %d\n", amoState.LastHeight)
-	fmt.Printf("fixed amoState.Height        = %d\n", amoState.Height)
+	amoMerkleTree.Load()
 
+	tmBlockStoreState := tmstore.LoadBlockStoreStateJSON(bsdb)
+	tmState := tmstate.LoadState(sdb)
+
+	fmt.Printf("amoMerkleTree\n")
+	fmt.Printf("  .Version         = %d\n", amoMerkleTree.Version())
+	fmt.Printf("  .Hash            = %x\n", amoMerkleTree.Hash())
+	fmt.Printf("amoState\n")
+	fmt.Printf("  .LastHeight      = %d\n", amoState.LastHeight)
+	fmt.Printf("  .Height          = %d\n", amoState.Height)
+	fmt.Printf("  .LastAppHash     = %x\n", amoState.LastAppHash)
+	fmt.Printf("  .AppHash         = %x\n", amoState.AppHash)
+	fmt.Printf("tmBlockStoreState\n")
+	fmt.Printf("  .height          = %d\n", tmBlockStoreState.Height)
+	fmt.Printf("tmState\n")
+	fmt.Printf("  .LastBlockID     = %s\n", tmState.LastBlockID)
+	fmt.Printf("  .LastBlockHeight = %d\n", tmState.LastBlockHeight)
+	fmt.Printf("  .LastBlockTime   = %s\n", tmState.LastBlockTime)
+	fmt.Printf("  .AppHash         = %x\n", tmState.AppHash)
+}
+
+func repair(amoRoot string) {
+	fmt.Println("Reparing data root:", amoRoot)
+
+	fn := amoRoot + "/data/state.json"
+	amoStateFile, err := os.OpenFile(fn, os.O_RDONLY, 0)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer amoStateFile.Close()
+
+	amoState := amo.State{}
+	err = amoState.LoadFrom(amoStateFile)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// tm dbs
+	bsdb, err := tmdb.NewGoLevelDB("blockstore", amoRoot+"/data")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer bsdb.Close()
+	sdb, err := tmdb.NewGoLevelDB("state", amoRoot+"/data")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer sdb.Close()
+
+	tmBlockStoreState := tmstore.LoadBlockStoreStateJSON(bsdb)
+	tmBlockStore := tmstore.NewBlockStore(bsdb)
+	tmState := tmstate.LoadState(sdb)
+
+	// targets
+	tmTargetHeight := tmState.LastBlockHeight
+
+	fmt.Printf("Reset amoStore")
+	err = os.RemoveAll(amoRoot + "/data/merkle.db")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = os.RemoveAll(amoRoot + "/data/index.db")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = os.RemoveAll(amoRoot + "/data/incentive.db")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = os.RemoveAll(amoRoot + "/data/group_counter.db")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// amo dbs
+	merkleDB, err := tmdb.NewGoLevelDB("merkle", amoRoot+"/data")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer merkleDB.Close()
+
+	indexDB, err := tmdb.NewGoLevelDB("index", amoRoot+"/data")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer indexDB.Close()
+
+	incentiveDB, err := tmdb.NewGoLevelDB("incentive", amoRoot+"/data")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer incentiveDB.Close()
+
+	groupCounterDB, err := tmdb.NewGoLevelDB("group_counter", amoRoot+"/data")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer groupCounterDB.Close()
+
+	fmt.Printf(" - Done !\n")
+
+	fmt.Printf("Reset amoState")
+	amoState = amo.State{}
 	err = amoState.SaveTo(amoStateFile)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	fmt.Printf(" - Done !\n")
 
-	fmt.Println("fixed amoState")
+	fmt.Printf("Clean up tmBlockStore:\n")
+	for i := tmBlockStoreState.Height; i > tmTargetHeight; i-- {
+		b := tmBlockStore.LoadBlock(i)
 
-	bdb, err := tmdb.NewGoLevelDB("blockstore", amoRoot+"/data")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer bdb.Close()
+		fmt.Printf("  delete blockHeight = %d, blockHash = %x", b.Height, b.Hash())
 
-	bsj := tmstore.LoadBlockStoreStateJSON(bdb)
-	fmt.Printf("TM block store state height = %d\n", bsj.Height)
-
-	bst := tmstore.NewBlockStore(bdb)
-	lb := bst.LoadBlock(targetHeight + 1)
-	for i := bsj.Height; i > targetHeight; i-- {
-		b := bst.LoadBlock(i)
-
-		fmt.Printf("BlockHeight = %d, BlockHash = %x\n", b.Height, b.Hash())
-
-		err = bdb.DeleteSync([]byte(fmt.Sprintf("BH:%s", strings.ToLower(hex.EncodeToString(b.Hash())))))
+		err = bsdb.DeleteSync([]byte(fmt.Sprintf("BH:%s",
+			strings.ToLower(hex.EncodeToString(b.Hash())))),
+		)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 
 		targetKey := []byte(fmt.Sprintf("P:%v:", i))
-		itr, err := bdb.Iterator(targetKey, nil)
+		itr, err := bsdb.Iterator(targetKey, nil)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -119,75 +215,42 @@ func inspect(amoRoot string) {
 				continue
 			}
 
-			err := bdb.DeleteSync(itr.Key())
+			err := bsdb.DeleteSync(itr.Key())
 			if err != nil {
 				fmt.Println(err)
 				continue
 			}
 		}
 
-		err = bdb.DeleteSync([]byte(fmt.Sprintf("H:%v", i)))
+		err = bsdb.DeleteSync([]byte(fmt.Sprintf("H:%v", i)))
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		err = bdb.DeleteSync([]byte(fmt.Sprintf("C:%v", i)))
+		err = bsdb.DeleteSync([]byte(fmt.Sprintf("C:%v", i)))
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		err = bdb.DeleteSync([]byte(fmt.Sprintf("SC:%v", i)))
+		err = bsdb.DeleteSync([]byte(fmt.Sprintf("SC:%v", i)))
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 
-		btmp := bst.LoadBlockByHash(b.Hash())
+		btmp := tmBlockStore.LoadBlockByHash(b.Hash())
 		if btmp != nil {
-			fmt.Printf("not properly deleted %x\n", btmp.Hash())
+			fmt.Printf(" - not properly deleted %x\n", btmp.Hash())
 		}
 
-		fmt.Printf("delete blockstore garbage block height = %d\n", b.Height)
+		fmt.Printf(" - Done !\n")
 	}
 
-	fmt.Println("fixed BlockStore")
-
-	bsj.Height = targetHeight
-	bsj.Save(bdb)
-	fmt.Printf("fixed blockStoreStateJSON.Height = %d\n", bsj.Height)
-
-	fmt.Println("fixed BlockStoreStateJSON")
-
-	db, err := tmdb.NewGoLevelDB("state", amoRoot+"/data")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer db.Close()
-
-	tmState := tmstate.LoadState(db)
-	fmt.Printf("TM state block id   = %s\n", tmState.LastBlockID)
-	fmt.Printf("TM state height     = %d\n", tmState.LastBlockHeight)
-	fmt.Printf("TM state appHash    = %x\n", tmState.AppHash)
-	fmt.Printf("TM state block time = %s\n", tmState.LastBlockTime)
-
-	tmState.LastBlockID = lb.LastBlockID
-	tmState.LastBlockHeight = targetHeight
-	tmState.LastBlockTime = lb.Time
-
-	//tmState.AppHash = amoState.AppHash
-	tmstate.SaveState(db, tmState)
-
-	fmt.Printf("fixed tmState.LastBlockID     = %s\n", tmState.LastBlockID)
-	fmt.Printf("fixed tmState.LastBlockHeight = %d\n", tmState.LastBlockHeight)
-	fmt.Printf("fixed tmState.AppHash         = %x\n", tmState.AppHash)
-	fmt.Printf("fixed tmState.LastBlockTime   = %s\n", tmState.LastBlockTime)
-
-	fmt.Println("fixed tmState")
-
-	//return nil
-}
-
-func repair(amoRoot string) {
-	fmt.Println("Reparing data root:", amoRoot)
+	fmt.Printf("Fix tmBlockStoreState: Height = %d to Height = %d",
+		tmBlockStoreState.Height,
+		tmTargetHeight,
+	)
+	tmBlockStoreState.Height = tmTargetHeight
+	tmBlockStoreState.Save(bsdb)
+	fmt.Printf(" - Done !\n")
 }

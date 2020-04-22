@@ -15,6 +15,7 @@ var rootCmd = &cobra.Command{
 		amoRoot := args[0]
 		inspect(amoRoot)
 		repair(amoRoot)
+		inspect(amoRoot)
 	},
 }
 
