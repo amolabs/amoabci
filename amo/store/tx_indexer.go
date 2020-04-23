@@ -101,7 +101,7 @@ func (s Store) TxIndexerDelete(height int64) {
 	txs := s.TxIndexerGetHash(height)
 
 	// delete indexBlockTx of given height
-	err = s.indexBlockTx.DeleteSync(hb)
+	err = s.indexBlockTx.Delete(hb)
 	if err != nil {
 		s.logger.Error("Store", "TxIndexerDelete", err.Error())
 		return
@@ -109,7 +109,7 @@ func (s Store) TxIndexerDelete(height int64) {
 
 	// delete txs of given height
 	for _, tx := range txs {
-		err = s.indexTxBlock.DeleteSync(tx)
+		err = s.indexTxBlock.Delete(tx)
 		if err != nil {
 			s.logger.Error("Store", "TxIndexerDelete", err.Error())
 			return
