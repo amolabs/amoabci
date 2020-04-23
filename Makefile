@@ -5,7 +5,7 @@ all: build
 GO := $(shell command -v go 2> /dev/null)
 # go source code files
 GOSRCS=$(shell find . -name \*.go)
-BUILDENV=CGO_ENABLED=1
+BUILDENV=CGO_ENABLED=0
 BUILDTAGS=
 
 ifeq ($(GO),)
