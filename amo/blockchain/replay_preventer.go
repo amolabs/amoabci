@@ -109,7 +109,8 @@ func (rp *ReplayPreventer) Check(tx []byte, txHeight, blockHeight int64) error {
 	}
 
 	// check if given tx already exists in txIndexer
-	if rp.store.TxIndexerGetHeight(txHash[:]) > 0 {
+	h := rp.store.TxIndexerGetHeight(txHash[:])
+	if h > 0 && h < blockHeight {
 		return errors.New("already processed tx")
 	}
 
