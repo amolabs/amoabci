@@ -111,8 +111,8 @@ func repair(amoRoot string, doFix bool) {
 	}
 	fmt.Printf("Rewinded %d blocks\n", orgHeight-tmState.LastBlockHeight)
 
-	if tmBlockStoreState.Height > tmState.LastBlockHeight {
-		tmBlockStoreState.Height = tmState.LastBlockHeight
+	if tmBlockStoreState.Height > tmState.LastBlockHeight+1 {
+		tmBlockStoreState.Height = tmState.LastBlockHeight + 1
 	}
 
 	fmt.Println("Repair AMO merkle tree...")
