@@ -20,8 +20,11 @@ jobs:
     - name: Set env var for RELEASE_VERSION
       run: echo "::set-env name=RELEASE_VERSION::${GITHUB_REF:10}"
 
-    - name: Set env var for ASSET
-      run: echo "::set-env name=ASSET::amod-${RELEASE_VERSION/v/''}-linux-x86_64.tar.gz"
+    - name: Set env var for ASSET_amod
+      run: echo "::set-env name=ASSET_amod::amod-${RELEASE_VERSION/v/''}-linux-x86_64.tar.gz"
+
+    - name: Set env var for ASSET_repair
+      run: echo "::set-env name=ASSET_repair::repair-${RELEASE_VERSION/v/''}-linux-x86_64.tar.gz"
 
     - name: Unit Test
       run: make test
@@ -29,8 +32,11 @@ jobs:
     - name: Build
       run: make TARGET=linux build
 
-    - name: Wrap
-      run: tar -czf ${{ env.ASSET }} amod
+    - name: Wrap (amod)
+      run: tar -czf ${{ env.ASSET_amod }} amod
+
+    - name: Wrap (repair)
+      run: tar -czf ${{ env.ASSET_repair }} repair
 
     - name: Create Release
       id: create_release
@@ -43,13 +49,23 @@ jobs:
           draft: true 
           prerelease: false
 
-    - name: Upload Release Assets
+    - name: Upload Release Asset (amod)
       uses: actions/upload-release-asset@v1
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ env.ASSET }}
-          asset_name: ${{ env.ASSET }}
+          asset_path: ./${{ env.ASSET_amod }}
+          asset_name: ${{ env.ASSET_amod }}
+          asset_content_type: application/gzip
+      
+    - name: Upload Release Asset (repair)
+      uses: actions/upload-release-asset@v1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ env.ASSET_repair}}
+          asset_name: ${{ env.ASSET_repair}}
           asset_content_type: application/gzip
       
