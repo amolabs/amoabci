@@ -45,7 +45,8 @@ type Store struct {
 	logger log.Logger
 
 	// merkle tree for blockchain state
-	merkleTree *iavl.MutableTree
+	merkleTree    *iavl.MutableTree
+	merkleVersion int64
 
 	indexDB tmdb.DB
 	// search index for delegators:
@@ -94,7 +95,8 @@ func NewStore(logger log.Logger, merkleDB, indexDB, incentiveDB, lazinessCounter
 	return &Store{
 		logger: logger,
 
-		merkleTree: mt,
+		merkleTree:    mt,
+		merkleVersion: 0,
 
 		indexDB:        indexDB,
 		indexDelegator: tmdb.NewPrefixDB(indexDB, prefixIndexDelegator),
@@ -203,12 +205,7 @@ func (s Store) get(key []byte, committed bool) []byte {
 		return value
 	}
 
-	latestVersion, err := s.getLatestVersion()
-	if err != nil {
-		return nil
-	}
-
-	_, value := s.merkleTree.GetVersioned(key, latestVersion)
+	_, value := s.merkleTree.GetVersioned(key, s.merkleVersion)
 	return value
 }
 
@@ -218,17 +215,23 @@ func (s Store) remove(key []byte) ([]byte, bool) {
 }
 
 // working tree >> saved tree
-func (s Store) Save() ([]byte, int64, error) {
-	return s.merkleTree.SaveVersion()
+func (s *Store) Save() ([]byte, int64, error) {
+	hash, vers, err := s.merkleTree.SaveVersion()
+	s.merkleVersion = vers
+	return hash, vers, err
 }
 
 // Load the latest versioned tree from disk.
-func (s Store) Load() (int64, error) {
-	return s.merkleTree.Load()
+func (s *Store) Load() (vers int64, err error) {
+	vers, err = s.merkleTree.Load()
+	s.merkleVersion = vers
+	return
 }
 
-func (s Store) LoadVersion(version int64) (int64, error) {
-	return s.merkleTree.LoadVersionForOverwriting(version)
+func (s *Store) LoadVersion(version int64) (vers int64, err error) {
+	vers, err = s.merkleTree.LoadVersionForOverwriting(version)
+	s.merkleVersion = vers
+	return
 }
 
 func (s Store) Root() []byte {
@@ -245,26 +248,12 @@ func (s Store) Verify(key []byte) (bool, error) {
 	return true, nil
 }
 
-func (s Store) getLatestVersion() (int64, error) {
-	versions := s.merkleTree.AvailableVersions()
-	if len(versions) == 0 {
-		return int64(0), errors.New("no available versions exist")
-	}
-
-	return int64(versions[len(versions)-1]), nil
-}
-
 func (s Store) getImmutableTree(committed bool) (*iavl.ImmutableTree, error) {
 	if !committed {
 		return s.merkleTree.ImmutableTree, nil
 	}
 
-	latestVersion, err := s.getLatestVersion()
-	if err != nil {
-		return nil, err
-	}
-
-	imt, err := s.merkleTree.GetImmutable(latestVersion)
+	imt, err := s.merkleTree.GetImmutable(s.merkleVersion)
 	if err != nil {
 		return nil, err
 	}
