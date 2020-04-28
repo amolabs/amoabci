@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/pprof"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -33,6 +35,19 @@ var RunCmd = &cobra.Command{
 		node, err := initApp(amoDirPath)
 		if err != nil {
 			return err
+		}
+
+		cpuprof, _ := cmd.Flags().GetString("cpuprofile")
+		if len(cpuprof) > 0 {
+			f, err := os.Create(cpuprof)
+			if err != nil {
+				fmt.Println("unable to create cpu profile")
+			}
+			defer f.Close()
+			if err := pprof.StartCPUProfile(f); err != nil {
+				fmt.Println("unable to start cpu profile")
+			}
+			defer pprof.StopCPUProfile()
 		}
 
 		node.Start()
@@ -145,5 +160,5 @@ func newTM(app abci.Application, config *cfg.Config) (*nm.Node, error) {
 }
 
 func init() {
-	// init here
+	RunCmd.Flags().String("cpuprofile", "", "write cpu profile to `file`")
 }
