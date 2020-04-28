@@ -9,4 +9,5 @@ require (
 	github.com/tendermint/iavl v0.13.2
 	github.com/tendermint/tendermint v0.33.2
 	github.com/tendermint/tm-db v0.5.0
+	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b // indirect
 )
