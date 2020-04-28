@@ -17,13 +17,19 @@ var rootCmd = &cobra.Command{
 			fmt.Println(err)
 			return
 		}
+		rewindMerkle, err := cmd.Flags().GetBool("merkle")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		amoRoot := args[0]
-		repair(amoRoot, doFix)
+		repair(amoRoot, doFix, rewindMerkle)
 	},
 }
 
 func main() {
 	rootCmd.PersistentFlags().BoolP("fix", "f", false, "do fix")
+	rootCmd.PersistentFlags().BoolP("merkle", "m", false, "force-rewind merkle db")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

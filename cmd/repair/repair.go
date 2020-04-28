@@ -22,7 +22,7 @@ const (
 	merkleTreeCacheSize = 10000
 )
 
-func repair(amoRoot string, doFix bool) {
+func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 	fmt.Println("Inspecting data root:", amoRoot)
 
 	//// open
@@ -130,12 +130,13 @@ func repair(amoRoot string, doFix bool) {
 			return
 		}
 		appHash = amoMt.Hash()
-		if !bytes.Equal(appHash, prevHash) {
+		if rewindMerkle || bytes.Equal(appHash, prevHash) {
+			// Ok. No change in appHash, so no change in index db. We don't
+			// have to touch index db. Rewind was safe in this case.
+		} else {
 			fmt.Println("Unable to rewind merkle db")
 			return
 		}
-		// Ok. No change in appHash, so no change in index db. We don't have to
-		// touch index db. Rewind was safe in this case.
 	}
 
 	fmt.Println("Repair AMO state...")
