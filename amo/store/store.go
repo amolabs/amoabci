@@ -879,7 +879,7 @@ func (s Store) GetDelegateEx(holder crypto.Address, committed bool) *types.Deleg
 	if delegate == nil {
 		return nil
 	}
-	return &types.DelegateEx{holder, delegate}
+	return &types.DelegateEx{Delegator: holder, Delegate: delegate}
 }
 
 func (s Store) GetDelegatesByDelegatee(delegatee crypto.Address, committed bool) []*types.DelegateEx {
