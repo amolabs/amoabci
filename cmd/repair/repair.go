@@ -90,11 +90,7 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 
 	orgHeight := tmState.LastBlockHeight
 	nblk := tmBlockStore.LoadBlock(tmState.LastBlockHeight + 1)
-	if nblk == nil {
-		fmt.Println("Seems to be at the tip of the chain")
-		return
-	}
-	for matchStateAndBlock(tmState, nblk) == false {
+	for nblk != nil && matchStateAndBlock(tmState, nblk) == false {
 		// rewind to find the matching state
 		nblk = tmBlockStore.LoadBlock(tmState.LastBlockHeight)
 		if nblk == nil {
@@ -109,7 +105,8 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 			return
 		}
 	}
-	fmt.Printf("Rewinded %d blocks\n", orgHeight-tmState.LastBlockHeight)
+	fmt.Printf("Rewinded TM state by %d blocks\n",
+		orgHeight-tmState.LastBlockHeight)
 
 	if tmBlockStoreState.Height > tmState.LastBlockHeight+1 {
 		tmBlockStoreState.Height = tmState.LastBlockHeight + 1
@@ -118,6 +115,7 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 	fmt.Println("Repair AMO merkle tree...")
 
 	ver, _ := amoMt.Load()
+	orgVersion := ver
 	appHash := amoMt.Hash()
 	prevHash := appHash // should be null?
 	// amoMt.Version equals to the block height where the app hash is written.
@@ -137,6 +135,12 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 			fmt.Println("Unable to rewind merkle db")
 			return
 		}
+	}
+	fmt.Printf("Rewinded AMO merkle db by %d\n", orgVersion-ver)
+
+	fmt.Println("Check TM state again with AMO merkle db...")
+	if !bytes.Equal(tmState.AppHash, appHash) {
+		tmState.AppHash = appHash
 	}
 
 	fmt.Println("Repair AMO state...")
