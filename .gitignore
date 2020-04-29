@@ -17,6 +17,7 @@ vendor
 
 # output binary files
 /amod
+/repair
 
 # docker-related files
 DOCKER/amod

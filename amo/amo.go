@@ -542,7 +542,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	}
 
 	events := []abci.Event{
-		abci.Event{
+		{
 			Type: "tx",
 			Attributes: []kv.Pair{
 				{Key: []byte("type"), Value: []byte(t.GetType())},
