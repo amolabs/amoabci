@@ -24,7 +24,7 @@ func (s Store) AddTxIndexer(height int64, txs [][]byte) {
 	txsJSON, _ := json.Marshal(txs)
 
 	// update indexBlockTx
-	s.indexBlockTx.SetSync(hb, txsJSON)
+	s.indexBlockTx.Set(hb, txsJSON)
 
 	batch := s.indexTxBlock.NewBatch()
 	defer batch.Close()
@@ -126,7 +126,7 @@ func (s Store) TxIndexerPurge() {
 	defer itr.Close()
 
 	for ; itr.Valid(); itr.Next() {
-		s.indexBlockTx.DeleteSync(itr.Key())
+		s.indexBlockTx.Delete(itr.Key())
 	}
 
 	itr, err = s.indexTxBlock.Iterator(nil, nil)
@@ -137,6 +137,6 @@ func (s Store) TxIndexerPurge() {
 	defer itr.Close()
 
 	for ; itr.Valid(); itr.Next() {
-		s.indexTxBlock.DeleteSync(itr.Key())
+		s.indexTxBlock.Delete(itr.Key())
 	}
 }

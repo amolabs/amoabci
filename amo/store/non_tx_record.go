@@ -39,11 +39,11 @@ func (s Store) AddIncentiveRecord(height int64, address crypto.Address, amount *
 	abKey := makeAddressFirstKey(address, height)
 	amountValue := amount.Bytes()
 
-	err := s.incentiveHeight.SetSync(baKey, amountValue)
+	err := s.incentiveHeight.Set(baKey, amountValue)
 	if err != nil {
 		return err
 	}
-	s.incentiveAddress.SetSync(abKey, amountValue)
+	s.incentiveAddress.Set(abKey, amountValue)
 	if err != nil {
 		return err
 	}
