@@ -145,7 +145,7 @@ jobs:
           name: "withdraw stakes coins should SUCCEED"
           command: ./test_script/withdraw.sh 2 "$NODENUM" 100000000000000000000 "ok"
       - run:
-          name: "tu1's stake should be 1 mote"
+          name: "tu1's stake should be 79 mote"
           command: ./test_script/penalty_check.sh 
 
 workflows:
