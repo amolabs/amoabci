@@ -24,7 +24,7 @@ import (
 const (
 	// versions
 	AMOAppVersion      = "v1.6.3"
-	AMOProtocolVersion = uint64(0x3)
+	AMOProtocolVersion = uint64(0x4)
 )
 
 // Output are sorted by voting power.
@@ -611,15 +611,9 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.feeAccumulated,
 	)
 
-	if app.doValUpdate {
-		app.doValUpdate = false
-		newVals := app.store.GetValidators(app.config.MaxValidators, false)
-		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
-	}
-
 	app.store.LoosenLockedStakes(false)
 
-	blockchain.PenalizeConvicts(
+	doValUpdate, _ := blockchain.PenalizeConvicts(
 		app.store,
 		app.logger,
 		app.pendingEvidences,
@@ -627,6 +621,12 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.config.WeightValidator, app.config.WeightDelegator,
 		app.config.PenaltyRatioM, app.config.PenaltyRatioL,
 	)
+
+	if app.doValUpdate || doValUpdate {
+		app.doValUpdate = false
+		newVals := app.store.GetValidators(app.config.MaxValidators, false)
+		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
+	}
 
 	app.replayPreventer.Index(app.state.Height)
 
