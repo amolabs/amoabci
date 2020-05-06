@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math/big"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -30,20 +31,26 @@ func PenalizeConvicts(
 	// handle evidences
 	for _, evidence := range evidences {
 		validator := evidence.GetValidator().Address
-		penalize(
+		err := penalize(
 			store, logger,
 			weightValidator, weightDelegator,
 			validator, penaltyRatioM, "Evidence Penalty",
 		)
+		if err != nil {
+			return err
+		}
 	}
 
 	// handle lazyValidators
 	for _, lazyValidator := range lazyValidators {
-		penalize(
+		err := penalize(
 			store, logger,
 			weightValidator, weightDelegator,
 			lazyValidator, penaltyRatioL, "Downtime Penalty",
 		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -57,14 +64,17 @@ func penalize(
 	validator crypto.Address,
 	ratio float64,
 	penaltyType string,
-) {
+) error {
 
 	zeroAmount := new(types.Currency).Set(0)
 
 	holder := store.GetHolderByValidator(validator, false)
+	if holder == nil {
+		return fmt.Errorf("no holder for validator: %X", validator)
+	}
 	vs := store.GetStake(holder, false) // validator's stake
 	if vs == nil {
-		return
+		return fmt.Errorf("no stake for holder: %X", holder)
 	}
 
 	ds := store.GetDelegatesByDelegatee(holder, false) // delegators' stake
@@ -116,4 +126,6 @@ func penalize(
 
 	logger.Debug(penaltyType,
 		"validator", hex.EncodeToString(holder), "penalty", tmpc2.String())
+
+	return nil
 }
