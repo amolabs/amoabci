@@ -26,34 +26,35 @@ func PenalizeConvicts(
 
 	weightValidator, weightDelegator float64,
 	penaltyRatioM, penaltyRatioL float64,
-) error {
+) (bool, error) {
+	var doValUpdate bool = false
 
 	// handle evidences
 	for _, evidence := range evidences {
 		validator := evidence.GetValidator().Address
-		err := penalize(
+		doValUpdate, err := penalize(
 			store, logger,
 			weightValidator, weightDelegator,
 			validator, penaltyRatioM, "Evidence Penalty",
 		)
 		if err != nil {
-			return err
+			return doValUpdate, err
 		}
 	}
 
 	// handle lazyValidators
 	for _, lazyValidator := range lazyValidators {
-		err := penalize(
+		doValUpdate, err := penalize(
 			store, logger,
 			weightValidator, weightDelegator,
 			lazyValidator, penaltyRatioL, "Downtime Penalty",
 		)
 		if err != nil {
-			return err
+			return doValUpdate, err
 		}
 	}
 
-	return nil
+	return doValUpdate, nil
 }
 
 func penalize(
@@ -64,17 +65,17 @@ func penalize(
 	validator crypto.Address,
 	ratio float64,
 	penaltyType string,
-) error {
-
+) (bool, error) {
+	doValUpdate := false
 	zeroAmount := new(types.Currency).Set(0)
 
 	holder := store.GetHolderByValidator(validator, false)
 	if holder == nil {
-		return fmt.Errorf("no holder for validator: %X", validator)
+		return doValUpdate, fmt.Errorf("no holder for validator: %X", validator)
 	}
 	vs := store.GetStake(holder, false) // validator's stake
 	if vs == nil {
-		return fmt.Errorf("no stake for holder: %X", holder)
+		return doValUpdate, fmt.Errorf("no stake for holder: %X", holder)
 	}
 
 	ds := store.GetDelegatesByDelegatee(holder, false) // delegators' stake
@@ -112,20 +113,28 @@ func penalize(
 		tmpc2 = *partialAmount(weightDelegator, df, &wsumf, &penalty)
 		tmpc.Add(&tmpc2) // update subtotal
 
-		d.Delegate.Amount.Sub(&tmpc2)
-		if d.Delegate.Amount.LessThan(zeroAmount) {
-			d.Delegate.Amount.Set(0)
-		}
+		if !tmpc2.Equals(zeroAmount) {
+			d.Delegate.Amount.Sub(&tmpc2)
+			if d.Delegate.Amount.LessThan(zeroAmount) {
+				d.Delegate.Amount.Set(0)
+			}
 
-		store.SetDelegate(d.Delegator, d.Delegate)
-		logger.Debug(penaltyType,
-			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmpc.String())
+			store.SetDelegate(d.Delegator, d.Delegate)
+			logger.Debug(penaltyType,
+				"delegator", hex.EncodeToString(d.Delegator), "penalty", tmpc.String())
+
+			doValUpdate = true
+		}
 	}
 	tmpc2.Int.Sub(&penalty.Int, &tmpc.Int) // calc voter(validator) penalty
-	store.SlashStakes(holder, tmpc2, false)
 
-	logger.Debug(penaltyType,
-		"validator", hex.EncodeToString(holder), "penalty", tmpc2.String())
+	if !tmpc2.Equals(zeroAmount) {
+		store.SlashStakes(holder, tmpc2, false)
+		logger.Debug(penaltyType,
+			"validator", hex.EncodeToString(holder), "penalty", tmpc2.String())
 
-	return nil
+		doValUpdate = true
+	}
+
+	return doValUpdate, nil
 }
