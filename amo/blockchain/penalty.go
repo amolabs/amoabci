@@ -27,12 +27,15 @@ func PenalizeConvicts(
 	weightValidator, weightDelegator float64,
 	penaltyRatioM, penaltyRatioL float64,
 ) (bool, error) {
-	var doValUpdate bool = false
+	var (
+		doValUpdate bool = false
+		err         error
+	)
 
 	// handle evidences
 	for _, evidence := range evidences {
 		validator := evidence.GetValidator().Address
-		doValUpdate, err := penalize(
+		doValUpdate, err = penalize(
 			store, logger,
 			weightValidator, weightDelegator,
 			validator, penaltyRatioM, "Evidence Penalty",
@@ -44,7 +47,7 @@ func PenalizeConvicts(
 
 	// handle lazyValidators
 	for _, lazyValidator := range lazyValidators {
-		doValUpdate, err := penalize(
+		doValUpdate, err = penalize(
 			store, logger,
 			weightValidator, weightDelegator,
 			lazyValidator, penaltyRatioL, "Downtime Penalty",
