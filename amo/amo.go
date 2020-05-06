@@ -24,7 +24,7 @@ import (
 const (
 	// versions
 	AMOAppVersion      = "v1.6.3"
-	AMOProtocolVersion = uint64(0x3)
+	AMOProtocolVersion = uint64(0x4)
 )
 
 // Output are sorted by voting power.
