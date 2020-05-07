@@ -80,6 +80,8 @@ func penalize(
 	pf := esf.Mul(esf, prf) // penalty = effStake * penaltyRatio
 	pf.Int(&penalty.Int)
 
+	// distribute penalty
+	// TODO: unify this code snippet with those in incentive.go
 	var (
 		wsumf, wf   big.Float // weighted sum
 		tmpf        big.Float // tmp
@@ -96,24 +98,34 @@ func penalize(
 	}
 
 	// individual penalties for delegators
+	// NOTE: merkle version equals to last height + 1, so until commit() merkle
+	// version equals to the current height
+	height := store.GetMerkleVersion()
 	tmpc.Set(0) // subtotal for delegate holders
 	for _, d := range ds {
 		df := new(big.Float).SetInt(&d.Amount.Int)
 		tmpc2 = *partialAmount(weightDelegator, df, &wsumf, &penalty)
 		tmpc.Add(&tmpc2) // update subtotal
 
+		// update stake
 		d.Delegate.Amount.Sub(&tmpc2)
-		if d.Delegate.Amount.LessThan(zeroAmount) {
+		if d.Delegate.Amount.LessThan(zeroAmount) { // XXX: is it necessary?
 			d.Delegate.Amount.Set(0)
 		}
-
 		store.SetDelegate(d.Delegator, d.Delegate)
+		// add history record
+		store.AddPenaltyRecord(height, d.Delegator, &tmpc2)
+		// log XXX: remove this?
 		logger.Debug(penaltyType,
 			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmpc.String())
 	}
-	tmpc2.Int.Sub(&penalty.Int, &tmpc.Int) // calc voter(validator) penalty
+	// calc voter(validator) penalty
+	tmpc2.Int.Sub(&penalty.Int, &tmpc.Int)
+	// update stake
 	store.SlashStakes(holder, tmpc2, false)
-
+	// add history record
+	store.AddPenaltyRecord(height, holder, &tmpc2)
+	// log XXX: remove this?
 	logger.Debug(penaltyType,
 		"validator", hex.EncodeToString(holder), "penalty", tmpc2.String())
 }

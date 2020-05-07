@@ -246,7 +246,7 @@ func TestQueryParcel(t *testing.T) {
 	parcelEx := types.ParcelEx{
 		Parcel: &parcel,
 		Requests: []*types.RequestEx{
-			&types.RequestEx{
+			{
 				Request: &request,
 				Buyer:   _addr,
 			},
@@ -1010,7 +1010,7 @@ func TestIncentiveNoTouch(t *testing.T) {
 		app.logger,
 		app.config.WeightValidator, app.config.WeightDelegator,
 		app.config.BlkReward, app.config.TxReward,
-		app.state.Height, app.numDeliveredTxs,
+		app.numDeliveredTxs,
 		app.staker,
 		app.feeAccumulated,
 	)
