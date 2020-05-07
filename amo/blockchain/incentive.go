@@ -18,7 +18,7 @@ func DistributeIncentive(
 
 	weightValidator, weightDelegator float64,
 	blkReward, txReward types.Currency,
-	height, numDeliveredTxs int64,
+	numDeliveredTxs int64,
 	staker crypto.Address,
 	feeAccumulated types.Currency,
 ) error {
@@ -53,6 +53,8 @@ func DistributeIncentive(
 		return nil
 	}
 
+	// distribute incentive
+	// TODO: unify this code snippet with those in penalty.go
 	var (
 		wsumf, wf big.Float // weighted sum
 		tmpf      big.Float // tmp
@@ -68,22 +70,32 @@ func DistributeIncentive(
 	}
 
 	// individual rewards
+	// NOTE: merkle version equals to last height + 1, so until commit() merkle
+	// version equals to the current height
+	height := store.GetMerkleVersion()
 	tmpc.Set(0) // subtotal for delegate holders
 	for _, d := range ds {
 		df := new(big.Float).SetInt(&d.Amount.Int)
 		tmpc2 = *partialAmount(weightDelegator, df, &wsumf, &incentive)
 		tmpc.Add(&tmpc2) // update subtotal
 
+		// update balance
 		b := store.GetBalance(d.Delegator, false).Add(&tmpc2)
-		store.SetBalance(d.Delegator, b)                      // update balance
-		store.AddIncentiveRecord(height, d.Delegator, &tmpc2) // update incentive record
+		store.SetBalance(d.Delegator, b)
+		// add history record
+		store.AddIncentiveRecord(height, d.Delegator, &tmpc2)
+		// log XXX: remove this?
 		logger.Debug("Block reward",
 			"delegator", hex.EncodeToString(d.Delegator), "reward", tmpc2.String())
 	}
-	tmpc2.Int.Sub(&incentive.Int, &tmpc.Int) // calc validator reward
+	// calc validator reward
+	tmpc2.Int.Sub(&incentive.Int, &tmpc.Int)
+	// update balance
 	b := store.GetBalance(staker, false).Add(&tmpc2)
-	store.SetBalance(staker, b)                      // update balance
-	store.AddIncentiveRecord(height, staker, &tmpc2) // update incentive record
+	store.SetBalance(staker, b)
+	// add history record
+	store.AddIncentiveRecord(height, staker, &tmpc2)
+	// log XXX: remove this?
 	logger.Debug("Block reward",
 		"proposer", hex.EncodeToString(staker), "reward", tmpc2.String())
 

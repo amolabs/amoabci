@@ -428,6 +428,12 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 		resQuery = queryAddressIncentives(app.store, reqQuery.Data)
 	case "inc":
 		resQuery = queryIncentive(app.store, reqQuery.Data)
+	case "pen_block":
+		resQuery = queryBlockPenalties(app.store, reqQuery.Data)
+	case "pen_address":
+		resQuery = queryAddressPenalties(app.store, reqQuery.Data)
+	case "pen":
+		resQuery = queryPenalty(app.store, reqQuery.Data)
 	default:
 		resQuery.Code = code.QueryCodeBadPath
 		return resQuery
@@ -606,7 +612,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.logger,
 		app.config.WeightValidator, app.config.WeightDelegator,
 		app.config.BlkReward, app.config.TxReward,
-		app.state.Height, app.numDeliveredTxs,
+		app.numDeliveredTxs,
 		app.staker,
 		app.feeAccumulated,
 	)
