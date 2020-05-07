@@ -14,7 +14,11 @@ import (
 var (
 	prefixIncentiveHeight  = []byte("ba")
 	prefixIncentiveAddress = []byte("ab")
+	prefixPenaltyHeight    = []byte("pba")
+	prefixPenaltyAddress   = []byte("pab")
 )
+
+type PenaltyInfo IncentiveInfo
 
 type IncentiveInfo struct {
 	BlockHeight int64           `json:"block_height"`
@@ -143,6 +147,133 @@ func (s Store) GetIncentiveRecord(height int64, address crypto.Address) Incentiv
 	}
 
 	return IncentiveInfo{
+		BlockHeight: height,
+		Address:     address,
+		Amount:      amount,
+	}
+}
+
+func (s Store) AddPenaltyRecord(height int64, address crypto.Address, amount *types.Currency) error {
+	if height < 0 {
+		return errors.New("unavailable height")
+	}
+
+	if address == nil {
+		return errors.New("address is nil")
+	}
+
+	if amount.Equals(new(types.Currency).Set(0)) {
+		return errors.New("ignore recording 0 value")
+	}
+
+	baKey := makeHeightFirstKey(height, address)
+	abKey := makeAddressFirstKey(address, height)
+	amountValue := amount.Bytes()
+
+	err := s.penaltyHeight.Set(baKey, amountValue)
+	if err != nil {
+		return err
+	}
+	s.penaltyAddress.Set(abKey, amountValue)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s Store) GetBlockPenaltyRecords(height int64) []PenaltyInfo {
+	var (
+		itr       tmdb.Iterator
+		penalties []PenaltyInfo
+	)
+
+	hb := make([]byte, 8)
+	binary.BigEndian.PutUint64(hb, uint64(height))
+
+	itr, err := s.penaltyHeight.Iterator(hb, nil)
+	if err != nil {
+		s.logger.Error("Store", "GetBlockPenaltyRecords", err.Error())
+		return []PenaltyInfo{}
+	}
+	defer itr.Close()
+
+	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), hb); itr.Next() {
+		address := crypto.Address(itr.Key()[len(hb):])
+		amount, err := new(types.Currency).SetBytes(itr.Value())
+		if err != nil {
+			s.logger.Error("Store", "GetBlockPenaltyRecords", err.Error())
+			return []PenaltyInfo{}
+		}
+
+		penalty := PenaltyInfo{
+			BlockHeight: height,
+			Address:     address,
+			Amount:      amount,
+		}
+
+		penalties = append(penalties, penalty)
+	}
+
+	return penalties
+}
+
+func (s Store) GetAddressPenaltyRecords(address crypto.Address) []PenaltyInfo {
+	var (
+		itr       tmdb.Iterator
+		penalties []PenaltyInfo
+	)
+
+	ab := address.Bytes()
+
+	itr, err := s.penaltyAddress.Iterator(ab, nil)
+	if err != nil {
+		s.logger.Error("Store", "GetAddressPenaltyRecords", err.Error())
+		return []PenaltyInfo{}
+	}
+	defer itr.Close()
+
+	for ; itr.Valid() && bytes.HasPrefix(itr.Key(), ab); itr.Next() {
+		blockHeight := int64(binary.BigEndian.Uint64(itr.Key()[len(ab):]))
+		amount, err := new(types.Currency).SetBytes(itr.Value())
+		if err != nil {
+			s.logger.Error("Store", "GetAddressPenaltyRecords", err.Error())
+			return []PenaltyInfo{}
+		}
+
+		penalty := PenaltyInfo{
+			BlockHeight: blockHeight,
+			Address:     address,
+			Amount:      amount,
+		}
+
+		penalties = append(penalties, penalty)
+	}
+
+	return penalties
+}
+
+func (s Store) GetPenaltyRecord(height int64, address crypto.Address) PenaltyInfo {
+	ba := makeHeightFirstKey(height, address)
+
+	value, err := s.penaltyHeight.Get(ba)
+	if err != nil {
+		return PenaltyInfo{}
+	}
+	if value == nil {
+		return PenaltyInfo{}
+	}
+
+	amount, err := new(types.Currency).SetBytes(value)
+	if err != nil {
+		return PenaltyInfo{}
+	}
+
+	if amount.Equals(new(types.Currency).Set(0)) {
+		return PenaltyInfo{}
+	}
+
+	return PenaltyInfo{
 		BlockHeight: height,
 		Address:     address,
 		Amount:      amount,

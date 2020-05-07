@@ -614,3 +614,133 @@ func queryIncentive(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 
 	return
 }
+
+func queryBlockPenalties(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	var (
+		penalties []store.PenaltyInfo
+		tmp       string
+		height    int64
+	)
+
+	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	err := json.Unmarshal(queryData, &tmp)
+	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	height, err = strconv.ParseInt(tmp, 10, 64)
+	if err != nil {
+		res.Log = "error: cannot convert string to int64"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	penalties = s.GetBlockPenaltyRecords(height)
+	if len(penalties) == 0 {
+		res.Log = fmt.Sprintf("no match: %d", height)
+		res.Code = code.QueryCodeNoMatch
+		return
+	}
+
+	jsonstr, _ := json.Marshal(penalties)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}
+
+func queryAddressPenalties(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	var (
+		penalties []store.PenaltyInfo
+		address   crypto.Address
+	)
+
+	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	err := json.Unmarshal(queryData, &address)
+	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	penalties = s.GetAddressPenaltyRecords(address)
+	if len(penalties) == 0 {
+		res.Log = "error: no penalties"
+		res.Code = code.QueryCodeNoMatch
+		return
+	}
+
+	jsonstr, _ := json.Marshal(penalties)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}
+
+func queryPenalty(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	var (
+		penalties []store.PenaltyInfo
+		height    int64
+		address   crypto.Address
+	)
+
+	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	var keys struct {
+		Height  string         `json:"height"`
+		Address crypto.Address `json:"address"`
+	}
+
+	err := json.Unmarshal(queryData, &keys)
+	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	height, err = strconv.ParseInt(keys.Height, 10, 64)
+	if err != nil {
+		res.Log = fmt.Sprintf("error: cannot convert %s", keys.Height)
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	address = keys.Address
+
+	penalty := s.GetPenaltyRecord(height, address)
+	if reflect.DeepEqual(penalty, store.PenaltyInfo{}) {
+		res.Log = "error: no penalties"
+		res.Code = code.QueryCodeNoMatch
+		return
+	}
+
+	penalties = append(penalties, penalty)
+
+	jsonstr, _ := json.Marshal(penalties)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}

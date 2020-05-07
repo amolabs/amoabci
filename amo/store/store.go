@@ -81,6 +81,14 @@ type Store struct {
 	// key: stake holder addres || block height
 	// value: incentive amount
 	incentiveAddress tmdb.DB
+	// search penalty for block height-first:
+	// key: block height || stake holder address
+	// value: penalty amount
+	penaltyHeight tmdb.DB
+	// search penalty for address-first:
+	// key: stake holder addres || block height
+	// value: penalty amount
+	penaltyAddress tmdb.DB
 
 	// lazinessCounter database
 	lazinessCounterDB tmdb.DB
@@ -108,9 +116,15 @@ func NewStore(logger log.Logger, merkleDB, indexDB, incentiveDB, lazinessCounter
 		incentiveDB:      incentiveDB,
 		incentiveHeight:  tmdb.NewPrefixDB(incentiveDB, prefixIncentiveHeight),
 		incentiveAddress: tmdb.NewPrefixDB(incentiveDB, prefixIncentiveAddress),
+		penaltyHeight:    tmdb.NewPrefixDB(incentiveDB, prefixPenaltyHeight),
+		penaltyAddress:   tmdb.NewPrefixDB(incentiveDB, prefixPenaltyAddress),
 
 		lazinessCounterDB: lazinessCounterDB,
 	}, nil
+}
+
+func (s Store) GetMerkleVersion() int64 {
+	return s.merkleVersion
 }
 
 func (s Store) Purge() error {
