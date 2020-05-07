@@ -116,28 +116,28 @@ func penalize(
 		tmpc2 = *partialAmount(weightDelegator, df, &wsumf, &penalty)
 		tmpc.Add(&tmpc2) // update subtotal
 
-		if !tmpc2.Equals(zeroAmount) {
-			d.Delegate.Amount.Sub(&tmpc2)
-			if d.Delegate.Amount.LessThan(zeroAmount) {
-				d.Delegate.Amount.Set(0)
-			}
-
-			store.SetDelegate(d.Delegator, d.Delegate)
-			logger.Debug(penaltyType,
-				"delegator", hex.EncodeToString(d.Delegator), "penalty", tmpc.String())
-
-			doValUpdate = true
+		if tmpc2.Equals(zeroAmount) {
+			continue
 		}
+		d.Delegate.Amount.Sub(&tmpc2)
+		if d.Delegate.Amount.LessThan(zeroAmount) {
+			d.Delegate.Amount.Set(0)
+		}
+
+		store.SetDelegate(d.Delegator, d.Delegate)
+		logger.Debug(penaltyType,
+			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmpc.String())
+		doValUpdate = true
 	}
 	tmpc2.Int.Sub(&penalty.Int, &tmpc.Int) // calc voter(validator) penalty
 
-	if !tmpc2.Equals(zeroAmount) {
-		store.SlashStakes(holder, tmpc2, false)
-		logger.Debug(penaltyType,
-			"validator", hex.EncodeToString(holder), "penalty", tmpc2.String())
-
-		doValUpdate = true
+	if tmpc2.Equals(zeroAmount) {
+		return doValUpdate, nil
 	}
+	store.SlashStakes(holder, tmpc2, false)
+	logger.Debug(penaltyType,
+		"validator", hex.EncodeToString(holder), "penalty", tmpc2.String())
+	doValUpdate = true
 
 	return doValUpdate, nil
 }
