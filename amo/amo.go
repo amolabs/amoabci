@@ -636,7 +636,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 
 	app.replayPreventer.Index(app.state.Height)
 
-	app.store.ProcessDraftVotes(
+	evs := app.store.ProcessDraftVotes(
 		app.state.NextDraftID-uint32(1),
 		app.config.MaxValidators,
 		app.config.DraftQuorumRate,
@@ -644,6 +644,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.config.DraftRefundRate,
 		false,
 	)
+	res.Events = append(res.Events, evs...)
 
 	// update appHash
 	hash := app.store.Root()

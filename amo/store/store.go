@@ -11,6 +11,7 @@ import (
 	"github.com/tendermint/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/kv"
 	"github.com/tendermint/tendermint/libs/log"
 	tm "github.com/tendermint/tendermint/types"
 	tmdb "github.com/tendermint/tm-db"
@@ -999,21 +1000,22 @@ func (s Store) ProcessDraftVotes(
 	maxValidators uint64,
 	quorumRate, passRate, refundRate float64,
 	committed bool,
-) {
+) []abci.Event {
 	voteJustGotClosed := false
 	applyDraftConfig := false
+	events := []abci.Event{}
 
 	// check if there is a draft in process first
 	draft := s.GetDraft(latestDraftIDUint, committed)
 
 	// ignore non-existing draft
 	if draft == nil {
-		return
+		return events
 	}
 
 	// ignore already applied draft
 	if draft.OpenCount == 0 && draft.CloseCount == 0 && draft.ApplyCount == 0 {
-		return
+		return events
 	}
 
 	// decrement draft's open, close, apply counts
@@ -1116,6 +1118,17 @@ func (s Store) ProcessDraftVotes(
 
 	s.SetDraft(latestDraftIDUint, draft)
 
+	// events
+	idJson, _ := json.Marshal(latestDraftIDUint)
+	draftJson, _ := json.Marshal(draft)
+	events = append(events, abci.Event{
+		Type: "draft",
+		Attributes: []kv.Pair{
+			{Key: []byte("id"), Value: idJson},
+			{Key: []byte("draft"), Value: draftJson},
+		},
+	})
+
 	if applyDraftConfig {
 		// totalTally = draft.TallyApprove + draft.TallyReject
 		totalTally := new(types.Currency).Set(0)
@@ -1124,7 +1137,7 @@ func (s Store) ProcessDraftVotes(
 
 		// if draft.TallyQuorum > totalTally, drop draft config
 		if draft.TallyQuorum.GreaterThan(totalTally) {
-			return
+			return events
 		}
 
 		// pass = totalTally * passRate
@@ -1137,16 +1150,18 @@ func (s Store) ProcessDraftVotes(
 
 		// if pass > draft.TallyApprove, drop draft config
 		if pass.GreaterThan(&draft.TallyApprove) {
-			return
+			return events
 		}
 
 		b, err := json.Marshal(draft.Config)
 		if err != nil {
-			return
+			return events
 		}
 
 		s.SetAppConfig(b)
+		// TODO: add event 'draft applied'
 	}
+	return events
 }
 
 // Vote store

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/kv"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -83,7 +84,7 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	}
 
 	// set draft
-	store.SetDraft(txParam.DraftID, &types.Draft{
+	newDraft := &types.Draft{
 		Proposer: t.GetSender(),
 		Config:   cfg,
 		Desc:     t.Param.Desc,
@@ -96,10 +97,23 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		TallyQuorum:  *types.Zero,
 		TallyApprove: *types.Zero,
 		TallyReject:  *types.Zero,
-	})
+	}
+	store.SetDraft(txParam.DraftID, newDraft)
 
 	// set sender balance
 	store.SetBalance(t.GetSender(), balance)
 
-	return code.TxCodeOK, "ok", nil
+	idJson, _ := json.Marshal(txParam.DraftID)
+	draftJson, _ := json.Marshal(newDraft)
+	events := []abci.Event{
+		{
+			Type: "draft",
+			Attributes: []kv.Pair{
+				{Key: []byte("id"), Value: idJson},
+				{Key: []byte("draft"), Value: draftJson},
+			},
+		},
+	}
+
+	return code.TxCodeOK, "ok", events
 }
