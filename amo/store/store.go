@@ -1159,7 +1159,14 @@ func (s Store) ProcessDraftVotes(
 		}
 
 		s.SetAppConfig(b)
-		// TODO: add event 'draft applied'
+
+		// events
+		events = append(events, abci.Event{
+			Type: "config",
+			Attributes: []kv.Pair{
+				{Key: []byte("config"), Value: b},
+			},
+		})
 	}
 	return events
 }
