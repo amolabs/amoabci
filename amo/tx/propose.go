@@ -83,6 +83,8 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		return code.TxCodeImproperDraftConfig, err.Error(), nil
 	}
 
+	events := []abci.Event{}
+
 	// set draft
 	newDraft := &types.Draft{
 		Proposer: t.GetSender(),
@@ -99,21 +101,19 @@ func (t *TxPropose) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		TallyReject:  *types.Zero,
 	}
 	store.SetDraft(txParam.DraftID, newDraft)
+	// event
+	idJson, _ := json.Marshal(txParam.DraftID)
+	draftJson, _ := json.Marshal(newDraft)
+	events = append(events, abci.Event{
+		Type: "draft",
+		Attributes: []kv.Pair{
+			{Key: []byte("id"), Value: idJson},
+			{Key: []byte("draft"), Value: draftJson},
+		},
+	})
 
 	// set sender balance
 	store.SetBalance(t.GetSender(), balance)
-
-	idJson, _ := json.Marshal(txParam.DraftID)
-	draftJson, _ := json.Marshal(newDraft)
-	events := []abci.Event{
-		{
-			Type: "draft",
-			Attributes: []kv.Pair{
-				{Key: []byte("id"), Value: idJson},
-				{Key: []byte("draft"), Value: draftJson},
-			},
-		},
-	}
 
 	return code.TxCodeOK, "ok", events
 }
