@@ -1096,6 +1096,16 @@ func (s Store) ProcessDraftVotes(
 			balance := s.GetBalance(draft.Proposer, committed)
 			balance.Add(&draft.Deposit)
 			s.SetBalance(draft.Proposer, balance)
+			// event
+			addressJson, _ := json.Marshal(draft.Proposer)
+			amountJson, _ := json.Marshal(draft.Deposit)
+			events = append(events, abci.Event{
+				Type: "balance",
+				Attributes: []kv.Pair{
+					{Key: []byte("address"), Value: addressJson},
+					{Key: []byte("amount"), Value: amountJson},
+				},
+			})
 		} else {
 			// distribute deposit to voters
 			votes := s.GetVotes(latestDraftIDUint, committed)
@@ -1112,6 +1122,16 @@ func (s Store) ProcessDraftVotes(
 				balance := s.GetBalance(vote.Voter, committed)
 				balance.Add(distAmount)
 				s.SetBalance(vote.Voter, balance)
+				// event
+				addressJson, _ := json.Marshal(vote.Voter)
+				amountJson, _ := json.Marshal(distAmount)
+				events = append(events, abci.Event{
+					Type: "balance",
+					Attributes: []kv.Pair{
+						{Key: []byte("address"), Value: addressJson},
+						{Key: []byte("amount"), Value: amountJson},
+					},
+				})
 			}
 		}
 	}
