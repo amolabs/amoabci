@@ -1005,7 +1005,7 @@ func TestIncentiveNoTouch(t *testing.T) {
 	prevHash, _, err := app.store.Save()
 	assert.NoError(t, err)
 
-	err = blockchain.DistributeIncentive(
+	_, err = blockchain.DistributeIncentive(
 		app.store,
 		app.logger,
 		app.config.WeightValidator, app.config.WeightDelegator,
