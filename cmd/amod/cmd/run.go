@@ -88,22 +88,22 @@ func initApp(amoDirPath string) (*nm.Node, error) {
 	}
 
 	// TODO: do not use hard-coded value. use value from configuration.
-	merkleDB, err := tmdb.NewGoLevelDB(defaultMerkleDB, dataDirPath)
+	merkleDB, err := tmdb.NewCLevelDB(defaultMerkleDB, dataDirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	indexDB, err := tmdb.NewGoLevelDB(defaultIndexDB, dataDirPath)
+	indexDB, err := tmdb.NewCLevelDB(defaultIndexDB, dataDirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	incentiveDB, err := tmdb.NewGoLevelDB(defaultIncentiveDB, dataDirPath)
+	incentiveDB, err := tmdb.NewCLevelDB(defaultIncentiveDB, dataDirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	groupCounterDB, err := tmdb.NewGoLevelDB(defaultGroupCounterDB, dataDirPath)
+	groupCounterDB, err := tmdb.NewCLevelDB(defaultGroupCounterDB, dataDirPath)
 	if err != nil {
 		return nil, err
 	}
