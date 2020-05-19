@@ -619,10 +619,12 @@ func (s Store) UnlockStakes(holder crypto.Address, height int64, committed bool)
 	s.SetUnlockedStake(holder, unlocked)
 }
 
-func (s Store) LoosenLockedStakes(committed bool) {
+func (s Store) LoosenLockedStakes(committed bool) []abci.Event {
+	events := []abci.Event{}
+
 	imt, err := s.getImmutableTree(committed)
 	if err != nil {
-		return
+		return events
 	}
 
 	imt.IterateRangeInclusive(prefixStake, nil, true, func(key []byte, value []byte, version int64) bool {
@@ -662,6 +664,15 @@ func (s Store) LoosenLockedStakes(committed bool) {
 			if err != nil {
 				return false // continue
 			}
+			addressJson, _ := json.Marshal(holder)
+			amountJson, _ := json.Marshal(stake.Amount)
+			events = append(events, abci.Event{
+				Type: "stake_unlock",
+				Attributes: []kv.Pair{
+					{Key: []byte("address"), Value: addressJson},
+					{Key: []byte("amount"), Value: amountJson},
+				},
+			})
 		} else {
 			err := s.SetLockedStake(holder, stake, height)
 			if err != nil {
@@ -670,6 +681,7 @@ func (s Store) LoosenLockedStakes(committed bool) {
 		}
 		return false
 	})
+	return events
 }
 
 func makeEffStakeKey(amount types.Currency, holder crypto.Address) []byte {

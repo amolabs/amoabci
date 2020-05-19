@@ -624,7 +624,8 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
 	}
 
-	app.store.LoosenLockedStakes(false)
+	evs = app.store.LoosenLockedStakes(false)
+	res.Events = append(res.Events, evs...)
 
 	evs, _ = blockchain.PenalizeConvicts(
 		app.store,
