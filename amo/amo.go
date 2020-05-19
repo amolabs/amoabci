@@ -607,7 +607,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	// XXX no means to convey error to res
 
-	blockchain.DistributeIncentive(
+	evs, _ := blockchain.DistributeIncentive(
 		app.store,
 		app.logger,
 		app.config.WeightValidator, app.config.WeightDelegator,
@@ -616,6 +616,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.staker,
 		app.feeAccumulated,
 	)
+	res.Events = append(res.Events, evs...)
 
 	if app.doValUpdate {
 		app.doValUpdate = false
@@ -625,7 +626,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 
 	app.store.LoosenLockedStakes(false)
 
-	evs, _ := blockchain.PenalizeConvicts(
+	evs, _ = blockchain.PenalizeConvicts(
 		app.store,
 		app.logger,
 		app.pendingEvidences,

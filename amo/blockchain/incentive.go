@@ -2,10 +2,13 @@ package blockchain
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"math/big"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/kv"
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/amolabs/amoabci/amo/store"
@@ -21,11 +24,12 @@ func DistributeIncentive(
 	numDeliveredTxs int64,
 	staker crypto.Address,
 	feeAccumulated types.Currency,
-) error {
+) ([]abci.Event, error) {
+	events := []abci.Event{}
 
 	stake := store.GetStake(staker, true)
 	if stake == nil {
-		return errors.New("No stake, no reward.")
+		return events, errors.New("No stake, no reward.")
 	}
 	ds := store.GetDelegatesByDelegatee(staker, true)
 
@@ -50,7 +54,7 @@ func DistributeIncentive(
 
 	// ignore 0 incentive
 	if incentive.Equals(new(types.Currency).Set(0)) {
-		return nil
+		return events, nil
 	}
 
 	// distribute incentive
@@ -87,6 +91,15 @@ func DistributeIncentive(
 		// log XXX: remove this?
 		logger.Debug("Block reward",
 			"delegator", hex.EncodeToString(d.Delegator), "reward", tmpc2.String())
+		addressJson, _ := json.Marshal(d.Delegator)
+		amountJson, _ := json.Marshal(tmpc2)
+		events = append(events, abci.Event{
+			Type: "balance",
+			Attributes: []kv.Pair{
+				{Key: []byte("address"), Value: addressJson},
+				{Key: []byte("amount"), Value: amountJson},
+			},
+		})
 	}
 	// calc validator reward
 	tmpc2.Int.Sub(&incentive.Int, &tmpc.Int)
@@ -98,6 +111,15 @@ func DistributeIncentive(
 	// log XXX: remove this?
 	logger.Debug("Block reward",
 		"proposer", hex.EncodeToString(staker), "reward", tmpc2.String())
+	addressJson, _ := json.Marshal(staker)
+	amountJson, _ := json.Marshal(tmpc2)
+	events = append(events, abci.Event{
+		Type: "balance",
+		Attributes: []kv.Pair{
+			{Key: []byte("address"), Value: addressJson},
+			{Key: []byte("amount"), Value: amountJson},
+		},
+	})
 
-	return nil
+	return events, nil
 }
