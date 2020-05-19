@@ -625,7 +625,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 
 	app.store.LoosenLockedStakes(false)
 
-	blockchain.PenalizeConvicts(
+	evs, _ := blockchain.PenalizeConvicts(
 		app.store,
 		app.logger,
 		app.pendingEvidences,
@@ -633,10 +633,11 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.config.WeightValidator, app.config.WeightDelegator,
 		app.config.PenaltyRatioM, app.config.PenaltyRatioL,
 	)
+	res.Events = append(res.Events, evs...)
 
 	app.replayPreventer.Index(app.state.Height)
 
-	evs := app.store.ProcessDraftVotes(
+	evs = app.store.ProcessDraftVotes(
 		app.state.NextDraftID-uint32(1),
 		app.config.MaxValidators,
 		app.config.DraftQuorumRate,

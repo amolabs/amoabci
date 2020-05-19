@@ -2,10 +2,12 @@ package blockchain
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"math/big"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/kv"
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/amolabs/amoabci/amo/store"
@@ -25,28 +27,31 @@ func PenalizeConvicts(
 
 	weightValidator, weightDelegator float64,
 	penaltyRatioM, penaltyRatioL float64,
-) error {
+) ([]abci.Event, error) {
+	events := []abci.Event{}
 
 	// handle evidences
 	for _, evidence := range evidences {
 		validator := evidence.GetValidator().Address
-		penalize(
+		evs := penalize(
 			store, logger,
 			weightValidator, weightDelegator,
 			validator, penaltyRatioM, "Evidence Penalty",
 		)
+		events = append(events, evs...)
 	}
 
 	// handle lazyValidators
 	for _, lazyValidator := range lazyValidators {
-		penalize(
+		evs := penalize(
 			store, logger,
 			weightValidator, weightDelegator,
 			lazyValidator, penaltyRatioL, "Downtime Penalty",
 		)
+		events = append(events, evs...)
 	}
 
-	return nil
+	return events, nil
 }
 
 func penalize(
@@ -57,14 +62,14 @@ func penalize(
 	validator crypto.Address,
 	ratio float64,
 	penaltyType string,
-) {
-
+) []abci.Event {
+	events := []abci.Event{}
 	zeroAmount := new(types.Currency).Set(0)
 
 	holder := store.GetHolderByValidator(validator, false)
 	vs := store.GetStake(holder, false) // validator's stake
 	if vs == nil {
-		return
+		return events
 	}
 
 	ds := store.GetDelegatesByDelegatee(holder, false) // delegators' stake
@@ -118,6 +123,15 @@ func penalize(
 		// log XXX: remove this?
 		logger.Debug(penaltyType,
 			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmpc.String())
+		addressJson, _ := json.Marshal(d.Delegator)
+		amountJson, _ := json.Marshal(tmpc)
+		events = append(events, abci.Event{
+			Type: "balance",
+			Attributes: []kv.Pair{
+				{Key: []byte("address"), Value: addressJson},
+				{Key: []byte("amount"), Value: amountJson},
+			},
+		})
 	}
 	// calc voter(validator) penalty
 	tmpc2.Int.Sub(&penalty.Int, &tmpc.Int)
@@ -128,4 +142,15 @@ func penalize(
 	// log XXX: remove this?
 	logger.Debug(penaltyType,
 		"validator", hex.EncodeToString(holder), "penalty", tmpc2.String())
+	addressJson, _ := json.Marshal(holder)
+	amountJson, _ := json.Marshal(tmpc)
+	events = append(events, abci.Event{
+		Type: "balance",
+		Attributes: []kv.Pair{
+			{Key: []byte("address"), Value: addressJson},
+			{Key: []byte("amount"), Value: amountJson},
+		},
+	})
+
+	return events
 }
