@@ -126,7 +126,7 @@ func penalize(
 		addressJson, _ := json.Marshal(d.Delegator)
 		amountJson, _ := json.Marshal(tmpc)
 		events = append(events, abci.Event{
-			Type: "balance",
+			Type: "penalty",
 			Attributes: []kv.Pair{
 				{Key: []byte("address"), Value: addressJson},
 				{Key: []byte("amount"), Value: amountJson},
@@ -145,7 +145,7 @@ func penalize(
 	addressJson, _ := json.Marshal(holder)
 	amountJson, _ := json.Marshal(tmpc)
 	events = append(events, abci.Event{
-		Type: "balance",
+		Type: "penalty",
 		Attributes: []kv.Pair{
 			{Key: []byte("address"), Value: addressJson},
 			{Key: []byte("amount"), Value: amountJson},

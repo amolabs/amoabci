@@ -94,7 +94,7 @@ func DistributeIncentive(
 		addressJson, _ := json.Marshal(d.Delegator)
 		amountJson, _ := json.Marshal(tmpc2)
 		events = append(events, abci.Event{
-			Type: "balance",
+			Type: "incentive",
 			Attributes: []kv.Pair{
 				{Key: []byte("address"), Value: addressJson},
 				{Key: []byte("amount"), Value: amountJson},
@@ -114,7 +114,7 @@ func DistributeIncentive(
 	addressJson, _ := json.Marshal(staker)
 	amountJson, _ := json.Marshal(tmpc2)
 	events = append(events, abci.Event{
-		Type: "balance",
+		Type: "incentive",
 		Attributes: []kv.Pair{
 			{Key: []byte("address"), Value: addressJson},
 			{Key: []byte("amount"), Value: amountJson},
