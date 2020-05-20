@@ -291,12 +291,22 @@ func (app *AMOApp) save() {
 	}
 }
 
-func (app *AMOApp) upgradeProtocol() {
+func (app *AMOApp) upgradeProtocol() []abci.Event {
+	events := []abci.Event{}
 	if app.state.Height != app.config.UpgradeProtocolHeight {
-		return
+		return events
 	}
 	app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
 	app.save()
+	versionJson, _ := json.Marshal(app.state.ProtocolVersion)
+	events = append(events, abci.Event{
+		Type: "protocol_upgrade",
+		Attributes: []kv.Pair{
+			{Key: []byte("version"), Value: versionJson},
+		},
+	})
+
+	return events
 }
 
 func (app *AMOApp) checkProtocolVersion() error {
@@ -451,7 +461,8 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	tx.StateProtocolVersion = app.state.ProtocolVersion
 
 	// upgrade protocol version
-	app.upgradeProtocol()
+	evs := app.upgradeProtocol()
+	res.Events = append(res.Events, evs...)
 
 	// check if app's protocol version matches supported version
 	err := app.checkProtocolVersion()
