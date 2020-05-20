@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/jmhodges/levigo"
 	"github.com/tendermint/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
@@ -1429,6 +1430,15 @@ func (s Store) GetValidators(max uint64, committed bool) abci.ValidatorUpdates {
 		}
 	}
 	return vals
+}
+
+func (s Store) Compact() {
+	//fmt.Println("compacting")
+	cleveldb, ok := s.indexDB.(*tmdb.CLevelDB)
+	if ok {
+		//fmt.Println("cleveldb compacting")
+		cleveldb.DB().CompactRange(levigo.Range{nil, nil})
+	}
 }
 
 func calcAdjustFactor(stakes []*types.Stake) uint {
