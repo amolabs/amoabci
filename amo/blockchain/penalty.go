@@ -105,7 +105,6 @@ func penalize(
 	// individual penalties for delegators
 	// NOTE: merkle version equals to last height + 1, so until commit() merkle
 	// version equals to the current height
-	height := store.GetMerkleVersion()
 	tmpc.Set(0) // subtotal for delegate holders
 	for _, d := range ds {
 		df := new(big.Float).SetInt(&d.Amount.Int)
@@ -118,8 +117,6 @@ func penalize(
 			d.Delegate.Amount.Set(0)
 		}
 		store.SetDelegate(d.Delegator, d.Delegate)
-		// add history record
-		store.AddPenaltyRecord(height, d.Delegator, &tmpc2)
 		// log XXX: remove this?
 		logger.Debug(penaltyType,
 			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmpc.String())
@@ -137,8 +134,6 @@ func penalize(
 	tmpc2.Int.Sub(&penalty.Int, &tmpc.Int)
 	// update stake
 	store.SlashStakes(holder, tmpc2, false)
-	// add history record
-	store.AddPenaltyRecord(height, holder, &tmpc2)
 	// log XXX: remove this?
 	logger.Debug(penaltyType,
 		"validator", hex.EncodeToString(holder), "penalty", tmpc2.String())

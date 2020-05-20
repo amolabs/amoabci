@@ -83,7 +83,6 @@ type AMOApp struct {
 	// internal database
 	merkleDB       tmdb.DB
 	indexDB        tmdb.DB
-	incentiveDB    tmdb.DB
 	groupCounterDB tmdb.DB
 
 	// state related variables
@@ -111,7 +110,7 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(stateFile *os.File, mdb, idxdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -121,14 +120,11 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 	if idxdb == nil {
 		idxdb = tmdb.NewMemDB()
 	}
-	if incdb == nil {
-		incdb = tmdb.NewMemDB()
-	}
 	if gcdb == nil {
 		gcdb = tmdb.NewMemDB()
 	}
 
-	s, err := astore.NewStore(l, mdb, idxdb, incdb, gcdb)
+	s, err := astore.NewStore(l, mdb, idxdb, gcdb)
 	if err != nil {
 		panic(err)
 	}
@@ -140,7 +136,6 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 		store:          s,
 		merkleDB:       mdb,
 		indexDB:        idxdb,
-		incentiveDB:    incdb,
 		groupCounterDB: gcdb,
 	}
 
@@ -432,18 +427,6 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 		resQuery = queryRequest(app.store, reqQuery.Data)
 	case "usage":
 		resQuery = queryUsage(app.store, reqQuery.Data)
-	case "inc_block":
-		resQuery = queryBlockIncentives(app.store, reqQuery.Data)
-	case "inc_address":
-		resQuery = queryAddressIncentives(app.store, reqQuery.Data)
-	case "inc":
-		resQuery = queryIncentive(app.store, reqQuery.Data)
-	case "pen_block":
-		resQuery = queryBlockPenalties(app.store, reqQuery.Data)
-	case "pen_address":
-		resQuery = queryAddressPenalties(app.store, reqQuery.Data)
-	case "pen":
-		resQuery = queryPenalty(app.store, reqQuery.Data)
 	default:
 		resQuery.Code = code.QueryCodeBadPath
 		return resQuery

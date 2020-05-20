@@ -73,29 +73,11 @@ type Store struct {
 	// value: block height
 	indexTxBlock tmdb.DB
 
-	incentiveDB tmdb.DB
-	// search incentive for block height-first:
-	// key: block height || stake holder address
-	// value: incentive amount
-	incentiveHeight tmdb.DB
-	// search incentive for address-first:
-	// key: stake holder addres || block height
-	// value: incentive amount
-	incentiveAddress tmdb.DB
-	// search penalty for block height-first:
-	// key: block height || stake holder address
-	// value: penalty amount
-	penaltyHeight tmdb.DB
-	// search penalty for address-first:
-	// key: stake holder addres || block height
-	// value: penalty amount
-	penaltyAddress tmdb.DB
-
 	// lazinessCounter database
 	lazinessCounterDB tmdb.DB
 }
 
-func NewStore(logger log.Logger, merkleDB, indexDB, incentiveDB, lazinessCounterDB tmdb.DB) (*Store, error) {
+func NewStore(logger log.Logger, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (*Store, error) {
 	mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
 	if err != nil {
 		return nil, err
@@ -113,12 +95,6 @@ func NewStore(logger log.Logger, merkleDB, indexDB, incentiveDB, lazinessCounter
 		indexEffStake:  tmdb.NewPrefixDB(indexDB, prefixIndexEffStake),
 		indexBlockTx:   tmdb.NewPrefixDB(indexDB, prefixIndexBlockTx),
 		indexTxBlock:   tmdb.NewPrefixDB(indexDB, prefixIndexTxBlock),
-
-		incentiveDB:      incentiveDB,
-		incentiveHeight:  tmdb.NewPrefixDB(incentiveDB, prefixIncentiveHeight),
-		incentiveAddress: tmdb.NewPrefixDB(incentiveDB, prefixIncentiveAddress),
-		penaltyHeight:    tmdb.NewPrefixDB(incentiveDB, prefixPenaltyHeight),
-		penaltyAddress:   tmdb.NewPrefixDB(incentiveDB, prefixPenaltyAddress),
 
 		lazinessCounterDB: lazinessCounterDB,
 	}, nil
@@ -167,18 +143,6 @@ func (s Store) Purge() error {
 
 	// TODO: need some method like s.stateDB.Size() to check if the DB has been
 	// really emptied.
-
-	// incentiveDB
-	itr, err = s.incentiveDB.Iterator(nil, nil)
-	if err != nil {
-		return err
-	}
-	defer itr.Close()
-
-	for ; itr.Valid(); itr.Next() {
-		k := itr.Key()
-		s.incentiveDB.Delete(k)
-	}
 
 	// lazinessCounterDB
 	itr, err = s.lazinessCounterDB.Iterator(nil, nil)
