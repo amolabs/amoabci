@@ -11,6 +11,7 @@ import (
 	"github.com/tendermint/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/kv"
 	"github.com/tendermint/tendermint/libs/log"
 	tm "github.com/tendermint/tendermint/types"
 	tmdb "github.com/tendermint/tm-db"
@@ -72,29 +73,11 @@ type Store struct {
 	// value: block height
 	indexTxBlock tmdb.DB
 
-	incentiveDB tmdb.DB
-	// search incentive for block height-first:
-	// key: block height || stake holder address
-	// value: incentive amount
-	incentiveHeight tmdb.DB
-	// search incentive for address-first:
-	// key: stake holder addres || block height
-	// value: incentive amount
-	incentiveAddress tmdb.DB
-	// search penalty for block height-first:
-	// key: block height || stake holder address
-	// value: penalty amount
-	penaltyHeight tmdb.DB
-	// search penalty for address-first:
-	// key: stake holder addres || block height
-	// value: penalty amount
-	penaltyAddress tmdb.DB
-
 	// lazinessCounter database
 	lazinessCounterDB tmdb.DB
 }
 
-func NewStore(logger log.Logger, merkleDB, indexDB, incentiveDB, lazinessCounterDB tmdb.DB) (*Store, error) {
+func NewStore(logger log.Logger, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (*Store, error) {
 	mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
 	if err != nil {
 		return nil, err
@@ -112,12 +95,6 @@ func NewStore(logger log.Logger, merkleDB, indexDB, incentiveDB, lazinessCounter
 		indexEffStake:  tmdb.NewPrefixDB(indexDB, prefixIndexEffStake),
 		indexBlockTx:   tmdb.NewPrefixDB(indexDB, prefixIndexBlockTx),
 		indexTxBlock:   tmdb.NewPrefixDB(indexDB, prefixIndexTxBlock),
-
-		incentiveDB:      incentiveDB,
-		incentiveHeight:  tmdb.NewPrefixDB(incentiveDB, prefixIncentiveHeight),
-		incentiveAddress: tmdb.NewPrefixDB(incentiveDB, prefixIncentiveAddress),
-		penaltyHeight:    tmdb.NewPrefixDB(incentiveDB, prefixPenaltyHeight),
-		penaltyAddress:   tmdb.NewPrefixDB(incentiveDB, prefixPenaltyAddress),
 
 		lazinessCounterDB: lazinessCounterDB,
 	}, nil
@@ -166,18 +143,6 @@ func (s Store) Purge() error {
 
 	// TODO: need some method like s.stateDB.Size() to check if the DB has been
 	// really emptied.
-
-	// incentiveDB
-	itr, err = s.incentiveDB.Iterator(nil, nil)
-	if err != nil {
-		return err
-	}
-	defer itr.Close()
-
-	for ; itr.Valid(); itr.Next() {
-		k := itr.Key()
-		s.incentiveDB.Delete(k)
-	}
 
 	// lazinessCounterDB
 	itr, err = s.lazinessCounterDB.Iterator(nil, nil)
@@ -618,10 +583,12 @@ func (s Store) UnlockStakes(holder crypto.Address, height int64, committed bool)
 	s.SetUnlockedStake(holder, unlocked)
 }
 
-func (s Store) LoosenLockedStakes(committed bool) {
+func (s Store) LoosenLockedStakes(committed bool) []abci.Event {
+	events := []abci.Event{}
+
 	imt, err := s.getImmutableTree(committed)
 	if err != nil {
-		return
+		return events
 	}
 
 	imt.IterateRangeInclusive(prefixStake, nil, true, func(key []byte, value []byte, version int64) bool {
@@ -661,6 +628,15 @@ func (s Store) LoosenLockedStakes(committed bool) {
 			if err != nil {
 				return false // continue
 			}
+			addressJson, _ := json.Marshal(holder)
+			amountJson, _ := json.Marshal(stake.Amount)
+			events = append(events, abci.Event{
+				Type: "stake_unlock",
+				Attributes: []kv.Pair{
+					{Key: []byte("address"), Value: addressJson},
+					{Key: []byte("amount"), Value: amountJson},
+				},
+			})
 		} else {
 			err := s.SetLockedStake(holder, stake, height)
 			if err != nil {
@@ -669,6 +645,7 @@ func (s Store) LoosenLockedStakes(committed bool) {
 		}
 		return false
 	})
+	return events
 }
 
 func makeEffStakeKey(amount types.Currency, holder crypto.Address) []byte {
@@ -999,21 +976,22 @@ func (s Store) ProcessDraftVotes(
 	maxValidators uint64,
 	quorumRate, passRate, refundRate float64,
 	committed bool,
-) {
+) []abci.Event {
 	voteJustGotClosed := false
 	applyDraftConfig := false
+	events := []abci.Event{}
 
 	// check if there is a draft in process first
 	draft := s.GetDraft(latestDraftIDUint, committed)
 
 	// ignore non-existing draft
 	if draft == nil {
-		return
+		return events
 	}
 
 	// ignore already applied draft
 	if draft.OpenCount == 0 && draft.CloseCount == 0 && draft.ApplyCount == 0 {
-		return
+		return events
 	}
 
 	// decrement draft's open, close, apply counts
@@ -1094,6 +1072,16 @@ func (s Store) ProcessDraftVotes(
 			balance := s.GetBalance(draft.Proposer, committed)
 			balance.Add(&draft.Deposit)
 			s.SetBalance(draft.Proposer, balance)
+			// event
+			addressJson, _ := json.Marshal(draft.Proposer)
+			amountJson, _ := json.Marshal(draft.Deposit)
+			events = append(events, abci.Event{
+				Type: "draft_deposit",
+				Attributes: []kv.Pair{
+					{Key: []byte("address"), Value: addressJson},
+					{Key: []byte("amount"), Value: amountJson},
+				},
+			})
 		} else {
 			// distribute deposit to voters
 			votes := s.GetVotes(latestDraftIDUint, committed)
@@ -1110,11 +1098,32 @@ func (s Store) ProcessDraftVotes(
 				balance := s.GetBalance(vote.Voter, committed)
 				balance.Add(distAmount)
 				s.SetBalance(vote.Voter, balance)
+				// event
+				addressJson, _ := json.Marshal(vote.Voter)
+				amountJson, _ := json.Marshal(distAmount)
+				events = append(events, abci.Event{
+					Type: "draft_deposit",
+					Attributes: []kv.Pair{
+						{Key: []byte("address"), Value: addressJson},
+						{Key: []byte("amount"), Value: amountJson},
+					},
+				})
 			}
 		}
 	}
 
 	s.SetDraft(latestDraftIDUint, draft)
+
+	// events
+	idJson, _ := json.Marshal(latestDraftIDUint)
+	draftJson, _ := json.Marshal(draft)
+	events = append(events, abci.Event{
+		Type: "draft",
+		Attributes: []kv.Pair{
+			{Key: []byte("id"), Value: idJson},
+			{Key: []byte("draft"), Value: draftJson},
+		},
+	})
 
 	if applyDraftConfig {
 		// totalTally = draft.TallyApprove + draft.TallyReject
@@ -1124,7 +1133,7 @@ func (s Store) ProcessDraftVotes(
 
 		// if draft.TallyQuorum > totalTally, drop draft config
 		if draft.TallyQuorum.GreaterThan(totalTally) {
-			return
+			return events
 		}
 
 		// pass = totalTally * passRate
@@ -1137,16 +1146,25 @@ func (s Store) ProcessDraftVotes(
 
 		// if pass > draft.TallyApprove, drop draft config
 		if pass.GreaterThan(&draft.TallyApprove) {
-			return
+			return events
 		}
 
 		b, err := json.Marshal(draft.Config)
 		if err != nil {
-			return
+			return events
 		}
 
 		s.SetAppConfig(b)
+
+		// events
+		events = append(events, abci.Event{
+			Type: "config",
+			Attributes: []kv.Pair{
+				{Key: []byte("config"), Value: b},
+			},
+		})
 	}
+	return events
 }
 
 // Vote store
