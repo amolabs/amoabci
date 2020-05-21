@@ -1076,7 +1076,7 @@ func (s Store) ProcessDraftVotes(
 			addressJson, _ := json.Marshal(draft.Proposer)
 			amountJson, _ := json.Marshal(draft.Deposit)
 			events = append(events, abci.Event{
-				Type: "balance",
+				Type: "draft_deposit",
 				Attributes: []kv.Pair{
 					{Key: []byte("address"), Value: addressJson},
 					{Key: []byte("amount"), Value: amountJson},
@@ -1102,7 +1102,7 @@ func (s Store) ProcessDraftVotes(
 				addressJson, _ := json.Marshal(vote.Voter)
 				amountJson, _ := json.Marshal(distAmount)
 				events = append(events, abci.Event{
-					Type: "balance",
+					Type: "draft_deposit",
 					Attributes: []kv.Pair{
 						{Key: []byte("address"), Value: addressJson},
 						{Key: []byte("amount"), Value: amountJson},
