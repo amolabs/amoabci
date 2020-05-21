@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -32,7 +33,13 @@ var RunCmd = &cobra.Command{
 			return err
 		}
 
-		node, err := initApp(amoDirPath)
+		app, err := initApp(amoDirPath)
+		if err != nil {
+			return err
+		}
+		//defer app.Close()
+
+		node, err := newTM(app)
 		if err != nil {
 			return err
 		}
@@ -53,7 +60,12 @@ var RunCmd = &cobra.Command{
 		node.Start()
 		defer func() {
 			node.Stop()
+			node.ProxyApp().Stop()
 			node.Wait()
+			// XXX: I couldn't find the proper stopping sequence yet. So, just
+			// wait until the TM closes all.
+			time.Sleep(100000000) // 100ms
+			app.Close()
 		}()
 
 		c := make(chan os.Signal, 1)
@@ -64,7 +76,7 @@ var RunCmd = &cobra.Command{
 	},
 }
 
-func initApp(amoDirPath string) (*nm.Node, error) {
+func initApp(amoDirPath string) (*amo.AMOApp, error) {
 	// parse config
 	config := cfg.DefaultConfig()
 	err := viper.Unmarshal(config)
@@ -118,18 +130,26 @@ func initApp(amoDirPath string) (*nm.Node, error) {
 		appLogger.With("module", "abci-app"),
 	)
 
-	node, err := newTM(app, config)
+	return app, nil
+}
+
+func newTM(app abci.Application) (*nm.Node, error) {
+	// parse config
+	config := cfg.DefaultConfig()
+	err := viper.Unmarshal(config)
+	if err != nil {
+		return nil, err
+	}
+	config.SetRoot(config.RootDir)
+	cfg.EnsureRoot(config.RootDir)
+	err = config.ValidateBasic()
 	if err != nil {
 		return nil, err
 	}
 
-	return node, nil
-}
-
-func newTM(app abci.Application, config *cfg.Config) (*nm.Node, error) {
 	// logger
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-	logger, err := tmflags.ParseLogLevel(config.LogLevel, logger, cfg.DefaultLogLevel())
+	logger, err = tmflags.ParseLogLevel(config.LogLevel, logger, cfg.DefaultLogLevel())
 	if err != nil {
 		return nil, err
 	}

@@ -46,6 +46,7 @@ type Store struct {
 	logger log.Logger
 
 	// merkle tree for blockchain state
+	merkleDB      tmdb.DB
 	merkleTree    *iavl.MutableTree
 	merkleVersion int64
 
@@ -104,6 +105,7 @@ func NewStore(logger log.Logger, merkleDB, indexDB, incentiveDB, lazinessCounter
 	return &Store{
 		logger: logger,
 
+		merkleDB:      merkleDB,
 		merkleTree:    mt,
 		merkleVersion: 0,
 
@@ -1439,6 +1441,13 @@ func (s Store) Compact() {
 		//fmt.Println("cleveldb compacting")
 		cleveldb.DB().CompactRange(levigo.Range{nil, nil})
 	}
+}
+
+func (s Store) Close() {
+	s.merkleDB.Close()
+	s.indexDB.Close()
+	s.incentiveDB.Close()
+	s.lazinessCounterDB.Close()
 }
 
 func calcAdjustFactor(stakes []*types.Stake) uint {

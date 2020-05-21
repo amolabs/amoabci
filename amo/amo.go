@@ -80,12 +80,6 @@ type AMOApp struct {
 	// app config
 	config types.AMOAppConfig
 
-	// internal database
-	merkleDB       tmdb.DB
-	indexDB        tmdb.DB
-	incentiveDB    tmdb.DB
-	groupCounterDB tmdb.DB
-
 	// state related variables
 	stateFile *os.File
 	state     State
@@ -134,14 +128,10 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 	}
 
 	app := &AMOApp{
-		logger:         l,
-		stateFile:      stateFile,
-		state:          State{},
-		store:          s,
-		merkleDB:       mdb,
-		indexDB:        idxdb,
-		incentiveDB:    incdb,
-		groupCounterDB: gcdb,
+		logger:    l,
+		stateFile: stateFile,
+		state:     State{},
+		store:     s,
 	}
 
 	// load state, db and config
@@ -687,4 +677,8 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	//app.store.Compact()
 
 	return abci.ResponseCommit{Data: app.state.LastAppHash}
+}
+
+func (app *AMOApp) Close() {
+	app.store.Close()
 }
