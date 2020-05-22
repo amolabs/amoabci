@@ -131,68 +131,62 @@ func (s Store) GetMerkleVersion() int64 {
 }
 
 func (s Store) Purge() error {
-	var (
-		itr tmdb.Iterator
-		err error
-	)
-
 	// merkleTree
-	s.merkleTree.Rollback()
-
 	// delete all available tree versions
-	versions := s.merkleTree.AvailableVersions()
-	for i := len(versions) - 1; i >= 0; i-- {
-		err = s.merkleTree.DeleteVersion(int64(versions[i]))
-		if err != nil {
-			return err
-		}
+	v, err := s.merkleTree.LoadVersionForOverwriting(0)
+	if err != nil {
+		return err
 	}
-
-	// check if merkle tree is really emptied
-	if !s.merkleTree.IsEmpty() {
+	if v != 0 {
 		return errors.New("couldn't purge merkle tree")
+	}
+	err = purgeDB(s.merkleDB)
+	if err != nil {
+		return err
 	}
 
 	// indexDB
-	itr, err = s.indexDB.Iterator(nil, nil)
+	err = purgeDB(s.indexDB)
 	if err != nil {
 		return err
 	}
-	defer itr.Close()
-	// TODO: cannot guarantee in multi-thread environment
-	// need some sync mechanism
-	for ; itr.Valid(); itr.Next() {
-		k := itr.Key()
-		// XXX: not sure if this will confuse the iterator
-		s.indexDB.Delete(k)
-	}
-
-	// TODO: need some method like s.stateDB.Size() to check if the DB has been
-	// really emptied.
 
 	// incentiveDB
-	itr, err = s.incentiveDB.Iterator(nil, nil)
+	err = purgeDB(s.incentiveDB)
 	if err != nil {
 		return err
-	}
-	defer itr.Close()
-
-	for ; itr.Valid(); itr.Next() {
-		k := itr.Key()
-		s.incentiveDB.Delete(k)
 	}
 
 	// lazinessCounterDB
-	itr, err = s.lazinessCounterDB.Iterator(nil, nil)
+	err = purgeDB(s.lazinessCounterDB)
 	if err != nil {
 		return err
 	}
-	defer itr.Close()
-	for ; itr.Valid(); itr.Next() {
-		k := itr.Key()
-		s.lazinessCounterDB.Delete(k)
+
+	s.Compact()
+
+	s.merkleTree, err = iavl.NewMutableTree(s.merkleDB, merkleTreeCacheSize)
+	if err != nil {
+		return err
 	}
 
+	return nil
+}
+
+func purgeDB(db tmdb.DB) error {
+	itr, err := db.Iterator(nil, nil)
+	if err != nil {
+		return err
+	}
+	b := db.NewBatch()
+	for ; itr.Valid(); itr.Next() {
+		k := itr.Key()
+		// XXX: not sure if this will confuse the iterator
+		b.Delete(k)
+	}
+	itr.Close()
+	b.WriteSync()
+	b.Close()
 	return nil
 }
 
@@ -1436,7 +1430,22 @@ func (s Store) GetValidators(max uint64, committed bool) abci.ValidatorUpdates {
 
 func (s Store) Compact() {
 	//fmt.Println("compacting")
-	cleveldb, ok := s.indexDB.(*tmdb.CLevelDB)
+	cleveldb, ok := s.merkleDB.(*tmdb.CLevelDB)
+	if ok {
+		//fmt.Println("cleveldb compacting")
+		cleveldb.DB().CompactRange(levigo.Range{nil, nil})
+	}
+	cleveldb, ok = s.indexDB.(*tmdb.CLevelDB)
+	if ok {
+		//fmt.Println("cleveldb compacting")
+		cleveldb.DB().CompactRange(levigo.Range{nil, nil})
+	}
+	cleveldb, ok = s.incentiveDB.(*tmdb.CLevelDB)
+	if ok {
+		//fmt.Println("cleveldb compacting")
+		cleveldb.DB().CompactRange(levigo.Range{nil, nil})
+	}
+	cleveldb, ok = s.lazinessCounterDB.(*tmdb.CLevelDB)
 	if ok {
 		//fmt.Println("cleveldb compacting")
 		cleveldb.DB().CompactRange(levigo.Range{nil, nil})

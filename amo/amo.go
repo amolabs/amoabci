@@ -312,16 +312,17 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	genAppState, err := ParseGenesisStateBytes(req.AppStateBytes)
 	// TODO: use proper methods to inform error
 	if err != nil {
-		return abci.ResponseInitChain{}
+		panic(err)
 	}
 	// fill state db
-	if FillGenesisState(&app.state, app.store, genAppState) != nil {
-		return abci.ResponseInitChain{}
+	err = FillGenesisState(&app.state, app.store, genAppState)
+	if err != nil {
+		panic(err)
 	}
 
 	hash, version, err := app.store.Save()
 	if err != nil {
-		return abci.ResponseInitChain{}
+		panic(err)
 	}
 
 	app.state.MerkleVersion = version
@@ -331,7 +332,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 
 	err = app.loadAppConfig()
 	if err != nil {
-		return abci.ResponseInitChain{}
+		panic(err)
 	}
 
 	tx.ConfigAMOApp = app.config
