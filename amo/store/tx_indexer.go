@@ -19,6 +19,9 @@ var (
 )
 
 func (s Store) AddTxIndexer(height int64, txs [][]byte) {
+	if len(txs) == 0 {
+		return
+	}
 	hb := make([]byte, 8)
 	binary.BigEndian.PutUint64(hb, uint64(height))
 	txsJSON, _ := json.Marshal(txs)
@@ -74,6 +77,7 @@ func (s Store) TxIndexerGetHeight(txHash []byte) int64 {
 		return int64(0)
 	}
 
+	// NOTE: this is good for fail-safe operation, but bad for performance.
 	value, err := s.indexTxBlock.Get(txHash)
 	if err != nil {
 		s.logger.Error("Store", "TxIndexerGetHeight", err.Error())
