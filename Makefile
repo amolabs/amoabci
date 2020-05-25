@@ -31,7 +31,7 @@ install:
 	$(BUILDENV) go install ./cmd/amod
 
 test:
-	go test ./...
+	go test -tags cleveldb ./...
 
 bench:
 	cd amo; $(PROFCMD)
