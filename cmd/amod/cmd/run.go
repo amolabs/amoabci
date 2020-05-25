@@ -64,7 +64,7 @@ var RunCmd = &cobra.Command{
 			node.Wait()
 			// XXX: I couldn't find the proper stopping sequence yet. So, just
 			// wait until the TM closes all.
-			time.Sleep(100000000) // 100ms
+			time.Sleep(200000000) // 100ms
 			app.Close()
 		}()
 
