@@ -97,7 +97,13 @@ type Store struct {
 }
 
 func NewStore(logger log.Logger, merkleDB, indexDB, incentiveDB, lazinessCounterDB tmdb.DB) (*Store, error) {
-	mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
+	// normal noprune
+	//mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
+	// with prune
+	memDB := tmdb.NewMemDB()
+	mt, err := iavl.NewMutableTreeWithOpts(merkleDB, memDB,
+		merkleTreeCacheSize, iavl.PruningOptions(1000, 1))
+
 	if err != nil {
 		return nil, err
 	}
@@ -227,9 +233,9 @@ func (s Store) remove(key []byte) ([]byte, bool) {
 
 // working tree >> saved tree
 func (s *Store) Save() ([]byte, int64, error) {
-	hash, vers, err := s.merkleTree.SaveVersion()
-	s.merkleVersion = vers
-	return hash, vers, err
+	hash, ver, err := s.merkleTree.SaveVersion()
+	s.merkleVersion = ver
+	return hash, ver, err
 }
 
 // Load the latest versioned tree from disk.
