@@ -57,6 +57,20 @@ var RunCmd = &cobra.Command{
 			defer pprof.StopCPUProfile()
 		}
 
+		memprof, _ := cmd.Flags().GetString("memprofile")
+		if len(memprof) > 0 {
+			defer func() {
+				mf, err := os.Create(memprof)
+				if err != nil {
+					fmt.Println("unable to create mem profile")
+				}
+				if err := pprof.WriteHeapProfile(mf); err != nil {
+					fmt.Println("unable to write mem heap profile")
+				}
+				mf.Close()
+			}()
+		}
+
 		node.Start()
 		defer func() {
 			node.Stop()
@@ -181,4 +195,5 @@ func newTM(app abci.Application) (*nm.Node, error) {
 
 func init() {
 	RunCmd.Flags().String("cpuprofile", "", "write cpu profile to `file`")
+	RunCmd.Flags().String("memprofile", "", "write mem profile to `file`")
 }
