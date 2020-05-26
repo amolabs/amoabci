@@ -79,7 +79,7 @@ var RunCmd = &cobra.Command{
 			// XXX: I couldn't find the proper stopping sequence yet. So, just
 			// wait until the TM closes all.
 			time.Sleep(200000000) // 100ms
-			app.Close()
+			//app.Close()
 		}()
 
 		c := make(chan os.Signal, 1)
