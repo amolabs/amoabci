@@ -1032,20 +1032,21 @@ func TestEmptyBlock(t *testing.T) {
 	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
+	// init chain
+	app.InitChain(abci.RequestInitChain{})
+
 	// setup
 	tx.ConfigAMOApp.LockupPeriod = 2                               // manipulate
 	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(100) // manipulate
 	priv := p256.GenPrivKeyFromSecret([]byte("test"))
 	app.store.SetBalance(priv.PubKey().Address(), new(types.Currency).Set(500))
 
-	// init chain
-	app.InitChain(abci.RequestInitChain{})
-
 	// begin block
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 1}})
 
 	rawTx := makeTxStake(priv, "test", 500, "1")
-	app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
+	res := app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
+	assert.Equal(t, code.TxCodeOK, res.Code)
 
 	// end block
 	app.EndBlock(abci.RequestEndBlock{Height: 1})
