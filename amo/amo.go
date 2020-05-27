@@ -674,7 +674,10 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 
 	app.lazinessCounter.Set(app.config.LazinessCounterWindow, app.config.LazinessThreshold)
 
-	app.save()
+	// sync with pruning option of merkle DB
+	if app.state.MerkleVersion % 1000 == 0 {
+		app.save()
+	}
 
 	return abci.ResponseCommit{Data: app.state.LastAppHash}
 }

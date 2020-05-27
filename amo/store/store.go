@@ -97,11 +97,11 @@ type Store struct {
 
 func NewStore(logger log.Logger, merkleDB, indexDB, incentiveDB, lazinessCounterDB tmdb.DB) (*Store, error) {
 	// normal noprune
-	mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
+	//mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
 	// with prune
-	//memDB := tmdb.NewMemDB()
-	//mt, err := iavl.NewMutableTreeWithOpts(merkleDB, memDB,
-	//	merkleTreeCacheSize, iavl.PruningOptions(1000, 1))
+	memDB := tmdb.NewMemDB()
+	mt, err := iavl.NewMutableTreeWithOpts(merkleDB, memDB,
+		merkleTreeCacheSize, iavl.PruningOptions(1000, 1))
 
 	if err != nil {
 		return nil, err
