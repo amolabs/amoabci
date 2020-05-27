@@ -98,11 +98,6 @@ func initApp(amoDirPath string) (*nm.Node, error) {
 		return nil, err
 	}
 
-	incentiveDB, err := tmdb.NewGoLevelDB(defaultIncentiveDB, dataDirPath)
-	if err != nil {
-		return nil, err
-	}
-
 	groupCounterDB, err := tmdb.NewGoLevelDB(defaultGroupCounterDB, dataDirPath)
 	if err != nil {
 		return nil, err
@@ -114,7 +109,7 @@ func initApp(amoDirPath string) (*nm.Node, error) {
 	// create app
 	app := amo.NewAMOApp(
 		stateFile,
-		merkleDB, indexDB, incentiveDB, groupCounterDB,
+		merkleDB, indexDB, groupCounterDB,
 		appLogger.With("module", "abci-app"),
 	)
 

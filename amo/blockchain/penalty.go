@@ -2,11 +2,13 @@ package blockchain
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/kv"
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/amolabs/amoabci/amo/store"
@@ -26,37 +28,40 @@ func PenalizeConvicts(
 
 	weightValidator, weightDelegator float64,
 	penaltyRatioM, penaltyRatioL float64,
-) (bool, error) {
+) (bool, []abci.Event, error) {
 	doValUpdate := false
+	events := []abci.Event{}
 
 	// handle evidences
 	for _, evidence := range evidences {
 		validator := evidence.GetValidator().Address
-		tmp, err := penalize(
+		tmp, evs, err := penalize(
 			store, logger,
 			weightValidator, weightDelegator,
 			validator, penaltyRatioM, "Evidence Penalty",
 		)
 		doValUpdate = doValUpdate || tmp
 		if err != nil {
-			return doValUpdate, err
+			return doValUpdate, events, err
 		}
+		events = append(events, evs...)
 	}
 
 	// handle lazyValidators
 	for _, lazyValidator := range lazyValidators {
-		tmp, err := penalize(
+		tmp, evs, err := penalize(
 			store, logger,
 			weightValidator, weightDelegator,
 			lazyValidator, penaltyRatioL, "Downtime Penalty",
 		)
 		doValUpdate = doValUpdate || tmp
 		if err != nil {
-			return doValUpdate, err
+			return doValUpdate, events, err
 		}
+		events = append(events, evs...)
 	}
 
-	return doValUpdate, nil
+	return doValUpdate, events, nil
 }
 
 func penalize(
@@ -67,17 +72,18 @@ func penalize(
 	validator crypto.Address,
 	ratio float64,
 	penaltyType string,
-) (bool, error) {
+) (bool, []abci.Event, error) {
 	doValUpdate := false
+	events := []abci.Event{}
 	zeroAmount := new(types.Currency).Set(0)
 
 	holder := store.GetHolderByValidator(validator, false)
 	if holder == nil {
-		return doValUpdate, fmt.Errorf("no holder for validator: %X", validator)
+		return doValUpdate, events, fmt.Errorf("no holder for validator: %X", validator)
 	}
 	vs := store.GetStake(holder, false) // validator's stake
 	if vs == nil {
-		return doValUpdate, fmt.Errorf("no stake for holder: %X", holder)
+		return doValUpdate, events, fmt.Errorf("no stake for holder: %X", holder)
 	}
 
 	ds := store.GetDelegatesByDelegatee(holder, false) // delegators' stake
@@ -113,7 +119,6 @@ func penalize(
 	// individual penalties for delegators
 	// NOTE: merkle version equals to last height + 1, so until commit() merkle
 	// version equals to the current height
-	height := store.GetMerkleVersion()
 	tmpc.Set(0) // subtotal for delegate holders
 	for _, d := range ds {
 		df := new(big.Float).SetInt(&d.Amount.Int)
@@ -129,26 +134,42 @@ func penalize(
 			d.Delegate.Amount.Set(0)
 		}
 		store.SetDelegate(d.Delegator, d.Delegate)
-		// add history record
-		store.AddPenaltyRecord(height, d.Delegator, &tmpc2)
 		// log XXX: remove this?
 		logger.Debug(penaltyType,
 			"delegator", hex.EncodeToString(d.Delegator), "penalty", tmpc.String())
 		doValUpdate = true
+
+		addressJson, _ := json.Marshal(d.Delegator)
+		amountJson, _ := json.Marshal(tmpc)
+		events = append(events, abci.Event{
+			Type: "penalty",
+			Attributes: []kv.Pair{
+				{Key: []byte("address"), Value: addressJson},
+				{Key: []byte("amount"), Value: amountJson},
+			},
+		})
 	}
 	// calc voter(validator) penalty
 	tmpc2.Int.Sub(&penalty.Int, &tmpc.Int)
 	if tmpc2.Equals(zeroAmount) {
-		return doValUpdate, nil
+		return doValUpdate, events, nil
 	}
 	// update stake
 	store.SlashStakes(holder, tmpc2, false)
-	// add history record
-	store.AddPenaltyRecord(height, holder, &tmpc2)
 	// log XXX: remove this?
 	logger.Debug(penaltyType,
 		"validator", hex.EncodeToString(holder), "penalty", tmpc2.String())
 	doValUpdate = true
 
-	return doValUpdate, nil
+	addressJson, _ := json.Marshal(holder)
+	amountJson, _ := json.Marshal(tmpc)
+	events = append(events, abci.Event{
+		Type: "penalty",
+		Attributes: []kv.Pair{
+			{Key: []byte("address"), Value: addressJson},
+			{Key: []byte("amount"), Value: amountJson},
+		},
+	})
+
+	return doValUpdate, events, nil
 }

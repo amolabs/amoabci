@@ -49,7 +49,7 @@ func TestAppConfig(t *testing.T) {
 	defer tearDownTest(t)
 
 	// test genesis app config
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(
 		`{ "config": { "max_validators": 10, "lockup_period": 2 } }`)
@@ -77,7 +77,7 @@ func TestInitChain(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
 	res := app.InitChain(req)
@@ -96,7 +96,7 @@ func TestQueryDefault(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	// query
 	req := abci.RequestQuery{}
 	req.Path = "/nostore"
@@ -108,7 +108,7 @@ func TestQueryAppConfig(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	config := app.config
 
 	var (
@@ -129,7 +129,7 @@ func TestQueryBalance(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
 	addr := crypto.Address(addrbin)
@@ -179,7 +179,7 @@ func TestQueryStorage(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	storageID1 := uint32(123)
@@ -223,7 +223,7 @@ func TestQueryParcel(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -299,7 +299,7 @@ func TestQueryRequest(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -388,7 +388,7 @@ func TestQueryUsage(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -477,7 +477,7 @@ func TestQueryValidator(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// stake holder
 	priv := ed25519.GenPrivKey()
@@ -527,7 +527,7 @@ func TestSignedTransactionTest(t *testing.T) {
 
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
@@ -601,7 +601,7 @@ func TestPenaltyEvidence(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	// setup
@@ -677,7 +677,7 @@ func TestPenaltyLazyValidators(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	app.lazinessCounter = blockchain.NewLazinessCounter(
@@ -812,7 +812,7 @@ func TestEndBlock(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	// setup
@@ -874,7 +874,7 @@ func TestIncentive(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(50)
 
@@ -899,9 +899,9 @@ func TestIncentive(t *testing.T) {
 	// to ignore last three digits
 	divisor := new(types.Currency).Set(1000)
 
-	bald1 := app.store.GetBalance(d1Priv.PubKey().Address(), true)
-	bald2 := app.store.GetBalance(d2Priv.PubKey().Address(), true)
-	bals := app.store.GetBalance(sPriv.PubKey().Address(), true)
+	balD1 := app.store.GetBalance(d1Priv.PubKey().Address(), true)
+	balD2 := app.store.GetBalance(d2Priv.PubKey().Address(), true)
+	balS := app.store.GetBalance(sPriv.PubKey().Address(), true)
 
 	app.BeginBlock(abci.RequestBeginBlock{
 		Header: abci.Header{
@@ -918,25 +918,29 @@ func TestIncentive(t *testing.T) {
 	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 
-	app.EndBlock(abci.RequestEndBlock{Height: 1})
+	res := app.EndBlock(abci.RequestEndBlock{Height: 1})
 
 	app.Commit()
 	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(50)
 
 	// check incentive records
-	bir := app.store.GetBlockIncentiveRecords(1)
-	assert.Equal(t, 1, len(bir))
+	events := res.GetEvents()
+	assert.Equal(t, 1, len(events))
 
-	bals = app.store.GetBalance(sPriv.PubKey().Address(), true).Sub(bals)
+	balS = app.store.GetBalance(sPriv.PubKey().Address(), true).Sub(balS)
 
-	bir[0].Amount = DivCurrency(bir[0].Amount, divisor)
-	bals = DivCurrency(bals, divisor)
+	amountS := new(types.Currency).Set(0)
+	err := json.Unmarshal(events[0].Attributes[1].GetValue(), amountS)
+	assert.NoError(t, err)
 
-	assert.Equal(t, bir[0].Amount, bals)
+	amountS = DivCurrency(amountS, divisor)
+	balS = DivCurrency(balS, divisor)
 
-	bald1 = app.store.GetBalance(d1Priv.PubKey().Address(), true)
-	bald2 = app.store.GetBalance(d2Priv.PubKey().Address(), true)
-	bals = app.store.GetBalance(sPriv.PubKey().Address(), true)
+	assert.Equal(t, amountS, balS)
+
+	balD1 = app.store.GetBalance(d1Priv.PubKey().Address(), true)
+	balD2 = app.store.GetBalance(d2Priv.PubKey().Address(), true)
+	balS = app.store.GetBalance(sPriv.PubKey().Address(), true)
 
 	app.BeginBlock(abci.RequestBeginBlock{
 		Header: abci.Header{
@@ -953,40 +957,58 @@ func TestIncentive(t *testing.T) {
 	resDeliver = app.DeliverTx(abci.RequestDeliverTx{Tx: rawTx})
 	assert.Equal(t, code.TxCodeOK, resDeliver.Code)
 
-	app.EndBlock(abci.RequestEndBlock{Height: 2})
+	res = app.EndBlock(abci.RequestEndBlock{Height: 2})
 
 	app.Commit()
 	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(50)
 
-	bir = app.store.GetBlockIncentiveRecords(2)
-	assert.Equal(t, 3, len(bir))
+	// check incentive records
+	events = res.GetEvents()
+	assert.Equal(t, 3, len(events))
 
-	sort.Slice(bir, func(i, j int) bool {
-		return bir[i].Amount.LessThan(bir[j].Amount)
+	sort.Slice(events, func(i, j int) bool {
+		tmpI := new(types.Currency).Set(0)
+		err = json.Unmarshal(events[i].Attributes[1].GetValue(), tmpI)
+		tmpJ := new(types.Currency).Set(0)
+		err = json.Unmarshal(events[j].Attributes[1].GetValue(), tmpJ)
+		return tmpI.LessThan(tmpJ)
 	})
 
-	bald1 = app.store.GetBalance(d1Priv.PubKey().Address(), true).Sub(bald1)
-	bald2 = app.store.GetBalance(d2Priv.PubKey().Address(), true).Sub(bald2)
-	bals = app.store.GetBalance(sPriv.PubKey().Address(), true).Sub(bals)
+	balD1 = app.store.GetBalance(d1Priv.PubKey().Address(), true).Sub(balD1)
+	balD2 = app.store.GetBalance(d2Priv.PubKey().Address(), true).Sub(balD2)
+	balS = app.store.GetBalance(sPriv.PubKey().Address(), true).Sub(balS)
 
-	bir[0].Amount = DivCurrency(bir[0].Amount, divisor)
-	bir[1].Amount = DivCurrency(bir[1].Amount, divisor)
-	bir[2].Amount = DivCurrency(bir[2].Amount, divisor)
+	amountD1 := new(types.Currency).Set(0)
+	err = json.Unmarshal(events[0].Attributes[1].GetValue(), amountD1)
+	assert.NoError(t, err)
+	t.Logf("%s", events[0].Attributes[1].GetValue())
+	amountD2 := new(types.Currency).Set(0)
+	err = json.Unmarshal(events[1].Attributes[1].GetValue(), amountD2)
+	assert.NoError(t, err)
+	t.Logf("%s", events[1].Attributes[1].GetValue())
+	amountS = new(types.Currency).Set(0)
+	err = json.Unmarshal(events[2].Attributes[1].GetValue(), amountS)
+	assert.NoError(t, err)
+	t.Logf("%s", events[2].Attributes[1].GetValue())
 
-	bald1 = DivCurrency(bald1, divisor)
-	bald2 = DivCurrency(bald2, divisor)
-	bals = DivCurrency(bals, divisor)
+	amountD1 = DivCurrency(amountD1, divisor)
+	amountD2 = DivCurrency(amountD2, divisor)
+	amountS = DivCurrency(amountS, divisor)
 
-	assert.Equal(t, bir[0].Amount, bald1)
-	assert.Equal(t, bir[1].Amount, bald2)
-	assert.Equal(t, bir[2].Amount, bals)
+	balD1 = DivCurrency(balD1, divisor)
+	balD2 = DivCurrency(balD2, divisor)
+	balS = DivCurrency(balS, divisor)
+
+	assert.Equal(t, amountD1, balD1)
+	assert.Equal(t, amountD2, balD2)
+	assert.Equal(t, amountS, balS)
 }
 
 func TestIncentiveNoTouch(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	// setup
@@ -1005,7 +1027,7 @@ func TestIncentiveNoTouch(t *testing.T) {
 	prevHash, _, err := app.store.Save()
 	assert.NoError(t, err)
 
-	err = blockchain.DistributeIncentive(
+	_, err = blockchain.DistributeIncentive(
 		app.store,
 		app.logger,
 		app.config.WeightValidator, app.config.WeightDelegator,
@@ -1029,7 +1051,7 @@ func TestEmptyBlock(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	// setup
@@ -1097,7 +1119,7 @@ func TestReplayAttack(t *testing.T) {
 	tx2 := makeTxStake(t1, "test1", 10000, "1")
 	tx3 := makeTxStake(t1, "test1", 10000, "1")
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 	app.config.BlockBindingWindow = int64(3)
 	app.replayPreventer = blockchain.NewReplayPreventer(
@@ -1160,7 +1182,7 @@ func TestBindingBlock(t *testing.T) {
 	tx4 := makeTxStake(t1, "test1", 10000, "1")
 	tx5 := makeTxStake(t1, "test1", 10000, "2")
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 	app.config.BlockBindingWindow = int64(3)
 	app.replayPreventer = blockchain.NewReplayPreventer(
@@ -1209,7 +1231,7 @@ func TestGovernance(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	// manipulate InitChain() func
@@ -1465,7 +1487,7 @@ func TestProtocolUpgrade(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// manipulate
 	app.state.LastHeight = 8
