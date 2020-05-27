@@ -139,6 +139,7 @@ func (s Store) GetMerkleVersion() int64 {
 func (s Store) Purge() error {
 	// merkleTree
 	// delete all available tree versions
+	s.merkleTree.Rollback()
 	v, err := s.merkleTree.LoadVersionForOverwriting(0)
 	if err != nil {
 		return err
@@ -146,9 +147,8 @@ func (s Store) Purge() error {
 	if v != 0 {
 		return errors.New("couldn't purge merkle tree")
 	}
-	err = purgeDB(s.merkleDB)
-	if err != nil {
-		return err
+	if s.merkleTree.IsEmpty() != true {
+		return errors.New("merkle tree not empty after cleaning")
 	}
 
 	// indexDB

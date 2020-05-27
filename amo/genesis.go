@@ -33,7 +33,7 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	if len(data) > 0 {
 		err := json.Unmarshal(data, &genState)
 		if err != nil {
-			return nil, err
+			return &genState, err
 		}
 	}
 	if genState.State.ProtocolVersion == 0 {
