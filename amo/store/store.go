@@ -984,6 +984,19 @@ func (s Store) GetDraft(draftID uint32, committed bool) *types.Draft {
 	return &draft
 }
 
+func (s Store) GetLastDraftID() uint32 {
+	lastDraftID := uint32(0)
+	start := prefixDraft
+	// NOTE: by rule, the last character of all prefxces is ':'.
+	end := append(prefixDraft[:len(prefixDraft)-1], byte(';'))
+	// iterate in ascending order
+	s.merkleTree.IterateRange(start, end, true, func(k, v []byte) bool {
+		lastDraftID = binary.BigEndian.Uint32(k[len(prefixDraft):])
+		return false
+	})
+	return lastDraftID
+}
+
 func (s Store) ProcessDraftVotes(
 	latestDraftIDUint uint32,
 	maxValidators uint64,

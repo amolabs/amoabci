@@ -12,7 +12,7 @@ type State struct {
 	LastHeight      int64  `json:"-"` // last completed block height
 	LastAppHash     []byte `json:"-"`
 	CounterDue      int64  `json:"counter_due"`
-	NextDraftID     uint32 `json:"next_draft_id"`
+	NextDraftID     uint32 `json:"-"`
 }
 
 func (s *State) LoadFrom(f *os.File) error {

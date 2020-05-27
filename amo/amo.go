@@ -269,6 +269,7 @@ func (app *AMOApp) load() {
 
 	app.state.LastHeight = version - 1
 	app.state.LastAppHash = app.store.Root()
+	app.state.NextDraftID = app.store.GetLastDraftID() + 1
 
 	err = app.loadAppConfig()
 	if err != nil {
