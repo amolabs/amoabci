@@ -466,7 +466,18 @@ func TestDelegate(t *testing.T) {
 	assert.Equal(t, delegate2, s.GetDelegate(holder2, false))
 
 	// test delegator search index
+	assert.Equal(t, staker,
+		crypto.Address(s.GetHolderByValidator(valkey.Address(), false)))
 	ds := s.GetDelegatesByDelegatee(staker, false)
+	assert.Equal(t, 2, len(ds))
+	assert.Equal(t, delegate1, ds[0].Delegate)
+	assert.Equal(t, delegate2, ds[1].Delegate)
+
+	// same tests after RebuildIndex()
+	s.RebuildIndex()
+	assert.Equal(t, staker,
+		crypto.Address(s.GetHolderByValidator(valkey.Address(), false)))
+	ds = s.GetDelegatesByDelegatee(staker, false)
 	assert.Equal(t, 2, len(ds))
 	assert.Equal(t, delegate1, ds[0].Delegate)
 	assert.Equal(t, delegate2, ds[1].Delegate)

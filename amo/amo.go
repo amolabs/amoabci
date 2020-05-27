@@ -272,6 +272,8 @@ func (app *AMOApp) load() {
 	if err != nil {
 		panic(err)
 	}
+
+	app.store.RebuildIndex()
 }
 
 func (app *AMOApp) save() {

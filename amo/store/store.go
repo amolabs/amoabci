@@ -1431,6 +1431,60 @@ func (s Store) GetValidators(max uint64, committed bool) abci.ValidatorUpdates {
 	return vals
 }
 
+func (s Store) RebuildIndex() {
+	purgeDB(s.indexDelegator)
+	purgeDB(s.indexValidator)
+	purgeDB(s.indexEffStake)
+
+	var start, end []byte
+
+	batch := s.indexDelegator.NewBatch()
+	start = prefixDelegate
+	end = make([]byte, len(prefixDelegate))
+	copy(end, start)
+	end[len(prefixDelegate)-1] = ';'
+	s.merkleTree.IterateRange(start, end, true, func(k, v []byte) bool {
+		// indexDelegator
+		delegator := k[len(prefixDelegate):]
+		var delegate types.Delegate
+		err := json.Unmarshal(v, &delegate)
+		if err != nil {
+			return true
+		}
+		delegatee := delegate.Delegatee
+		batch.Set(append(delegatee, delegator...), nil)
+		return false
+	})
+	batch.Write()
+	batch.Close()
+
+	bVal := s.indexValidator.NewBatch()
+	bEff := s.indexEffStake.NewBatch()
+	start = prefixStake
+	end = make([]byte, len(prefixStake))
+	copy(end, start)
+	end[len(prefixStake)-1] = ';'
+	s.merkleTree.IterateRange(start, end, true, func(k, v []byte) bool {
+		// indexValidator
+		holder := k[len(prefixStake):]
+		var stake types.Stake
+		err := json.Unmarshal(v, &stake)
+		if err != nil {
+			return true
+		}
+		validator := stake.Validator.Address()
+		bVal.Set(validator, holder)
+		// indexEffStake
+		effStake := s.GetEffStake(holder, false)
+		bEff.Set(makeEffStakeKey(effStake.Amount, holder), nil)
+		return false
+	})
+	bVal.Write()
+	bVal.Close()
+	bEff.Write()
+	bEff.Close()
+}
+
 func (s Store) Close() {
 	s.merkleDB.Close()
 	s.indexDB.Close()
