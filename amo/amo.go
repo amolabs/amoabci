@@ -675,7 +675,6 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	app.lazinessCounter.Set(app.config.LazinessCounterWindow, app.config.LazinessThreshold)
 
 	app.save()
-	//app.store.Compact()
 
 	return abci.ResponseCommit{Data: app.state.LastAppHash}
 }
