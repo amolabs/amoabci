@@ -25,7 +25,7 @@ func (s Store) GroupCounterSet(candidates LazyValidators) {
 		batch.Set(ab, cb)
 	}
 
-	err := batch.WriteSync()
+	err := batch.Write()
 	if err != nil {
 		s.logger.Error("Store", "GroupCounterSet", err.Error())
 	}

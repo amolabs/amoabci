@@ -37,7 +37,7 @@ func (s Store) AddTxIndexer(height int64, txs [][]byte) {
 		batch.Set(tx, hb)
 	}
 
-	err := batch.WriteSync()
+	err := batch.Write()
 	if err != nil {
 		s.logger.Error("Store", "AddTxIndexer", err.Error())
 	}
