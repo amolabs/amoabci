@@ -105,7 +105,7 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(stateFile *os.File, mdb, idxdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -115,14 +115,11 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, incdb, gcdb tmdb.DB, l log.Logger
 	if idxdb == nil {
 		idxdb = tmdb.NewMemDB()
 	}
-	if incdb == nil {
-		incdb = tmdb.NewMemDB()
-	}
 	if gcdb == nil {
 		gcdb = tmdb.NewMemDB()
 	}
 
-	s, err := astore.NewStore(l, mdb, idxdb, incdb, gcdb)
+	s, err := astore.NewStore(l, mdb, idxdb, gcdb)
 	if err != nil {
 		panic(err)
 	}
@@ -283,12 +280,22 @@ func (app *AMOApp) save() {
 	}
 }
 
-func (app *AMOApp) upgradeProtocol() {
+func (app *AMOApp) upgradeProtocol() []abci.Event {
+	events := []abci.Event{}
 	if app.state.Height != app.config.UpgradeProtocolHeight {
-		return
+		return events
 	}
 	app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
 	app.save()
+	versionJson, _ := json.Marshal(app.state.ProtocolVersion)
+	events = append(events, abci.Event{
+		Type: "protocol_upgrade",
+		Attributes: []kv.Pair{
+			{Key: []byte("version"), Value: versionJson},
+		},
+	})
+
+	return events
 }
 
 func (app *AMOApp) checkProtocolVersion() error {
@@ -415,18 +422,6 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 		resQuery = queryRequest(app.store, reqQuery.Data)
 	case "usage":
 		resQuery = queryUsage(app.store, reqQuery.Data)
-	case "inc_block":
-		resQuery = queryBlockIncentives(app.store, reqQuery.Data)
-	case "inc_address":
-		resQuery = queryAddressIncentives(app.store, reqQuery.Data)
-	case "inc":
-		resQuery = queryIncentive(app.store, reqQuery.Data)
-	case "pen_block":
-		resQuery = queryBlockPenalties(app.store, reqQuery.Data)
-	case "pen_address":
-		resQuery = queryAddressPenalties(app.store, reqQuery.Data)
-	case "pen":
-		resQuery = queryPenalty(app.store, reqQuery.Data)
 	default:
 		resQuery.Code = code.QueryCodeBadPath
 		return resQuery
@@ -444,7 +439,8 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	tx.StateProtocolVersion = app.state.ProtocolVersion
 
 	// upgrade protocol version
-	app.upgradeProtocol()
+	evs := app.upgradeProtocol()
+	res.Events = append(res.Events, evs...)
 
 	// check if app's protocol version matches supported version
 	err := app.checkProtocolVersion()
@@ -600,7 +596,7 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	// XXX no means to convey error to res
 
-	blockchain.DistributeIncentive(
+	evs, _ := blockchain.DistributeIncentive(
 		app.store,
 		app.logger,
 		app.config.WeightValidator, app.config.WeightDelegator,
@@ -609,6 +605,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.staker,
 		app.feeAccumulated,
 	)
+	res.Events = append(res.Events, evs...)
 
 	if app.doValUpdate {
 		app.doValUpdate = false
@@ -616,9 +613,10 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
 	}
 
-	app.store.LoosenLockedStakes(false)
+	evs = app.store.LoosenLockedStakes(false)
+	res.Events = append(res.Events, evs...)
 
-	blockchain.PenalizeConvicts(
+	evs, _ = blockchain.PenalizeConvicts(
 		app.store,
 		app.logger,
 		app.pendingEvidences,
@@ -626,10 +624,11 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.config.WeightValidator, app.config.WeightDelegator,
 		app.config.PenaltyRatioM, app.config.PenaltyRatioL,
 	)
+	res.Events = append(res.Events, evs...)
 
 	app.replayPreventer.Index(app.state.Height)
 
-	app.store.ProcessDraftVotes(
+	evs = app.store.ProcessDraftVotes(
 		app.state.NextDraftID-uint32(1),
 		app.config.MaxValidators,
 		app.config.DraftQuorumRate,
@@ -637,6 +636,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.config.DraftRefundRate,
 		false,
 	)
+	res.Events = append(res.Events, evs...)
 
 	// update appHash
 	hash := app.store.Root()

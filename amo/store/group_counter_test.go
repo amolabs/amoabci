@@ -9,7 +9,7 @@ import (
 )
 
 func TestGroupCounter(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 

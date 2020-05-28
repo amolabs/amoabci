@@ -99,7 +99,7 @@ func TestParseGenesisStateBytes(t *testing.T) {
 }
 
 func TestFillGenesisState(t *testing.T) {
-	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	st := State{}
 
