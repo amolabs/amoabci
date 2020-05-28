@@ -649,8 +649,7 @@ func (s Store) LoosenLockedStakes(committed bool) {
 		}
 
 		s.remove(key)
-		height--
-		if height == 0 {
+		if height == 1 {
 			unlocked := s.GetUnlockedStake(holder, committed)
 			if unlocked == nil {
 				unlocked = stake
@@ -662,10 +661,7 @@ func (s Store) LoosenLockedStakes(committed bool) {
 				return false // continue
 			}
 		} else {
-			err := s.SetLockedStake(holder, stake, height)
-			if err != nil {
-				return false // continue
-			}
+			s.set(makeLockedStakeKey(holder, height - 1), value)
 		}
 		return false
 	})
