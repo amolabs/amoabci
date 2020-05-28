@@ -1439,13 +1439,14 @@ func (s Store) RebuildIndex() {
 	var start, end []byte
 
 	batch := s.indexDelegator.NewBatch()
+	prefixLen := len(prefixDelegate)
 	start = prefixDelegate
-	end = make([]byte, len(prefixDelegate))
+	end = make([]byte, prefixLen)
 	copy(end, start)
-	end[len(prefixDelegate)-1] = ';'
+	end[prefixLen-1] = ';'
 	s.merkleTree.IterateRange(start, end, true, func(k, v []byte) bool {
 		// indexDelegator
-		delegator := k[len(prefixDelegate):]
+		delegator := k[prefixLen:prefixLen+crypto.AddressSize]
 		var delegate types.Delegate
 		err := json.Unmarshal(v, &delegate)
 		if err != nil {
@@ -1460,13 +1461,14 @@ func (s Store) RebuildIndex() {
 
 	bVal := s.indexValidator.NewBatch()
 	bEff := s.indexEffStake.NewBatch()
+	prefixLen = len(prefixStake)
 	start = prefixStake
-	end = make([]byte, len(prefixStake))
+	end = make([]byte, prefixLen)
 	copy(end, start)
-	end[len(prefixStake)-1] = ';'
+	end[prefixLen-1] = ';'
 	s.merkleTree.IterateRange(start, end, true, func(k, v []byte) bool {
 		// indexValidator
-		holder := k[len(prefixStake):]
+		holder := k[prefixLen:prefixLen+crypto.AddressSize]
 		var stake types.Stake
 		err := json.Unmarshal(v, &stake)
 		if err != nil {
