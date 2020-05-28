@@ -638,7 +638,7 @@ func (s Store) LoosenLockedStakes(committed bool) []abci.Event {
 				},
 			})
 		} else {
-			s.set(makeLockedStakeKey(holder, height - 1), value)
+			s.set(makeLockedStakeKey(holder, height-1), value)
 		}
 		return false
 	})
@@ -1461,7 +1461,7 @@ func (s Store) RebuildIndex() {
 	end[prefixLen-1] = ';'
 	s.merkleTree.IterateRange(start, end, true, func(k, v []byte) bool {
 		// indexDelegator
-		delegator := k[prefixLen:prefixLen+crypto.AddressSize]
+		delegator := k[prefixLen : prefixLen+crypto.AddressSize]
 		var delegate types.Delegate
 		err := json.Unmarshal(v, &delegate)
 		if err != nil {
@@ -1483,7 +1483,7 @@ func (s Store) RebuildIndex() {
 	end[prefixLen-1] = ';'
 	s.merkleTree.IterateRange(start, end, true, func(k, v []byte) bool {
 		// indexValidator
-		holder := k[prefixLen:prefixLen+crypto.AddressSize]
+		holder := k[prefixLen : prefixLen+crypto.AddressSize]
 		var stake types.Stake
 		err := json.Unmarshal(v, &stake)
 		if err != nil {
