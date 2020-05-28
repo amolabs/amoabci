@@ -76,6 +76,7 @@ type Store struct {
 
 	// lazinessCounter database
 	lazinessCounterDB tmdb.DB
+	laziCache         tmdb.DB
 }
 
 func NewStore(logger log.Logger, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (*Store, error) {
@@ -89,6 +90,9 @@ func NewStore(logger log.Logger, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (
 	if err != nil {
 		return nil, err
 	}
+
+	laziCache := tmdb.NewMemDB()
+	cloneDB(laziCache, lazinessCounterDB)
 
 	return &Store{
 		logger: logger,
@@ -105,6 +109,7 @@ func NewStore(logger log.Logger, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (
 		indexTxBlock:   tmdb.NewPrefixDB(indexDB, prefixIndexTxBlock),
 
 		lazinessCounterDB: lazinessCounterDB,
+		laziCache:         laziCache,
 	}, nil
 }
 
@@ -129,6 +134,12 @@ func (s Store) Purge() error {
 
 	// indexDB
 	err = purgeDB(s.indexDB)
+	if err != nil {
+		return err
+	}
+
+	// laziCache
+	err = purgeDB(s.laziCache)
 	if err != nil {
 		return err
 	}
@@ -198,6 +209,9 @@ func (s Store) remove(key []byte) ([]byte, bool) {
 func (s *Store) Save() ([]byte, int64, error) {
 	hash, ver, err := s.merkleTree.SaveVersion()
 	s.merkleVersion = ver
+	if ver%1000 == 0 {
+		cloneDB(s.lazinessCounterDB, s.laziCache)
+	}
 	return hash, ver, err
 }
 
@@ -1505,6 +1519,7 @@ func (s Store) RebuildIndex() {
 func (s Store) Close() {
 	s.merkleDB.Close()
 	s.indexDB.Close()
+	s.laziCache.Close()
 	s.lazinessCounterDB.Close()
 }
 
@@ -1531,4 +1546,21 @@ func calcAdjustFactor(stakes []*types.Stake) uint {
 		vps = tmp
 	}
 	return shifts
+}
+
+func cloneDB(dst tmdb.DB, src tmdb.DB) {
+	purgeDB(dst)
+	b := dst.NewBatch()
+	itr, err := src.Iterator(nil, nil)
+	if err != nil {
+		// TODO contain purge process in the whole batch.
+		// BUT: this is just a temporal workaround. We may not do this work.
+		return
+	}
+	for ; itr.Valid(); itr.Next() {
+		b.Set(itr.Key(), itr.Value())
+	}
+	itr.Close()
+	b.WriteSync()
+	b.Close()
 }

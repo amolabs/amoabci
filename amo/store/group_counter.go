@@ -13,7 +13,7 @@ type (
 
 // Record map[Address]int64
 func (s Store) GroupCounterSet(candidates LazyValidators) {
-	batch := s.lazinessCounterDB.NewBatch()
+	batch := s.laziCache.NewBatch()
 	defer batch.Close()
 
 	for address, count := range candidates {
@@ -34,7 +34,7 @@ func (s Store) GroupCounterSet(candidates LazyValidators) {
 func (s Store) GroupCounterGetLazyValidators() LazyValidators {
 	lazyValidators := LazyValidators{}
 
-	itr, err := s.lazinessCounterDB.Iterator(nil, nil)
+	itr, err := s.laziCache.Iterator(nil, nil)
 	if err != nil {
 		s.logger.Error("Store", "GroupCounterGetLazyValidators", err.Error())
 		return LazyValidators{}
@@ -50,8 +50,8 @@ func (s Store) GroupCounterGetLazyValidators() LazyValidators {
 	return lazyValidators
 }
 
-func (s Store) GroupCounterPurge() {
-	itr, err := s.lazinessCounterDB.Iterator(nil, nil)
+func (s Store) GroupCounterReset() {
+	itr, err := s.laziCache.Iterator(nil, nil)
 	if err != nil {
 		s.logger.Error("Store", "GroupCounterPurge", err.Error())
 		return
@@ -60,7 +60,7 @@ func (s Store) GroupCounterPurge() {
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
 
-		err := s.lazinessCounterDB.Delete(k)
+		err := s.laziCache.Delete(k)
 		if err != nil {
 			s.logger.Error("Store", "GroupCounterPurge", err.Error())
 			continue
