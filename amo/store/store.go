@@ -1505,7 +1505,6 @@ func (s Store) RebuildIndex() {
 func (s Store) Close() {
 	s.merkleDB.Close()
 	s.indexDB.Close()
-	s.incentiveDB.Close()
 	s.lazinessCounterDB.Close()
 }
 
