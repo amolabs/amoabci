@@ -5,7 +5,7 @@ all: build
 GO := $(shell command -v go 2> /dev/null)
 # go source code files
 GOSRCS=$(shell find . -name \*.go)
-BUILDENV=CGO_ENABLED=1
+BUILDENV=CGO_ENABLED=0
 BUILDTAGS=
 
 ifeq ($(GO),)
@@ -23,15 +23,15 @@ tags: $(GOSRCS)
 
 build:
 	@echo "--> Building amo daemon (amod)"
-	$(BUILDENV) go build -tags cleveldb ./cmd/amod
-	$(BUILDENV) go build -tags cleveldb ./cmd/repair
+	$(BUILDENV) go build ./cmd/amod
+	$(BUILDENV) go build ./cmd/repair
 
 install:
 	@echo "--> Installing amo daemon (amod)"
 	$(BUILDENV) go install ./cmd/amod
 
 test:
-	go test -tags cleveldb ./...
+	go test ./...
 
 bench:
 	cd amo; $(PROFCMD)
