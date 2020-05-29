@@ -94,15 +94,5 @@ func (t *TxRegister) Execute(store *store.Store) (uint32, string, []abci.Event) 
 		OnSale: true,
 	})
 
-	events := []abci.Event{
-		abci.Event{
-			Type: "parcel",
-			Attributes: []kv.Pair{
-				{Key: []byte("id"), Value: []byte(txParam.Target.String())},
-				{Key: []byte("owner"), Value: []byte(t.GetSender())},
-			},
-		},
-	}
-
-	return code.TxCodeOK, "ok", events
+	return code.TxCodeOK, "ok", []abci.Event{}
 }

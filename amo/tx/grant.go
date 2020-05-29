@@ -112,14 +112,5 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	balance.Add(&request.DealerFee)
 	store.SetBalance(request.Dealer, balance)
 
-	events := []abci.Event{
-		abci.Event{
-			Type: "parcel",
-			Attributes: []kv.Pair{
-				{Key: []byte("parcel.id"), Value: []byte(txParam.Target.String())},
-			},
-		},
-	}
-
-	return code.TxCodeOK, "ok", events
+	return code.TxCodeOK, "ok", []abci.Event{}
 }
