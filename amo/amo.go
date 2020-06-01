@@ -638,14 +638,6 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	)
 	res.Events = append(res.Events, evs...)
 
-	// update appHash
-	hash := app.store.Root()
-	if hash == nil {
-		return abci.ResponseEndBlock{}
-	}
-
-	app.state.AppHash = hash
-
 	return res
 }
 
@@ -655,14 +647,8 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 		return abci.ResponseCommit{}
 	}
 
-	// check if there are no state changes between EndBlock() and Commit()
-	ok := bytes.Equal(hash, app.state.AppHash)
-	if !ok {
-		return abci.ResponseCommit{}
-	}
-
 	app.state.MerkleVersion = version
-	app.state.LastAppHash = app.state.AppHash
+	app.state.LastAppHash = hash
 	app.state.LastHeight = app.state.Height
 
 	err = app.loadAppConfig()

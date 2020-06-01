@@ -1468,6 +1468,7 @@ func (s Store) RebuildIndex() {
 	var start, end []byte
 
 	batch := s.indexDelegator.NewBatch()
+	defer batch.Close()
 	prefixLen := len(prefixDelegate)
 	start = prefixDelegate
 	end = make([]byte, prefixLen)
@@ -1486,10 +1487,11 @@ func (s Store) RebuildIndex() {
 		return false
 	})
 	batch.Write()
-	batch.Close()
 
 	bVal := s.indexValidator.NewBatch()
 	bEff := s.indexEffStake.NewBatch()
+	defer bVal.Close()
+	defer bEff.Close()
 	prefixLen = len(prefixStake)
 	start = prefixStake
 	end = make([]byte, prefixLen)
@@ -1511,9 +1513,7 @@ func (s Store) RebuildIndex() {
 		return false
 	})
 	bVal.Write()
-	bVal.Close()
 	bEff.Write()
-	bEff.Close()
 }
 
 func (s Store) Close() {
@@ -1551,6 +1551,7 @@ func calcAdjustFactor(stakes []*types.Stake) uint {
 func cloneDB(dst tmdb.DB, src tmdb.DB) {
 	purgeDB(dst)
 	b := dst.NewBatch()
+	defer b.Close()
 	itr, err := src.Iterator(nil, nil)
 	if err != nil {
 		// TODO contain purge process in the whole batch.
@@ -1562,5 +1563,4 @@ func cloneDB(dst tmdb.DB, src tmdb.DB) {
 	}
 	itr.Close()
 	b.WriteSync()
-	b.Close()
 }
