@@ -114,23 +114,17 @@ func initApp(amoDirPath string) (*amo.AMOApp, error) {
 	}
 
 	// TODO: do not use hard-coded value. use value from configuration.
-	merkleDB, err := tmdb.NewGoLevelDB(defaultMerkleDB, dataDirPath)
-	if err != nil {
-		return nil, err
-	}
-
-	indexDB, err := tmdb.NewGoLevelDB(defaultIndexDB, dataDirPath)
-	if err != nil {
-		return nil, err
-	}
-
-	groupCounterDB, err := tmdb.NewGoLevelDB(defaultGroupCounterDB, dataDirPath)
-	if err != nil {
-		return nil, err
-	}
+	merkleDB := tmdb.NewDB(defaultMerkleDB,
+		tmdb.BackendType(config.DBBackend), dataDirPath)
+	indexDB := tmdb.NewDB(defaultIndexDB,
+		tmdb.BackendType(config.DBBackend), dataDirPath)
+	groupCounterDB := tmdb.NewDB(defaultGroupCounterDB,
+		tmdb.BackendType(config.DBBackend), dataDirPath)
 
 	// logger
 	appLogger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
+	appLogger, err = tmflags.ParseLogLevel(config.LogLevel, appLogger,
+		cfg.DefaultLogLevel())
 
 	// create app
 	app := amo.NewAMOApp(
