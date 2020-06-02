@@ -29,8 +29,8 @@ build:
 build_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1
 build_c:
 	@echo "--> Building amo daemon (amod)"
-	$(l_BUILDENV) go build -tags cleveldb ./cmd/amod
-	$(l_BUILDENV) go build -tags cleveldb ./cmd/repair
+	$(l_BUILDENV) go build -tags cleveldb,rocksdb ./cmd/amod
+	$(l_BUILDENV) go build -tags cleveldb,rocksdb ./cmd/repair
 
 install:
 	@echo "--> Installing amo daemon (amod)"
@@ -39,14 +39,14 @@ install:
 install_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1
 install_c:
 	@echo "--> Installing amo daemon (amod)"
-	$(l_BUILDENV) go install -tags cleveldb ./cmd/amod
+	$(l_BUILDENV) go install -tags cleveldb,rocksdb ./cmd/amod
 
 test:
 	go test ./...
 
 test_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1
 test_c:
-	$(l_BUILDENV) go test -tags cleveldb ./...
+	$(l_BUILDENV) go test -tags cleveldb,rocksdb ./...
 
 bench:
 	cd amo; $(PROFCMD)
