@@ -26,7 +26,7 @@ build:
 	$(BUILDENV) go build ./cmd/amod
 	$(BUILDENV) go build ./cmd/repair
 
-build_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1
+build_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1 CGO_LDFLAGS="-lsnappy"
 build_c:
 	@echo "--> Building amo daemon (amod)"
 	$(l_BUILDENV) go build -tags cleveldb,rocksdb ./cmd/amod
@@ -36,7 +36,7 @@ install:
 	@echo "--> Installing amo daemon (amod)"
 	$(BUILDENV) go install ./cmd/amod
 
-install_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1
+install_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1 CGO_LDFLAGS="-lsnappy"
 install_c:
 	@echo "--> Installing amo daemon (amod)"
 	$(l_BUILDENV) go install -tags cleveldb,rocksdb ./cmd/amod
@@ -44,7 +44,7 @@ install_c:
 test:
 	go test ./...
 
-test_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1
+test_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1 CGO_LDFLAGS="-lsnappy"
 test_c:
 	$(l_BUILDENV) go test -tags cleveldb,rocksdb ./...
 
