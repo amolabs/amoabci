@@ -210,6 +210,9 @@ func (s *Store) Save() ([]byte, int64, error) {
 	hash, ver, err := s.merkleTree.SaveVersion()
 	s.merkleVersion = ver
 	if ver%1000 == 0 {
+		if ver > 1000 {
+			s.merkleTree.DeleteVersion(ver - 1000)
+		}
 		cloneDB(s.lazinessCounterDB, s.laziCache)
 	}
 	return hash, ver, err
