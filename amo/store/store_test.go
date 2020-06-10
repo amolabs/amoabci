@@ -89,7 +89,7 @@ func TestPurge(t *testing.T) {
 	gcdb, err := tmdb.NewGoLevelDB("group_counter", testRoot)
 	assert.NoError(t, err)
 
-	s, err := NewStore(nil, sdb, idxdb, gcdb)
+	s, err := NewStore(nil, 1, sdb, idxdb, gcdb)
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
@@ -98,7 +98,7 @@ func TestPurge(t *testing.T) {
 }
 
 func TestBalance(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	balance := new(types.Currency).Set(1000)
@@ -117,7 +117,7 @@ func TestBalance(t *testing.T) {
 }
 
 func TestParcel(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	custody := tmrand.Bytes(32)
@@ -137,7 +137,7 @@ func TestParcel(t *testing.T) {
 }
 
 func TestRequest(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := tmrand.Bytes(32)
@@ -156,7 +156,7 @@ func TestRequest(t *testing.T) {
 }
 
 func TestUsage(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	testAddr := p256.GenPrivKey().PubKey().Address()
 	parcelID := tmrand.Bytes(32)
@@ -180,7 +180,7 @@ func TestUsage(t *testing.T) {
 
 func TestStake(t *testing.T) {
 	// setup
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 
 	holder1 := makeAccAddr("holder1")
@@ -230,7 +230,7 @@ func TestStake(t *testing.T) {
 }
 
 func TestImmutableStake(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 
 	// setup
@@ -287,7 +287,7 @@ func TestImmutableStake(t *testing.T) {
 
 func TestLockedStake(t *testing.T) {
 	// setup
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 
 	holder1 := makeAccAddr("holder1")
@@ -364,7 +364,7 @@ func TestLockedStake(t *testing.T) {
 }
 
 func TestSlashStakes(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 
 	holder := makeAccAddr("holder")
@@ -433,7 +433,7 @@ func TestSlashStakes(t *testing.T) {
 }
 
 func TestDelegate(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	// staker will be the delegatee of holders(delegators)
 	staker := p256.GenPrivKeyFromSecret([]byte("staker")).PubKey().Address()
@@ -464,7 +464,18 @@ func TestDelegate(t *testing.T) {
 	assert.Equal(t, delegate2, s.GetDelegate(holder2, false))
 
 	// test delegator search index
+	assert.Equal(t, staker,
+		crypto.Address(s.GetHolderByValidator(valkey.Address(), false)))
 	ds := s.GetDelegatesByDelegatee(staker, false)
+	assert.Equal(t, 2, len(ds))
+	assert.Equal(t, delegate1, ds[0].Delegate)
+	assert.Equal(t, delegate2, ds[1].Delegate)
+
+	// same tests after RebuildIndex()
+	s.RebuildIndex()
+	assert.Equal(t, staker,
+		crypto.Address(s.GetHolderByValidator(valkey.Address(), false)))
+	ds = s.GetDelegatesByDelegatee(staker, false)
 	assert.Equal(t, 2, len(ds))
 	assert.Equal(t, delegate1, ds[0].Delegate)
 	assert.Equal(t, delegate2, ds[1].Delegate)
@@ -496,7 +507,7 @@ func newStake(amount string) (crypto.Address, *types.Stake) {
 }
 
 func TestVotingPowerCalc(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 
 	vals := s.GetValidators(100, false)
@@ -570,7 +581,7 @@ func TestVotingPowerCalc(t *testing.T) {
 
 func TestMerkleTree(t *testing.T) {
 	// suppose merkleTree is already defined in Store structure
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 
 	// make transactions to put into merkleTree
@@ -610,7 +621,7 @@ func TestMerkleTree(t *testing.T) {
 }
 
 func TestMutableTree(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 
 	key := []byte("alice")
@@ -644,7 +655,7 @@ func TestMutableTree(t *testing.T) {
 }
 
 func TestDraft(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 
 	proposer := p256.GenPrivKey().PubKey().Address()
@@ -680,7 +691,7 @@ func TestDraft(t *testing.T) {
 }
 
 func TestVote(t *testing.T) {
-	s, err := NewStore(nil, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 
 	voter1 := p256.GenPrivKey().PubKey().Address()

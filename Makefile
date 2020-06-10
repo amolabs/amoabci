@@ -5,7 +5,7 @@ all: build
 GO := $(shell command -v go 2> /dev/null)
 # go source code files
 GOSRCS=$(shell find . -name \*.go)
-BUILDENV=CGO_ENABLED=0
+BUILDENV=
 BUILDTAGS=
 
 ifeq ($(GO),)
@@ -26,12 +26,27 @@ build:
 	$(BUILDENV) go build ./cmd/amod
 	$(BUILDENV) go build ./cmd/repair
 
+build_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1 CGO_LDFLAGS="-lsnappy"
+build_c:
+	@echo "--> Building amo daemon (amod)"
+	$(l_BUILDENV) go build -tags cleveldb,rocksdb ./cmd/amod
+	$(l_BUILDENV) go build -tags cleveldb,rocksdb ./cmd/repair
+
 install:
 	@echo "--> Installing amo daemon (amod)"
 	$(BUILDENV) go install ./cmd/amod
 
+install_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1 CGO_LDFLAGS="-lsnappy"
+install_c:
+	@echo "--> Installing amo daemon (amod)"
+	$(l_BUILDENV) go install -tags cleveldb,rocksdb ./cmd/amod
+
 test:
 	go test ./...
+
+test_c: l_BUILDENV = $(BUILDENV) CGO_ENABLED=1 CGO_LDFLAGS="-lsnappy"
+test_c:
+	$(l_BUILDENV) go test -tags cleveldb,rocksdb ./...
 
 bench:
 	cd amo; $(PROFCMD)

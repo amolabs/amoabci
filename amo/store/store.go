@@ -46,8 +46,10 @@ type Store struct {
 	logger log.Logger
 
 	// merkle tree for blockchain state
-	merkleTree    *iavl.MutableTree
-	merkleVersion int64
+	merkleDB            tmdb.DB
+	merkleTree          *iavl.MutableTree
+	merkleVersion       int64
+	checkpoint_interval int64
 
 	indexDB tmdb.DB
 	// search index for delegators:
@@ -75,19 +77,35 @@ type Store struct {
 
 	// lazinessCounter database
 	lazinessCounterDB tmdb.DB
+	laziCache         tmdb.DB
 }
 
-func NewStore(logger log.Logger, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (*Store, error) {
-	mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
+func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (*Store, error) {
+	// normal noprune
+	//mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
+	// with prune
+	memDB := tmdb.NewMemDB()
+	keepRecent := int64(0)
+	if checkpoint_interval > 1 {
+		keepRecent = 1
+	}
+	mt, err := iavl.NewMutableTreeWithOpts(merkleDB, memDB,
+		merkleTreeCacheSize, iavl.PruningOptions(checkpoint_interval, keepRecent))
+
 	if err != nil {
 		return nil, err
 	}
 
+	laziCache := tmdb.NewMemDB()
+	cloneDB(laziCache, lazinessCounterDB)
+
 	return &Store{
 		logger: logger,
 
-		merkleTree:    mt,
-		merkleVersion: 0,
+		merkleDB:            merkleDB,
+		merkleTree:          mt,
+		merkleVersion:       0,
+		checkpoint_interval: checkpoint_interval,
 
 		indexDB:        indexDB,
 		indexDelegator: tmdb.NewPrefixDB(indexDB, prefixIndexDelegator),
@@ -97,6 +115,7 @@ func NewStore(logger log.Logger, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (
 		indexTxBlock:   tmdb.NewPrefixDB(indexDB, prefixIndexTxBlock),
 
 		lazinessCounterDB: lazinessCounterDB,
+		laziCache:         laziCache,
 	}, nil
 }
 
@@ -105,56 +124,55 @@ func (s Store) GetMerkleVersion() int64 {
 }
 
 func (s Store) Purge() error {
-	var (
-		itr tmdb.Iterator
-		err error
-	)
-
 	// merkleTree
-	s.merkleTree.Rollback()
-
 	// delete all available tree versions
-	versions := s.merkleTree.AvailableVersions()
-	for i := len(versions) - 1; i >= 0; i-- {
-		err = s.merkleTree.DeleteVersion(int64(versions[i]))
-		if err != nil {
-			return err
-		}
+	s.merkleTree.Rollback()
+	v, err := s.merkleTree.LoadVersionForOverwriting(0)
+	if err != nil {
+		return err
 	}
-
-	// check if merkle tree is really emptied
-	if !s.merkleTree.IsEmpty() {
+	if v != 0 {
 		return errors.New("couldn't purge merkle tree")
+	}
+	if s.merkleTree.IsEmpty() != true {
+		return errors.New("merkle tree not empty after cleaning")
 	}
 
 	// indexDB
-	itr, err = s.indexDB.Iterator(nil, nil)
+	err = purgeDB(s.indexDB)
 	if err != nil {
 		return err
 	}
-	defer itr.Close()
-	// TODO: cannot guarantee in multi-thread environment
-	// need some sync mechanism
+
+	// laziCache
+	err = purgeDB(s.laziCache)
+	if err != nil {
+		return err
+	}
+
+	// lazinessCounterDB
+	err = purgeDB(s.lazinessCounterDB)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func purgeDB(db tmdb.DB) error {
+	itr, err := db.Iterator(nil, nil)
+	if err != nil {
+		return err
+	}
+	b := db.NewBatch()
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
 		// XXX: not sure if this will confuse the iterator
-		s.indexDB.Delete(k)
+		b.Delete(k)
 	}
-
-	// TODO: need some method like s.stateDB.Size() to check if the DB has been
-	// really emptied.
-
-	// lazinessCounterDB
-	itr, err = s.lazinessCounterDB.Iterator(nil, nil)
-	if err != nil {
-		return err
-	}
-	defer itr.Close()
-	for ; itr.Valid(); itr.Next() {
-		k := itr.Key()
-		s.lazinessCounterDB.Delete(k)
-	}
-
+	itr.Close()
+	b.WriteSync()
+	b.Close()
 	return nil
 }
 
@@ -195,9 +213,15 @@ func (s Store) remove(key []byte) ([]byte, bool) {
 
 // working tree >> saved tree
 func (s *Store) Save() ([]byte, int64, error) {
-	hash, vers, err := s.merkleTree.SaveVersion()
-	s.merkleVersion = vers
-	return hash, vers, err
+	hash, ver, err := s.merkleTree.SaveVersion()
+	s.merkleVersion = ver
+	if ver%s.checkpoint_interval == 0 {
+		if ver > s.checkpoint_interval {
+			s.merkleTree.DeleteVersion(ver - s.checkpoint_interval)
+		}
+		cloneDB(s.lazinessCounterDB, s.laziCache)
+	}
+	return hash, ver, err
 }
 
 // Load the latest versioned tree from disk.
@@ -616,8 +640,7 @@ func (s Store) LoosenLockedStakes(committed bool) []abci.Event {
 		}
 
 		s.remove(key)
-		height--
-		if height == 0 {
+		if height == 1 {
 			unlocked := s.GetUnlockedStake(holder, committed)
 			if unlocked == nil {
 				unlocked = stake
@@ -638,10 +661,7 @@ func (s Store) LoosenLockedStakes(committed bool) []abci.Event {
 				},
 			})
 		} else {
-			err := s.SetLockedStake(holder, stake, height)
-			if err != nil {
-				return false // continue
-			}
+			s.set(makeLockedStakeKey(holder, height-1), value)
 		}
 		return false
 	})
@@ -1449,6 +1469,69 @@ func (s Store) GetValidators(max uint64, committed bool) abci.ValidatorUpdates {
 	return vals
 }
 
+func (s Store) RebuildIndex() {
+	purgeDB(s.indexDelegator)
+	purgeDB(s.indexValidator)
+	purgeDB(s.indexEffStake)
+
+	var start, end []byte
+
+	batch := s.indexDelegator.NewBatch()
+	defer batch.Close()
+	prefixLen := len(prefixDelegate)
+	start = prefixDelegate
+	end = make([]byte, prefixLen)
+	copy(end, start)
+	end[prefixLen-1] = ';'
+	s.merkleTree.IterateRange(start, end, true, func(k, v []byte) bool {
+		// indexDelegator
+		delegator := k[prefixLen : prefixLen+crypto.AddressSize]
+		var delegate types.Delegate
+		err := json.Unmarshal(v, &delegate)
+		if err != nil {
+			return true
+		}
+		delegatee := delegate.Delegatee
+		batch.Set(append(delegatee, delegator...), nil)
+		return false
+	})
+	batch.Write()
+
+	bVal := s.indexValidator.NewBatch()
+	bEff := s.indexEffStake.NewBatch()
+	defer bVal.Close()
+	defer bEff.Close()
+	prefixLen = len(prefixStake)
+	start = prefixStake
+	end = make([]byte, prefixLen)
+	copy(end, start)
+	end[prefixLen-1] = ';'
+	s.merkleTree.IterateRange(start, end, true, func(k, v []byte) bool {
+		// indexValidator
+		holder := k[prefixLen : prefixLen+crypto.AddressSize]
+		var stake types.Stake
+		err := json.Unmarshal(v, &stake)
+		if err != nil {
+			return true
+		}
+		validator := stake.Validator.Address()
+		bVal.Set(validator, holder)
+		// indexEffStake
+		effStake := s.GetEffStake(holder, false)
+		bEff.Set(makeEffStakeKey(effStake.Amount, holder), nil)
+		return false
+	})
+	bVal.Write()
+	bEff.Write()
+}
+
+func (s Store) Close() {
+	s.merkleDB.Close()
+	s.indexDB.Close()
+	s.laziCache.Close()
+	s.lazinessCounterDB.Close()
+}
+
 func calcAdjustFactor(stakes []*types.Stake) uint {
 	var vp big.Int
 	max := MaxTotalVotingPower
@@ -1472,4 +1555,21 @@ func calcAdjustFactor(stakes []*types.Stake) uint {
 		vps = tmp
 	}
 	return shifts
+}
+
+func cloneDB(dst tmdb.DB, src tmdb.DB) {
+	purgeDB(dst)
+	b := dst.NewBatch()
+	defer b.Close()
+	itr, err := src.Iterator(nil, nil)
+	if err != nil {
+		// TODO contain purge process in the whole batch.
+		// BUT: this is just a temporal workaround. We may not do this work.
+		return
+	}
+	for ; itr.Valid(); itr.Next() {
+		b.Set(itr.Key(), itr.Value())
+	}
+	itr.Close()
+	b.WriteSync()
 }

@@ -80,17 +80,13 @@ type AMOApp struct {
 	// app config
 	config types.AMOAppConfig
 
-	// internal database
-	merkleDB       tmdb.DB
-	indexDB        tmdb.DB
-	groupCounterDB tmdb.DB
-
 	// state related variables
 	stateFile *os.File
 	state     State
 
 	// abstraction of internal DBs to the outer world
-	store *astore.Store
+	store               *astore.Store
+	checkpoint_interval int64 // NOTE: this is a tentative workaround
 
 	// runtime temporary variables
 	doValUpdate bool
@@ -110,7 +106,7 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(stateFile *os.File, mdb, idxdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -124,19 +120,17 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, gcdb tmdb.DB, l log.Logger) *AMOA
 		gcdb = tmdb.NewMemDB()
 	}
 
-	s, err := astore.NewStore(l, mdb, idxdb, gcdb)
+	s, err := astore.NewStore(l, checkpoint_interval, mdb, idxdb, gcdb)
 	if err != nil {
 		panic(err)
 	}
 
 	app := &AMOApp{
-		logger:         l,
-		stateFile:      stateFile,
-		state:          State{},
-		store:          s,
-		merkleDB:       mdb,
-		indexDB:        idxdb,
-		groupCounterDB: gcdb,
+		logger:              l,
+		stateFile:           stateFile,
+		state:               State{},
+		store:               s,
+		checkpoint_interval: checkpoint_interval,
 	}
 
 	// load state, db and config
@@ -277,6 +271,8 @@ func (app *AMOApp) load() {
 	if err != nil {
 		panic(err)
 	}
+
+	app.store.RebuildIndex()
 }
 
 func (app *AMOApp) save() {
@@ -327,16 +323,17 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	genAppState, err := ParseGenesisStateBytes(req.AppStateBytes)
 	// TODO: use proper methods to inform error
 	if err != nil {
-		return abci.ResponseInitChain{}
+		panic(err)
 	}
 	// fill state db
-	if FillGenesisState(&app.state, app.store, genAppState) != nil {
-		return abci.ResponseInitChain{}
+	err = FillGenesisState(&app.state, app.store, genAppState)
+	if err != nil {
+		panic(err)
 	}
 
 	hash, version, err := app.store.Save()
 	if err != nil {
-		return abci.ResponseInitChain{}
+		panic(err)
 	}
 
 	app.state.MerkleVersion = version
@@ -346,7 +343,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 
 	err = app.loadAppConfig()
 	if err != nil {
-		return abci.ResponseInitChain{}
+		panic(err)
 	}
 
 	tx.ConfigAMOApp = app.config
@@ -643,14 +640,6 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	)
 	res.Events = append(res.Events, evs...)
 
-	// update appHash
-	hash := app.store.Root()
-	if hash == nil {
-		return abci.ResponseEndBlock{}
-	}
-
-	app.state.AppHash = hash
-
 	return res
 }
 
@@ -660,14 +649,8 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 		return abci.ResponseCommit{}
 	}
 
-	// check if there are no state changes between EndBlock() and Commit()
-	ok := bytes.Equal(hash, app.state.AppHash)
-	if !ok {
-		return abci.ResponseCommit{}
-	}
-
 	app.state.MerkleVersion = version
-	app.state.LastAppHash = app.state.AppHash
+	app.state.LastAppHash = hash
 	app.state.LastHeight = app.state.Height
 
 	err = app.loadAppConfig()
@@ -681,7 +664,15 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 
 	app.lazinessCounter.Set(app.config.LazinessCounterWindow, app.config.LazinessThreshold)
 
-	app.save()
+	// sync with pruning option of merkle DB
+	// NOTE: this is a tentative workaround
+	if app.state.MerkleVersion%app.checkpoint_interval == 0 {
+		app.save()
+	}
 
 	return abci.ResponseCommit{Data: app.state.LastAppHash}
+}
+
+func (app *AMOApp) Close() {
+	app.store.Close()
 }

@@ -128,7 +128,7 @@ func (lc *LazinessCounter) purge() {
 		delete(lc.Candidates, key)
 	}
 
-	lc.store.GroupCounterPurge()
+	lc.store.GroupCounterReset()
 }
 
 func (lc *LazinessCounter) checkEnd() bool {

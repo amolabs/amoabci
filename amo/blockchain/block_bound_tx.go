@@ -34,8 +34,11 @@ func checkBlockBindingTx(txHeight, blockHeight, bindingWindow int64) error {
 		fromHeight = blockHeight - bindingWindow + 1
 	}
 
-	if !(fromHeight <= txHeight && txHeight <= toHeight) {
-		return errors.New("failed to bind tx to block")
+	if txHeight < fromHeight {
+		return errors.New("tx is too old")
+	}
+	if txHeight > toHeight {
+		return errors.New("tx is from the future")
 	}
 
 	return nil
