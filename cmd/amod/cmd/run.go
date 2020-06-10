@@ -127,8 +127,9 @@ func initApp(amoDirPath string) (*amo.AMOApp, error) {
 		cfg.DefaultLogLevel())
 
 	// create app
+	// TODO: read checkpoint_interval from config
 	app := amo.NewAMOApp(
-		stateFile,
+		stateFile, 100,
 		merkleDB, indexDB, groupCounterDB,
 		appLogger.With("module", "abci-app"),
 	)

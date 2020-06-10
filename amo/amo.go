@@ -85,7 +85,8 @@ type AMOApp struct {
 	state     State
 
 	// abstraction of internal DBs to the outer world
-	store *astore.Store
+	store               *astore.Store
+	checkpoint_interval int64 // NOTE: this is a tentative workaround
 
 	// runtime temporary variables
 	doValUpdate bool
@@ -105,7 +106,7 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(stateFile *os.File, mdb, idxdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -119,16 +120,17 @@ func NewAMOApp(stateFile *os.File, mdb, idxdb, gcdb tmdb.DB, l log.Logger) *AMOA
 		gcdb = tmdb.NewMemDB()
 	}
 
-	s, err := astore.NewStore(l, mdb, idxdb, gcdb)
+	s, err := astore.NewStore(l, checkpoint_interval, mdb, idxdb, gcdb)
 	if err != nil {
 		panic(err)
 	}
 
 	app := &AMOApp{
-		logger:    l,
-		stateFile: stateFile,
-		state:     State{},
-		store:     s,
+		logger:              l,
+		stateFile:           stateFile,
+		state:               State{},
+		store:               s,
+		checkpoint_interval: checkpoint_interval,
 	}
 
 	// load state, db and config
@@ -663,7 +665,8 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	app.lazinessCounter.Set(app.config.LazinessCounterWindow, app.config.LazinessThreshold)
 
 	// sync with pruning option of merkle DB
-	if app.state.MerkleVersion % 1000 == 0 {
+	// NOTE: this is a tentative workaround
+	if app.state.MerkleVersion%app.checkpoint_interval == 0 {
 		app.save()
 	}
 

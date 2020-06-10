@@ -46,9 +46,10 @@ type Store struct {
 	logger log.Logger
 
 	// merkle tree for blockchain state
-	merkleDB      tmdb.DB
-	merkleTree    *iavl.MutableTree
-	merkleVersion int64
+	merkleDB            tmdb.DB
+	merkleTree          *iavl.MutableTree
+	merkleVersion       int64
+	checkpoint_interval int64
 
 	indexDB tmdb.DB
 	// search index for delegators:
@@ -79,13 +80,17 @@ type Store struct {
 	laziCache         tmdb.DB
 }
 
-func NewStore(logger log.Logger, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (*Store, error) {
+func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (*Store, error) {
 	// normal noprune
 	//mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
 	// with prune
 	memDB := tmdb.NewMemDB()
+	keepRecent := int64(0)
+	if checkpoint_interval > 1 {
+		keepRecent = 1
+	}
 	mt, err := iavl.NewMutableTreeWithOpts(merkleDB, memDB,
-		merkleTreeCacheSize, iavl.PruningOptions(1000, 1))
+		merkleTreeCacheSize, iavl.PruningOptions(checkpoint_interval, keepRecent))
 
 	if err != nil {
 		return nil, err
@@ -97,9 +102,10 @@ func NewStore(logger log.Logger, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (
 	return &Store{
 		logger: logger,
 
-		merkleDB:      merkleDB,
-		merkleTree:    mt,
-		merkleVersion: 0,
+		merkleDB:            merkleDB,
+		merkleTree:          mt,
+		merkleVersion:       0,
+		checkpoint_interval: checkpoint_interval,
 
 		indexDB:        indexDB,
 		indexDelegator: tmdb.NewPrefixDB(indexDB, prefixIndexDelegator),
@@ -209,9 +215,9 @@ func (s Store) remove(key []byte) ([]byte, bool) {
 func (s *Store) Save() ([]byte, int64, error) {
 	hash, ver, err := s.merkleTree.SaveVersion()
 	s.merkleVersion = ver
-	if ver%1000 == 0 {
-		if ver > 1000 {
-			s.merkleTree.DeleteVersion(ver - 1000)
+	if ver%s.checkpoint_interval == 0 {
+		if ver > s.checkpoint_interval {
+			s.merkleTree.DeleteVersion(ver - s.checkpoint_interval)
 		}
 		cloneDB(s.lazinessCounterDB, s.laziCache)
 	}
