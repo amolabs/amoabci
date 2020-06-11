@@ -42,9 +42,9 @@ RUN apk add bash snappy
 
 #COPY amod /usr/bin/
 COPY --from=0 /usr/lib/librocksdb.so.6.10.1 /usr/lib/
-RUN ln -sf /usr/lib/librocksdb.so.6.10.1 /usr/lib/librocksdb.so
-RUN ln -sf /usr/lib/librocksdb.so.6.10.1 /usr/lib/librocksdb.so.6
 RUN ln -sf /usr/lib/librocksdb.so.6.10.1 /usr/lib/librocksdb.so.6.10
+RUN ln -sf /usr/lib/librocksdb.so.6.10.1 /usr/lib/librocksdb.so.6
+RUN ln -sf /usr/lib/librocksdb.so.6.10.1 /usr/lib/librocksdb.so
 COPY --from=0 /usr/lib/libleveldb.so.1.20 /usr/lib/
 RUN ln -sf /usr/lib/libleveldb.so.1.20 /usr/lib/libleveldb.so.1
 RUN ln -sf /usr/lib/libleveldb.so.1.20 /usr/lib/libleveldb.so
