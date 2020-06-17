@@ -934,6 +934,7 @@ func (s Store) GetTopStakes(max uint64, peek crypto.Address, committed bool) []*
 		s.logger.Error("Store", "GetTopStakes", err.Error())
 		return nil
 	}
+	defer itr.Close()
 	for ; itr.Valid(); itr.Next() {
 		if cnt >= max {
 			break

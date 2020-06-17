@@ -39,6 +39,7 @@ func (s Store) GroupCounterGetLazyValidators() LazyValidators {
 		s.logger.Error("Store", "GroupCounterGetLazyValidators", err.Error())
 		return LazyValidators{}
 	}
+	defer itr.Close()
 	for ; itr.Valid(); itr.Next() {
 		address := Address{}
 		copy(address[:], itr.Key())

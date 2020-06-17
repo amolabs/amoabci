@@ -127,20 +127,18 @@ func (s Store) TxIndexerPurge() {
 		s.logger.Error("Store", "TxIndexerPurge", err.Error())
 		return
 	}
-	defer itr.Close()
-
 	for ; itr.Valid(); itr.Next() {
 		s.indexBlockTx.Delete(itr.Key())
 	}
+	itr.Close()
 
 	itr, err = s.indexTxBlock.Iterator(nil, nil)
 	if err != nil {
 		s.logger.Error("Store", "TxIndexerPurge", err.Error())
 		return
 	}
-	defer itr.Close()
-
 	for ; itr.Valid(); itr.Next() {
 		s.indexTxBlock.Delete(itr.Key())
 	}
+	itr.Close()
 }
