@@ -6,7 +6,6 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmbytes "github.com/tendermint/tendermint/libs/bytes"
-	"github.com/tendermint/tendermint/libs/kv"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -62,14 +61,5 @@ func (t *TxDiscard) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	parcel.OnSale = false
 	store.SetParcel(txParam.Target, parcel)
 
-	events := []abci.Event{
-		abci.Event{
-			Type: "parcel",
-			Attributes: []kv.Pair{
-				{Key: []byte("id"), Value: []byte(txParam.Target.String())},
-			},
-		},
-	}
-
-	return code.TxCodeOK, "ok", events
+	return code.TxCodeOK, "ok", []abci.Event{}
 }

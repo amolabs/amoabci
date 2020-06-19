@@ -538,12 +538,14 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 		}
 	}
 
+	typeJson, _ := json.Marshal(t.GetType())
+	senderJson, _ := json.Marshal(t.GetSender())
 	events := []abci.Event{
 		{
 			Type: "tx",
 			Attributes: []kv.Pair{
-				{Key: []byte("type"), Value: []byte(t.GetType())},
-				{Key: []byte("sender"), Value: []byte(t.GetSender().String())},
+				{Key: []byte("type"), Value: typeJson},
+				{Key: []byte("sender"), Value: senderJson},
 			},
 		},
 	}

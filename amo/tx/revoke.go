@@ -7,7 +7,6 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	tmbytes "github.com/tendermint/tendermint/libs/bytes"
-	"github.com/tendermint/tendermint/libs/kv"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -72,14 +71,5 @@ func (t *TxRevoke) Execute(store *store.Store) (uint32, string, []abci.Event) {
 
 	store.DeleteUsage(txParam.Grantee, txParam.Target)
 
-	events := []abci.Event{
-		abci.Event{
-			Type: "parcel",
-			Attributes: []kv.Pair{
-				{Key: []byte("id"), Value: []byte(txParam.Target.String())},
-			},
-		},
-	}
-
-	return code.TxCodeOK, "ok", events
+	return code.TxCodeOK, "ok", []abci.Event{}
 }
