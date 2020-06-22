@@ -14,9 +14,9 @@ RUN mkdir /src
 WORKDIR /src
 
 # rocksdb 
-RUN wget https://github.com/facebook/rocksdb/archive/v6.10.1.tar.gz 
-RUN tar -xzf v6.10.1.tar.gz
-RUN cp -a rocksdb-6.10.1/include/rocksdb /usr/include/
+RUN wget https://github.com/facebook/rocksdb/archive/v5.18.4.tar.gz 
+RUN tar -xzf v5.18.4.tar.gz
+RUN cp -a rocksdb-5.18.4/include/rocksdb /usr/include/
 COPY contrib/rocksdb/librocksdb.so* /usr/lib/ 
 
 # leveldb 
@@ -38,13 +38,13 @@ RUN make -C amoabci build_c
 FROM alpine:3.12
 
 # tools & libs
-RUN apk add bash snappy
+RUN apk add bash snappy snappy-dev
 
 #COPY amod /usr/bin/
-COPY --from=0 /usr/lib/librocksdb.so.6.10.1 /usr/lib/
-RUN ln -sf /usr/lib/librocksdb.so.6.10.1 /usr/lib/librocksdb.so.6.10
-RUN ln -sf /usr/lib/librocksdb.so.6.10.1 /usr/lib/librocksdb.so.6
-RUN ln -sf /usr/lib/librocksdb.so.6.10.1 /usr/lib/librocksdb.so
+COPY --from=0 /usr/lib/librocksdb.so.5.18.4 /usr/lib/
+RUN ln -sf /usr/lib/librocksdb.so.5.18.4 /usr/lib/librocksdb.so.5.18
+RUN ln -sf /usr/lib/librocksdb.so.5.18.4 /usr/lib/librocksdb.so.5
+RUN ln -sf /usr/lib/librocksdb.so.5.18.4 /usr/lib/librocksdb.so
 COPY --from=0 /usr/lib/libleveldb.so.1.20 /usr/lib/
 RUN ln -sf /usr/lib/libleveldb.so.1.20 /usr/lib/libleveldb.so.1
 RUN ln -sf /usr/lib/libleveldb.so.1.20 /usr/lib/libleveldb.so
