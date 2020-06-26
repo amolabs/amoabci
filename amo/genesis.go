@@ -30,9 +30,11 @@ type GenAccStake struct {
 
 func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	genState := GenAmoAppState{}
-	err := json.Unmarshal(data, &genState)
-	if err != nil {
-		return nil, err
+	if len(data) > 0 {
+		err := json.Unmarshal(data, &genState)
+		if err != nil {
+			return &genState, err
+		}
 	}
 	if genState.State.ProtocolVersion == 0 {
 		genState.State.ProtocolVersion = uint64(AMOProtocolVersion)

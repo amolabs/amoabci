@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Set up Go 1.13
+    - name: Set up Go 1.14
       uses: actions/setup-go@v1
       with:
-        go-version: 1.13
+        go-version: 1.14
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
@@ -26,11 +26,17 @@ jobs:
     - name: Set env var for ASSET_repair
       run: echo "::set-env name=ASSET_repair::repair-${RELEASE_VERSION/v/''}-linux-x86_64.tar.gz"
 
+    - name: Set env var for ASSET_docker_tag
+      run: echo "::set-env name=ASSET_docker_tag::${RELEASE_VERSION/v/''}"
+
     - name: Unit Test
       run: make test
 
-    - name: Build
+    - name: Build Binary Files
       run: make TARGET=linux build
+
+    - name: Build Docker Image
+      run: make docker
 
     - name: Wrap (amod)
       run: tar -czf ${{ env.ASSET_amod }} amod
@@ -68,4 +74,19 @@ jobs:
           asset_path: ./${{ env.ASSET_repair}}
           asset_name: ${{ env.ASSET_repair}}
           asset_content_type: application/gzip
+
+    - name: Access to Docker Hub
+      run: |
+        echo ${{ secrets.DOCKERHUB_PASSWORD }} |
+        docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
       
+    - name: Tag Docker Image to ${{ env.ASSET_docker_tag }}
+      run: |
+        docker tag amolabs/amod:latest amolabs/amod:${{ env.ASSET_docker_tag }}
+        
+    - name: Publish Docker Image to Docker Hub
+      run: |
+        docker push amolabs/amod:latest
+        docker push amolabs/amod:${{env.ASSET_docker_tag }}
+
+        

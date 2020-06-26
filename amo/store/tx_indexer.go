@@ -19,6 +19,9 @@ var (
 )
 
 func (s Store) AddTxIndexer(height int64, txs [][]byte) {
+	if len(txs) == 0 {
+		return
+	}
 	hb := make([]byte, 8)
 	binary.BigEndian.PutUint64(hb, uint64(height))
 	txsJSON, _ := json.Marshal(txs)
@@ -34,7 +37,7 @@ func (s Store) AddTxIndexer(height int64, txs [][]byte) {
 		batch.Set(tx, hb)
 	}
 
-	err := batch.WriteSync()
+	err := batch.Write()
 	if err != nil {
 		s.logger.Error("Store", "AddTxIndexer", err.Error())
 	}
@@ -74,6 +77,7 @@ func (s Store) TxIndexerGetHeight(txHash []byte) int64 {
 		return int64(0)
 	}
 
+	// NOTE: this is good for fail-safe operation, but bad for performance.
 	value, err := s.indexTxBlock.Get(txHash)
 	if err != nil {
 		s.logger.Error("Store", "TxIndexerGetHeight", err.Error())
@@ -123,20 +127,18 @@ func (s Store) TxIndexerPurge() {
 		s.logger.Error("Store", "TxIndexerPurge", err.Error())
 		return
 	}
-	defer itr.Close()
-
 	for ; itr.Valid(); itr.Next() {
 		s.indexBlockTx.Delete(itr.Key())
 	}
+	itr.Close()
 
 	itr, err = s.indexTxBlock.Iterator(nil, nil)
 	if err != nil {
 		s.logger.Error("Store", "TxIndexerPurge", err.Error())
 		return
 	}
-	defer itr.Close()
-
 	for ; itr.Valid(); itr.Next() {
 		s.indexTxBlock.Delete(itr.Key())
 	}
+	itr.Close()
 }
