@@ -624,6 +624,8 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	)
 	res.Events = append(res.Events, evs...)
 
+	// update hibernate
+
 	if app.doValUpdate || doValUpdate {
 		app.doValUpdate = false
 		newVals := app.store.GetValidators(app.config.MaxValidators, false)

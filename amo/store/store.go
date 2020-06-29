@@ -943,15 +943,19 @@ func (s Store) GetTopStakes(max uint64, peek crypto.Address, committed bool) []*
 		var amount types.Currency
 		amount.SetBytes(key[:32])
 		holder := key[32:]
+		stake := s.GetStake(holder, committed)
+		stake.Amount = amount // NOTE: effective stake
+		// filter out hibernating validators
+		if s.GetHibernate(stake.Validator.Address(), committed) != nil {
+			continue
+		}
 		// peeking mode
 		if len(peek) > 0 {
 			if bytes.Equal(holder, peek) {
-				stakes = append(stakes, s.GetStake(holder, committed))
+				stakes = append(stakes, stake)
 				return stakes
 			}
 		} else {
-			stake := s.GetStake(holder, committed)
-			stake.Amount = amount
 			stakes = append(stakes, stake)
 		}
 		cnt++
