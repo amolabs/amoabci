@@ -15,7 +15,6 @@ import (
 type MissRuns struct {
 	store              *store.Store
 	runDB              tmdb.DB
-	height             int64
 	hibernateThreshold int64
 	hibernatePeriod    int64
 }
@@ -27,14 +26,25 @@ func makeRunKey(val crypto.Address, start int64) []byte {
 	return append(val, buf...)
 }
 
-func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) error {
+func NewMissRuns(store *store.Store, db tmdb.DB, threshold, period int64) *MissRuns {
+	return &MissRuns{
+		store:              store,
+		runDB:              db,
+		hibernateThreshold: threshold,
+		hibernatePeriod:    period,
+	}
+}
+
+func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpdate bool, err error) {
+	doValUpdate = false
+
 	batch := m.runDB.NewBatch()
 	defer batch.Close()
 
 	unfinishedRuns := [][]byte{}
 	itr, err := m.runDB.Iterator(nil, nil)
 	if err != nil {
-		return err
+		return
 	}
 	defer itr.Close()
 	// guard for rewind
@@ -73,6 +83,7 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) error {
 						End:   height + m.hibernatePeriod,
 					}
 					m.store.SetHibernate(runVal, &hib)
+					doValUpdate = true
 				}
 				l := len(unfinishedRuns)
 				unfinishedRuns[i] = unfinishedRuns[l-1]
@@ -102,7 +113,7 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) error {
 
 	batch.Write()
 
-	return nil
+	return
 }
 
 func (m MissRuns) getLastMissRun(val crypto.Address) (start, length int64) {

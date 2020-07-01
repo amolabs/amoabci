@@ -16,6 +16,8 @@ type AMOAppConfig struct {
 	PenaltyRatioL          float64  `json:"penalty_ratio_l"` // lazy validators
 	LazinessCounterWindow  int64    `json:"laziness_counter_window"`
 	LazinessThreshold      float64  `json:"laziness_threshold"`
+	HibernateThreshold     int64    `json:"hibernate_threshold"`
+	HibernatePeriod        int64    `json:"hibernate_period"`
 	BlockBindingWindow     int64    `json:"block_binding_window"`
 	LockupPeriod           int64    `json:"lockup_period"`
 	DraftOpenCount         int64    `json:"draft_open_count"`
