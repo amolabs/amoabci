@@ -661,6 +661,15 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	}
 	app.doValUpdate = app.doValUpdate || tmp
 
+	// wake up hibernating validators
+	vals, hibs := app.store.GetHibernates(false)
+	for i, hib := range hibs {
+		if hib.End <= app.state.Height {
+			app.store.DeleteHibernate(vals[i])
+			app.doValUpdate = true
+		}
+	}
+
 	if app.doValUpdate {
 		app.doValUpdate = false
 		newVals := app.store.GetValidators(app.config.MaxValidators, false)

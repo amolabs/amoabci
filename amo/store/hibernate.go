@@ -42,6 +42,27 @@ func (s Store) GetHibernate(val crypto.Address, committed bool) *types.Hibernate
 	return &hib
 }
 
+func (s Store) GetHibernates(committed bool) (vals []crypto.Address, hibs []*types.Hibernate) {
+	prefixLen := len(prefixHibernate)
+	start := prefixHibernate
+	end := make([]byte, prefixLen)
+	copy(end, start)
+	end[prefixLen-1] = ';'
+	s.merkleTree.IterateRange(start, end, true, func(k, v []byte) bool {
+		val := k[prefixLen : prefixLen+crypto.AddressSize]
+		var hib types.Hibernate
+		err := json.Unmarshal(v, &hib)
+		if err != nil {
+			return true
+		}
+		vals = append(vals, val)
+		hibs = append(hibs, &hib)
+		return false
+	})
+
+	return
+}
+
 func (s Store) DeleteHibernate(val crypto.Address) {
 	s.remove(makeHibernateKey(val))
 }

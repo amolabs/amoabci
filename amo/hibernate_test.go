@@ -91,5 +91,20 @@ func TestHibernate(t *testing.T) {
 		crypto.AddressHash(res.ValidatorUpdates[0].GetPubKey().Data))
 	assert.Equal(t, int64(0), res.ValidatorUpdates[0].GetPower())
 
-	// TODO: wake hibernating validator
+	reqBB = makeBB(20, "", false) // XXX we need to check this
+	reqEB = makeEB(20)
+	app.BeginBlock(reqBB)
+	app.EndBlock(reqEB)
+
+	// wake up hibernating validator
+	reqBB = makeBB(29, "", false) // XXX we need to check this
+	reqEB = makeEB(29)
+	app.BeginBlock(reqBB)
+	res = app.EndBlock(reqEB)
+	hib = app.store.GetHibernate(makeValAddr("val1"), false)
+	assert.Nil(t, hib)
+	assert.Equal(t, 1, len(res.ValidatorUpdates))
+	assert.Equal(t, makeValAddr("val1"),
+		crypto.AddressHash(res.ValidatorUpdates[0].GetPubKey().Data))
+	assert.Equal(t, int64(100), res.ValidatorUpdates[0].GetPower())
 }
