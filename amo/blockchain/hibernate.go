@@ -20,10 +20,11 @@ type MissRuns struct {
 }
 
 func makeRunKey(val crypto.Address, start int64) []byte {
-	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, uint64(start))
+	buf := make([]byte, crypto.AddressSize+8)
+	copy(buf[:crypto.AddressSize], val)
+	binary.BigEndian.PutUint64(buf[crypto.AddressSize:], uint64(start))
 
-	return append(val, buf...)
+	return buf[:crypto.AddressSize+8]
 }
 
 func NewMissRuns(store *store.Store, db tmdb.DB, threshold, period int64) *MissRuns {
