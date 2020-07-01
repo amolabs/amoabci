@@ -32,7 +32,7 @@ func makeHibernate(start, end int64) *types.Hibernate {
 }
 
 func TestHibernate(t *testing.T) {
-	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
@@ -134,7 +134,7 @@ func TestHibernate(t *testing.T) {
 }
 
 func TestMissCount(t *testing.T) {
-	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 

@@ -150,7 +150,7 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 	amoState.Height = tmState.LastBlockHeight
 	amoState.LastAppHash = tmState.AppHash
 	amoState.AppHash = tmState.AppHash
-	// TODO: ProtocolVersion, CounterDue, NextDraftID
+	// TODO: ProtocolVersion, NextDraftID
 
 	display(amoMt, amoState, tmBlockStoreState, tmState)
 

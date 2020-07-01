@@ -13,7 +13,6 @@ type State struct {
 	AppHash         []byte `json:"app_hash"`
 	LastHeight      int64  `json:"last_height"` // last completed block height
 	LastAppHash     []byte `json:"last_app_hash"`
-	CounterDue      int64  `json:"counter_due"`
 	NextDraftID     uint32 `json:"next_draft_id"`
 }
 

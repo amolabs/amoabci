@@ -101,14 +101,13 @@ type AMOApp struct {
 	pendingLazyValidators []crypto.Address
 	missingVals           []crypto.Address
 
-	lazinessCounter blockchain.LazinessCounter
 	replayPreventer blockchain.ReplayPreventer
 	missRuns        *blockchain.MissRuns
 }
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -118,11 +117,8 @@ func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb, gcdb t
 	if idxdb == nil {
 		idxdb = tmdb.NewMemDB()
 	}
-	if gcdb == nil {
-		gcdb = tmdb.NewMemDB()
-	}
 
-	s, err := astore.NewStore(l, checkpoint_interval, mdb, idxdb, gcdb)
+	s, err := astore.NewStore(l, checkpoint_interval, mdb, idxdb)
 	if err != nil {
 		panic(err)
 	}
@@ -143,14 +139,6 @@ func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb, gcdb t
 	tx.StateNextDraftID = app.state.NextDraftID
 	tx.StateBlockHeight = app.state.Height
 	tx.StateProtocolVersion = app.state.ProtocolVersion
-
-	app.lazinessCounter = blockchain.NewLazinessCounter(
-		app.store,
-		app.state.LastHeight,
-		app.state.CounterDue,
-		app.config.LazinessCounterWindow,
-		app.config.LazinessThreshold,
-	)
 
 	app.missRuns = blockchain.NewMissRuns(
 		app.store,
@@ -365,14 +353,6 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	tx.StateBlockHeight = app.state.Height
 	tx.StateProtocolVersion = app.state.ProtocolVersion
 
-	app.lazinessCounter = blockchain.NewLazinessCounter(
-		app.store,
-		app.state.LastHeight,
-		app.state.CounterDue,
-		app.config.LazinessCounterWindow,
-		app.config.LazinessThreshold,
-	)
-
 	app.missRuns = blockchain.NewMissRuns(
 		app.store,
 		tmdb.NewMemDB(),
@@ -486,7 +466,6 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	// blockchain modules
 	app.replayPreventer.Update(app.state.Height, app.config.BlockBindingWindow)
 	app.pendingEvidences = req.GetByzantineValidators()
-	app.pendingLazyValidators, app.state.CounterDue = app.lazinessCounter.Investigate(app.state.Height, req.GetLastCommitInfo())
 
 	lci := req.GetLastCommitInfo()
 	app.missingVals = []crypto.Address{}
@@ -723,8 +702,6 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	tx.ConfigAMOApp = app.config
 	tx.StateNextDraftID = app.state.NextDraftID
 	tx.StateProtocolVersion = app.state.ProtocolVersion
-
-	app.lazinessCounter.Set(app.config.LazinessCounterWindow, app.config.LazinessThreshold)
 
 	// sync with pruning option of merkle DB
 	// NOTE: this is a tentative workaround

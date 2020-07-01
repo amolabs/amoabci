@@ -78,6 +78,7 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 				buf := make([]byte, 8)
 				binary.BigEndian.PutUint64(buf, uint64(0))
 				batch.Set(r, buf)
+				//fmt.Println(crypto.Address(runVal), height, runStart)
 				if height+1-runStart >= m.hibernateThreshold {
 					hib := types.Hibernate{
 						Start: height,
@@ -111,6 +112,8 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 		binary.BigEndian.PutUint64(buf, uint64(height-runStart))
 		batch.Set(r, buf)
 	}
+
+	// TODO: remove too old runs
 
 	batch.Write()
 

@@ -12,13 +12,13 @@ import (
 func makeHibernate(start, end int64) *types.Hibernate {
 	hib := types.Hibernate{
 		Start: start,
-		End: end,
+		End:   end,
 	}
 	return &hib
 }
 
 func TestGetSetHibernate(t *testing.T) {
-	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
@@ -39,7 +39,7 @@ func TestGetSetHibernate(t *testing.T) {
 }
 
 func TestValidatorSelection(t *testing.T) {
-	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 

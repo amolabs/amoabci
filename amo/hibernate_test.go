@@ -56,7 +56,7 @@ func TestHibernate(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	assert.NotNil(t, app)
 	app.state.ProtocolVersion = AMOProtocolVersion // tweak
 	memDB := tmdb.NewMemDB()

@@ -74,13 +74,9 @@ type Store struct {
 	// key: tx hash
 	// value: block height
 	indexTxBlock tmdb.DB
-
-	// lazinessCounter database
-	lazinessCounterDB tmdb.DB
-	laziCache         tmdb.DB
 }
 
-func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (*Store, error) {
+func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB tmdb.DB) (*Store, error) {
 	// normal noprune
 	//mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
 	// with prune
@@ -96,9 +92,6 @@ func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB, l
 		return nil, err
 	}
 
-	laziCache := tmdb.NewMemDB()
-	cloneDB(laziCache, lazinessCounterDB)
-
 	return &Store{
 		logger: logger,
 
@@ -113,9 +106,6 @@ func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB, l
 		indexEffStake:  tmdb.NewPrefixDB(indexDB, prefixIndexEffStake),
 		indexBlockTx:   tmdb.NewPrefixDB(indexDB, prefixIndexBlockTx),
 		indexTxBlock:   tmdb.NewPrefixDB(indexDB, prefixIndexTxBlock),
-
-		lazinessCounterDB: lazinessCounterDB,
-		laziCache:         laziCache,
 	}, nil
 }
 
@@ -140,18 +130,6 @@ func (s Store) Purge() error {
 
 	// indexDB
 	err = purgeDB(s.indexDB)
-	if err != nil {
-		return err
-	}
-
-	// laziCache
-	err = purgeDB(s.laziCache)
-	if err != nil {
-		return err
-	}
-
-	// lazinessCounterDB
-	err = purgeDB(s.lazinessCounterDB)
 	if err != nil {
 		return err
 	}
@@ -219,7 +197,6 @@ func (s *Store) Save() ([]byte, int64, error) {
 		if ver > s.checkpoint_interval {
 			s.merkleTree.DeleteVersion(ver - s.checkpoint_interval)
 		}
-		cloneDB(s.lazinessCounterDB, s.laziCache)
 	}
 	return hash, ver, err
 }
@@ -1533,8 +1510,6 @@ func (s Store) RebuildIndex() {
 func (s Store) Close() {
 	s.merkleDB.Close()
 	s.indexDB.Close()
-	s.laziCache.Close()
-	s.lazinessCounterDB.Close()
 }
 
 func calcAdjustFactor(stakes []*types.Stake) uint {
