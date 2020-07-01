@@ -132,3 +132,45 @@ func TestHibernate(t *testing.T) {
 	assert.Equal(t, int64(10), start)
 	assert.Equal(t, int64(10), length)
 }
+
+func TestMissCount(t *testing.T) {
+	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
+	assert.NotNil(t, s)
+
+	mr := MissRuns{
+		store:              s,
+		runDB:              tmdb.NewMemDB(),
+		hibernateThreshold: 10,
+		hibernatePeriod:    100,
+	}
+
+	val1 := makeValAddr("val1")
+	mvals := []crypto.Address{}
+	mval10 := []crypto.Address{val1}
+
+	mr.UpdateMissRuns(10, mval10)
+	//mr.UpdateMissRuns(11, mval10)
+	//mr.UpdateMissRuns(12, mval10)
+	//mr.UpdateMissRuns(13, mval10)
+	//mr.UpdateMissRuns(14, mval10)
+	mr.UpdateMissRuns(15, mvals)
+
+	mr.UpdateMissRuns(20, mval10)
+	//mr.UpdateMissRuns(21, mval10)
+	//mr.UpdateMissRuns(22, mval10)
+	//mr.UpdateMissRuns(23, mval10)
+	//mr.UpdateMissRuns(24, mval10)
+	mr.UpdateMissRuns(25, mvals)
+
+	mr.UpdateMissRuns(30, mval10)
+	//mr.UpdateMissRuns(31, mval10)
+	//mr.UpdateMissRuns(32, mval10)
+	//mr.UpdateMissRuns(33, mval10)
+	//mr.UpdateMissRuns(34, mval10)
+
+	count := mr.GetMissCount(val1, 10, 22)
+	assert.Equal(t, int64(8), count)
+	count = mr.GetMissCount(val1, 12, 34)
+	assert.Equal(t, int64(13), count)
+}

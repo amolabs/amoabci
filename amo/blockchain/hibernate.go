@@ -147,3 +147,62 @@ func (m MissRuns) getLastMissRun(val crypto.Address) (start, length int64) {
 
 	return
 }
+
+func max(a, b int64) int64 {
+	if a >= b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func min(a, b int64) int64 {
+	if a <= b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func (m MissRuns) GetMissCount(val crypto.Address, rangeStart, rangeEnd int64) int64 {
+	b := make(crypto.Address, crypto.AddressSize+8)
+	copy(b, val)
+	itrEnd := append(b[:crypto.AddressSize],
+		[]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}...)
+	itr, err := m.runDB.ReverseIterator(val, itrEnd)
+	if err != nil {
+		fmt.Println(err)
+		return 0
+	}
+	defer itr.Close()
+
+	count := int64(0)
+	for ; itr.Valid(); itr.Next() {
+		k := itr.Key()
+		runVal := k[:crypto.AddressSize]
+		if !bytes.Equal(runVal, val) {
+			return count
+		}
+
+		b := k[crypto.AddressSize:]
+		start := int64(binary.BigEndian.Uint64(b))
+		if start > rangeEnd {
+			continue
+		}
+
+		b = itr.Value()
+		length := int64(binary.BigEndian.Uint64(b))
+		if length == 0 {
+			length = rangeEnd - start + 1
+		}
+		if start+length <= rangeStart {
+			break
+		}
+		m1 := max(start, rangeStart)
+		m2 := min(start+length-1, rangeEnd)
+
+		count += m2 - m1 + 1
+	}
+
+	return count
+}
