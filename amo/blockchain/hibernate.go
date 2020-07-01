@@ -14,7 +14,6 @@ import (
 
 type MissRuns struct {
 	store              *store.Store
-	runDB              tmdb.DB
 	hibernateThreshold int64
 	hibernatePeriod    int64
 }
@@ -30,7 +29,6 @@ func makeRunKey(val crypto.Address, start int64) []byte {
 func NewMissRuns(store *store.Store, db tmdb.DB, threshold, period int64) *MissRuns {
 	return &MissRuns{
 		store:              store,
-		runDB:              db,
 		hibernateThreshold: threshold,
 		hibernatePeriod:    period,
 	}
@@ -39,11 +37,12 @@ func NewMissRuns(store *store.Store, db tmdb.DB, threshold, period int64) *MissR
 func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpdate bool, err error) {
 	doValUpdate = false
 
-	batch := m.runDB.NewBatch()
+	runDB := m.store.GetMissRunDB()
+	batch := runDB.NewBatch()
 	defer batch.Close()
 
 	unfinishedRuns := [][]byte{}
-	itr, err := m.runDB.Iterator(nil, nil)
+	itr, err := runDB.Iterator(nil, nil)
 	if err != nil {
 		return
 	}
@@ -124,11 +123,12 @@ func (m MissRuns) getLastMissRun(val crypto.Address) (start, length int64) {
 	start = 0
 	length = 0
 
+	runDB := m.store.GetMissRunDB()
 	b := make(crypto.Address, crypto.AddressSize+8)
 	copy(b, val)
 	end := append(b[:crypto.AddressSize],
 		[]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}...)
-	itr, err := m.runDB.ReverseIterator(val, end)
+	itr, err := runDB.ReverseIterator(val, end)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -168,11 +168,12 @@ func min(a, b int64) int64 {
 }
 
 func (m MissRuns) GetMissCount(val crypto.Address, rangeStart, rangeEnd int64) int64 {
+	runDB := m.store.GetMissRunDB()
 	b := make(crypto.Address, crypto.AddressSize+8)
 	copy(b, val)
 	itrEnd := append(b[:crypto.AddressSize],
 		[]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}...)
-	itr, err := m.runDB.ReverseIterator(val, itrEnd)
+	itr, err := runDB.ReverseIterator(val, itrEnd)
 	if err != nil {
 		fmt.Println(err)
 		return 0

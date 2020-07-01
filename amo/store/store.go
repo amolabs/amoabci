@@ -40,6 +40,8 @@ var (
 	prefixIndexDelegator = []byte("delegator")
 	prefixIndexValidator = []byte("validator")
 	prefixIndexEffStake  = []byte("effstake")
+
+	prefixMissRun = []byte("miss_run")
 )
 
 type Store struct {
@@ -74,6 +76,9 @@ type Store struct {
 	// key: tx hash
 	// value: block height
 	indexTxBlock tmdb.DB
+
+	// miss runs
+	missRunDB tmdb.DB
 }
 
 func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB tmdb.DB) (*Store, error) {
@@ -106,6 +111,8 @@ func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB tm
 		indexEffStake:  tmdb.NewPrefixDB(indexDB, prefixIndexEffStake),
 		indexBlockTx:   tmdb.NewPrefixDB(indexDB, prefixIndexBlockTx),
 		indexTxBlock:   tmdb.NewPrefixDB(indexDB, prefixIndexTxBlock),
+
+		missRunDB: tmdb.NewPrefixDB(indexDB, prefixMissRun),
 	}, nil
 }
 
@@ -152,6 +159,10 @@ func purgeDB(db tmdb.DB) error {
 	b.WriteSync()
 	b.Close()
 	return nil
+}
+
+func (s Store) GetMissRunDB() tmdb.DB {
+	return s.missRunDB
 }
 
 // MERKLE TREE SCOPE

@@ -38,7 +38,6 @@ func TestHibernate(t *testing.T) {
 
 	mr := MissRuns{
 		store:              s,
-		runDB:              tmdb.NewMemDB(),
 		hibernateThreshold: 10,
 		hibernatePeriod:    100,
 	}
@@ -140,7 +139,6 @@ func TestMissCount(t *testing.T) {
 
 	mr := MissRuns{
 		store:              s,
-		runDB:              tmdb.NewMemDB(),
 		hibernateThreshold: 10,
 		hibernatePeriod:    100,
 	}
