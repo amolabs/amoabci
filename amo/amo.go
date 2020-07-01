@@ -629,31 +629,6 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	// XXX no means to convey error to res
 
-	evs, _ := blockchain.DistributeIncentive(
-		app.store,
-		app.logger,
-		app.config.WeightValidator, app.config.WeightDelegator,
-		app.config.BlkReward, app.config.TxReward,
-		app.numDeliveredTxs,
-		app.staker,
-		app.feeAccumulated,
-	)
-	res.Events = append(res.Events, evs...)
-
-	evs = app.store.LoosenLockedStakes(false)
-	res.Events = append(res.Events, evs...)
-
-	tmp, evs, _ := blockchain.PenalizeConvicts(
-		app.store,
-		app.logger,
-		app.pendingEvidences,
-		app.pendingLazyValidators,
-		app.config.WeightValidator, app.config.WeightDelegator,
-		app.config.PenaltyRatioM, app.config.PenaltyRatioL,
-	)
-	res.Events = append(res.Events, evs...)
-	app.doValUpdate = app.doValUpdate || tmp
-
 	// update miss runs
 	tmp, err := app.missRuns.UpdateMissRuns(app.state.Height, app.missingVals)
 	if err != nil {
@@ -669,6 +644,31 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 			app.doValUpdate = true
 		}
 	}
+
+	evs, _ := blockchain.DistributeIncentive(
+		app.store,
+		app.logger,
+		app.config.WeightValidator, app.config.WeightDelegator,
+		app.config.BlkReward, app.config.TxReward,
+		app.numDeliveredTxs,
+		app.staker,
+		app.feeAccumulated,
+	)
+	res.Events = append(res.Events, evs...)
+
+	evs = app.store.LoosenLockedStakes(false)
+	res.Events = append(res.Events, evs...)
+
+	tmp, evs, _ = blockchain.PenalizeConvicts(
+		app.store,
+		app.logger,
+		app.pendingEvidences,
+		app.pendingLazyValidators,
+		app.config.WeightValidator, app.config.WeightDelegator,
+		app.config.PenaltyRatioM, app.config.PenaltyRatioL,
+	)
+	res.Events = append(res.Events, evs...)
+	app.doValUpdate = app.doValUpdate || tmp
 
 	if app.doValUpdate {
 		app.doValUpdate = false
