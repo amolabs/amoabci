@@ -659,11 +659,25 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	evs = app.store.LoosenLockedStakes(false)
 	res.Events = append(res.Events, evs...)
 
+	// get lazy validators
+	lazyValidators := []crypto.Address{}
+	for _, v := range app.missingVals {
+		missCount := app.missRuns.GetMissCount(v,
+			app.state.Height-app.config.LazinessCounterWindow-1,
+			app.state.Height)
+		size := app.config.LazinessCounterWindow
+		ratio := app.config.LazinessThreshold
+		if missCount >= int64(float64(size)*ratio) {
+			lazyValidators = append(lazyValidators, v)
+		}
+	}
+
+	// penalize
 	tmp, evs, _ = blockchain.PenalizeConvicts(
 		app.store,
 		app.logger,
 		app.pendingEvidences,
-		app.pendingLazyValidators,
+		lazyValidators,
 		app.config.WeightValidator, app.config.WeightDelegator,
 		app.config.PenaltyRatioM, app.config.PenaltyRatioL,
 	)

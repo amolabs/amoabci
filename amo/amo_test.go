@@ -679,14 +679,8 @@ func TestPenaltyLazyValidators(t *testing.T) {
 
 	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
-
-	app.lazinessCounter = blockchain.NewLazinessCounter(
-		app.store,
-		app.state.Height,
-		app.state.CounterDue,
-		int64(4),
-		float64(0.5),
-	)
+	app.config.LazinessCounterWindow = 4
+	app.config.LazinessThreshold = 0.5
 
 	// setup
 	//
@@ -739,16 +733,12 @@ func TestPenaltyLazyValidators(t *testing.T) {
 		LastCommitInfo: lastCommitInfo,
 	})
 	app.EndBlock(abci.RequestEndBlock{})
-	// lazinessCounter height -> 1
-	// 				   candidates -> val: 1
 
 	app.BeginBlock(abci.RequestBeginBlock{
 		Header:         abci.Header{Height: 2},
 		LastCommitInfo: lastCommitInfo,
 	})
 	app.EndBlock(abci.RequestEndBlock{})
-	// lazinessCounter height -> 2
-	// 				   candidates -> val: 2
 
 	lastCommitInfo = abci.LastCommitInfo{
 		Votes: []abci.VoteInfo{
@@ -766,24 +756,18 @@ func TestPenaltyLazyValidators(t *testing.T) {
 		LastCommitInfo: lastCommitInfo,
 	})
 	app.EndBlock(abci.RequestEndBlock{})
-	// lazinessCounter height -> 3
-	// 				   candidates -> val: 2
 
 	app.BeginBlock(abci.RequestBeginBlock{
 		Header:         abci.Header{Height: 4},
 		LastCommitInfo: lastCommitInfo,
 	})
 	app.EndBlock(abci.RequestEndBlock{})
-	// lazinessCounter height -> 4
-	// 				   candidates -> val: 2
 
 	app.BeginBlock(abci.RequestBeginBlock{
 		Header:         abci.Header{Height: 5},
 		LastCommitInfo: lastCommitInfo,
 	})
 	app.EndBlock(abci.RequestEndBlock{})
-	// lazinessCounter height -> 5
-	// 				   candidates -> nil
 
 	// after effective stake
 	stakeraes := app.store.GetEffStake(staker.PubKey().Address(), false)
