@@ -679,8 +679,8 @@ func TestPenaltyLazyValidators(t *testing.T) {
 
 	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
-	app.config.LazinessCounterWindow = 4
-	app.config.LazinessThreshold = 0.5
+	app.config.LazinessWindow = 4
+	app.config.LazinessThreshold = 2
 
 	// setup
 	//

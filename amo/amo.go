@@ -173,10 +173,10 @@ const (
 	defaultPenaltyRatioM = float64(0.3)
 	defaultPenaltyRatioL = float64(0.3)
 
-	defaultLazinessCounterWindow = int64(10000)
-	defaultLazinessThreshold     = float64(0.8)
-	defaultHibernateThreshold    = int64(100)
-	defaultHibernatePeriod       = int64(10000)
+	defaultLazinessWindow     = int64(10000)
+	defaultLazinessThreshold  = int64(8000)
+	defaultHibernateThreshold = int64(100)
+	defaultHibernatePeriod    = int64(10000)
 
 	defaultBlockBindingWindow = int64(10000)
 	defaultLockupPeriod       = int64(1000000)
@@ -200,7 +200,7 @@ func (app *AMOApp) loadAppConfig() error {
 		WeightDelegator:        defaultWeightDelegator,
 		PenaltyRatioM:          defaultPenaltyRatioM,
 		PenaltyRatioL:          defaultPenaltyRatioL,
-		LazinessCounterWindow:  defaultLazinessCounterWindow,
+		LazinessWindow:         defaultLazinessWindow,
 		LazinessThreshold:      defaultLazinessThreshold,
 		HibernateThreshold:     defaultHibernateThreshold,
 		HibernatePeriod:        defaultHibernatePeriod,
@@ -642,11 +642,9 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	lazyValidators := []crypto.Address{}
 	for _, v := range app.missingVals {
 		missCount := app.missRuns.GetMissCount(v,
-			app.state.Height-app.config.LazinessCounterWindow-1,
+			app.state.Height-app.config.LazinessWindow-1,
 			app.state.Height)
-		size := app.config.LazinessCounterWindow
-		ratio := app.config.LazinessThreshold
-		if missCount >= int64(float64(size)*ratio) {
+		if missCount >= app.config.LazinessThreshold {
 			lazyValidators = append(lazyValidators, v)
 		}
 	}

@@ -75,8 +75,8 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 	if genState.Config.PenaltyRatioL == 0 {
 		genState.Config.PenaltyRatioL = defaultPenaltyRatioL
 	}
-	if genState.Config.LazinessCounterWindow == 0 {
-		genState.Config.LazinessCounterWindow = defaultLazinessCounterWindow
+	if genState.Config.LazinessWindow == 0 {
+		genState.Config.LazinessWindow = defaultLazinessWindow
 	}
 	if genState.Config.LazinessThreshold == 0 {
 		genState.Config.LazinessThreshold = defaultLazinessThreshold
