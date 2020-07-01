@@ -83,7 +83,7 @@ func (cfg *AMOAppConfig) Check(
 	if existUpgradeProtocolCfg(txCfgMap, false) {
 		return AMOAppConfig{}, fmt.Errorf("upgrade protocol config is included")
 	}
-	for key, _ := range txCfgMap {
+	for key := range txCfgMap {
 		if _, exist := cfgMap[key]; !exist {
 			return AMOAppConfig{}, fmt.Errorf("%s doesn't exist in config map", key)
 		}
