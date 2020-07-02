@@ -40,6 +40,8 @@ var (
 	prefixIndexDelegator = []byte("delegator")
 	prefixIndexValidator = []byte("validator")
 	prefixIndexEffStake  = []byte("effstake")
+
+	prefixMissRun = []byte("miss_run")
 )
 
 type Store struct {
@@ -75,12 +77,11 @@ type Store struct {
 	// value: block height
 	indexTxBlock tmdb.DB
 
-	// lazinessCounter database
-	lazinessCounterDB tmdb.DB
-	laziCache         tmdb.DB
+	// miss runs
+	missRunDB tmdb.DB
 }
 
-func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB, lazinessCounterDB tmdb.DB) (*Store, error) {
+func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB tmdb.DB) (*Store, error) {
 	// normal noprune
 	//mt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
 	// with prune
@@ -95,9 +96,6 @@ func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB, l
 	if err != nil {
 		return nil, err
 	}
-
-	laziCache := tmdb.NewMemDB()
-	cloneDB(laziCache, lazinessCounterDB)
 
 	return &Store{
 		logger: logger,
@@ -114,8 +112,7 @@ func NewStore(logger log.Logger, checkpoint_interval int64, merkleDB, indexDB, l
 		indexBlockTx:   tmdb.NewPrefixDB(indexDB, prefixIndexBlockTx),
 		indexTxBlock:   tmdb.NewPrefixDB(indexDB, prefixIndexTxBlock),
 
-		lazinessCounterDB: lazinessCounterDB,
-		laziCache:         laziCache,
+		missRunDB: tmdb.NewPrefixDB(indexDB, prefixMissRun),
 	}, nil
 }
 
@@ -144,18 +141,6 @@ func (s Store) Purge() error {
 		return err
 	}
 
-	// laziCache
-	err = purgeDB(s.laziCache)
-	if err != nil {
-		return err
-	}
-
-	// lazinessCounterDB
-	err = purgeDB(s.lazinessCounterDB)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -174,6 +159,10 @@ func purgeDB(db tmdb.DB) error {
 	b.WriteSync()
 	b.Close()
 	return nil
+}
+
+func (s Store) GetMissRunDB() tmdb.DB {
+	return s.missRunDB
 }
 
 // MERKLE TREE SCOPE
@@ -219,7 +208,6 @@ func (s *Store) Save() ([]byte, int64, error) {
 		if ver > s.checkpoint_interval {
 			s.merkleTree.DeleteVersion(ver - s.checkpoint_interval)
 		}
-		cloneDB(s.lazinessCounterDB, s.laziCache)
 	}
 	return hash, ver, err
 }
@@ -943,15 +931,19 @@ func (s Store) GetTopStakes(max uint64, peek crypto.Address, committed bool) []*
 		var amount types.Currency
 		amount.SetBytes(key[:32])
 		holder := key[32:]
+		stake := s.GetStake(holder, committed)
+		stake.Amount = amount // NOTE: effective stake
+		// filter out hibernating validators
+		if s.GetHibernate(stake.Validator.Address(), committed) != nil {
+			continue
+		}
 		// peeking mode
 		if len(peek) > 0 {
 			if bytes.Equal(holder, peek) {
-				stakes = append(stakes, s.GetStake(holder, committed))
+				stakes = append(stakes, stake)
 				return stakes
 			}
 		} else {
-			stake := s.GetStake(holder, committed)
-			stake.Amount = amount
 			stakes = append(stakes, stake)
 		}
 		cnt++
@@ -1529,8 +1521,6 @@ func (s Store) RebuildIndex() {
 func (s Store) Close() {
 	s.merkleDB.Close()
 	s.indexDB.Close()
-	s.laziCache.Close()
-	s.lazinessCounterDB.Close()
 }
 
 func calcAdjustFactor(stakes []*types.Stake) uint {

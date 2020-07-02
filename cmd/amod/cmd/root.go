@@ -13,10 +13,8 @@ var (
 	defaultDataDir   = "data"
 	defaultConfigDir = "config"
 
-	defaultMerkleDB       = "merkle"
-	defaultIndexDB        = "index"
-	defaultIncentiveDB    = "incentive"
-	defaultGroupCounterDB = "group_counter"
+	defaultMerkleDB = "merkle"
+	defaultIndexDB  = "index"
 
 	defaultStateFile = "state.json"
 

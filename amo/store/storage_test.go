@@ -10,7 +10,7 @@ import (
 )
 
 func TestStorageSetGet(t *testing.T) {
-	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 

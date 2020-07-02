@@ -2,6 +2,7 @@ package amo
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -99,14 +100,15 @@ type AMOApp struct {
 
 	pendingEvidences      []abci.Evidence
 	pendingLazyValidators []crypto.Address
+	missingVals           []crypto.Address
 
-	lazinessCounter blockchain.LazinessCounter
 	replayPreventer blockchain.ReplayPreventer
+	missRuns        *blockchain.MissRuns
 }
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb, gcdb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -116,11 +118,8 @@ func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb, gcdb t
 	if idxdb == nil {
 		idxdb = tmdb.NewMemDB()
 	}
-	if gcdb == nil {
-		gcdb = tmdb.NewMemDB()
-	}
 
-	s, err := astore.NewStore(l, checkpoint_interval, mdb, idxdb, gcdb)
+	s, err := astore.NewStore(l, checkpoint_interval, mdb, idxdb)
 	if err != nil {
 		panic(err)
 	}
@@ -142,12 +141,11 @@ func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb, gcdb t
 	tx.StateBlockHeight = app.state.Height
 	tx.StateProtocolVersion = app.state.ProtocolVersion
 
-	app.lazinessCounter = blockchain.NewLazinessCounter(
+	app.missRuns = blockchain.NewMissRuns(
 		app.store,
-		app.state.LastHeight,
-		app.state.CounterDue,
-		app.config.LazinessCounterWindow,
-		app.config.LazinessThreshold,
+		tmdb.NewMemDB(),
+		app.config.HibernateThreshold,
+		app.config.HibernatePeriod,
 	)
 
 	app.replayPreventer = blockchain.NewReplayPreventer(
@@ -176,8 +174,10 @@ const (
 	defaultPenaltyRatioM = float64(0.3)
 	defaultPenaltyRatioL = float64(0.3)
 
-	defaultLazinessCounterWindow = int64(10000)
-	defaultLazinessThreshold     = float64(0.8)
+	defaultLazinessWindow     = int64(10000)
+	defaultLazinessThreshold  = int64(8000)
+	defaultHibernateThreshold = int64(100)
+	defaultHibernatePeriod    = int64(10000)
 
 	defaultBlockBindingWindow = int64(10000)
 	defaultLockupPeriod       = int64(1000000)
@@ -201,8 +201,10 @@ func (app *AMOApp) loadAppConfig() error {
 		WeightDelegator:        defaultWeightDelegator,
 		PenaltyRatioM:          defaultPenaltyRatioM,
 		PenaltyRatioL:          defaultPenaltyRatioL,
-		LazinessCounterWindow:  defaultLazinessCounterWindow,
+		LazinessWindow:         defaultLazinessWindow,
 		LazinessThreshold:      defaultLazinessThreshold,
+		HibernateThreshold:     defaultHibernateThreshold,
+		HibernatePeriod:        defaultHibernatePeriod,
 		BlockBindingWindow:     defaultBlockBindingWindow,
 		LockupPeriod:           defaultLockupPeriod,
 		DraftOpenCount:         defaultDraftOpenCount,
@@ -302,7 +304,8 @@ func (app *AMOApp) upgradeProtocol() []abci.Event {
 
 func (app *AMOApp) checkProtocolVersion() error {
 	if app.state.ProtocolVersion != AMOProtocolVersion {
-		return fmt.Errorf("protocol version(%d) doesn't match supported version(%d)",
+		return fmt.Errorf("software protocol version(%d) doesn't "+
+			"match state protocol version(%d)",
 			AMOProtocolVersion, app.state.ProtocolVersion)
 	}
 
@@ -351,12 +354,11 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	tx.StateBlockHeight = app.state.Height
 	tx.StateProtocolVersion = app.state.ProtocolVersion
 
-	app.lazinessCounter = blockchain.NewLazinessCounter(
+	app.missRuns = blockchain.NewMissRuns(
 		app.store,
-		app.state.LastHeight,
-		app.state.CounterDue,
-		app.config.LazinessCounterWindow,
-		app.config.LazinessThreshold,
+		tmdb.NewMemDB(),
+		app.config.HibernateThreshold,
+		app.config.HibernatePeriod,
 	)
 
 	app.replayPreventer = blockchain.NewReplayPreventer(
@@ -465,7 +467,14 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	// blockchain modules
 	app.replayPreventer.Update(app.state.Height, app.config.BlockBindingWindow)
 	app.pendingEvidences = req.GetByzantineValidators()
-	app.pendingLazyValidators, app.state.CounterDue = app.lazinessCounter.Investigate(app.state.Height, req.GetLastCommitInfo())
+
+	lci := req.GetLastCommitInfo()
+	app.missingVals = []crypto.Address{}
+	for _, v := range lci.GetVotes() {
+		if !v.GetSignedLastBlock() {
+			app.missingVals = append(app.missingVals, v.Validator.Address)
+		}
+	}
 
 	return res
 }
@@ -600,6 +609,22 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	// XXX no means to convey error to res
 
+	// update miss runs
+	tmp, err := app.missRuns.UpdateMissRuns(app.state.Height, app.missingVals)
+	if err != nil {
+		app.logger.Error(err.Error())
+	}
+	app.doValUpdate = app.doValUpdate || tmp
+
+	// wake up hibernating validators
+	vals, hibs := app.store.GetHibernates(false)
+	for i, hib := range hibs {
+		if hib.End <= app.state.Height {
+			app.store.DeleteHibernate(vals[i])
+			app.doValUpdate = true
+		}
+	}
+
 	evs, _ := blockchain.DistributeIncentive(
 		app.store,
 		app.logger,
@@ -614,17 +639,37 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	evs = app.store.LoosenLockedStakes(false)
 	res.Events = append(res.Events, evs...)
 
-	doValUpdate, evs, _ := blockchain.PenalizeConvicts(
+	// get lazy validators
+	lazyValidators := []crypto.Address{}
+	if app.state.Height%app.config.LazinessWindow == 0 {
+		missStat := app.missRuns.GetMissStat(
+			app.state.Height-app.config.LazinessWindow+1,
+			app.state.Height)
+		for valString, count := range missStat {
+			b, err := hex.DecodeString(valString)
+			if err != nil {
+				continue
+			}
+			val := crypto.Address(b)
+			if count >= app.config.LazinessThreshold {
+				lazyValidators = append(lazyValidators, val)
+			}
+		}
+	}
+
+	// penalize
+	tmp, evs, _ = blockchain.PenalizeConvicts(
 		app.store,
 		app.logger,
 		app.pendingEvidences,
-		app.pendingLazyValidators,
+		lazyValidators,
 		app.config.WeightValidator, app.config.WeightDelegator,
 		app.config.PenaltyRatioM, app.config.PenaltyRatioL,
 	)
 	res.Events = append(res.Events, evs...)
+	app.doValUpdate = app.doValUpdate || tmp
 
-	if app.doValUpdate || doValUpdate {
+	if app.doValUpdate {
 		app.doValUpdate = false
 		newVals := app.store.GetValidators(app.config.MaxValidators, false)
 		res.ValidatorUpdates = findValUpdates(app.oldVals, newVals)
@@ -663,8 +708,6 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	tx.ConfigAMOApp = app.config
 	tx.StateNextDraftID = app.state.NextDraftID
 	tx.StateProtocolVersion = app.state.ProtocolVersion
-
-	app.lazinessCounter.Set(app.config.LazinessCounterWindow, app.config.LazinessThreshold)
 
 	// sync with pruning option of merkle DB
 	// NOTE: this is a tentative workaround

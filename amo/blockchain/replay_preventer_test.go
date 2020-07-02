@@ -10,7 +10,7 @@ import (
 )
 
 func TestReplayPreventer(t *testing.T) {
-	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 
 	rp := NewReplayPreventer(s, 0, 3)

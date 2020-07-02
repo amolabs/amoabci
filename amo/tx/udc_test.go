@@ -42,7 +42,7 @@ func TestParseIssue(t *testing.T) {
 }
 
 func TestTxIssue(t *testing.T) {
-	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
@@ -109,7 +109,7 @@ func TestTxIssue(t *testing.T) {
 }
 
 func TestTxUDCBalance(t *testing.T) {
-	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
@@ -235,7 +235,7 @@ func TestParseLock(t *testing.T) {
 }
 
 func TestUDCLock(t *testing.T) {
-	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
@@ -356,7 +356,7 @@ func TestParseBurn(t *testing.T) {
 }
 
 func TestUDCBurn(t *testing.T) {
-	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), tmdb.NewMemDB())
+	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 

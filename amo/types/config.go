@@ -14,8 +14,10 @@ type AMOAppConfig struct {
 	TxReward               Currency `json:"tx_reward"`
 	PenaltyRatioM          float64  `json:"penalty_ratio_m"` // malicious validator
 	PenaltyRatioL          float64  `json:"penalty_ratio_l"` // lazy validators
-	LazinessCounterWindow  int64    `json:"laziness_counter_window"`
-	LazinessThreshold      float64  `json:"laziness_threshold"`
+	LazinessWindow         int64    `json:"laziness_window"`
+	LazinessThreshold      int64    `json:"laziness_threshold"`
+	HibernateThreshold     int64    `json:"hibernate_threshold"`
+	HibernatePeriod        int64    `json:"hibernate_period"`
 	BlockBindingWindow     int64    `json:"block_binding_window"`
 	LockupPeriod           int64    `json:"lockup_period"`
 	DraftOpenCount         int64    `json:"draft_open_count"`
@@ -81,7 +83,7 @@ func (cfg *AMOAppConfig) Check(
 	if existUpgradeProtocolCfg(txCfgMap, false) {
 		return AMOAppConfig{}, fmt.Errorf("upgrade protocol config is included")
 	}
-	for key, _ := range txCfgMap {
+	for key := range txCfgMap {
 		if _, exist := cfgMap[key]; !exist {
 			return AMOAppConfig{}, fmt.Errorf("%s doesn't exist in config map", key)
 		}
@@ -101,8 +103,10 @@ func (cfg *AMOAppConfig) Check(
 		cmp(tmpCfg.TxReward, ">=", *Zero) &&
 		cmp(tmpCfg.PenaltyRatioM, ">", float64(0)) &&
 		cmp(tmpCfg.PenaltyRatioL, ">", float64(0)) &&
-		cmp(tmpCfg.LazinessCounterWindow, ">=", int64(10000)) &&
-		cmp(tmpCfg.LazinessThreshold, ">", float64(0)) &&
+		cmp(tmpCfg.LazinessWindow, ">=", int64(10000)) &&
+		cmp(tmpCfg.LazinessThreshold, ">", int64(0)) &&
+		cmp(tmpCfg.HibernateThreshold, ">", int64(0)) &&
+		cmp(tmpCfg.HibernatePeriod, ">", int64(0)) &&
 		cmp(tmpCfg.BlockBindingWindow, ">=", int64(10000)) &&
 		cmp(tmpCfg.LockupPeriod, ">=", int64(10000)) &&
 		cmp(tmpCfg.DraftOpenCount, ">=", int64(10000)) &&

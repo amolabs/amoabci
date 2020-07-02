@@ -118,8 +118,6 @@ func initApp(amoDirPath string) (*amo.AMOApp, error) {
 		tmdb.BackendType(config.DBBackend), dataDirPath)
 	indexDB := tmdb.NewDB(defaultIndexDB,
 		tmdb.BackendType(config.DBBackend), dataDirPath)
-	groupCounterDB := tmdb.NewDB(defaultGroupCounterDB,
-		tmdb.BackendType(config.DBBackend), dataDirPath)
 
 	// logger
 	appLogger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
@@ -130,7 +128,7 @@ func initApp(amoDirPath string) (*amo.AMOApp, error) {
 	// TODO: read checkpoint_interval from config
 	app := amo.NewAMOApp(
 		stateFile, 100,
-		merkleDB, indexDB, groupCounterDB,
+		merkleDB, indexDB,
 		appLogger.With("module", "abci-app"),
 	)
 
