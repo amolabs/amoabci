@@ -90,5 +90,5 @@ check_block_height "$stake_height"
 echo "[shoud SUCCEED] withdraw staked coins for val2, val3, val4, val5, val6"
 $ROOT/withdraw.sh 2 "$NODENUM" "$AMO100" "ok"
 
-echo "tu1's stake SHOULD be 2560000 mote"
+echo "tu1's stake SHOULD be 1280000 mote"
 $ROOT/penalty_check.sh
