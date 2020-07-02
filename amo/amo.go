@@ -2,6 +2,7 @@ package amo
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -640,12 +641,19 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 
 	// get lazy validators
 	lazyValidators := []crypto.Address{}
-	for _, v := range app.missingVals {
-		missCount := app.missRuns.GetMissCount(v,
-			app.state.Height-app.config.LazinessWindow-1,
+	if app.state.Height%app.config.LazinessWindow == 0 {
+		missStat := app.missRuns.GetMissStat(
+			app.state.Height-app.config.LazinessWindow+1,
 			app.state.Height)
-		if missCount >= app.config.LazinessThreshold {
-			lazyValidators = append(lazyValidators, v)
+		for valString, count := range missStat {
+			b, err := hex.DecodeString(valString)
+			if err != nil {
+				continue
+			}
+			val := crypto.Address(b)
+			if count >= app.config.LazinessThreshold {
+				lazyValidators = append(lazyValidators, val)
+			}
 		}
 	}
 

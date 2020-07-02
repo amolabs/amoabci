@@ -167,46 +167,43 @@ func min(a, b int64) int64 {
 	}
 }
 
-func (m MissRuns) GetMissCount(val crypto.Address, rangeStart, rangeEnd int64) int64 {
+func (m MissRuns) GetMissStat(rangeStart, rangeEnd int64) map[string]int64 {
+	stat := map[string]int64{}
 	runDB := m.store.GetMissRunDB()
-	b := make(crypto.Address, crypto.AddressSize+8)
-	copy(b, val)
-	itrEnd := append(b[:crypto.AddressSize],
-		[]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}...)
-	itr, err := runDB.ReverseIterator(val, itrEnd)
+
+	itr, err := runDB.Iterator(nil, nil)
 	if err != nil {
 		fmt.Println(err)
-		return 0
+		return stat
 	}
 	defer itr.Close()
 
-	count := int64(0)
 	for ; itr.Valid(); itr.Next() {
 		k := itr.Key()
-		runVal := k[:crypto.AddressSize]
-		if !bytes.Equal(runVal, val) {
-			return count
-		}
-
+		val := crypto.Address(k[:crypto.AddressSize])
 		b := k[crypto.AddressSize:]
 		start := int64(binary.BigEndian.Uint64(b))
 		if start > rangeEnd {
 			continue
 		}
-
 		b = itr.Value()
 		length := int64(binary.BigEndian.Uint64(b))
 		if length == 0 {
 			length = rangeEnd - start + 1
 		}
 		if start+length <= rangeStart {
-			break
+			continue
 		}
+
 		m1 := max(start, rangeStart)
 		m2 := min(start+length-1, rangeEnd)
-
-		count += m2 - m1 + 1
+		count := m2 - m1 + 1
+		if stat[val.String()] == 0 {
+			stat[val.String()] = count
+		} else {
+			stat[val.String()] += count
+		}
 	}
 
-	return count
+	return stat
 }

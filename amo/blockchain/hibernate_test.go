@@ -1,6 +1,8 @@
 package blockchain
 
 import (
+	"bytes"
+	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -132,7 +134,7 @@ func TestHibernate(t *testing.T) {
 	assert.Equal(t, int64(10), length)
 }
 
-func TestMissCount(t *testing.T) {
+func TestMissStat(t *testing.T) {
 	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
@@ -144,31 +146,37 @@ func TestMissCount(t *testing.T) {
 	}
 
 	val1 := makeValAddr("val1")
-	mvals := []crypto.Address{}
+	val2 := makeValAddr("val2")
+	mval00 := []crypto.Address{}
 	mval10 := []crypto.Address{val1}
+	mval12 := []crypto.Address{val1, val2}
+	mval02 := []crypto.Address{val2}
 
-	mr.UpdateMissRuns(10, mval10)
-	//mr.UpdateMissRuns(11, mval10)
-	//mr.UpdateMissRuns(12, mval10)
-	//mr.UpdateMissRuns(13, mval10)
-	//mr.UpdateMissRuns(14, mval10)
-	mr.UpdateMissRuns(15, mvals)
-
-	mr.UpdateMissRuns(20, mval10)
-	//mr.UpdateMissRuns(21, mval10)
-	//mr.UpdateMissRuns(22, mval10)
-	//mr.UpdateMissRuns(23, mval10)
-	//mr.UpdateMissRuns(24, mval10)
-	mr.UpdateMissRuns(25, mvals)
-
+	mr.UpdateMissRuns(10, mval00)
+	mr.UpdateMissRuns(11, mval10)
+	mr.UpdateMissRuns(12, mval10)
+	mr.UpdateMissRuns(13, mval10)
+	mr.UpdateMissRuns(14, mval12)
+	mr.UpdateMissRuns(15, mval12)
+	mr.UpdateMissRuns(16, mval12)
+	mr.UpdateMissRuns(17, mval02)
+	mr.UpdateMissRuns(18, mval02)
+	mr.UpdateMissRuns(19, mval12)
+	mr.UpdateMissRuns(20, mval12)
+	mr.UpdateMissRuns(21, mval02)
+	mr.UpdateMissRuns(22, mval02)
+	mr.UpdateMissRuns(23, mval02)
+	mr.UpdateMissRuns(24, mval02)
+	mr.UpdateMissRuns(25, mval12)
+	mr.UpdateMissRuns(26, mval10)
+	mr.UpdateMissRuns(27, mval10)
+	mr.UpdateMissRuns(28, mval02)
+	mr.UpdateMissRuns(29, mval12)
 	mr.UpdateMissRuns(30, mval10)
-	//mr.UpdateMissRuns(31, mval10)
-	//mr.UpdateMissRuns(32, mval10)
-	//mr.UpdateMissRuns(33, mval10)
-	//mr.UpdateMissRuns(34, mval10)
 
-	count := mr.GetMissCount(val1, 10, 22)
-	assert.Equal(t, int64(8), count)
-	count = mr.GetMissCount(val1, 12, 34)
-	assert.Equal(t, int64(13), count)
+	stat := mr.GetMissStat(13, 30)
+	val, _ := hex.DecodeString(val1.String())
+	assert.True(t, bytes.Equal(val1, val))
+	assert.Equal(t, int64(11), stat[val1.String()])
+	assert.Equal(t, int64(14), stat[val2.String()])
 }

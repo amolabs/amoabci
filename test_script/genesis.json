@@ -33,8 +33,10 @@
         "min_staking_unit": "10000",
         "penalty_ratio_m": 0.5,
         "penalty_ratio_l": 0.5,
-        "laziness_counter_window": 4, 
-        "laziness_threshold": 0.5,
+        "laziness_window": 10, 
+        "laziness_threshold": 5,
+        "hibernate_threshold": 5,
+        "hibernate_period": 20,
         "block_binding_window":25,
         "lockup_period": 20 
     },
