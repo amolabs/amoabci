@@ -6,7 +6,7 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 )
 
-type DIDDocument struct {
+type DIDEntry struct {
 	Owner    crypto.Address  `json:"owner"`
 	Document json.RawMessage `json:"document"`
 }

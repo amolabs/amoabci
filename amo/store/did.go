@@ -14,28 +14,28 @@ func makeDIDKey(did []byte) []byte {
 	return append(prefixDID, did...)
 }
 
-func (s Store) SetDIDDocument(did []byte, value *types.DIDDocument) error {
+func (s Store) SetDIDEntry(id []byte, value *types.DIDEntry) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
-	s.set(makeParcelKey(did), b)
+	s.set(makeDIDKey(id), b)
 	return nil
 }
 
-func (s Store) GetDIDDocument(did []byte, committed bool) *types.DIDDocument {
-	b := s.get(makeDIDKey(did), committed)
+func (s Store) GetDIDEntry(id []byte, committed bool) *types.DIDEntry {
+	b := s.get(makeDIDKey(id), committed)
 	if len(b) == 0 {
 		return nil
 	}
-	var doc types.DIDDocument
-	err := json.Unmarshal(b, &doc)
+	var entry types.DIDEntry
+	err := json.Unmarshal(b, &entry)
 	if err != nil {
 		return nil
 	}
-	return &doc
+	return &entry
 }
 
-func (s Store) DeleteDIDDocument(did []byte) {
-	s.remove(makeDIDKey(did))
+func (s Store) DeleteDIDEntry(id []byte) {
+	s.remove(makeDIDKey(id))
 }
