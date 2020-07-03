@@ -482,3 +482,34 @@ func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 
 	return
 }
+
+func queryDIDEntry(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	var id string
+	err := json.Unmarshal(queryData, &id)
+	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	entry := s.GetDIDEntry(id, true)
+	if entry == nil {
+		res.Log = "error: no such did entry"
+		res.Code = code.QueryCodeNoMatch
+		return
+	}
+
+	jsonstr, _ := json.Marshal(entry)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}
