@@ -16,12 +16,12 @@ func TestDIDGetSet(t *testing.T) {
 
 	var jsonDoc = []byte(`{"jsonkey":"jsonvalue"}`)
 
-	entry := s.GetDIDEntry([]byte("myid"), false)
+	entry := s.GetDIDEntry("myid", false)
 	assert.Nil(t, entry)
 	entry = &types.DIDEntry{Owner: makeAccAddr("me"), Document: jsonDoc}
-	err = s.SetDIDEntry([]byte("myid"), entry)
+	err = s.SetDIDEntry("myid", entry)
 	assert.NoError(t, err)
-	_entry := s.GetDIDEntry([]byte("myid"), false)
+	_entry := s.GetDIDEntry("myid", false)
 	assert.NotNil(t, _entry)
 	assert.Equal(t, entry, _entry)
 	assert.Equal(t, makeAccAddr("me"), _entry.Owner)

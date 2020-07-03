@@ -10,11 +10,11 @@ var (
 	prefixDID = []byte("did:")
 )
 
-func makeDIDKey(did []byte) []byte {
-	return append(prefixDID, did...)
+func makeDIDKey(did string) []byte {
+	return append(prefixDID, []byte(did)...)
 }
 
-func (s Store) SetDIDEntry(id []byte, value *types.DIDEntry) error {
+func (s Store) SetDIDEntry(id string, value *types.DIDEntry) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -23,7 +23,7 @@ func (s Store) SetDIDEntry(id []byte, value *types.DIDEntry) error {
 	return nil
 }
 
-func (s Store) GetDIDEntry(id []byte, committed bool) *types.DIDEntry {
+func (s Store) GetDIDEntry(id string, committed bool) *types.DIDEntry {
 	b := s.get(makeDIDKey(id), committed)
 	if len(b) == 0 {
 		return nil
@@ -36,6 +36,6 @@ func (s Store) GetDIDEntry(id []byte, committed bool) *types.DIDEntry {
 	return &entry
 }
 
-func (s Store) DeleteDIDEntry(id []byte) {
+func (s Store) DeleteDIDEntry(id string) {
 	s.remove(makeDIDKey(id))
 }
