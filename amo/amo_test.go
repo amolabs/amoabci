@@ -1573,3 +1573,38 @@ func prepForGov(s *store.Store, seed string, amount uint64) crypto.Address {
 
 	return holder.PubKey().Address()
 }
+
+func TestDID(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	var req abci.RequestQuery
+	var res abci.ResponseQuery
+	var jsonstr []byte
+
+	req = abci.RequestQuery{Path: "/did"}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoKey, res.Code)
+
+	var jsonDoc = []byte(`{"jsonkey":"jsonvalue"}`)
+	entry := &types.DIDEntry{Owner: makeAccAddr("me"), Document: jsonDoc}
+	app.store.SetDIDEntry("myid", entry)
+
+	req = abci.RequestQuery{Path: "/did", Data: []byte(`"myid"`)}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
+	app.store.Save()
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeOK, res.Code)
+	assert.Equal(t, []byte(`"myid"`), res.Key)
+	jsonstr, _ = json.Marshal(entry)
+	assert.Equal(t, jsonstr, res.Value)
+
+	app.store.DeleteDIDEntry("myid")
+	app.store.Save()
+
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
+}

@@ -426,6 +426,8 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 		resQuery = queryRequest(app.store, reqQuery.Data)
 	case "usage":
 		resQuery = queryUsage(app.store, reqQuery.Data)
+	case "did":
+		resQuery = queryDIDEntry(app.store, reqQuery.Data)
 	default:
 		resQuery.Code = code.QueryCodeBadPath
 		return resQuery

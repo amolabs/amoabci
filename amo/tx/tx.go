@@ -181,6 +181,18 @@ func classifyTx(base TxBase) Tx {
 			TxBase: base,
 			Param:  param,
 		}
+	case "claim":
+		param, _ := parseClaimParam(base.Payload)
+		t = &TxClaim{
+			TxBase: base,
+			Param:  param,
+		}
+	case "dismiss":
+		param, _ := parseDismissParam(base.Payload)
+		t = &TxDismiss{
+			TxBase: base,
+			Param:  param,
+		}
 	case "issue":
 		param, _ := parseIssueParam(base.Payload)
 		t = &TxIssue{
