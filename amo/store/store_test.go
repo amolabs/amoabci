@@ -585,7 +585,7 @@ func TestMerkleTree(t *testing.T) {
 	assert.NoError(t, err)
 
 	// make transactions to put into merkleTree
-	hash := "144d3380c65caa4991eeb365b907f7de609dab65301017ae985deca101ea73c2"
+	hash := "39c7c94adc4786629137ec83cadd2753dafd23796e36af70c4154602555ab7d3"
 	expectedHash, err := hex.DecodeString(hash)
 	assert.NoError(t, err)
 

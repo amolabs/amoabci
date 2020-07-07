@@ -1,6 +1,7 @@
 package amo
 
 import (
+	"bytes"
 	"fmt"
 )
 
@@ -33,6 +34,51 @@ func (app *AMOApp) MigrateToX() {
 	}
 
 	app.migrateTo(protocolVersion, changes, func() error { return nil })
+}
+
+func (app *AMOApp) MigrateTo4() {
+	protocolVersion := uint64(0x4)
+	changes := []string{
+		"shorten store key 'balance:' -> 'bal:'",
+		"set key-value with new prefix",
+		"remove exisiting key-value with old prefix",
+	}
+
+	app.migrateTo(protocolVersion, changes, func() error {
+		// ignore when merkle tree doesn't have available versions
+		merkleVersion := app.store.GetMerkleVersion()
+		if merkleVersion == int64(0) {
+			return nil
+		}
+
+		mt := app.store.GetMerkleTree()
+
+		imt, err := mt.GetImmutable(merkleVersion)
+		if err != nil {
+			return err
+		}
+
+		beforeKeyPrefix := []byte("balance:")
+		afterKeyPrefix := []byte("bal:")
+
+		imt.IterateRangeInclusive(beforeKeyPrefix, nil, true, func(key, value []byte, version int64) bool {
+			if !bytes.HasPrefix(key, beforeKeyPrefix) {
+				return false
+			}
+
+			beforeKey := key
+			afterKey := append(afterKeyPrefix, key[len(beforeKeyPrefix):]...)
+
+			app.logger.Debug(Migration, "store:set", fmt.Sprintf("%x", afterKey))
+			mt.Set(afterKey, value)
+			app.logger.Debug(Migration, "store:remove", fmt.Sprintf("%x", beforeKey))
+			mt.Remove(beforeKey)
+
+			return false
+		})
+
+		return nil
+	})
 }
 
 /* sample code for migration

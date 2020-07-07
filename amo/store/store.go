@@ -28,7 +28,7 @@ const (
 )
 
 var (
-	prefixBalance  = []byte("balance:")
+	prefixBalance  = []byte("bal:")
 	prefixStake    = []byte("stake:")
 	prefixDraft    = []byte("draft:")
 	prefixVote     = []byte("vote:")
@@ -249,6 +249,10 @@ func (s Store) Root() []byte {
 
 func (s Store) Verify(key []byte) (bool, error) {
 	return true, nil
+}
+
+func (s Store) GetMerkleTree() *iavl.MutableTree {
+	return s.merkleTree
 }
 
 func (s Store) getImmutableTree(committed bool) (*iavl.ImmutableTree, error) {

@@ -450,8 +450,8 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 		panic(err)
 	}
 
-	// migrate to X if needed
-	// app.MigrateToX()
+	// migrate to 4
+	app.MigrateTo4()
 
 	app.doValUpdate = false
 	app.oldVals = app.store.GetValidators(app.config.MaxValidators, false)
