@@ -1,6 +1,8 @@
 package amo
 
 import (
+	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -101,6 +103,13 @@ func TestHibernate(t *testing.T) {
 	reqEB = makeEB(29)
 	app.BeginBlock(reqBB)
 	res = app.EndBlock(reqEB)
+	// check ev
+	assert.Equal(t, "wakeup", res.Events[0].Type)
+	var addrBytes crypto.Address
+	err := json.Unmarshal(res.Events[0].Attributes[0].Value, &addrBytes)
+	assert.NoError(t, err)
+	assert.True(t, bytes.Equal(makeValAddr("val1"), addrBytes))
+	// check hib
 	hib = app.store.GetHibernate(makeValAddr("val1"), false)
 	assert.Nil(t, hib)
 	assert.Equal(t, 1, len(res.ValidatorUpdates))

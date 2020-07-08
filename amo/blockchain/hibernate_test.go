@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	tmdb "github.com/tendermint/tm-db"
@@ -56,19 +57,19 @@ func TestHibernate(t *testing.T) {
 	hib := s.GetHibernate(val1, false)
 	assert.Nil(t, hib)
 
-	_, err = mr.UpdateMissRuns(3, mvals)
+	_, _, err = mr.UpdateMissRuns(3, mvals)
 	assert.NoError(t, err)
 	start, length = mr.getLastMissRun(val1)
 	assert.Equal(t, int64(0), start)
 	assert.Equal(t, int64(0), length)
 
-	_, err = mr.UpdateMissRuns(4, mval10)
+	_, _, err = mr.UpdateMissRuns(4, mval10)
 	assert.NoError(t, err)
-	_, err = mr.UpdateMissRuns(5, mval12)
+	_, _, err = mr.UpdateMissRuns(5, mval12)
 	assert.NoError(t, err)
-	_, err = mr.UpdateMissRuns(6, mval12)
+	_, _, err = mr.UpdateMissRuns(6, mval12)
 	assert.NoError(t, err)
-	_, err = mr.UpdateMissRuns(7, mval02)
+	_, _, err = mr.UpdateMissRuns(7, mval02)
 	assert.NoError(t, err)
 	start, length = mr.getLastMissRun(val1)
 	assert.Equal(t, int64(4), start)
@@ -78,9 +79,9 @@ func TestHibernate(t *testing.T) {
 	assert.Equal(t, int64(0), length) // unfinished run has length zero
 
 	// alternative history from height 6
-	_, err = mr.UpdateMissRuns(6, mvals)
+	_, _, err = mr.UpdateMissRuns(6, mvals)
 	assert.NoError(t, err)
-	_, err = mr.UpdateMissRuns(7, mval02)
+	_, _, err = mr.UpdateMissRuns(7, mval02)
 	assert.NoError(t, err)
 	start, length = mr.getLastMissRun(val1)
 	assert.Equal(t, int64(4), start)
@@ -90,7 +91,7 @@ func TestHibernate(t *testing.T) {
 	assert.Equal(t, int64(0), length) // unfinished run has length zero
 
 	// history gap does not break unfinished run
-	_, err = mr.UpdateMissRuns(9, mval02)
+	_, _, err = mr.UpdateMissRuns(9, mval02)
 	assert.NoError(t, err)
 	start, length = mr.getLastMissRun(val2)
 	assert.Equal(t, int64(7), start)
@@ -99,13 +100,13 @@ func TestHibernate(t *testing.T) {
 	// hibernate test
 	// val came back before hibernation
 	for h := int64(10); h < 19; h++ {
-		_, err = mr.UpdateMissRuns(h, mval10)
+		_, _, err = mr.UpdateMissRuns(h, mval10)
 		assert.NoError(t, err)
 	}
 	start, length = mr.getLastMissRun(val1)
 	assert.Equal(t, int64(10), start)
 	assert.Equal(t, int64(0), length)
-	_, err = mr.UpdateMissRuns(20, mvals) // empty missing validators
+	_, _, err = mr.UpdateMissRuns(20, mvals) // empty missing validators
 	start, length = mr.getLastMissRun(val1)
 	assert.Equal(t, int64(10), start)
 	assert.Equal(t, int64(10), length)
@@ -114,10 +115,15 @@ func TestHibernate(t *testing.T) {
 
 	// hibernate test
 	// val goes to hibernate at height 19
+	var evs []abci.Event
 	for h := int64(10); h < 20; h++ {
-		_, err = mr.UpdateMissRuns(h, mval10)
+		_, evs, err = mr.UpdateMissRuns(h, mval10)
 		assert.NoError(t, err)
 	}
+	assert.Equal(t, "hibernate", evs[0].Type)
+	assert.Equal(t, []byte("validator"), evs[0].Attributes[0].Key)
+	assert.Equal(t, []byte("19"), evs[0].Attributes[1].Value)
+	assert.Equal(t, []byte("119"), evs[0].Attributes[2].Value)
 	start, length = mr.getLastMissRun(val1)
 	assert.Equal(t, int64(10), start)
 	assert.Equal(t, int64(0), length)
@@ -128,7 +134,7 @@ func TestHibernate(t *testing.T) {
 	// one more height to close the run:
 	// Since val1 is set to hibernate at height 19, it will not be included in
 	// the missed validators at height 20.
-	_, err = mr.UpdateMissRuns(20, mvals)
+	_, _, err = mr.UpdateMissRuns(20, mvals)
 	start, length = mr.getLastMissRun(val1)
 	assert.Equal(t, int64(10), start)
 	assert.Equal(t, int64(10), length)

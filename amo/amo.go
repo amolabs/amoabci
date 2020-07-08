@@ -607,27 +607,35 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	}
 }
 
-// TODO: use req.Height
 func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	// XXX no means to convey error to res
 
 	// update miss runs
-	tmp, err := app.missRuns.UpdateMissRuns(app.state.Height, app.missingVals)
+	doValUpdate, evs, err := app.missRuns.UpdateMissRuns(app.state.Height, app.missingVals)
 	if err != nil {
 		app.logger.Error(err.Error())
 	}
-	app.doValUpdate = app.doValUpdate || tmp
+	app.doValUpdate = app.doValUpdate || doValUpdate
+	res.Events = append(res.Events, evs...)
 
 	// wake up hibernating validators
 	vals, hibs := app.store.GetHibernates(false)
 	for i, hib := range hibs {
 		if hib.End <= app.state.Height {
 			app.store.DeleteHibernate(vals[i])
+			addressJson, _ := json.Marshal(vals[i])
+			ev := abci.Event{
+				Type: "wakeup",
+				Attributes: []kv.Pair{
+					{Key: []byte("validator"), Value: addressJson},
+				},
+			}
+			res.Events = append(res.Events, ev)
 			app.doValUpdate = true
 		}
 	}
 
-	evs, _ := blockchain.DistributeIncentive(
+	evs, _ = blockchain.DistributeIncentive(
 		app.store,
 		app.logger,
 		app.config.WeightValidator, app.config.WeightDelegator,
@@ -660,7 +668,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 	}
 
 	// penalize
-	tmp, evs, _ = blockchain.PenalizeConvicts(
+	doValUpdate, evs, _ = blockchain.PenalizeConvicts(
 		app.store,
 		app.logger,
 		app.pendingEvidences,
@@ -669,7 +677,7 @@ func (app *AMOApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock
 		app.config.PenaltyRatioM, app.config.PenaltyRatioL,
 	)
 	res.Events = append(res.Events, evs...)
-	app.doValUpdate = app.doValUpdate || tmp
+	app.doValUpdate = app.doValUpdate || doValUpdate
 
 	if app.doValUpdate {
 		app.doValUpdate = false

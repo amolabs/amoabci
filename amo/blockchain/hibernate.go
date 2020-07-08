@@ -3,9 +3,12 @@ package blockchain
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/kv"
 	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo/store"
@@ -34,7 +37,7 @@ func NewMissRuns(store *store.Store, db tmdb.DB, threshold, period int64) *MissR
 	}
 }
 
-func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpdate bool, err error) {
+func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpdate bool, evs []abci.Event, err error) {
 	doValUpdate = false
 
 	runDB := m.store.GetMissRunDB()
@@ -63,7 +66,7 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 		}
 	}
 
-	// process input missing validators
+	// process given missing validators
 	for _, v := range vals {
 		hit := false
 		for i, r := range unfinishedRuns {
@@ -84,6 +87,18 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 						End:   height + m.hibernatePeriod,
 					}
 					m.store.SetHibernate(runVal, &hib)
+					addressJson, _ := json.Marshal(vals[i])
+					startJson, _ := json.Marshal(height)
+					endJson, _ := json.Marshal(height + m.hibernatePeriod)
+					ev := abci.Event{
+						Type: "hibernate",
+						Attributes: []kv.Pair{
+							{Key: []byte("validator"), Value: addressJson},
+							{Key: []byte("start"), Value: startJson},
+							{Key: []byte("end"), Value: endJson},
+						},
+					}
+					evs = append(evs, ev)
 					doValUpdate = true
 				}
 				l := len(unfinishedRuns)
