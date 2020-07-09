@@ -1574,7 +1574,7 @@ func prepForGov(s *store.Store, seed string, amount uint64) crypto.Address {
 	return holder.PubKey().Address()
 }
 
-func TestDID(t *testing.T) {
+func TestQueryDID(t *testing.T) {
 	setUpTest(t)
 	defer tearDownTest(t)
 
@@ -1603,6 +1603,42 @@ func TestDID(t *testing.T) {
 	assert.Equal(t, jsonstr, res.Value)
 
 	app.store.DeleteDIDEntry("myid")
+	app.store.Save()
+
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
+}
+
+func TestQueryHibernate(t *testing.T) {
+	setUpTest(t)
+	defer tearDownTest(t)
+
+	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	var req abci.RequestQuery
+	var res abci.ResponseQuery
+	var jsonstr []byte
+
+	req = abci.RequestQuery{Path: "/hibernate"}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoKey, res.Code)
+
+	hib := &types.Hibernate{Start: 100, End: 200}
+	app.store.SetHibernate(makeValAddr("val1"), hib)
+
+	jsonstr, _ = json.Marshal(makeValAddr("val1"))
+	req = abci.RequestQuery{Path: "/hibernate", Data: jsonstr}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
+
+	app.store.Save()
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeOK, res.Code)
+	assert.Equal(t, jsonstr, res.Key)
+	jsonstr, _ = json.Marshal(hib)
+	assert.Equal(t, jsonstr, res.Value)
+
+	app.store.DeleteHibernate(makeValAddr("val1"))
 	app.store.Save()
 
 	res = app.Query(req)

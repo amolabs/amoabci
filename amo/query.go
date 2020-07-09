@@ -217,6 +217,36 @@ func queryValidator(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	return
 }
 
+func queryHibernate(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
+	if len(queryData) == 0 {
+		res.Log = "error: no query_data"
+		res.Code = code.QueryCodeNoKey
+		return
+	}
+
+	var addr crypto.Address
+	err := json.Unmarshal(queryData, &addr)
+	if err != nil {
+		res.Log = "error: unmarshal"
+		res.Code = code.QueryCodeBadKey
+		return
+	}
+
+	hib := s.GetHibernate(addr, true)
+	if hib == nil {
+		res.Code = code.QueryCodeNoMatch
+		res.Key = queryData
+		return
+	}
+	jsonstr, _ := json.Marshal(hib)
+	res.Log = string(jsonstr)
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+	res.Key = queryData
+
+	return
+}
+
 func queryStorage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	if len(queryData) == 0 {
 		res.Log = "error: no query_data"
