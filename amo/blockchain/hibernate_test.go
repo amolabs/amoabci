@@ -43,6 +43,7 @@ func TestHibernate(t *testing.T) {
 		store:              s,
 		hibernateThreshold: 10,
 		hibernatePeriod:    100,
+		lazinessWindow:     10,
 	}
 
 	var start, length int64
@@ -149,6 +150,7 @@ func TestMissStat(t *testing.T) {
 		store:              s,
 		hibernateThreshold: 10,
 		hibernatePeriod:    100,
+		lazinessWindow:     20, // dummy value
 	}
 
 	val1 := makeValAddr("val1")
@@ -185,4 +187,138 @@ func TestMissStat(t *testing.T) {
 	assert.True(t, bytes.Equal(val1, val))
 	assert.Equal(t, int64(11), stat[val1.String()])
 	assert.Equal(t, int64(14), stat[val2.String()])
+}
+
+func TestCleanUpFinishedRuns(t *testing.T) {
+	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
+	assert.NotNil(t, s)
+
+	// test case for lazinessWindow > hibernateThreshold
+	mr := MissRuns{
+		store:              s,
+		hibernateThreshold: 10,
+		hibernatePeriod:    100,
+		lazinessWindow:     12,
+	}
+	val1 := makeValAddr("val1")
+	val2 := makeValAddr("val2")
+	mval00 := []crypto.Address{}
+	mval10 := []crypto.Address{val1}
+	mval12 := []crypto.Address{val1, val2}
+	// mval02 := []crypto.Address{val2}
+
+	mr.UpdateMissRuns(10, mval00)
+
+	stat := mr.GetMissStat(10, 10)
+	assert.Empty(t, stat)
+
+	// val1: hibernating
+	// val2: non-hibernating
+	mr.UpdateMissRuns(11, mval10)
+	mr.UpdateMissRuns(12, mval12)
+	mr.UpdateMissRuns(13, mval12)
+	mr.UpdateMissRuns(14, mval12)
+	mr.UpdateMissRuns(15, mval12)
+	mr.UpdateMissRuns(16, mval12)
+	mr.UpdateMissRuns(17, mval12)
+	mr.UpdateMissRuns(18, mval12)
+	mr.UpdateMissRuns(19, mval12)
+	mr.UpdateMissRuns(20, mval12) // val1 hibernates
+
+	stat = mr.GetMissStat(10, 20)
+	assert.Equal(t, int64(10), stat[val1.String()])
+	assert.Equal(t, int64(9), stat[val2.String()])
+
+	mr.UpdateMissRuns(21, mval00)
+	stat = mr.GetMissStat(10, 21)
+	_, exist := stat[val1.String()]
+	assert.True(t, exist)
+	_, exist = stat[val2.String()]
+	assert.True(t, exist)
+
+	mr.UpdateMissRuns(22, mval00)
+	stat = mr.GetMissStat(10, 22)
+	_, exist = stat[val1.String()]
+	assert.True(t, exist)
+	_, exist = stat[val2.String()]
+	assert.True(t, exist)
+
+	mr.UpdateMissRuns(23, mval00) // val1's missRun gets removed
+	stat = mr.GetMissStat(10, 23)
+	_, exist = stat[val1.String()]
+	assert.False(t, exist)
+	_, exist = stat[val2.String()]
+	assert.True(t, exist)
+
+	mr.UpdateMissRuns(24, mval00) // val2's missRun gets removed
+	stat = mr.GetMissStat(10, 24)
+	_, exist = stat[val1.String()]
+	assert.False(t, exist)
+	_, exist = stat[val2.String()]
+	assert.False(t, exist)
+	assert.Empty(t, stat)
+
+	// test case for lazinessWindow < hibernateThreshold
+	mr = MissRuns{
+		store:              s,
+		hibernateThreshold: 12,
+		hibernatePeriod:    100,
+		lazinessWindow:     10,
+	}
+
+	mr.UpdateMissRuns(10, mval00)
+
+	stat = mr.GetMissStat(10, 10)
+	assert.Empty(t, stat)
+
+	// val1: hibernating
+	// val2: non-hibernating
+	mr.UpdateMissRuns(11, mval10)
+	mr.UpdateMissRuns(12, mval12)
+	mr.UpdateMissRuns(13, mval12)
+	mr.UpdateMissRuns(14, mval12)
+	mr.UpdateMissRuns(15, mval12)
+	mr.UpdateMissRuns(16, mval12)
+	mr.UpdateMissRuns(17, mval12)
+	mr.UpdateMissRuns(18, mval12)
+	mr.UpdateMissRuns(19, mval12)
+	mr.UpdateMissRuns(20, mval12)
+
+	stat = mr.GetMissStat(10, 20)
+	assert.Equal(t, int64(10), stat[val1.String()])
+	assert.Equal(t, int64(9), stat[val2.String()])
+
+	mr.UpdateMissRuns(21, mval12)
+
+	stat = mr.GetMissStat(10, 21)
+	_, exist = stat[val1.String()]
+	assert.True(t, exist)
+	_, exist = stat[val2.String()]
+	assert.True(t, exist)
+
+	mr.UpdateMissRuns(22, mval12) // val1 hibernates
+
+	stat = mr.GetMissStat(10, 22)
+	_, exist = stat[val1.String()]
+	assert.True(t, exist)
+	_, exist = stat[val2.String()]
+	assert.True(t, exist)
+
+	mr.UpdateMissRuns(23, mval00)
+
+	stat = mr.GetMissStat(10, 23)
+	_, exist = stat[val1.String()]
+	assert.True(t, exist)
+	_, exist = stat[val2.String()]
+	assert.True(t, exist)
+
+	mr.UpdateMissRuns(24, mval00) // val1, val2's missRuns get removed
+
+	stat = mr.GetMissStat(10, 24)
+	_, exist = stat[val1.String()]
+	assert.False(t, exist)
+	_, exist = stat[val2.String()]
+	assert.False(t, exist)
+	assert.Empty(t, stat)
 }
