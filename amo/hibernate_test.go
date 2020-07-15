@@ -62,7 +62,7 @@ func TestHibernate(t *testing.T) {
 	assert.NotNil(t, app)
 	app.state.ProtocolVersion = AMOProtocolVersion // tweak
 	memDB := tmdb.NewMemDB()
-	app.missRuns = blockchain.NewMissRuns(app.store, memDB, 10, 10)
+	app.missRuns = blockchain.NewMissRuns(app.store, memDB, 10, 10, 10)
 	// to test ValidatorUpdates
 	app.store.SetUnlockedStake(makeAccAddr("val1"), makeStake("val1", 100))
 
