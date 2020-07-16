@@ -1,6 +1,7 @@
 package tx
 
 import (
+	"bytes"
 	"crypto/elliptic"
 	"encoding/json"
 	"errors"
@@ -305,6 +306,9 @@ func (t *TxBase) Sign(privKey crypto.PrivKey) error {
 }
 
 func (t *TxBase) Verify() bool {
+	if !bytes.Equal(t.Sender, t.getSignature().PubKey.Address()) {
+		return false
+	}
 	if len(t.Signature.SigBytes) != p256.SignatureSize {
 		return false
 	}

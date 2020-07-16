@@ -170,10 +170,14 @@ func TestTxSignature(t *testing.T) {
 	_sb := `{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","fee":"0","last_height":"1","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}}`
 	assert.Equal(t, _sb, string(sb))
 	err := trnx.Sign(from)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 	assert.True(t, trnx.Verify())
+
+	// wrong sender address
+	trnx.Sender = to
+	err = trnx.Sign(from)
+	assert.NoError(t, err)
+	assert.False(t, trnx.Verify())
 }
 
 func TestValidCancel(t *testing.T) {
