@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
 	tmbytes "github.com/tendermint/tendermint/libs/bytes"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -16,7 +17,7 @@ import (
 type RegisterParam struct {
 	Target       tmbytes.HexBytes `json:"target"`
 	Custody      tmbytes.HexBytes `json:"custody"`
-	ProxyAccount tmbytes.HexBytes `json:"proxy_account,omitempty"`
+	ProxyAccount crypto.Address   `json:"proxy_account,omitempty"`
 	Extra        json.RawMessage  `json:"extra,omitempty"`
 }
 
