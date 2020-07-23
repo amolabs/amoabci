@@ -317,11 +317,21 @@ func TestRegister(t *testing.T) {
 	payload, _ := json.Marshal(RegisterParam{
 		Target:       parcelID,
 		Custody:      []byte("custody"),
+		ProxyAccount: []byte("wrong address"),
+		Extra:        []byte(`"any json"`),
+	})
+	t0 := makeTestTx("register", "seller", payload)
+	rc, _ := t0.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+
+	payload, _ = json.Marshal(RegisterParam{
+		Target:       parcelID,
+		Custody:      []byte("custody"),
 		ProxyAccount: bob.addr,
 		Extra:        []byte(`"any json"`),
 	})
 	t1 := makeTestTx("register", "seller", payload)
-	rc, _ := t1.Check()
+	rc, _ = t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
 	// register before storage setup
