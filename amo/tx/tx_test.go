@@ -314,14 +314,35 @@ func TestRegister(t *testing.T) {
 	binary.BigEndian.PutUint32(tmp, uint32(123))
 	parcelID := append(tmp, []byte("parcel")...)
 
+	// wrong proxy_account
 	payload, _ := json.Marshal(RegisterParam{
+		Target:       parcelID,
+		Custody:      []byte("custody"),
+		ProxyAccount: []byte("wrong address"),
+		Extra:        []byte(`"any json"`),
+	})
+	t0 := makeTestTx("register", "seller", payload)
+	rc, _ := t0.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+
+	// empty proxy_account
+	payload, _ = json.Marshal(RegisterParam{
+		Target:  parcelID,
+		Custody: []byte("custody"),
+		Extra:   []byte(`"any json"`),
+	})
+	t0 = makeTestTx("register", "seller", payload)
+	rc, _ = t0.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+
+	payload, _ = json.Marshal(RegisterParam{
 		Target:       parcelID,
 		Custody:      []byte("custody"),
 		ProxyAccount: bob.addr,
 		Extra:        []byte(`"any json"`),
 	})
 	t1 := makeTestTx("register", "seller", payload)
-	rc, _ := t1.Check()
+	rc, _ = t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
 	// register before storage setup

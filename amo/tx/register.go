@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto"
 	tmbytes "github.com/tendermint/tendermint/libs/bytes"
 
 	"github.com/amolabs/amoabci/amo/code"
@@ -46,7 +47,10 @@ func (t *TxRegister) Check() (uint32, string) {
 	if len(txParam.Target) <= types.StorageIDLen {
 		return code.TxCodeBadParam, "parcel id too short"
 	}
-
+	if len(txParam.ProxyAccount) != 0 &&
+		len(txParam.ProxyAccount) != crypto.AddressSize {
+		return code.TxCodeBadParam, "wrong proxy account address size"
+	}
 	return code.TxCodeOK, "ok"
 }
 
