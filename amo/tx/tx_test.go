@@ -314,6 +314,7 @@ func TestRegister(t *testing.T) {
 	binary.BigEndian.PutUint32(tmp, uint32(123))
 	parcelID := append(tmp, []byte("parcel")...)
 
+	// wrong proxy_account
 	payload, _ := json.Marshal(RegisterParam{
 		Target:       parcelID,
 		Custody:      []byte("custody"),
@@ -323,6 +324,16 @@ func TestRegister(t *testing.T) {
 	t0 := makeTestTx("register", "seller", payload)
 	rc, _ := t0.Check()
 	assert.Equal(t, code.TxCodeBadParam, rc)
+
+	// empty proxy_account
+	payload, _ = json.Marshal(RegisterParam{
+		Target:  parcelID,
+		Custody: []byte("custody"),
+		Extra:   []byte(`"any json"`),
+	})
+	t0 = makeTestTx("register", "seller", payload)
+	rc, _ = t0.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
 
 	payload, _ = json.Marshal(RegisterParam{
 		Target:       parcelID,

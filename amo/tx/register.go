@@ -47,7 +47,8 @@ func (t *TxRegister) Check() (uint32, string) {
 	if len(txParam.Target) <= types.StorageIDLen {
 		return code.TxCodeBadParam, "parcel id too short"
 	}
-	if len(txParam.ProxyAccount) != crypto.AddressSize {
+	if len(txParam.ProxyAccount) != 0 &&
+		len(txParam.ProxyAccount) != crypto.AddressSize {
 		return code.TxCodeBadParam, "wrong proxy account address size"
 	}
 	return code.TxCodeOK, "ok"
