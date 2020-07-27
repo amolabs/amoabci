@@ -47,7 +47,6 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 	defer batch.Close()
 
 	unfinishedRuns := [][]byte{}
-	finishedRuns := [][]byte{}
 
 	itr, err := runDB.Iterator(nil, nil)
 	if err != nil {
@@ -71,12 +70,10 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 			// run cropped, and made to be an unfinished run
 			unfinishedRuns = append(unfinishedRuns, k)
 		} else if runLen != 0 {
-			// not yet over lazinessWindow
-			if !(height+1-runStart > m.lazinessWindow) {
-				continue
+			if height-m.lazinessWindow > runStart+runLen {
+				// end of run & out of lazinessWindow
+				batch.Delete(k)
 			}
-
-			finishedRuns = append(finishedRuns, k)
 		}
 	}
 
@@ -141,11 +138,6 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 		buf := make([]byte, 8)
 		binary.BigEndian.PutUint64(buf, uint64(height-runStart))
 		batch.Set(r, buf)
-	}
-
-	// delete finishedRuns
-	for _, r := range finishedRuns {
-		batch.Delete(r)
 	}
 
 	batch.Write()

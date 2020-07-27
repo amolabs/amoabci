@@ -209,6 +209,12 @@ func TestCleanUpFinishedRuns(t *testing.T) {
 	// mval02 := []crypto.Address{val2}
 
 	mr.UpdateMissRuns(10, mval00)
+	start, length := mr.getLastMissRun(val1)
+	assert.Equal(t, int64(0), start)
+	assert.Equal(t, int64(0), length)
+	start, length = mr.getLastMissRun(val2)
+	assert.Equal(t, int64(0), start)
+	assert.Equal(t, int64(0), length)
 
 	stat := mr.GetMissStat(10, 10)
 	assert.Empty(t, stat)
@@ -226,37 +232,52 @@ func TestCleanUpFinishedRuns(t *testing.T) {
 	mr.UpdateMissRuns(19, mval12)
 	mr.UpdateMissRuns(20, mval12) // val1 hibernates
 
-	stat = mr.GetMissStat(10, 20)
-	assert.Equal(t, int64(10), stat[val1.String()])
-	assert.Equal(t, int64(9), stat[val2.String()])
+	start, length = mr.getLastMissRun(val1)
+	assert.Equal(t, int64(11), start)
+	assert.Equal(t, int64(0), length)
+	start, length = mr.getLastMissRun(val2)
+	assert.Equal(t, int64(12), start)
+	assert.Equal(t, int64(0), length)
 
 	mr.UpdateMissRuns(21, mval00)
-	stat = mr.GetMissStat(10, 21)
-	_, exist := stat[val1.String()]
-	assert.True(t, exist)
-	_, exist = stat[val2.String()]
-	assert.True(t, exist)
+
+	start, length = mr.getLastMissRun(val1)
+	assert.Equal(t, int64(11), start)
+	assert.Equal(t, int64(10), length)
+	start, length = mr.getLastMissRun(val2)
+	assert.Equal(t, int64(12), start)
+	assert.Equal(t, int64(9), length)
 
 	mr.UpdateMissRuns(22, mval00)
-	stat = mr.GetMissStat(10, 22)
-	_, exist = stat[val1.String()]
-	assert.True(t, exist)
-	_, exist = stat[val2.String()]
-	assert.True(t, exist)
+	mr.UpdateMissRuns(23, mval00)
+	mr.UpdateMissRuns(24, mval00)
+	mr.UpdateMissRuns(25, mval00)
+	mr.UpdateMissRuns(26, mval00)
+	mr.UpdateMissRuns(27, mval00)
+	mr.UpdateMissRuns(28, mval00)
+	mr.UpdateMissRuns(29, mval00)
+	mr.UpdateMissRuns(30, mval00)
+	mr.UpdateMissRuns(31, mval00)
+	mr.UpdateMissRuns(32, mval00)
+	mr.UpdateMissRuns(33, mval00) // val1, val2's missRuns should still exist
 
-	mr.UpdateMissRuns(23, mval00) // val1's missRun gets removed
-	stat = mr.GetMissStat(10, 23)
-	_, exist = stat[val1.String()]
-	assert.False(t, exist)
-	_, exist = stat[val2.String()]
-	assert.True(t, exist)
+	start, length = mr.getLastMissRun(val1)
+	assert.Equal(t, int64(11), start)
+	assert.Equal(t, int64(10), length)
+	start, length = mr.getLastMissRun(val2)
+	assert.Equal(t, int64(12), start)
+	assert.Equal(t, int64(9), length)
 
-	mr.UpdateMissRuns(24, mval00) // val2's missRun gets removed
-	stat = mr.GetMissStat(10, 24)
-	_, exist = stat[val1.String()]
-	assert.False(t, exist)
-	_, exist = stat[val2.String()]
-	assert.False(t, exist)
+	mr.UpdateMissRuns(34, mval00) // val1, val2's missRuns should get removed
+
+	start, length = mr.getLastMissRun(val1)
+	assert.Equal(t, int64(0), start)
+	assert.Equal(t, int64(0), length)
+	start, length = mr.getLastMissRun(val2)
+	assert.Equal(t, int64(0), start)
+	assert.Equal(t, int64(0), length)
+
+	stat = mr.GetMissStat(10, 35)
 	assert.Empty(t, stat)
 
 	// test case for lazinessWindow < hibernateThreshold
@@ -269,8 +290,12 @@ func TestCleanUpFinishedRuns(t *testing.T) {
 
 	mr.UpdateMissRuns(10, mval00)
 
-	stat = mr.GetMissStat(10, 10)
-	assert.Empty(t, stat)
+	start, length = mr.getLastMissRun(val1)
+	assert.Equal(t, int64(0), start)
+	assert.Equal(t, int64(0), length)
+	start, length = mr.getLastMissRun(val2)
+	assert.Equal(t, int64(0), start)
+	assert.Equal(t, int64(0), length)
 
 	// val1: hibernating
 	// val2: non-hibernating
@@ -284,41 +309,52 @@ func TestCleanUpFinishedRuns(t *testing.T) {
 	mr.UpdateMissRuns(18, mval12)
 	mr.UpdateMissRuns(19, mval12)
 	mr.UpdateMissRuns(20, mval12)
-
-	stat = mr.GetMissStat(10, 20)
-	assert.Equal(t, int64(10), stat[val1.String()])
-	assert.Equal(t, int64(9), stat[val2.String()])
-
 	mr.UpdateMissRuns(21, mval12)
-
-	stat = mr.GetMissStat(10, 21)
-	_, exist = stat[val1.String()]
-	assert.True(t, exist)
-	_, exist = stat[val2.String()]
-	assert.True(t, exist)
-
 	mr.UpdateMissRuns(22, mval12) // val1 hibernates
 
-	stat = mr.GetMissStat(10, 22)
-	_, exist = stat[val1.String()]
-	assert.True(t, exist)
-	_, exist = stat[val2.String()]
-	assert.True(t, exist)
+	start, length = mr.getLastMissRun(val1)
+	assert.Equal(t, int64(11), start)
+	assert.Equal(t, int64(0), length)
+	start, length = mr.getLastMissRun(val2)
+	assert.Equal(t, int64(12), start)
+	assert.Equal(t, int64(0), length)
 
 	mr.UpdateMissRuns(23, mval00)
 
-	stat = mr.GetMissStat(10, 23)
-	_, exist = stat[val1.String()]
-	assert.True(t, exist)
-	_, exist = stat[val2.String()]
-	assert.True(t, exist)
+	start, length = mr.getLastMissRun(val1)
+	assert.Equal(t, int64(11), start)
+	assert.Equal(t, int64(12), length)
+	start, length = mr.getLastMissRun(val2)
+	assert.Equal(t, int64(12), start)
+	assert.Equal(t, int64(11), length)
 
-	mr.UpdateMissRuns(24, mval00) // val1, val2's missRuns get removed
+	mr.UpdateMissRuns(24, mval00)
+	mr.UpdateMissRuns(25, mval00)
+	mr.UpdateMissRuns(26, mval00)
+	mr.UpdateMissRuns(27, mval00)
+	mr.UpdateMissRuns(28, mval00)
+	mr.UpdateMissRuns(29, mval00)
+	mr.UpdateMissRuns(30, mval00)
+	mr.UpdateMissRuns(31, mval00)
+	mr.UpdateMissRuns(32, mval00)
+	mr.UpdateMissRuns(33, mval00) // val1, val2's missRuns should still exist
 
-	stat = mr.GetMissStat(10, 24)
-	_, exist = stat[val1.String()]
-	assert.False(t, exist)
-	_, exist = stat[val2.String()]
-	assert.False(t, exist)
+	start, length = mr.getLastMissRun(val1)
+	assert.Equal(t, int64(11), start)
+	assert.Equal(t, int64(12), length)
+	start, length = mr.getLastMissRun(val2)
+	assert.Equal(t, int64(12), start)
+	assert.Equal(t, int64(11), length)
+
+	mr.UpdateMissRuns(34, mval00) // val1, val2's missRuns should get removed
+
+	start, length = mr.getLastMissRun(val1)
+	assert.Equal(t, int64(0), start)
+	assert.Equal(t, int64(0), length)
+	start, length = mr.getLastMissRun(val2)
+	assert.Equal(t, int64(0), start)
+	assert.Equal(t, int64(0), length)
+
+	stat = mr.GetMissStat(10, 35)
 	assert.Empty(t, stat)
 }
