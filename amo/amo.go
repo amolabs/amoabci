@@ -146,6 +146,7 @@ func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb tmdb.DB
 		tmdb.NewMemDB(),
 		app.config.HibernateThreshold,
 		app.config.HibernatePeriod,
+		app.config.LazinessWindow,
 	)
 
 	app.replayPreventer = blockchain.NewReplayPreventer(
@@ -359,6 +360,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		tmdb.NewMemDB(),
 		app.config.HibernateThreshold,
 		app.config.HibernatePeriod,
+		app.config.LazinessWindow,
 	)
 
 	app.replayPreventer = blockchain.NewReplayPreventer(

@@ -19,6 +19,7 @@ type MissRuns struct {
 	store              *store.Store
 	hibernateThreshold int64
 	hibernatePeriod    int64
+	lazinessWindow     int64
 }
 
 func makeRunKey(val crypto.Address, start int64) []byte {
@@ -29,11 +30,12 @@ func makeRunKey(val crypto.Address, start int64) []byte {
 	return buf[:crypto.AddressSize+8]
 }
 
-func NewMissRuns(store *store.Store, db tmdb.DB, threshold, period int64) *MissRuns {
+func NewMissRuns(store *store.Store, db tmdb.DB, hibThreshold, hibPeriod, lazyWindow int64) *MissRuns {
 	return &MissRuns{
 		store:              store,
-		hibernateThreshold: threshold,
-		hibernatePeriod:    period,
+		hibernateThreshold: hibThreshold,
+		hibernatePeriod:    hibPeriod,
+		lazinessWindow:     lazyWindow,
 	}
 }
 
@@ -45,6 +47,7 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 	defer batch.Close()
 
 	unfinishedRuns := [][]byte{}
+
 	itr, err := runDB.Iterator(nil, nil)
 	if err != nil {
 		return
@@ -52,6 +55,8 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 	defer itr.Close()
 	// guard for rewind
 	for ; itr.Valid(); itr.Next() {
+		// key: "<addr><runStart>"
+		// value: "<runLen>"
 		k := itr.Key()
 		b := k[crypto.AddressSize:]
 		runStart := int64(binary.BigEndian.Uint64(b))
@@ -59,10 +64,16 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 		runLen := int64(binary.BigEndian.Uint64(b))
 
 		if runStart > height {
+			// clean-up for missing validators from the future
 			batch.Delete(k)
 		} else if runStart+runLen > height || runLen == 0 {
 			// run cropped, and made to be an unfinished run
 			unfinishedRuns = append(unfinishedRuns, k)
+		} else if runLen != 0 {
+			if height-m.lazinessWindow > runStart+runLen {
+				// end of run & out of lazinessWindow
+				batch.Delete(k)
+			}
 		}
 	}
 
@@ -82,10 +93,12 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 				batch.Set(r, buf)
 				//fmt.Println(crypto.Address(runVal), height, runStart)
 				if height+1-runStart >= m.hibernateThreshold {
+					// over threshold, hibernate missing validator
 					hib := types.Hibernate{
 						Start: height,
 						End:   height + m.hibernatePeriod,
 					}
+					// put into hibernation
 					m.store.SetHibernate(runVal, &hib)
 					addressJson, _ := json.Marshal(vals[i])
 					startJson, _ := json.Marshal(height)
@@ -126,8 +139,6 @@ func (m MissRuns) UpdateMissRuns(height int64, vals []crypto.Address) (doValUpda
 		binary.BigEndian.PutUint64(buf, uint64(height-runStart))
 		batch.Set(r, buf)
 	}
-
-	// TODO: remove too old runs
 
 	batch.Write()
 
