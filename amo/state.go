@@ -8,11 +8,10 @@ import (
 
 type State struct {
 	ProtocolVersion uint64 `json:"protocol_version"`
-	MerkleVersion   int64  `json:"merkle_version"`
-	Height          int64  `json:"height"` // current block height
-	AppHash         []byte `json:"app_hash"`
-	LastHeight      int64  `json:"last_height"` // last completed block height
-	LastAppHash     []byte `json:"last_app_hash"`
+	Height          int64  `json:"-"` // current block height
+	LastHeight      int64  `json:"-"` // last completed block height
+	LastAppHash     []byte `json:"-"`
+	CounterDue      int64  `json:"counter_due"`
 	NextDraftID     uint32 `json:"next_draft_id"`
 }
 

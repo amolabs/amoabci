@@ -145,11 +145,8 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 
 	fmt.Println("Repair AMO state...")
 
-	amoState.MerkleVersion = amoMt.Version()
 	amoState.LastHeight = tmState.LastBlockHeight
-	amoState.Height = tmState.LastBlockHeight
 	amoState.LastAppHash = tmState.AppHash
-	amoState.AppHash = tmState.AppHash
 	// TODO: ProtocolVersion, NextDraftID
 
 	display(amoMt, amoState, tmBlockStoreState, tmState)
@@ -163,7 +160,6 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 
 	fmt.Println("saving repair result...")
 	amoState.SaveTo(amoStateFile)
-	amoMt.LoadVersionForOverwriting(amoState.MerkleVersion)
 	tmBlockStoreState.Save(bsdb)
 	tmstate.SaveState(sdb, tmState)
 
@@ -264,11 +260,8 @@ func display(mt *iavl.MutableTree, amoState amo.State, tmBsj tmstore.BlockStoreS
 	fmt.Printf("  .Hash    (-3)    = %X\n", mt.Hash())
 	mt.Load()
 	fmt.Printf("AMO state ----------------------------------\n")
-	fmt.Printf("  .MerkleVersion   = %d\n", amoState.MerkleVersion)
 	fmt.Printf("  .LastHeight      = %d\n", amoState.LastHeight)
-	fmt.Printf("  .Height          = %d\n", amoState.Height)
 	fmt.Printf("  .LastAppHash     = %X\n", amoState.LastAppHash)
-	fmt.Printf("  .AppHash         = %X\n", amoState.AppHash)
 	fmt.Printf("TM block store state -----------------------\n")
 	fmt.Printf("  .height          = %d\n", tmBsj.Height)
 	fmt.Printf("TM state -----------------------------------\n")

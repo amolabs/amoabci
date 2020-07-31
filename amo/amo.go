@@ -138,7 +138,6 @@ func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb tmdb.DB
 	// TODO: use something more elegant
 	tx.ConfigAMOApp = app.config
 	tx.StateNextDraftID = app.state.NextDraftID
-	tx.StateBlockHeight = app.state.Height
 	tx.StateProtocolVersion = app.state.ProtocolVersion
 
 	app.missRuns = blockchain.NewMissRuns(
@@ -263,12 +262,13 @@ func (app *AMOApp) load() {
 		panic(err)
 	}
 
-	version, err := app.store.LoadVersion(app.state.MerkleVersion)
+	version, err := app.store.Load()
 	if err != nil {
 		panic(err)
 	}
 
-	app.state.MerkleVersion = version
+	app.state.LastHeight = version - 1
+	app.state.LastAppHash = app.store.Root()
 
 	err = app.loadAppConfig()
 	if err != nil {
@@ -340,8 +340,7 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		panic(err)
 	}
 
-	app.state.MerkleVersion = version
-	app.state.LastHeight = int64(0)
+	app.state.LastHeight = version - 1
 	app.state.LastAppHash = hash
 	app.state.NextDraftID = uint32(1)
 
@@ -352,7 +351,6 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 
 	tx.ConfigAMOApp = app.config
 	tx.StateNextDraftID = app.state.NextDraftID
-	tx.StateBlockHeight = app.state.Height
 	tx.StateProtocolVersion = app.state.ProtocolVersion
 
 	app.missRuns = blockchain.NewMissRuns(
@@ -710,9 +708,8 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 		return abci.ResponseCommit{}
 	}
 
-	app.state.MerkleVersion = version
 	app.state.LastAppHash = hash
-	app.state.LastHeight = app.state.Height
+	app.state.LastHeight = version - 1
 
 	err = app.loadAppConfig()
 	if err != nil {
@@ -725,7 +722,7 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 
 	// sync with pruning option of merkle DB
 	// NOTE: this is a tentative workaround
-	if app.state.MerkleVersion%app.checkpoint_interval == 0 {
+	if version%app.checkpoint_interval == 0 {
 		app.save()
 	}
 
