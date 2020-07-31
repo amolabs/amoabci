@@ -106,13 +106,6 @@ func initApp(amoDirPath string) (*amo.AMOApp, error) {
 
 	dataDirPath := filepath.Join(config.RootDir, defaultDataDir)
 
-	// state file
-	stateFilePath := filepath.Join(dataDirPath, defaultStateFile)
-	stateFile, err := os.OpenFile(stateFilePath, os.O_CREATE, os.FileMode(0644))
-	if err != nil {
-		return nil, err
-	}
-
 	// TODO: do not use hard-coded value. use value from configuration.
 	merkleDB := tmdb.NewDB(defaultMerkleDB,
 		tmdb.BackendType(config.DBBackend), dataDirPath)
@@ -127,7 +120,7 @@ func initApp(amoDirPath string) (*amo.AMOApp, error) {
 	// create app
 	// TODO: read checkpoint_interval from config
 	app := amo.NewAMOApp(
-		stateFile, 100,
+		100,
 		merkleDB, indexDB,
 		appLogger.With("module", "abci-app"),
 	)

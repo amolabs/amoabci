@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -16,6 +17,8 @@ import (
 	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo"
+	astore "github.com/amolabs/amoabci/amo/store"
+	atypes "github.com/amolabs/amoabci/amo/types"
 )
 
 const (
@@ -46,6 +49,13 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 	}
 	defer merkleDB.Close()
 
+	indexDB, err := tmdb.NewGoLevelDB("index", amoRoot+"/data")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer indexDB.Close()
+
 	bsdb, err := tmdb.NewGoLevelDB("blockstore", amoRoot+"/data")
 	if err != nil {
 		fmt.Println(err)
@@ -62,19 +72,33 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 
 	//// load
 
-	amoState := amo.State{}
-	err = amoState.LoadFrom(amoStateFile)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
 	amoMt, err := iavl.NewMutableTree(merkleDB, merkleTreeCacheSize)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	amoMt.Load()
+
+	amoStore, err := astore.NewStore(nil, 100, merkleDB, indexDB)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	amoCfg := atypes.AMOAppConfig{}
+	b := amoStore.GetAppConfig()
+	if len(b) <= 0 {
+		fmt.Println("couldn't find proper app config")
+		return
+	}
+	err = json.Unmarshal(b, &amoCfg)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	amoState := amo.State{}
+	amoState.LoadFrom(amoStore, amoCfg)
 
 	tmBlockStore := tmstore.NewBlockStore(bsdb)
 	tmBlockStoreState := tmstore.LoadBlockStoreStateJSON(bsdb)
@@ -159,18 +183,10 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 	}
 
 	fmt.Println("saving repair result...")
-	amoState.SaveTo(amoStateFile)
 	tmBlockStoreState.Save(bsdb)
 	tmstate.SaveState(sdb, tmState)
 
 	// cleaning up tx index
-	indexDB, err := tmdb.NewGoLevelDB("index", amoRoot+"/data")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer indexDB.Close()
-
 	// If validator set has not changed, then these dbs have no change either.
 	// indexDelegator = tmdb.NewPrefixDB(indexDB, []byte("delegator")
 	// indexValidator = tmdb.NewPrefixDB(indexDB, []byte("validator")
@@ -180,7 +196,7 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 	defer indexBlockTx.Close()
 	defer indexTxBlock.Close()
 
-	b := make([]byte, 8)
+	b = make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(amoState.LastHeight+1))
 	iter, err := indexBlockTx.Iterator(b, nil)
 	for ; iter.Valid(); iter.Next() {

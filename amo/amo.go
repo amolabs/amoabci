@@ -108,7 +108,7 @@ type AMOApp struct {
 
 var _ abci.Application = (*AMOApp)(nil)
 
-func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb tmdb.DB, l log.Logger) *AMOApp {
+func NewAMOApp(checkpoint_interval int64, mdb, idxdb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
 		l = log.NewNopLogger()
 	}
@@ -126,7 +126,6 @@ func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb tmdb.DB
 
 	app := &AMOApp{
 		logger:              l,
-		stateFile:           stateFile,
 		state:               State{},
 		store:               s,
 		checkpoint_interval: checkpoint_interval,
@@ -153,8 +152,6 @@ func NewAMOApp(stateFile *os.File, checkpoint_interval int64, mdb, idxdb tmdb.DB
 		app.state.LastHeight,
 		app.config.BlockBindingWindow,
 	)
-
-	app.save()
 
 	return app
 }
@@ -257,33 +254,19 @@ func (app *AMOApp) loadAppConfig() error {
 }
 
 func (app *AMOApp) load() {
-	err := app.state.LoadFrom(app.stateFile)
+	_, err := app.store.Load()
 	if err != nil {
 		panic(err)
 	}
-
-	version, err := app.store.Load()
-	if err != nil {
-		panic(err)
-	}
-
-	app.state.LastHeight = version - 1
-	app.state.LastAppHash = app.store.Root()
-	app.state.NextDraftID = app.store.GetLastDraftID() + 1
 
 	err = app.loadAppConfig()
 	if err != nil {
 		panic(err)
 	}
 
-	app.store.RebuildIndex()
-}
+	app.state.LoadFrom(app.store, app.config)
 
-func (app *AMOApp) save() {
-	err := app.state.SaveTo(app.stateFile)
-	if err != nil {
-		panic(err)
-	}
+	app.store.RebuildIndex()
 }
 
 func (app *AMOApp) upgradeProtocol() []abci.Event {
@@ -292,7 +275,6 @@ func (app *AMOApp) upgradeProtocol() []abci.Event {
 		return events
 	}
 	app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
-	app.save()
 	versionJson, _ := json.Marshal(app.state.ProtocolVersion)
 	events = append(events, abci.Event{
 		Type: "protocol_upgrade",
@@ -368,7 +350,6 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 		app.config.BlockBindingWindow,
 	)
 
-	app.save()
 	app.logger.Info("InitChain: new genesis app state applied.")
 
 	return abci.ResponseInitChain{
@@ -720,12 +701,6 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 	tx.ConfigAMOApp = app.config
 	tx.StateNextDraftID = app.state.NextDraftID
 	tx.StateProtocolVersion = app.state.ProtocolVersion
-
-	// sync with pruning option of merkle DB
-	// NOTE: this is a tentative workaround
-	if version%app.checkpoint_interval == 0 {
-		app.save()
-	}
 
 	return abci.ResponseCommit{Data: app.state.LastAppHash}
 }
