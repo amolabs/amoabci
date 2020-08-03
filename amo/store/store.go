@@ -1022,6 +1022,17 @@ func (s Store) ProcessDraftVotes(
 		}
 	}
 
+	// events
+	idJson, _ := json.Marshal(latestDraftIDUint)
+	draftJson, _ := json.Marshal(draft)
+	events = append(events, abci.Event{
+		Type: "draft",
+		Attributes: []kv.Pair{
+			{Key: []byte("id"), Value: idJson},
+			{Key: []byte("draft"), Value: draftJson},
+		},
+	})
+
 	// if draft just gets closed, update draft's tally value and handle deposit
 	if voteJustGotClosed {
 		// calculate draft.TallyQuorum
@@ -1123,29 +1134,10 @@ func (s Store) ProcessDraftVotes(
 				})
 			}
 		}
-	}
-
-	s.SetDraft(latestDraftIDUint, draft)
-
-	// events
-	idJson, _ := json.Marshal(latestDraftIDUint)
-	draftJson, _ := json.Marshal(draft)
-	events = append(events, abci.Event{
-		Type: "draft",
-		Attributes: []kv.Pair{
-			{Key: []byte("id"), Value: idJson},
-			{Key: []byte("draft"), Value: draftJson},
-		},
-	})
-
-	if applyDraftConfig {
-		// totalTally = draft.TallyApprove + draft.TallyReject
-		totalTally := new(types.Currency).Set(0)
-		totalTally.Add(&draft.TallyApprove)
-		totalTally.Add(&draft.TallyReject)
-
 		// if draft.TallyQuorum > totalTally, drop draft config
 		if draft.TallyQuorum.GreaterThan(totalTally) {
+			draft.ApplyCount = int64(0)
+			s.SetDraft(latestDraftIDUint, draft)
 			return events
 		}
 
@@ -1159,9 +1151,15 @@ func (s Store) ProcessDraftVotes(
 
 		// if pass > draft.TallyApprove, drop draft config
 		if pass.GreaterThan(&draft.TallyApprove) {
+			draft.ApplyCount = int64(0)
+			s.SetDraft(latestDraftIDUint, draft)
 			return events
 		}
+	}
 
+	s.SetDraft(latestDraftIDUint, draft)
+
+	if applyDraftConfig {
 		b, err := json.Marshal(draft.Config)
 		if err != nil {
 			return events

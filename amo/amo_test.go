@@ -1425,7 +1425,7 @@ func TestGovernance(t *testing.T) {
 	draft = app.store.GetDraft(draftID, false)
 	assert.Equal(t, int64(0), draft.OpenCount)
 	assert.Equal(t, int64(0), draft.CloseCount)
-	assert.Equal(t, int64(1), draft.ApplyCount)
+	assert.Equal(t, int64(0), draft.ApplyCount)
 	assert.Equal(t, *new(types.Currency).Set(2000), draft.TallyApprove)
 	assert.Equal(t, *new(types.Currency).Set(8000), draft.TallyReject)
 
