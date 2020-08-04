@@ -1421,7 +1421,7 @@ func TestGovernance(t *testing.T) {
 
 	app.EndBlock(abci.RequestEndBlock{Height: 5})
 
-	// check if vote is closed and tally_* values are properly calculated
+	// check if vote is closed completely and tally_* values are properly calculated
 	draft = app.store.GetDraft(draftID, false)
 	assert.Equal(t, int64(0), draft.OpenCount)
 	assert.Equal(t, int64(0), draft.CloseCount)
@@ -1447,22 +1447,6 @@ func TestGovernance(t *testing.T) {
 	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v12, false))
 	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v13, false))
 	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v14, false))
-
-	// wait for draft to get applied for 1 at height 6
-	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 6}})
-	app.EndBlock(abci.RequestEndBlock{Height: 6})
-
-	// check if draft's counts are proper
-	draft = app.store.GetDraft(draftID, false)
-	assert.Equal(t, int64(0), draft.OpenCount)
-	assert.Equal(t, int64(0), draft.CloseCount)
-	assert.Equal(t, int64(0), draft.ApplyCount)
-
-	// imitate Commit() to load new app config
-	_, _, err = app.store.Save()
-	assert.NoError(t, err)
-	err = app.loadAppConfig()
-	assert.NoError(t, err)
 
 	// after target: should be same as befor drafte
 	assert.Equal(t, defaultBlockBindingWindow, app.config.BlockBindingWindow)
