@@ -63,10 +63,16 @@ func makeTestTx(txType string, seed string, payload []byte) Tx {
 	return classifyTx(trans)
 }
 
-func makeTestAddress(seed string) crypto.Address {
+func makeTestPubKey(seed string) p256.PubKeyP256 {
 	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
-	addr := privKey.PubKey().Address()
-	return addr
+	pubKey := privKey.PubKey().Bytes()
+	var pubKey256 p256.PubKeyP256
+	copy(pubKey256[:], pubKey)
+	return pubKey256
+}
+func makeTestAddress(seed string) crypto.Address {
+	pubKey := makeTestPubKey(seed)
+	return pubKey.Address()
 }
 
 func getTestStore() *store.Store {
@@ -380,11 +386,13 @@ func TestRequest(t *testing.T) {
 	tmp := make([]byte, 4)
 	binary.BigEndian.PutUint32(tmp, uint32(123))
 	parcelID := append(tmp, []byte("parcel")...)
+	grantee := makeTestPubKey("grantee")
 
 	payload, _ := json.Marshal(RequestParam{
-		Target:  parcelID,
-		Payment: *new(types.Currency).SetAMO(1),
-		Extra:   []byte(`"any json for req"`),
+		Target:          parcelID,
+		Payment:         *new(types.Currency).SetAMO(1),
+		RecipientPubKey: grantee.Bytes(),
+		Extra:           []byte(`"any json for req"`),
 	})
 	t1 := makeTestTx("request", "buyer", payload)
 	rc, _ := t1.Check()
@@ -434,6 +442,7 @@ func TestRequest(t *testing.T) {
 	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
 	req := s.GetRequest(makeAccAddr("buyer"), parcelID, false)
 	assert.NotNil(t, req)
+	assert.Equal(t, grantee.Address(), req.RecipientPubKey.Address())
 	assert.Equal(t, []byte(`"any json for reg"`), []byte(req.Extra.Register))
 	assert.Equal(t, []byte(`"any json for req"`), []byte(req.Extra.Request))
 
@@ -447,11 +456,12 @@ func TestRequest(t *testing.T) {
 	// XXX: dealer fee is optional, so the previous tests without dealer fee
 	// are valid also.
 	payload2, _ := json.Marshal(RequestParam{
-		Target:    parcelID,
-		Payment:   *new(types.Currency).SetAMO(25),
-		Dealer:    makeAccAddr("dealer"),
-		DealerFee: *new(types.Currency).SetAMO(50),
-		Extra:     []byte(`"any json for req"`),
+		Target:          parcelID,
+		Payment:         *new(types.Currency).SetAMO(25),
+		RecipientPubKey: grantee.Bytes(),
+		Dealer:          makeAccAddr("dealer"),
+		DealerFee:       *new(types.Currency).SetAMO(50),
+		Extra:           []byte(`"any json for req"`),
 	})
 	t2 := makeTestTx("request", "buyer", payload2)
 	rc, _ = t2.Check()
@@ -467,6 +477,7 @@ func TestRequest(t *testing.T) {
 	bal = s.GetBalance(makeAccAddr("buyer"), false)
 	assert.Equal(t, types.Zero, bal)
 	req = s.GetRequest(makeAccAddr("buyer"), parcelID, false)
+	assert.Equal(t, grantee.Address(), req.RecipientPubKey.Address())
 	assert.Equal(t, new(types.Currency).SetAMO(25), &req.Payment)
 	assert.Equal(t, new(types.Currency).SetAMO(50), &req.DealerFee)
 }
