@@ -6,6 +6,7 @@
 #fi
 
 . testaddr.sh
+. testpubkey.sh
 
 AMO1=1000000000000000000
 
@@ -47,7 +48,7 @@ info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deli
 if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
 
 echo "tu2 request p1 with 1 AMO"
-out=$($CLI tx --broadcast=commit request $CLIOPT --user tu2 "$P1" "$AMO1" | sed 's/\^\@//g')
+out=$($CLI tx --broadcast=commit request $CLIOPT --user tu2 "$P1" "$AMO1" "$tu2_pubkey" | sed 's/\^\@//g')
 info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
 if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
 
