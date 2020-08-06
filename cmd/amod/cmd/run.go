@@ -145,12 +145,6 @@ var RunCmd = &cobra.Command{
 func initApp(config *cfg.Config, logger log.Logger) (*amo.AMOApp, error) {
 	dataDirPath := filepath.Join(config.RootDir, config.DataDir)
 
-	stateFilePath := filepath.Join(dataDirPath, config.StateFile)
-	stateFile, err := os.OpenFile(stateFilePath, os.O_CREATE, os.FileMode(0644))
-	if err != nil {
-		return nil, err
-	}
-
 	merkleDB := tmdb.NewDB(
 		config.MerkleDB,
 		tmdb.BackendType(config.DBBackend),
@@ -165,7 +159,7 @@ func initApp(config *cfg.Config, logger log.Logger) (*amo.AMOApp, error) {
 	// create app
 	// TODO: read checkpoint_interval from config
 	app := amo.NewAMOApp(
-		stateFile, 100,
+		100,
 		merkleDB, indexDB,
 		logger.With("module", "abci-app"),
 	)

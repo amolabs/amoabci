@@ -2,13 +2,10 @@ package amo
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	abci "github.com/tendermint/tendermint/abci/types"
-	tmos "github.com/tendermint/tendermint/libs/os"
 	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo/tx"
@@ -18,28 +15,7 @@ import (
 
 const benchTest = "bench_test"
 
-func setUpBench(b *testing.B) {
-	err := tmos.EnsureDir(benchTest, 0700)
-	assert.NoError(b, err)
-
-	file, err := ioutil.TempFile("", "state_*.json")
-	assert.NoError(b, err)
-
-	tmpFile = file
-}
-
-func tearDownBench(b *testing.B) {
-	err := os.RemoveAll(benchTest)
-	assert.NoError(b, err)
-
-	err = os.Remove(tmpFile.Name())
-	assert.NoError(b, err)
-}
-
 func BenchmarkCheckTransferTx(b *testing.B) {
-	setUpBench(b)
-	defer tearDownBench(b)
-
 	sdb, err := tmdb.NewGoLevelDB("state", benchTest)
 	assert.NoError(b, err)
 	assert.NotNil(b, sdb)
@@ -55,7 +31,7 @@ func BenchmarkCheckTransferTx(b *testing.B) {
 	assert.NotNil(b, gcdb)
 	defer gcdb.Close()
 
-	app := NewAMOApp(tmpFile, 1, sdb, idxdb, nil)
+	app := NewAMOApp(1, sdb, idxdb, nil)
 
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 	//app.store.SetBalanceUint64(from.PubKey().Address(), 1000000000)
@@ -82,9 +58,6 @@ func BenchmarkCheckTransferTx(b *testing.B) {
 }
 
 func BenchmarkDeliverTransferTx(b *testing.B) {
-	setUpBench(b)
-	defer tearDownBench(b)
-
 	sdb, err := tmdb.NewGoLevelDB("state", benchTest)
 	assert.NoError(b, err)
 	assert.NotNil(b, sdb)
@@ -95,7 +68,7 @@ func BenchmarkDeliverTransferTx(b *testing.B) {
 	assert.NotNil(b, idxdb)
 	defer idxdb.Close()
 
-	app := NewAMOApp(tmpFile, 1, sdb, idxdb, nil)
+	app := NewAMOApp(1, sdb, idxdb, nil)
 	assert.NoError(b, err)
 
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
