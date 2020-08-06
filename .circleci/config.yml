@@ -35,6 +35,7 @@ jobs:
             cd ~
             git clone https://github.com/amolabs/amo-client-go
             # TODO: remove this checkout when unnecessary anymore
+            cd ~/amo-client-go
             git checkout 23622995c49f4a412851fcad99c0c9ed963fa13e
       - run:
           name: "prepare to build docker image"
