@@ -3,9 +3,7 @@ package amo
 import (
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"sort"
 	"testing"
 
@@ -25,31 +23,13 @@ import (
 	"github.com/amolabs/amoabci/crypto/p256"
 )
 
-var tmpFile *os.File
-
 func makeAccAddr(seed string) crypto.Address {
 	return p256.GenPrivKeyFromSecret([]byte(seed)).PubKey().Address()
 }
 
-// setup and teardown
-func setUpTest(t *testing.T) {
-	file, err := ioutil.TempFile("", "state_*.json")
-	assert.NoError(t, err)
-
-	tmpFile = file
-}
-
-func tearDownTest(t *testing.T) {
-	err := os.Remove(tmpFile.Name())
-	assert.NoError(t, err)
-}
-
 func TestAppConfig(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
 	// test genesis app config
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(
 		`{ "config": { "max_validators": 10, "lockup_period": 2 } }`)
@@ -74,10 +54,7 @@ func TestAppConfig(t *testing.T) {
 }
 
 func TestInitChain(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
 	res := app.InitChain(req)
@@ -93,10 +70,7 @@ func TestInitChain(t *testing.T) {
 }
 
 func TestQueryDefault(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	// query
 	req := abci.RequestQuery{}
 	req.Path = "/nostore"
@@ -105,10 +79,7 @@ func TestQueryDefault(t *testing.T) {
 }
 
 func TestQueryAppConfig(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	config := app.config
 
 	var (
@@ -126,10 +97,7 @@ func TestQueryAppConfig(t *testing.T) {
 }
 
 func TestQueryBalance(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
 	addr := crypto.Address(addrbin)
@@ -176,10 +144,7 @@ func TestQueryBalance(t *testing.T) {
 }
 
 func TestQueryStorage(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	storageID1 := uint32(123)
@@ -220,10 +185,7 @@ func TestQueryStorage(t *testing.T) {
 }
 
 func TestQueryParcel(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -296,10 +258,7 @@ func TestQueryParcel(t *testing.T) {
 }
 
 func TestQueryRequest(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -385,10 +344,7 @@ func TestQueryRequest(t *testing.T) {
 }
 
 func TestQueryUsage(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// populate db store
 	addrbin, _ := hex.DecodeString("7CECB223B976F27D77B0E03E95602DABCC28D876")
@@ -474,10 +430,7 @@ func TestQueryUsage(t *testing.T) {
 }
 
 func TestQueryValidator(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// stake holder
 	priv := ed25519.GenPrivKey()
@@ -522,12 +475,9 @@ func TestQueryValidator(t *testing.T) {
 }
 
 func TestSignedTransactionTest(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
@@ -566,9 +516,6 @@ func TestSignedTransactionTest(t *testing.T) {
 }
 
 func TestFuncValUpdates(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
 	val1 := abci.ValidatorUpdate{
 		PubKey: abci.PubKey{Type: "anything", Data: []byte("0001")},
 		Power:  1,
@@ -598,10 +545,7 @@ func TestFuncValUpdates(t *testing.T) {
 }
 
 func TestPenaltyEvidence(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	// setup
@@ -674,10 +618,7 @@ func TestPenaltyEvidence(t *testing.T) {
 }
 
 func TestPenaltyLazyValidators(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 	app.config.LazinessWindow = 4
 	app.config.LazinessThreshold = 2
@@ -793,10 +734,7 @@ func TestPenaltyLazyValidators(t *testing.T) {
 }
 
 func TestEndBlock(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	// setup
@@ -854,11 +792,7 @@ func DivCurrency(origin *types.Currency, divisor *types.Currency) *types.Currenc
 }
 
 func TestIncentive(t *testing.T) {
-	// setup
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(50)
 
@@ -989,10 +923,7 @@ func TestIncentive(t *testing.T) {
 }
 
 func TestIncentiveNoTouch(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	// setup
@@ -1032,10 +963,7 @@ func TestIncentiveNoTouch(t *testing.T) {
 }
 
 func TestEmptyBlock(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	// init chain
@@ -1096,15 +1024,12 @@ func TestEmptyBlock(t *testing.T) {
 }
 
 func TestReplayAttack(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
 	t1 := p256.GenPrivKeyFromSecret([]byte("test1"))
 	tx1 := makeTxStake(t1, "test1", 10000, "1")
 	tx2 := makeTxStake(t1, "test1", 10000, "1")
 	tx3 := makeTxStake(t1, "test1", 10000, "1")
 
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 	app.config.BlockBindingWindow = int64(3)
 	app.replayPreventer = blockchain.NewReplayPreventer(
@@ -1157,9 +1082,6 @@ func TestReplayAttack(t *testing.T) {
 }
 
 func TestBindingBlock(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
 	t1 := p256.GenPrivKeyFromSecret([]byte("test1"))
 	tx1 := makeTxStake(t1, "test1", 10000, "1")
 	tx2 := makeTxStake(t1, "test1", 10000, "2")
@@ -1167,7 +1089,7 @@ func TestBindingBlock(t *testing.T) {
 	tx4 := makeTxStake(t1, "test1", 10000, "1")
 	tx5 := makeTxStake(t1, "test1", 10000, "2")
 
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 	app.config.BlockBindingWindow = int64(3)
 	app.replayPreventer = blockchain.NewReplayPreventer(
@@ -1213,10 +1135,7 @@ func TestBindingBlock(t *testing.T) {
 }
 
 func TestGovernance(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
 	// manipulate InitChain() func
@@ -1469,10 +1388,7 @@ func TestGovernance(t *testing.T) {
 }
 
 func TestProtocolUpgrade(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	// manipulate
 	app.state.LastHeight = 8
@@ -1575,10 +1491,7 @@ func prepForGov(s *store.Store, seed string, amount uint64) crypto.Address {
 }
 
 func TestQueryDID(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	var req abci.RequestQuery
 	var res abci.ResponseQuery
@@ -1610,10 +1523,7 @@ func TestQueryDID(t *testing.T) {
 }
 
 func TestQueryHibernate(t *testing.T) {
-	setUpTest(t)
-	defer tearDownTest(t)
-
-	app := NewAMOApp(tmpFile, 1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
 	var req abci.RequestQuery
 	var res abci.ResponseQuery

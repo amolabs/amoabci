@@ -1,47 +1,35 @@
 package amo
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
+	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 type State struct {
-	ProtocolVersion uint64 `json:"protocol_version"`
-	MerkleVersion   int64  `json:"merkle_version"`
-	Height          int64  `json:"height"` // current block height
-	AppHash         []byte `json:"app_hash"`
-	LastHeight      int64  `json:"last_height"` // last completed block height
-	LastAppHash     []byte `json:"last_app_hash"`
-	NextDraftID     uint32 `json:"next_draft_id"`
+	ProtocolVersion uint64 `json:"-"`
+	Height          int64  `json:"-"` // current block height
+	LastHeight      int64  `json:"-"` // last completed block height
+	LastAppHash     []byte `json:"-"`
+	NextDraftID     uint32 `json:"-"`
 }
 
-func (s *State) LoadFrom(f *os.File) error {
-	file, err := ioutil.ReadFile(f.Name())
-	if err != nil {
-		return err
+func (s *State) LoadFrom(sto *store.Store, cfg types.AMOAppConfig) {
+	height := sto.GetMerkleVersion() - int64(1)
+	if height < int64(0) {
+		height = int64(0)
 	}
 
-	if len(file) > 0 {
-		err = json.Unmarshal(file, s)
-		if err != nil {
-			return err
-		}
+	hash := sto.Root()
+
+	nextDraftID := sto.GetLastDraftID() + uint32(1)
+	protocolVersion := cfg.UpgradeProtocolVersion
+	if height < cfg.UpgradeProtocolHeight {
+		protocolVersion -= uint64(1)
 	}
 
-	return nil
-}
-
-func (s *State) SaveTo(f *os.File) error {
-	file, err := json.MarshalIndent(s, "", "    ")
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(f.Name(), file, os.FileMode(0644))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	s.Height = height
+	s.LastHeight = height
+	s.LastAppHash = hash
+	s.NextDraftID = nextDraftID
+	s.ProtocolVersion = protocolVersion
 }
