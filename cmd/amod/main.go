@@ -3,10 +3,12 @@ package main
 import (
 	"os"
 
-	"github.com/amolabs/amoabci/cmd/amod/cmd"
 	"github.com/spf13/cobra"
 	tm "github.com/tendermint/tendermint/cmd/tendermint/commands"
 	"github.com/tendermint/tendermint/libs/cli"
+
+	"github.com/amolabs/amoabci/cmd/amod/cmd"
+	cfg "github.com/amolabs/amoabci/config"
 )
 
 /* Commands (expected hierarchy)
@@ -37,8 +39,8 @@ func main() {
 		tm.VersionCmd,
 	)
 
-	cli.PrepareBaseCmd(runCmd, "AMO", cmd.DefaultAMODirPath)
-	cli.PrepareBaseCmd(tmCmd, "AMO", cmd.DefaultAMODirPath)
+	cli.PrepareBaseCmd(runCmd, "AMO", cfg.DefaultAMODirPath)
+	cli.PrepareBaseCmd(tmCmd, "AMO", cfg.DefaultAMODirPath)
 
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(tmCmd)
