@@ -20,4 +20,4 @@ fi
 # TODO: ensure directory
 mkdir -p /amo/data
 
-/usr/bin/amod run
+/usr/bin/amod run --home /amo
