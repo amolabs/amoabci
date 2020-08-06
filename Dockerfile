@@ -31,6 +31,7 @@ COPY Makefile go.mod go.sum amoabci/
 COPY cmd amoabci/cmd
 COPY amo amoabci/amo
 COPY crypto amoabci/crypto
+COPY config amoabci/config
 RUN make -C amoabci build_c
 
 #### runner image
