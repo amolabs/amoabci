@@ -63,6 +63,20 @@ var RunCmd = &cobra.Command{
 			return err
 		}
 
+		// set RLIMIT_NOFILE
+		var rLimit syscall.Rlimit
+		err = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+		if err != nil {
+			return err
+		}
+		if config.RLimitNoFile <= rLimit.Max {
+			rLimit.Cur = config.RLimitNoFile
+		}
+		err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+		if err != nil {
+			return err
+		}
+
 		// logger
 		logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 		logger, err = tmflags.ParseLogLevel(
