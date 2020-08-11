@@ -12,5 +12,5 @@ type Usage struct {
 
 type UsageEx struct {
 	*Usage
-	Buyer crypto.Address `json:"buyer"`
+	Recipient crypto.Address `json:"recipient"`
 }
