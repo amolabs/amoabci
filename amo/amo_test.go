@@ -248,7 +248,6 @@ func TestQueryParcel(t *testing.T) {
 		Requests: []*types.RequestEx{
 			{
 				Request: &request,
-				Buyer:   _addr,
 			},
 		},
 		Usages: []*types.UsageEx{},
@@ -313,7 +312,6 @@ func TestQueryRequest(t *testing.T) {
 
 	requestEx := types.RequestEx{
 		Request: &request,
-		Buyer:   addr,
 	}
 
 	app.store.SetRequest(addr, parcelID, &request)
@@ -357,8 +355,8 @@ func TestQueryRequest(t *testing.T) {
 	assert.Equal(t, "error: unmarshal", res.Log)
 
 	var keyMap = map[string]tmbytes.HexBytes{
-		"buyer":  addr,
-		"target": parcelID,
+		"recipient": addr,
+		"target":    parcelID,
 	}
 
 	// query
@@ -371,13 +369,13 @@ func TestQueryRequest(t *testing.T) {
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
 
-	keyMap["buyer"] = wrongAddr
+	keyMap["recipient"] = wrongAddr
 	key, _ = json.Marshal(keyMap)
 	req = abci.RequestQuery{Path: "/request", Data: key}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
 
-	delete(keyMap, "buyer")
+	delete(keyMap, "recipient")
 	key, _ = json.Marshal(keyMap)
 	req = abci.RequestQuery{Path: "/request", Data: key}
 	res = app.Query(req)
@@ -401,8 +399,8 @@ func TestQueryUsage(t *testing.T) {
 	}
 
 	usageEx := types.UsageEx{
-		Usage: &usage,
-		Buyer: addr,
+		Usage:     &usage,
+		Recipient: addr,
 	}
 
 	app.store.SetUsage(addr, parcelID, &usage)
@@ -446,8 +444,8 @@ func TestQueryUsage(t *testing.T) {
 	assert.Equal(t, "error: unmarshal", res.Log)
 
 	var keyMap = map[string]tmbytes.HexBytes{
-		"buyer":  addr,
-		"target": parcelID,
+		"recipient": addr,
+		"target":    parcelID,
 	}
 
 	// query
@@ -460,13 +458,13 @@ func TestQueryUsage(t *testing.T) {
 	assert.Equal(t, req.Data, res.Key)
 	assert.Equal(t, string(jsonstr), res.Log)
 
-	keyMap["buyer"] = wrongAddr
+	keyMap["recipient"] = wrongAddr
 	key, _ = json.Marshal(keyMap)
 	req = abci.RequestQuery{Path: "/usage", Data: key}
 	res = app.Query(req)
 	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
 
-	delete(keyMap, "buyer")
+	delete(keyMap, "recipient")
 	key, _ = json.Marshal(keyMap)
 	req = abci.RequestQuery{Path: "/usage", Data: key}
 	res = app.Query(req)
