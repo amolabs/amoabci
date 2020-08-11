@@ -1347,7 +1347,6 @@ func (s Store) GetRequests(parcelID []byte, committed bool) []*types.RequestEx {
 			}
 			request := types.RequestEx{
 				Request: requestValue,
-				Buyer:   buyer,
 			}
 
 			requests = append(requests, &request)
@@ -1420,8 +1419,8 @@ func (s Store) GetUsages(parcelID []byte, committed bool) []*types.UsageEx {
 			// TODO: Is this really the best ?
 			parcelID, buyer := splitParcelBuyerKey(prefixUsage, key)
 			usage := types.UsageEx{
-				Usage: s.GetUsage(buyer, parcelID, committed),
-				Buyer: buyer,
+				Usage:     s.GetUsage(buyer, parcelID, committed),
+				Recipient: buyer,
 			}
 
 			usages = append(usages, &usage)
