@@ -11,16 +11,15 @@ import (
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/types"
-	"github.com/amolabs/amoabci/crypto/p256"
 )
 
 type RequestParam struct {
-	Target          tmbytes.HexBytes `json:"target"`
-	Payment         types.Currency   `json:"payment"`
-	RecipientPubKey tmbytes.HexBytes `json:"recipient_pubkey"`
-	Dealer          crypto.Address   `json:"dealer,omitempty"`
-	DealerFee       types.Currency   `json:"dealer_fee,omitempty"`
-	Extra           json.RawMessage  `json:"extra,omitempty"`
+	Recipient crypto.Address   `json:"recipient"`
+	Target    tmbytes.HexBytes `json:"target"`
+	Payment   types.Currency   `json:"payment"`
+	Dealer    crypto.Address   `json:"dealer,omitempty"`
+	DealerFee types.Currency   `json:"dealer_fee,omitempty"`
+	Extra     json.RawMessage  `json:"extra,omitempty"`
 }
 
 func parseRequestParam(raw []byte) (RequestParam, error) {
@@ -40,15 +39,13 @@ type TxRequest struct {
 var _ Tx = &TxRequest{}
 
 func (t *TxRequest) Check() (uint32, string) {
-	// TOOD: check format
-	//txParam, err := parseRequestParam(t.Payload)
 	txParam, err := parseRequestParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
 
-	if len(txParam.RecipientPubKey) != p256.PubKeyP256Size {
-		return code.TxCodeBadParam, "improper recipient pubkey"
+	if len(txParam.Recipient) != crypto.AddressSize {
+		return code.TxCodeBadParam, "improper recipient address"
 	}
 
 	return code.TxCodeOK, "ok"
@@ -60,28 +57,30 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
+	if len(txParam.Recipient) != crypto.AddressSize {
+		return code.TxCodeBadParam, "improper recipient address", nil
+	}
+
 	parcel := store.GetParcel(txParam.Target, false)
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
 
-	if bytes.Equal(parcel.Owner, t.GetSender()) {
+	requestor := t.GetSender()
+	if bytes.Equal(parcel.Owner, txParam.Recipient) {
 		// add new code for this
 		return code.TxCodeSelfTransaction, "requesting owned parcel", nil
 	}
 
-	usage := store.GetUsage(t.GetSender(), txParam.Target, false)
+	usage := store.GetUsage(txParam.Recipient, txParam.Target, false)
 	if usage != nil {
 		return code.TxCodeAlreadyGranted, "parcel already granted", nil
 	}
 
-	request := store.GetRequest(t.GetSender(), txParam.Target, false)
+	request := store.GetRequest(txParam.Recipient, txParam.Target, false)
 	if request != nil {
 		return code.TxCodeAlreadyRequested, "parcel already requested", nil
 	}
-
-	var recipientPubKey p256.PubKeyP256
-	copy(recipientPubKey[:], txParam.RecipientPubKey)
 
 	if len(txParam.Dealer) == 0 {
 		txParam.DealerFee.Set(0)
@@ -89,7 +88,7 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		return code.TxCodeBadParam, "invalid dealer address", nil
 	}
 
-	balance := store.GetBalance(t.GetSender(), false)
+	balance := store.GetBalance(requestor, false)
 	wanted, err := txParam.Payment.Clone()
 	if err != nil {
 		return code.TxCodeInvalidAmount, err.Error(), nil
@@ -99,11 +98,12 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 
-	store.SetRequest(t.GetSender(), txParam.Target, &types.Request{
-		Payment:         txParam.Payment,
-		RecipientPubKey: recipientPubKey,
-		Dealer:          txParam.Dealer,
-		DealerFee:       txParam.DealerFee,
+	store.SetRequest(txParam.Recipient, txParam.Target, &types.Request{
+		Agency:    requestor,
+		Recipient: txParam.Recipient,
+		Payment:   txParam.Payment,
+		Dealer:    txParam.Dealer,
+		DealerFee: txParam.DealerFee,
 		Extra: types.Extra{
 			Register: parcel.Extra.Register,
 			Request:  txParam.Extra,
@@ -111,7 +111,7 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	})
 
 	balance.Sub(wanted)
-	store.SetBalance(t.GetSender(), balance)
+	store.SetBalance(requestor, balance)
 
 	return code.TxCodeOK, "ok", []abci.Event{}
 }

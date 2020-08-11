@@ -13,8 +13,8 @@ import (
 )
 
 type RevokeParam struct {
-	Grantee crypto.Address   `json:"grantee"`
-	Target  tmbytes.HexBytes `json:"target"`
+	Recipient crypto.Address   `json:"recipient"`
+	Target    tmbytes.HexBytes `json:"target"`
 }
 
 func parseRevokeParam(raw []byte) (RevokeParam, error) {
@@ -41,8 +41,8 @@ func (t *TxRevoke) Check() (uint32, string) {
 
 	// TODO: check format
 
-	if len(txParam.Grantee) != crypto.AddressSize {
-		return code.TxCodeBadParam, "wrong grantee address size"
+	if len(txParam.Recipient) != crypto.AddressSize {
+		return code.TxCodeBadParam, "wrong recipient address"
 	}
 
 	return code.TxCodeOK, "ok"
@@ -55,21 +55,26 @@ func (t *TxRevoke) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
+	if len(txParam.Recipient) != crypto.AddressSize {
+		return code.TxCodeBadParam, "wrong recipient address", nil
+	}
+
+	revoker := t.GetSender()
 	parcel := store.GetParcel(txParam.Target, false)
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
-	if !bytes.Equal(parcel.Owner, t.GetSender()) &&
-		!bytes.Equal(parcel.ProxyAccount, t.GetSender()) {
+	if !bytes.Equal(parcel.Owner, revoker) &&
+		!bytes.Equal(parcel.ProxyAccount, revoker) {
 		return code.TxCodePermissionDenied, "permission denied", nil
 	}
 
-	usage := store.GetUsage(txParam.Grantee, txParam.Target, false)
+	usage := store.GetUsage(txParam.Recipient, txParam.Target, false)
 	if usage == nil {
 		return code.TxCodeUsageNotFound, "usage not found", nil
 	}
 
-	store.DeleteUsage(txParam.Grantee, txParam.Target)
+	store.DeleteUsage(txParam.Recipient, txParam.Target)
 
 	return code.TxCodeOK, "ok", []abci.Event{}
 }
