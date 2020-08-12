@@ -19,6 +19,7 @@
 
 # 14. tu1
 # 15. tu2
+# 16. tu3
 
 GENESISPRIVKEY="McFS24Dds4eezIfe+lfoni02J7lfs2eQQyhwF51ufmA="
 
@@ -56,6 +57,11 @@ if [ $? -ne 0 ]; then fail "$out"; fi
 echo "regenerate tu2 key"
 out=$($CLI key remove tu2)
 out=$($CLI key generate tu2 --encrypt=false)
+if [ $? -ne 0 ]; then fail "$out"; fi
+
+echo "regenerate tu3 key"
+out=$($CLI key remove tu3)
+out=$($CLI key generate tu3 --encrypt=false)
 if [ $? -ne 0 ]; then fail "$out"; fi
 
 keys=$($CLI key list -k)
