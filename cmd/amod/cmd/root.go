@@ -1,24 +1,7 @@
 package cmd
 
 import (
-	"os"
-	"path/filepath"
-
 	"github.com/spf13/cobra"
-)
-
-var (
-	defaultAMODir = ".amo"
-
-	defaultDataDir   = "data"
-	defaultConfigDir = "config"
-
-	defaultMerkleDB = "merkle"
-	defaultIndexDB  = "index"
-
-	defaultStateFile = "state.json"
-
-	DefaultAMODirPath = filepath.Join(os.ExpandEnv("$HOME"), defaultAMODir)
 )
 
 var RootCmd = &cobra.Command{
