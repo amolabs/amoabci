@@ -13,7 +13,7 @@ import (
 )
 
 type CancelParam struct {
-	Recipient crypto.Address   `json:"recipient"`
+	Recipient crypto.Address   `json:"recipient,omitempty"`
 	Target    tmbytes.HexBytes `json:"target"`
 }
 
@@ -39,7 +39,8 @@ func (t *TxCancel) Check() (uint32, string) {
 		return code.TxCodeBadParam, err.Error()
 	}
 
-	if len(txParam.Recipient) != crypto.AddressSize {
+	rpkSize := len(txParam.Recipient)
+	if rpkSize != 0 && rpkSize != crypto.AddressSize {
 		return code.TxCodeBadParam, "improper recipient address"
 	}
 
@@ -52,31 +53,45 @@ func (t *TxCancel) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	if len(txParam.Recipient) != crypto.AddressSize {
-		return code.TxCodeBadParam, "improper recipient address", nil
-	}
-
 	parcel := store.GetParcel(txParam.Target, false)
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
 
-	canceler := t.GetSender()
-	request := store.GetRequest(txParam.Recipient, txParam.Target, false)
+	var (
+		requestor crypto.Address   = t.GetSender()
+		canceler  crypto.Address   = t.GetSender()
+		recipient crypto.Address   = t.GetSender()
+		target    tmbytes.HexBytes = txParam.Target
+	)
+
+	rpkSize := len(txParam.Recipient)
+	if rpkSize != 0 {
+		if rpkSize != crypto.AddressSize {
+			return code.TxCodeBadParam, "improper recipient address", nil
+		}
+		recipient = txParam.Recipient
+	}
+
+	request := store.GetRequest(recipient, target, false)
 	if request == nil {
 		return code.TxCodeRequestNotFound, "request not found", nil
 	}
 
-	if !bytes.Equal(request.Agency, canceler) {
+	// permission check
+	if rpkSize != 0 {
+		requestor = request.Agency
+	}
+	if !bytes.Equal(requestor, canceler) {
 		return code.TxCodePermissionDenied, "permission denied", nil
 	}
 
-	usage := store.GetUsage(txParam.Recipient, txParam.Target, false)
+	usage := store.GetUsage(recipient, target, false)
 	if usage != nil {
 		return code.TxCodeAlreadyGranted, "parcel already granted", nil
 	}
 
-	store.DeleteRequest(txParam.Recipient, txParam.Target)
+	store.DeleteRequest(recipient, target)
 
 	balance := store.GetBalance(canceler, false)
 	balance.Add(&request.Payment)

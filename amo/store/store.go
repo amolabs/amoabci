@@ -1281,38 +1281,38 @@ func (s Store) DeleteParcel(parcelID []byte) {
 }
 
 // Request store
-func makeRequestKey(buyer crypto.Address, parcelID []byte) (buyerParcelKey, parcelBuyerKey []byte) {
-	buyerParcelKey = append(prefixRequest, append(append(buyer, ':'), parcelID...)...)
-	parcelBuyerKey = append(prefixRequest, append(append(parcelID, ':'), buyer...)...)
+func makeRequestKey(recipient crypto.Address, parcelID []byte) (recipientParcelKey, parcelBuyerKey []byte) {
+	recipientParcelKey = append(prefixRequest, append(append(recipient, ':'), parcelID...)...)
+	parcelBuyerKey = append(prefixRequest, append(append(parcelID, ':'), recipient...)...)
 	return
 }
 
-func splitParcelBuyerKey(prefix, key []byte) (parcelID []byte, buyer crypto.Address) {
-	// prefix + parcelID + buyer
+func splitParcelBuyerKey(prefix, key []byte) (parcelID []byte, recipient crypto.Address) {
+	// prefix + parcelID + recipient
 	parcelID = key[len(prefix) : len(key)-crypto.AddressSize-1]
-	buyer = key[len(key)-crypto.AddressSize:]
+	recipient = key[len(key)-crypto.AddressSize:]
 	return
 }
 
-func (s Store) SetRequest(buyer crypto.Address, parcelID []byte, value *types.Request) error {
+func (s Store) SetRequest(recipient crypto.Address, parcelID []byte, value *types.Request) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
 
-	buyerParcelKey, parcelBuyerKey := makeRequestKey(buyer, parcelID)
+	recipientParcelKey, parcelBuyerKey := makeRequestKey(recipient, parcelID)
 
 	// parcelBuyerKey has only nil as value to use it as index
-	s.set(buyerParcelKey, b)
+	s.set(recipientParcelKey, b)
 	s.set(parcelBuyerKey, []byte{})
 
 	return nil
 }
 
-func (s Store) GetRequest(buyer crypto.Address, parcelID []byte, committed bool) *types.Request {
-	buyerParcelKey, _ := makeRequestKey(buyer, parcelID)
+func (s Store) GetRequest(recipient crypto.Address, parcelID []byte, committed bool) *types.Request {
+	recipientParcelKey, _ := makeRequestKey(recipient, parcelID)
 
-	b := s.get(buyerParcelKey, committed)
+	b := s.get(recipientParcelKey, committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -1340,8 +1340,8 @@ func (s Store) GetRequests(parcelID []byte, committed bool) []*types.RequestEx {
 			}
 
 			// TODO: Is this really the best ?
-			parcelID, buyer := splitParcelBuyerKey(prefixRequest, key)
-			requestValue := s.GetRequest(buyer, parcelID, committed)
+			parcelID, recipient := splitParcelBuyerKey(prefixRequest, key)
+			requestValue := s.GetRequest(recipient, parcelID, committed)
 			if requestValue == nil {
 				return false
 			}
@@ -1358,38 +1358,38 @@ func (s Store) GetRequests(parcelID []byte, committed bool) []*types.RequestEx {
 	return requests
 }
 
-func (s Store) DeleteRequest(buyer crypto.Address, parcelID []byte) {
-	buyerParcelKey, parcelBuyerKey := makeRequestKey(buyer, parcelID)
+func (s Store) DeleteRequest(recipient crypto.Address, parcelID []byte) {
+	recipientParcelKey, parcelBuyerKey := makeRequestKey(recipient, parcelID)
 
-	s.remove(buyerParcelKey)
+	s.remove(recipientParcelKey)
 	s.remove(parcelBuyerKey)
 }
 
 // Usage store
-func makeUsageKey(buyer crypto.Address, parcelID []byte) (buyerParcelKey, parcelBuyerKey []byte) {
-	buyerParcelKey = append(prefixUsage, append(append(buyer, ':'), parcelID...)...)
-	parcelBuyerKey = append(prefixUsage, append(append(parcelID, ':'), buyer...)...)
+func makeUsageKey(recipient crypto.Address, parcelID []byte) (recipientParcelKey, parcelBuyerKey []byte) {
+	recipientParcelKey = append(prefixUsage, append(append(recipient, ':'), parcelID...)...)
+	parcelBuyerKey = append(prefixUsage, append(append(parcelID, ':'), recipient...)...)
 	return
 }
 
-func (s Store) SetUsage(buyer crypto.Address, parcelID []byte, value *types.Usage) error {
+func (s Store) SetUsage(recipient crypto.Address, parcelID []byte, value *types.Usage) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
 
-	buyerParcelKey, parcelBuyerKey := makeUsageKey(buyer, parcelID)
+	recipientParcelKey, parcelBuyerKey := makeUsageKey(recipient, parcelID)
 
 	// parcelBuyerKey has only nil as value to use it as index
-	s.set(buyerParcelKey, b)
+	s.set(recipientParcelKey, b)
 	s.set(parcelBuyerKey, []byte{})
 
 	return nil
 }
 
-func (s Store) GetUsage(buyer crypto.Address, parcelID []byte, committed bool) *types.Usage {
-	buyerParcelKey, _ := makeUsageKey(buyer, parcelID)
-	b := s.get(buyerParcelKey, committed)
+func (s Store) GetUsage(recipient crypto.Address, parcelID []byte, committed bool) *types.Usage {
+	recipientParcelKey, _ := makeUsageKey(recipient, parcelID)
+	b := s.get(recipientParcelKey, committed)
 	if len(b) == 0 {
 		return nil
 	}
@@ -1417,10 +1417,10 @@ func (s Store) GetUsages(parcelID []byte, committed bool) []*types.UsageEx {
 			}
 
 			// TODO: Is this really the best ?
-			parcelID, buyer := splitParcelBuyerKey(prefixUsage, key)
+			parcelID, recipient := splitParcelBuyerKey(prefixUsage, key)
 			usage := types.UsageEx{
-				Usage:     s.GetUsage(buyer, parcelID, committed),
-				Recipient: buyer,
+				Usage:     s.GetUsage(recipient, parcelID, committed),
+				Recipient: recipient,
 			}
 
 			usages = append(usages, &usage)
@@ -1432,10 +1432,10 @@ func (s Store) GetUsages(parcelID []byte, committed bool) []*types.UsageEx {
 	return usages
 }
 
-func (s Store) DeleteUsage(buyer crypto.Address, parcelID []byte) {
-	buyerParcelKey, parcelBuyerKey := makeUsageKey(buyer, parcelID)
+func (s Store) DeleteUsage(recipient crypto.Address, parcelID []byte) {
+	recipientParcelKey, parcelBuyerKey := makeUsageKey(recipient, parcelID)
 
-	s.remove(buyerParcelKey)
+	s.remove(recipientParcelKey)
 	s.remove(parcelBuyerKey)
 }
 

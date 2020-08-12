@@ -5,9 +5,8 @@ import (
 )
 
 type Request struct {
-	Agency    crypto.Address `json:"agency"`
-	Recipient crypto.Address `json:"recipient"`
 	Payment   Currency       `json:"payment"`
+	Agency    crypto.Address `json:"agency,omitempty"`
 	Dealer    crypto.Address `json:"dealer,omitempty"`
 	DealerFee Currency       `json:"dealer_fee,omitempty"`
 	Extra     Extra          `json:"extra,omitempty"`
@@ -15,4 +14,5 @@ type Request struct {
 
 type RequestEx struct {
 	*Request
+	Recipient crypto.Address `json:"recipient"`
 }

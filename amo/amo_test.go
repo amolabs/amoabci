@@ -311,7 +311,8 @@ func TestQueryRequest(t *testing.T) {
 	}
 
 	requestEx := types.RequestEx{
-		Request: &request,
+		Request:   &request,
+		Recipient: addr,
 	}
 
 	app.store.SetRequest(addr, parcelID, &request)

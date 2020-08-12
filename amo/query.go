@@ -418,7 +418,7 @@ func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 	if _, ok := keyMap["recipient"]; !ok {
-		res.Log = "error: buyer is missing"
+		res.Log = "error: recipient is missing"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
@@ -444,7 +444,12 @@ func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	jsonstr, _ := json.Marshal(request)
+	requestEx := types.RequestEx{
+		Request:   request,
+		Recipient: addr,
+	}
+
+	jsonstr, _ := json.Marshal(requestEx)
 	res.Log = string(jsonstr)
 	res.Value = jsonstr
 	res.Code = code.QueryCodeOK
@@ -468,7 +473,7 @@ func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 	if _, ok := keyMap["recipient"]; !ok {
-		res.Log = "error: buyer is missing"
+		res.Log = "error: recipient is missing"
 		res.Code = code.QueryCodeBadKey
 		return
 	}

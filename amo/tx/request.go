@@ -15,9 +15,9 @@ import (
 )
 
 type RequestParam struct {
-	Recipient crypto.Address   `json:"recipient"`
 	Target    tmbytes.HexBytes `json:"target"`
 	Payment   types.Currency   `json:"payment"`
+	Recipient crypto.Address   `json:"recipient,omitempty"`
 	Dealer    crypto.Address   `json:"dealer,omitempty"`
 	DealerFee types.Currency   `json:"dealer_fee,omitempty"`
 	Extra     json.RawMessage  `json:"extra,omitempty"`
@@ -45,7 +45,8 @@ func (t *TxRequest) Check() (uint32, string) {
 		return code.TxCodeBadParam, err.Error()
 	}
 
-	if len(txParam.Recipient) != crypto.AddressSize {
+	rpkSize := len(txParam.Recipient)
+	if rpkSize != 0 && rpkSize != crypto.AddressSize {
 		return code.TxCodeBadParam, "improper recipient address"
 	}
 
@@ -58,64 +59,72 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	if len(txParam.Recipient) != crypto.AddressSize {
-		return code.TxCodeBadParam, "improper recipient address", nil
-	}
-
 	parcel := store.GetParcel(txParam.Target, false)
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
 
-	requestor := t.GetSender()
-	if bytes.Equal(parcel.Owner, txParam.Recipient) {
-		// add new code for this
+	var (
+		requestor crypto.Address   = t.GetSender()
+		recipient crypto.Address   = t.GetSender()
+		target    tmbytes.HexBytes = txParam.Target
+		request   types.Request    = types.Request{
+			Payment:   txParam.Payment,
+			Dealer:    txParam.Dealer,
+			DealerFee: txParam.DealerFee,
+			Extra: types.Extra{
+				Register: parcel.Extra.Register,
+				Request:  txParam.Extra,
+			},
+		}
+	)
+
+	rpkSize := len(txParam.Recipient)
+	if rpkSize != 0 {
+		if rpkSize != crypto.AddressSize {
+			return code.TxCodeBadParam, "improper recipient address", nil
+		}
+		recipient = txParam.Recipient
+		request.Agency = t.GetSender()
+	}
+
+	if bytes.Equal(parcel.Owner, recipient) {
 		return code.TxCodeSelfTransaction, "requesting owned parcel", nil
 	}
 
-	usage := store.GetUsage(txParam.Recipient, txParam.Target, false)
+	usage := store.GetUsage(recipient, target, false)
 	if usage != nil {
 		return code.TxCodeAlreadyGranted, "parcel already granted", nil
 	}
 
-	request := store.GetRequest(txParam.Recipient, txParam.Target, false)
-	if request != nil {
+	existingReq := store.GetRequest(recipient, target, false)
+	if existingReq != nil {
 		return code.TxCodeAlreadyRequested, "parcel already requested", nil
 	}
 
-	storageID := binary.BigEndian.Uint32(txParam.Target[:types.StorageIDLen])
+	storageID := binary.BigEndian.Uint32(target[:types.StorageIDLen])
 	storage := store.GetStorage(storageID, false)
 	if storage == nil || storage.Active == false {
 		return code.TxCodeNoStorage, "no active storage for this parcel", nil
 	}
 
-	if len(txParam.Dealer) == 0 {
-		txParam.DealerFee.Set(0)
-	} else if len(txParam.Dealer) != crypto.AddressSize {
+	if len(request.Dealer) == 0 {
+		request.DealerFee.Set(0)
+	} else if len(request.Dealer) != crypto.AddressSize {
 		return code.TxCodeBadParam, "invalid dealer address", nil
 	}
 
 	balance := store.GetBalance(requestor, false)
-	wanted, err := txParam.Payment.Clone()
+	wanted, err := request.Payment.Clone()
 	if err != nil {
 		return code.TxCodeInvalidAmount, err.Error(), nil
 	}
-	wanted.Add(&txParam.DealerFee)
+	wanted.Add(&request.DealerFee)
 	if balance.LessThan(wanted) {
 		return code.TxCodeNotEnoughBalance, "not enough balance", nil
 	}
 
-	store.SetRequest(txParam.Recipient, txParam.Target, &types.Request{
-		Agency:    requestor,
-		Recipient: txParam.Recipient,
-		Payment:   txParam.Payment,
-		Dealer:    txParam.Dealer,
-		DealerFee: txParam.DealerFee,
-		Extra: types.Extra{
-			Register: parcel.Extra.Register,
-			Request:  txParam.Extra,
-		},
-	})
+	store.SetRequest(recipient, target, &request)
 
 	balance.Sub(wanted)
 	store.SetBalance(requestor, balance)

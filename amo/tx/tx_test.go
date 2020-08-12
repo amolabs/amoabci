@@ -470,7 +470,6 @@ func TestRequest(t *testing.T) {
 	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
 	req := s.GetRequest(makeAccAddr("recipient"), parcelID, false)
 	assert.NotNil(t, req)
-	assert.Equal(t, makeAccAddr("recipient"), req.Recipient)
 	assert.Equal(t, []byte(`"any json for reg"`), []byte(req.Extra.Register))
 	assert.Equal(t, []byte(`"any json for req"`), []byte(req.Extra.Request))
 
@@ -505,7 +504,6 @@ func TestRequest(t *testing.T) {
 	bal = s.GetBalance(makeAccAddr("recipient"), false)
 	assert.Equal(t, types.Zero, bal)
 	req = s.GetRequest(makeAccAddr("recipient"), parcelID, false)
-	assert.Equal(t, makeAccAddr("recipient"), req.Recipient)
 	assert.Equal(t, new(types.Currency).SetAMO(25), &req.Payment)
 	assert.Equal(t, new(types.Currency).SetAMO(50), &req.DealerFee)
 }
