@@ -2,6 +2,7 @@ package tx
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -80,6 +81,12 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	request := store.GetRequest(txParam.Recipient, txParam.Target, false)
 	if request != nil {
 		return code.TxCodeAlreadyRequested, "parcel already requested", nil
+	}
+
+	storageID := binary.BigEndian.Uint32(txParam.Target[:types.StorageIDLen])
+	storage := store.GetStorage(storageID, false)
+	if storage == nil || storage.Active == false {
+		return code.TxCodeNoStorage, "no active storage for this parcel", nil
 	}
 
 	if len(txParam.Dealer) == 0 {

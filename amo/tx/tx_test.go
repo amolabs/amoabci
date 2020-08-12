@@ -432,6 +432,32 @@ func TestRequest(t *testing.T) {
 	// clean-up
 	s.DeleteUsage(makeAccAddr("recipient"), parcelID)
 
+	// no storage
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNoStorage, rc)
+
+	// set inactive storage
+	s.SetStorage(123, &types.Storage{
+		Owner:           makeAccAddr("provider"),
+		Url:             "http://dummy",
+		RegistrationFee: *new(types.Currency).SetAMO(1),
+		HostingFee:      *new(types.Currency).SetAMO(2),
+		Active:          false,
+	})
+
+	// inactive storage
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNoStorage, rc)
+
+	// set active storage
+	s.SetStorage(123, &types.Storage{
+		Owner:           makeAccAddr("provider"),
+		Url:             "http://dummy",
+		RegistrationFee: *new(types.Currency).SetAMO(1),
+		HostingFee:      *new(types.Currency).SetAMO(2),
+		Active:          true,
+	})
+
 	// not enough balance
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
