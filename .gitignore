@@ -40,4 +40,5 @@ TAGS
 *.tmp
 testdata/
 testaddr.sh
+testpubkey.sh
 *.tar.gz

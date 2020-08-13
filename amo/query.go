@@ -417,8 +417,8 @@ func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		res.Code = code.QueryCodeBadKey
 		return
 	}
-	if _, ok := keyMap["buyer"]; !ok {
-		res.Log = "error: buyer is missing"
+	if _, ok := keyMap["recipient"]; !ok {
+		res.Log = "error: recipient is missing"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
@@ -427,7 +427,7 @@ func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		res.Code = code.QueryCodeBadKey
 		return
 	}
-	addr := crypto.Address(keyMap["buyer"])
+	addr := crypto.Address(keyMap["recipient"])
 	if len(addr) != crypto.AddressSize {
 		res.Log = "error: not avaiable address"
 		res.Code = code.QueryCodeBadKey
@@ -445,8 +445,8 @@ func queryRequest(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	}
 
 	requestEx := types.RequestEx{
-		Request: request,
-		Buyer:   addr,
+		Request:   request,
+		Recipient: addr,
 	}
 
 	jsonstr, _ := json.Marshal(requestEx)
@@ -472,8 +472,8 @@ func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		res.Code = code.QueryCodeBadKey
 		return
 	}
-	if _, ok := keyMap["buyer"]; !ok {
-		res.Log = "error: buyer is missing"
+	if _, ok := keyMap["recipient"]; !ok {
+		res.Log = "error: recipient is missing"
 		res.Code = code.QueryCodeBadKey
 		return
 	}
@@ -482,7 +482,7 @@ func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		res.Code = code.QueryCodeBadKey
 		return
 	}
-	addr := crypto.Address(keyMap["buyer"])
+	addr := crypto.Address(keyMap["recipient"])
 	if len(addr) != crypto.AddressSize {
 		res.Log = "error: not avaiable address"
 		res.Code = code.QueryCodeBadKey
@@ -500,8 +500,8 @@ func queryUsage(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	}
 
 	usageEx := types.UsageEx{
-		Usage: usage,
-		Buyer: addr,
+		Usage:     usage,
+		Recipient: addr,
 	}
 
 	jsonstr, _ := json.Marshal(usageEx)

@@ -51,6 +51,16 @@ out=$($CLI tx --broadcast=commit request $CLIOPT --user tu2 "$P1" "$AMO1" | sed 
 info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
 if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
 
+echo "tu2 cancel p1 request"
+out=$($CLI tx --broadcast=commit cancel $CLIOPT --user tu2 "$P1" | sed 's/\^\@//g')
+info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
+
+echo "tu2 request p1 with 1 AMO"
+out=$($CLI tx --broadcast=commit request $CLIOPT --user tu2 "$P1" "$AMO1" | sed 's/\^\@//g')
+info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
+
 echo "tu1 grant tu2 on p1, collect 1 AMO"
 out=$($CLI tx --broadcast=commit grant $CLIOPT --user tu1 "$P1" "$tu2" "$CUSTODY" | sed 's/\^\@//g')
 info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
@@ -61,3 +71,27 @@ out=$($CLI tx --broadcast=commit revoke $CLIOPT --user tu1 "$P1" "$tu2" | sed 's
 info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
 if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
 
+echo "tu2 request p1 for tu3 with 1 AMO"
+out=$($CLI tx --broadcast=commit request $CLIOPT --user tu2 "$P1" "$AMO1" --recipient "$tu3" | sed 's/\^\@//g')
+info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
+
+echo "tu2 cancel p1 request for tu3"
+out=$($CLI tx --broadcast=commit cancel $CLIOPT --user tu2 "$P1" --recipient "$tu3" | sed 's/\^\@//g')
+info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
+
+echo "tu2 request p1 for tu3 with 1 AMO"
+out=$($CLI tx --broadcast=commit request $CLIOPT --user tu2 "$P1" "$AMO1" --recipient "$tu3" | sed 's/\^\@//g')
+info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
+
+echo "tu1 grant tu3 on p1, collect 1 AMO"
+out=$($CLI tx --broadcast=commit grant $CLIOPT --user tu1 "$P1" "$tu3" "$CUSTODY" | sed 's/\^\@//g')
+info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi
+
+echo "tu1 revoke grant given to tu3 on p1"
+out=$($CLI tx --broadcast=commit revoke $CLIOPT --user tu1 "$P1" "$tu3" | sed 's/\^\@//g')
+info=$(echo $out | python -c "import sys, json; print json.load(sys.stdin)['deliver_tx']['info']")
+if [ -z "$info" -o "$info" != "ok" ]; then fail $out; fi

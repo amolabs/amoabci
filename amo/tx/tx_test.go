@@ -63,10 +63,16 @@ func makeTestTx(txType string, seed string, payload []byte) Tx {
 	return classifyTx(trans)
 }
 
-func makeTestAddress(seed string) crypto.Address {
+func makeTestPubKey(seed string) p256.PubKeyP256 {
 	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
-	addr := privKey.PubKey().Address()
-	return addr
+	pubKey := privKey.PubKey().Bytes()
+	var pubKey256 p256.PubKeyP256
+	copy(pubKey256[:], pubKey)
+	return pubKey256
+}
+func makeTestAddress(seed string) crypto.Address {
+	pubKey := makeTestPubKey(seed)
+	return pubKey.Address()
 }
 
 func getTestStore() *store.Store {
@@ -189,11 +195,13 @@ func TestValidCancel(t *testing.T) {
 		Custody: custody[0],
 	})
 	s.SetRequest(bob.addr, parcelID[0], &types.Request{
+		Agency:  bob.addr,
 		Payment: *new(types.Currency).Set(100),
 	})
 
 	// target
 	param := CancelParam{
+		bob.addr,
 		parcelID[0],
 	}
 	payload, _ := json.Marshal(param)
@@ -219,6 +227,7 @@ func TestNonValidCancel(t *testing.T) {
 
 	// target
 	param := CancelParam{
+		eve.addr,
 		parcelID[0],
 	}
 	payload, _ := json.Marshal(param)
@@ -382,11 +391,12 @@ func TestRequest(t *testing.T) {
 	parcelID := append(tmp, []byte("parcel")...)
 
 	payload, _ := json.Marshal(RequestParam{
-		Target:  parcelID,
-		Payment: *new(types.Currency).SetAMO(1),
-		Extra:   []byte(`"any json for req"`),
+		Recipient: makeAccAddr("recipient"),
+		Target:    parcelID,
+		Payment:   *new(types.Currency).SetAMO(1),
+		Extra:     []byte(`"any json for req"`),
 	})
-	t1 := makeTestTx("request", "buyer", payload)
+	t1 := makeTestTx("request", "recipient", payload)
 	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 
@@ -394,9 +404,9 @@ func TestRequest(t *testing.T) {
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeParcelNotFound, rc)
 
-	// request for buyer owned parcel
+	// request for recipient owned parcel
 	s.SetParcel(parcelID, &types.Parcel{
-		Owner:        makeAccAddr("buyer"),
+		Owner:        makeAccAddr("recipient"),
 		Custody:      []byte("custody"),
 		ProxyAccount: makeAccAddr("proxy"),
 		Extra:        types.Extra{},
@@ -413,26 +423,52 @@ func TestRequest(t *testing.T) {
 			Register: []byte(`"any json for reg"`),
 		},
 	})
-	s.SetUsage(makeAccAddr("buyer"), parcelID, &types.Usage{
+	s.SetUsage(makeAccAddr("recipient"), parcelID, &types.Usage{
 		Custody: []byte("custody"),
 		Extra:   types.Extra{},
 	})
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
 	// clean-up
-	s.DeleteUsage(makeAccAddr("buyer"), parcelID)
+	s.DeleteUsage(makeAccAddr("recipient"), parcelID)
+
+	// no storage
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNoStorage, rc)
+
+	// set inactive storage
+	s.SetStorage(123, &types.Storage{
+		Owner:           makeAccAddr("provider"),
+		Url:             "http://dummy",
+		RegistrationFee: *new(types.Currency).SetAMO(1),
+		HostingFee:      *new(types.Currency).SetAMO(2),
+		Active:          false,
+	})
+
+	// inactive storage
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNoStorage, rc)
+
+	// set active storage
+	s.SetStorage(123, &types.Storage{
+		Owner:           makeAccAddr("provider"),
+		Url:             "http://dummy",
+		RegistrationFee: *new(types.Currency).SetAMO(1),
+		HostingFee:      *new(types.Currency).SetAMO(2),
+		Active:          true,
+	})
 
 	// not enough balance
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 
 	// with some balance, do it again
-	s.SetBalance(makeAccAddr("buyer"), new(types.Currency).SetAMO(2))
+	s.SetBalance(makeAccAddr("recipient"), new(types.Currency).SetAMO(2))
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
-	bal := s.GetBalance(makeAccAddr("buyer"), false)
+	bal := s.GetBalance(makeAccAddr("recipient"), false)
 	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
-	req := s.GetRequest(makeAccAddr("buyer"), parcelID, false)
+	req := s.GetRequest(makeAccAddr("recipient"), parcelID, false)
 	assert.NotNil(t, req)
 	assert.Equal(t, []byte(`"any json for reg"`), []byte(req.Extra.Register))
 	assert.Equal(t, []byte(`"any json for req"`), []byte(req.Extra.Request))
@@ -441,32 +477,33 @@ func TestRequest(t *testing.T) {
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyRequested, rc)
 	// clean-up
-	s.DeleteRequest(makeAccAddr("buyer"), parcelID)
+	s.DeleteRequest(makeAccAddr("recipient"), parcelID)
 
 	// dealer fee
 	// XXX: dealer fee is optional, so the previous tests without dealer fee
 	// are valid also.
 	payload2, _ := json.Marshal(RequestParam{
+		Recipient: makeAccAddr("recipient"),
 		Target:    parcelID,
 		Payment:   *new(types.Currency).SetAMO(25),
 		Dealer:    makeAccAddr("dealer"),
 		DealerFee: *new(types.Currency).SetAMO(50),
 		Extra:     []byte(`"any json for req"`),
 	})
-	t2 := makeTestTx("request", "buyer", payload2)
+	t2 := makeTestTx("request", "recipient", payload2)
 	rc, _ = t2.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
-	// at this point, buyer's balance is 1 AMO. not enough
+	// at this point, recipient's balance is 1 AMO. not enough
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeNotEnoughBalance, rc)
 	// do again with more money
-	s.SetBalance(makeAccAddr("buyer"), new(types.Currency).SetAMO(75))
+	s.SetBalance(makeAccAddr("recipient"), new(types.Currency).SetAMO(75))
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	// check balance
-	bal = s.GetBalance(makeAccAddr("buyer"), false)
+	bal = s.GetBalance(makeAccAddr("recipient"), false)
 	assert.Equal(t, types.Zero, bal)
-	req = s.GetRequest(makeAccAddr("buyer"), parcelID, false)
+	req = s.GetRequest(makeAccAddr("recipient"), parcelID, false)
 	assert.Equal(t, new(types.Currency).SetAMO(25), &req.Payment)
 	assert.Equal(t, new(types.Currency).SetAMO(50), &req.DealerFee)
 }
@@ -483,10 +520,10 @@ func TestGrant(t *testing.T) {
 	parcelID := append(tmp, []byte("parcel")...)
 
 	payload, _ := json.Marshal(GrantParam{
-		Target:  parcelID,
-		Grantee: makeAccAddr("buyer"),
-		Custody: []byte("custody"),
-		Extra:   []byte(`"any json for grant"`),
+		Recipient: makeAccAddr("recipient"),
+		Target:    parcelID,
+		Custody:   []byte("custody"),
+		Extra:     []byte(`"any json for grant"`),
 	})
 	t1 := makeTestTx("grant", "seller", payload)
 	rc, _ := t1.Check()
@@ -509,18 +546,18 @@ func TestGrant(t *testing.T) {
 	assert.Equal(t, code.TxCodeRequestNotFound, rc)
 
 	// grant for already granted parcel
-	s.SetUsage(makeAccAddr("buyer"), parcelID, &types.Usage{})
+	s.SetUsage(makeAccAddr("recipient"), parcelID, &types.Usage{})
 	rc, _, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeAlreadyGranted, rc)
 	// clean-up
-	s.DeleteUsage(makeAccAddr("buyer"), parcelID)
+	s.DeleteUsage(makeAccAddr("recipient"), parcelID)
 
 	// grant without permission
 	t2 := makeTestTx("grant", "bogus", payload)
 	rc, _, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
 
-	s.SetRequest(makeAccAddr("buyer"), parcelID, &types.Request{
+	s.SetRequest(makeAccAddr("recipient"), parcelID, &types.Request{
 		Payment:   *new(types.Currency).SetAMO(1),
 		Dealer:    makeAccAddr("dealer"),
 		DealerFee: *new(types.Currency).SetAMO(1),
@@ -563,7 +600,7 @@ func TestGrant(t *testing.T) {
 	bal = s.GetBalance(makeAccAddr("dealer"), false)
 	assert.Equal(t, new(types.Currency).SetAMO(1), bal)
 	// check extras
-	usage := s.GetUsage(makeAccAddr("buyer"), parcelID, false)
+	usage := s.GetUsage(makeAccAddr("recipient"), parcelID, false)
 	assert.Equal(t, []byte(`"any json for reg"`), []byte(usage.Extra.Register))
 	assert.Equal(t, []byte(`"any json for req"`), []byte(usage.Extra.Request))
 	assert.Equal(t, []byte(`"any json for grant"`), []byte(usage.Extra.Grant))
@@ -591,15 +628,15 @@ func TestValidRevoke(t *testing.T) {
 
 	// target
 	param := RevokeParam{
-		Grantee: bob.addr,
-		Target:  parcelID[0],
+		Recipient: bob.addr,
+		Target:    parcelID[0],
 	}
 	payload, _ := json.Marshal(param)
 	t1 := makeTestTx("revoke", "alice", payload)
 
 	param = RevokeParam{
-		Grantee: bob.addr,
-		Target:  parcelID[1],
+		Recipient: bob.addr,
+		Target:    parcelID[1],
 	}
 	payload, _ = json.Marshal(param)
 	t2 := makeTestTx("revoke", "carol", payload)
@@ -631,15 +668,15 @@ func TestNonValidRevoke(t *testing.T) {
 
 	// target
 	param := RevokeParam{
-		Grantee: eve.addr,
-		Target:  parcelID[0],
+		Recipient: eve.addr,
+		Target:    parcelID[0],
 	}
 	payload, _ := json.Marshal(param)
 	t1 := makeTestTx("revoke", "eve", payload)
 
 	param = RevokeParam{
-		Grantee: bob.addr,
-		Target:  parcelID[2],
+		Recipient: bob.addr,
+		Target:    parcelID[2],
 	}
 	payload, _ = json.Marshal(param)
 	t2 := makeTestTx("revoke", "alice", payload)

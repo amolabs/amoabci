@@ -6,6 +6,7 @@ import (
 
 type Request struct {
 	Payment   Currency       `json:"payment"`
+	Agency    crypto.Address `json:"agency,omitempty"`
 	Dealer    crypto.Address `json:"dealer,omitempty"`
 	DealerFee Currency       `json:"dealer_fee,omitempty"`
 	Extra     Extra          `json:"extra,omitempty"`
@@ -13,5 +14,5 @@ type Request struct {
 
 type RequestEx struct {
 	*Request
-	Buyer crypto.Address `json:"buyer"`
+	Recipient crypto.Address `json:"recipient"`
 }

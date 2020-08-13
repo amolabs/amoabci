@@ -15,10 +15,10 @@ import (
 )
 
 type GrantParam struct {
-	Target  tmbytes.HexBytes `json:"target"`
-	Grantee crypto.Address   `json:"grantee"`
-	Custody tmbytes.HexBytes `json:"custody"`
-	Extra   json.RawMessage  `json:"extra,omitempty"`
+	Recipient crypto.Address   `json:"recipient"`
+	Target    tmbytes.HexBytes `json:"target"`
+	Custody   tmbytes.HexBytes `json:"custody"`
+	Extra     json.RawMessage  `json:"extra,omitempty"`
 }
 
 func parseGrantParam(raw []byte) (GrantParam, error) {
@@ -45,8 +45,8 @@ func (t *TxGrant) Check() (uint32, string) {
 
 	// TODO: check format
 
-	if len(txParam.Grantee) != crypto.AddressSize {
-		return code.TxCodeBadParam, "wrong grantee address size"
+	if len(txParam.Recipient) != crypto.AddressSize {
+		return code.TxCodeBadParam, "improper recipient address"
 	}
 
 	return code.TxCodeOK, "ok"
@@ -58,22 +58,27 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
+	if len(txParam.Recipient) != crypto.AddressSize {
+		return code.TxCodeBadParam, "improper recipient address", nil
+	}
+
+	grantor := t.GetSender()
 	parcel := store.GetParcel(txParam.Target, false)
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil
 	}
 
-	if !bytes.Equal(parcel.Owner, t.GetSender()) &&
-		!bytes.Equal(parcel.ProxyAccount, t.GetSender()) {
+	if !bytes.Equal(parcel.Owner, grantor) &&
+		!bytes.Equal(parcel.ProxyAccount, grantor) {
 		return code.TxCodePermissionDenied, "permission denied", nil
 	}
 
-	usage := store.GetUsage(txParam.Grantee, txParam.Target, false)
+	usage := store.GetUsage(txParam.Recipient, txParam.Target, false)
 	if usage != nil {
 		return code.TxCodeAlreadyGranted, "parcel already granted", nil
 	}
 
-	request := store.GetRequest(txParam.Grantee, txParam.Target, false)
+	request := store.GetRequest(txParam.Recipient, txParam.Target, false)
 	if request == nil {
 		return code.TxCodeRequestNotFound, "parcel not requested", nil
 	}
@@ -90,9 +95,9 @@ func (t *TxGrant) Execute(store *store.Store) (uint32, string, []abci.Event) {
 			"not enough balance for hosting fee", nil
 	}
 
-	store.DeleteRequest(txParam.Grantee, txParam.Target)
+	store.DeleteRequest(txParam.Recipient, txParam.Target)
 
-	store.SetUsage(txParam.Grantee, txParam.Target, &types.Usage{
+	store.SetUsage(txParam.Recipient, txParam.Target, &types.Usage{
 		Custody: txParam.Custody,
 		Extra: types.Extra{
 			Register: request.Extra.Register,
