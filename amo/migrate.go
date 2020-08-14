@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	tmdb "github.com/tendermint/tm-db"
-
 	"github.com/amolabs/amoabci/amo/types"
 )
 
@@ -116,23 +114,6 @@ func (app *AMOApp) MigrateTo4() {
 
 		return nil
 	})
-}
-
-func purgeDB(db tmdb.DB) error {
-	itr, err := db.Iterator(nil, nil)
-	if err != nil {
-		return err
-	}
-	b := db.NewBatch()
-	for ; itr.Valid(); itr.Next() {
-		k := itr.Key()
-		// XXX: not sure if this will confuse the iterator
-		b.Delete(k)
-	}
-	itr.Close()
-	b.WriteSync()
-	b.Close()
-	return nil
 }
 
 /* sample code for migration
