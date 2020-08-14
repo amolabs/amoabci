@@ -156,6 +156,9 @@ func initApp(config *cfg.Config, logger log.Logger) (*amo.AMOApp, error) {
 		dataDirPath,
 	)
 
+	// TODO: remove these lines at protocol v5 release
+	amo.DataDirPath = dataDirPath
+
 	// create app
 	// TODO: read checkpoint_interval from config
 	app := amo.NewAMOApp(

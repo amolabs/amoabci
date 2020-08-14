@@ -246,6 +246,64 @@ func (app *AMOApp) loadAppConfig() error {
 		if err != nil {
 			return err
 		}
+
+		// TODO: remove these lines at v1.7.1
+		if cfg.UpgradeProtocolHeight != defaultUpgradeProtocolHeight &&
+			app.state.Height == cfg.UpgradeProtocolHeight {
+			var bCfg struct {
+				MaxValidators          uint64         `json:"max_validators"`
+				WeightValidator        float64        `json:"weight_validator"`
+				WeightDelegator        float64        `json:"weight_delegator"`
+				MinStakingUnit         types.Currency `json:"min_staking_unit"`
+				BlkReward              types.Currency `json:"blk_reward"`
+				TxReward               types.Currency `json:"tx_reward"`
+				PenaltyRatioM          float64        `json:"penalty_ratio_m"`
+				PenaltyRatioL          float64        `json:"penalty_ratio_l"`
+				LazinessCounterWindow  int64          `json:"laziness_counter_window"`
+				LazinessThreshold      float64        `json:"laziness_threshold"`
+				BlockBindingWindow     int64          `json:"block_binding_window"`
+				LockupPeriod           int64          `json:"lockup_period"`
+				DraftOpenCount         int64          `json:"draft_open_count"`
+				DraftCloseCount        int64          `json:"draft_close_count"`
+				DraftApplyCount        int64          `json:"draft_apply_count"`
+				DraftDeposit           types.Currency `json:"draft_deposit"`
+				DraftQuorumRate        float64        `json:"draft_quorum_rate"`
+				DraftPassRate          float64        `json:"draft_pass_rate"`
+				DraftRefundRate        float64        `json:"draft_refund_rate"`
+				UpgradeProtocolHeight  int64          `json:"upgrade_protocol_height"`
+				UpgradeProtocolVersion uint64         `json:"upgrade_protocol_version"`
+			}
+			err = json.Unmarshal(b, &bCfg)
+			if err != nil {
+				return err
+			}
+
+			// explict config change process
+			cfg.LazinessWindow = bCfg.LazinessCounterWindow
+			cfg.LazinessThreshold = int64(float64(bCfg.LazinessCounterWindow) * bCfg.LazinessThreshold)
+			cfg.HibernateThreshold = defaultHibernateThreshold
+			cfg.HibernatePeriod = defaultHibernatePeriod
+
+			cfg.MaxValidators = bCfg.MaxValidators
+			cfg.WeightValidator = bCfg.WeightValidator
+			cfg.WeightDelegator = bCfg.WeightDelegator
+			cfg.MinStakingUnit = bCfg.MinStakingUnit
+			cfg.BlkReward = bCfg.BlkReward
+			cfg.TxReward = bCfg.TxReward
+			cfg.PenaltyRatioM = bCfg.PenaltyRatioM
+			cfg.PenaltyRatioL = bCfg.PenaltyRatioL
+			cfg.BlockBindingWindow = bCfg.BlockBindingWindow
+			cfg.LockupPeriod = bCfg.LockupPeriod
+			cfg.DraftOpenCount = bCfg.DraftOpenCount
+			cfg.DraftCloseCount = bCfg.DraftCloseCount
+			cfg.DraftApplyCount = bCfg.DraftApplyCount
+			cfg.DraftDeposit = bCfg.DraftDeposit
+			cfg.DraftQuorumRate = bCfg.DraftQuorumRate
+			cfg.DraftPassRate = bCfg.DraftPassRate
+			cfg.DraftRefundRate = bCfg.DraftRefundRate
+			cfg.UpgradeProtocolHeight = bCfg.UpgradeProtocolHeight
+			cfg.UpgradeProtocolVersion = bCfg.UpgradeProtocolVersion
+		}
 	}
 
 	app.config = cfg
@@ -438,8 +496,8 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 		panic(err)
 	}
 
-	// migrate to X if needed
-	// app.MigrateToX()
+	// migrate to 4
+	app.MigrateTo4()
 
 	app.doValUpdate = false
 	app.oldVals = app.store.GetValidators(app.config.MaxValidators, false)
