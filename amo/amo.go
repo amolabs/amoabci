@@ -242,9 +242,17 @@ func (app *AMOApp) loadAppConfig() error {
 
 	// if config exists
 	if len(b) > 0 {
+		var upgradeProtocol struct {
+			Height int64 `json:"upgrade_protocol_height"`
+		}
+		err = json.Unmarshal(b, &upgradeProtocol)
+		if err != nil {
+			return err
+		}
+
 		// TODO: remove these lines at v1.7.2
-		if cfg.UpgradeProtocolHeight != defaultUpgradeProtocolHeight &&
-			app.state.Height == cfg.UpgradeProtocolHeight {
+		if upgradeProtocol.Height != defaultUpgradeProtocolHeight &&
+			app.state.Height == upgradeProtocol.Height {
 			var bCfg struct {
 				MaxValidators          uint64         `json:"max_validators"`
 				WeightValidator        float64        `json:"weight_validator"`
