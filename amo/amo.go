@@ -24,7 +24,7 @@ import (
 
 const (
 	// versions
-	AMOAppVersion      = "v1.7.1"
+	AMOAppVersion      = "v1.7.2"
 	AMOProtocolVersion = uint64(0x4)
 )
 
@@ -239,6 +239,7 @@ func (app *AMOApp) loadAppConfig() error {
 	cfg.DraftDeposit = *tmp
 
 	b := app.store.GetAppConfig()
+	height := app.store.GetMerkleVersion()
 
 	// if config exists
 	if len(b) > 0 {
@@ -252,7 +253,7 @@ func (app *AMOApp) loadAppConfig() error {
 
 		// TODO: remove these lines at v1.7.2
 		if upgradeProtocol.Height != defaultUpgradeProtocolHeight &&
-			app.state.Height == upgradeProtocol.Height {
+			height == upgradeProtocol.Height {
 			var bCfg struct {
 				MaxValidators          uint64         `json:"max_validators"`
 				WeightValidator        float64        `json:"weight_validator"`
