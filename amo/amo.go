@@ -298,6 +298,12 @@ func (app *AMOApp) loadAppConfig() error {
 			cfg.DraftRefundRate = bCfg.DraftRefundRate
 			cfg.UpgradeProtocolHeight = bCfg.UpgradeProtocolHeight
 			cfg.UpgradeProtocolVersion = bCfg.UpgradeProtocolVersion
+		} else {
+			err = json.Unmarshal(b, &cfg)
+			if err != nil {
+				return err
+			}
+
 		}
 	}
 
