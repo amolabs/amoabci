@@ -24,8 +24,12 @@ func rewind(amoRoot string, doFix bool, rewindVersion int64) {
 
 	fmt.Println("current merkle version", ver)
 
-	if doFix {
+	if rewindVersion > 0 && ver > rewindVersion && doFix {
 		ver, err = amoMt.LoadVersionForOverwriting(rewindVersion)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		fmt.Println("fixed merkle version", ver)
 	}
 }
