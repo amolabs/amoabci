@@ -251,7 +251,7 @@ func (app *AMOApp) loadAppConfig() error {
 			return err
 		}
 
-		// TODO: remove these lines at v1.7.2
+		// TODO: remove these lines at v1.7.5
 		if upgradeProtocol.Height != defaultUpgradeProtocolHeight &&
 			height == upgradeProtocol.Height {
 			var bCfg struct {
@@ -307,12 +307,20 @@ func (app *AMOApp) loadAppConfig() error {
 			cfg.DraftRefundRate = bCfg.DraftRefundRate
 			cfg.UpgradeProtocolHeight = bCfg.UpgradeProtocolHeight
 			cfg.UpgradeProtocolVersion = bCfg.UpgradeProtocolVersion
+
+			b, err := json.Marshal(cfg)
+			if err != nil {
+				return err
+			}
+			err = app.store.SetAppConfig(b)
+			if err != nil {
+				return err
+			}
 		} else {
 			err = json.Unmarshal(b, &cfg)
 			if err != nil {
 				return err
 			}
-
 		}
 	}
 
