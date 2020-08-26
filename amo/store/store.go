@@ -971,7 +971,7 @@ func (s *Store) SetDraft(draftID uint32, value *types.Draft) error {
 
 func (s *Store) GetDraft(draftID uint32, committed bool) *types.Draft {
 	b := s.get(makeDraftKey(draftID), committed)
-	if len(b) == 0 {
+	if b == nil || len(b) == 0 {
 		return nil
 	}
 
@@ -984,16 +984,37 @@ func (s *Store) GetDraft(draftID uint32, committed bool) *types.Draft {
 	return &draft
 }
 
+func (s *Store) GetDraftForQuery(draftID uint32, committed bool) *types.DraftForQuery {
+	b := s.get(makeDraftKey(draftID), committed)
+	if b == nil || len(b) == 0 {
+		return nil
+	}
+
+	var draft types.DraftForQuery
+	err := json.Unmarshal(b, &draft)
+	if err != nil {
+		return nil
+	}
+
+	return &draft
+}
+
 func (s *Store) GetLastDraftID() uint32 {
 	lastDraftID := uint32(0)
-	start := prefixDraft
+	var start, end []byte
+
+	prefixLen := len(prefixDraft)
+	start = prefixDraft
+	end = make([]byte, prefixLen)
+	copy(end, start)
 	// NOTE: by rule, the last character of all prefxces is ':'.
-	end := append(prefixDraft[:len(prefixDraft)-1], byte(';'))
+	end[prefixLen-1] = ';'
 	// iterate in ascending order
 	s.merkleTree.IterateRange(start, end, true, func(k, v []byte) bool {
-		lastDraftID = binary.BigEndian.Uint32(k[len(prefixDraft):])
+		lastDraftID = binary.BigEndian.Uint32(k[prefixLen:])
 		return false
 	})
+
 	return lastDraftID
 }
 
@@ -1305,7 +1326,7 @@ func splitParcelBuyerKey(prefix, key []byte) (parcelID []byte, recipient crypto.
 	return
 }
 
-func (s Store) SetRequest(recipient crypto.Address, parcelID []byte, value *types.Request) error {
+func (s *Store) SetRequest(recipient crypto.Address, parcelID []byte, value *types.Request) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -1320,7 +1341,7 @@ func (s Store) SetRequest(recipient crypto.Address, parcelID []byte, value *type
 	return nil
 }
 
-func (s Store) GetRequest(recipient crypto.Address, parcelID []byte, committed bool) *types.Request {
+func (s *Store) GetRequest(recipient crypto.Address, parcelID []byte, committed bool) *types.Request {
 	recipientParcelKey, _ := makeRequestKey(recipient, parcelID)
 
 	b := s.get(recipientParcelKey, committed)
@@ -1369,7 +1390,7 @@ func (s *Store) GetRequests(parcelID []byte, committed bool) []*types.RequestEx 
 	return requests
 }
 
-func (s Store) DeleteRequest(recipient crypto.Address, parcelID []byte) {
+func (s *Store) DeleteRequest(recipient crypto.Address, parcelID []byte) {
 	recipientParcelKey, parcelBuyerKey := makeRequestKey(recipient, parcelID)
 
 	s.remove(recipientParcelKey)
@@ -1383,7 +1404,7 @@ func makeUsageKey(recipient crypto.Address, parcelID []byte) (recipientParcelKey
 	return
 }
 
-func (s Store) SetUsage(recipient crypto.Address, parcelID []byte, value *types.Usage) error {
+func (s *Store) SetUsage(recipient crypto.Address, parcelID []byte, value *types.Usage) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -1398,7 +1419,7 @@ func (s Store) SetUsage(recipient crypto.Address, parcelID []byte, value *types.
 	return nil
 }
 
-func (s Store) GetUsage(recipient crypto.Address, parcelID []byte, committed bool) *types.Usage {
+func (s *Store) GetUsage(recipient crypto.Address, parcelID []byte, committed bool) *types.Usage {
 	recipientParcelKey, _ := makeUsageKey(recipient, parcelID)
 	b := s.get(recipientParcelKey, committed)
 	if len(b) == 0 {
@@ -1443,7 +1464,7 @@ func (s *Store) GetUsages(parcelID []byte, committed bool) []*types.UsageEx {
 	return usages
 }
 
-func (s Store) DeleteUsage(recipient crypto.Address, parcelID []byte) {
+func (s *Store) DeleteUsage(recipient crypto.Address, parcelID []byte) {
 	recipientParcelKey, parcelBuyerKey := makeUsageKey(recipient, parcelID)
 
 	s.remove(recipientParcelKey)

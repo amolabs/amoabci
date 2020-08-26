@@ -293,7 +293,7 @@ func queryDraft(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 		return
 	}
 
-	draft := s.GetDraft(draftID, true)
+	draft := s.GetDraftForQuery(draftID, true)
 	if draft == nil {
 		res.Log = "error: no draft"
 		res.Code = code.QueryCodeNoMatch
@@ -301,8 +301,8 @@ func queryDraft(s *store.Store, queryData []byte) (res abci.ResponseQuery) {
 	}
 
 	draftEx := types.DraftEx{
-		Draft: draft,
-		Votes: s.GetVotes(draftID, true),
+		DraftForQuery: draft,
+		Votes:         s.GetVotes(draftID, true),
 	}
 
 	jsonstr, err := json.Marshal(draftEx)

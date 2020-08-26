@@ -662,6 +662,10 @@ func TestDraft(t *testing.T) {
 	txReward, err := new(types.Currency).SetString("1000000000000000000000", 10)
 	assert.NoError(t, err)
 
+	// lastDraftID should be 0
+	lastDraftID := s.GetLastDraftID()
+	assert.Equal(t, uint32(0), lastDraftID)
+
 	draftInput := types.Draft{
 		Proposer: proposer,
 		Config:   types.AMOAppConfig{TxReward: *txReward},
@@ -680,8 +684,14 @@ func TestDraft(t *testing.T) {
 	err = s.SetDraft(draftID, &draftInput)
 	assert.NoError(t, err)
 
-	draftOutput := s.GetDraft(draftID, false)
+	// lastDraftID should be 123
+	lastDraftID = s.GetLastDraftID()
+	assert.Equal(t, uint32(123), lastDraftID)
 
+	// prefixDraft should not be changed
+	assert.Equal(t, []byte("draft:"), prefixDraft)
+
+	draftOutput := s.GetDraft(draftID, false)
 	assert.Equal(t, draftInput, *draftOutput)
 
 	t.Log(draftInput)
