@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -223,13 +224,31 @@ func (app *AMOApp) load() {
 }
 
 func checkProtocolVersion(stateProtocolVersion, swProtocolVersion uint64) error {
-	if stateProtocolVersion != swProtocolVersion {
-		return fmt.Errorf("software protocol version(%d) doesn't "+
-			"match state protocol version(%d)",
-			swProtocolVersion, stateProtocolVersion)
+	if stateProtocolVersion == swProtocolVersion {
+		return nil
 	}
+	err := fmt.Sprintf("software protocol version(%d) doesn't "+
+		"match state protocol version(%d).", swProtocolVersion, stateProtocolVersion)
 
-	return nil
+	var inst, vers string
+	if swProtocolVersion > stateProtocolVersion {
+		inst = "downgrade"
+	} else {
+		inst = "upgrade"
+	}
+	// TODO: map versions
+	switch stateProtocolVersion {
+	case uint64(0x3):
+		vers = "v1.6.x"
+		break
+	case uint64(0x4):
+		vers = "v1.7.x"
+	}
+	err += fmt.Sprintf(" please %s software to the one which "+
+		"supports protocol version(%d). %s versions support %d.",
+		inst, stateProtocolVersion, vers, stateProtocolVersion)
+
+	return errors.New(err)
 }
 
 func (app *AMOApp) upgradeProtocol() []abci.Event {
