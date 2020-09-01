@@ -24,8 +24,9 @@ import (
 
 const (
 	// versions
-	AMOAppVersion      = "v1.7.5"
-	AMOProtocolVersion = uint64(0x4)
+	AMOAppVersion             = "v1.7.5"
+	AMOGenesisProtocolVersion = uint64(0x3)
+	AMOProtocolVersion        = uint64(0x4)
 )
 
 // Output are sorted by voting power.
@@ -156,87 +157,11 @@ func NewAMOApp(checkpoint_interval int64, mdb, idxdb tmdb.DB, l log.Logger) *AMO
 	return app
 }
 
-const (
-	// hard-coded configs
-	defaultMaxValidators   = uint64(100)
-	defaultWeightValidator = float64(2)
-	defaultWeightDelegator = float64(1)
-
-	defaultMinStakingUnit = "1000000000000000000000000"
-
-	defaultBlkReward = "0"
-	defaultTxReward  = "10000000000000000000"
-
-	// TODO: not fixed default ratios yet
-	defaultPenaltyRatioM = float64(0.3)
-	defaultPenaltyRatioL = float64(0.3)
-
-	defaultLazinessWindow     = int64(10000)
-	defaultLazinessThreshold  = int64(8000)
-	defaultHibernateThreshold = int64(100)
-	defaultHibernatePeriod    = int64(10000)
-
-	defaultBlockBindingWindow = int64(10000)
-	defaultLockupPeriod       = int64(1000000)
-
-	defaultDraftOpenCount  = int64(10000)
-	defaultDraftCloseCount = int64(10000)
-	defaultDraftApplyCount = int64(10000)
-	defaultDraftDeposit    = "1000000000000000000000000"
-	defaultDraftQuorumRate = float64(0.3)
-	defaultDraftPassRate   = float64(0.51)
-	defaultDraftRefundRate = float64(0.2)
-
-	defaultUpgradeProtocolHeight  = int64(1)
-	defaultUpgradeProtocolVersion = AMOProtocolVersion
-)
-
 func (app *AMOApp) loadAppConfig() error {
-	cfg := types.AMOAppConfig{
-		MaxValidators:          defaultMaxValidators,
-		WeightValidator:        defaultWeightValidator,
-		WeightDelegator:        defaultWeightDelegator,
-		PenaltyRatioM:          defaultPenaltyRatioM,
-		PenaltyRatioL:          defaultPenaltyRatioL,
-		LazinessWindow:         defaultLazinessWindow,
-		LazinessThreshold:      defaultLazinessThreshold,
-		HibernateThreshold:     defaultHibernateThreshold,
-		HibernatePeriod:        defaultHibernatePeriod,
-		BlockBindingWindow:     defaultBlockBindingWindow,
-		LockupPeriod:           defaultLockupPeriod,
-		DraftOpenCount:         defaultDraftOpenCount,
-		DraftCloseCount:        defaultDraftCloseCount,
-		DraftApplyCount:        defaultDraftApplyCount,
-		DraftQuorumRate:        defaultDraftQuorumRate,
-		DraftPassRate:          defaultDraftPassRate,
-		DraftRefundRate:        defaultDraftRefundRate,
-		UpgradeProtocolHeight:  defaultUpgradeProtocolHeight,
-		UpgradeProtocolVersion: defaultUpgradeProtocolVersion,
-	}
-
-	tmp, err := new(types.Currency).SetString(defaultMinStakingUnit, 10)
+	cfg, err := types.NewDefaultAMOAppConfig()
 	if err != nil {
 		return err
 	}
-	cfg.MinStakingUnit = *tmp
-
-	tmp, err = new(types.Currency).SetString(defaultBlkReward, 10)
-	if err != nil {
-		return err
-	}
-	cfg.BlkReward = *tmp
-
-	tmp, err = new(types.Currency).SetString(defaultTxReward, 10)
-	if err != nil {
-		return err
-	}
-	cfg.TxReward = *tmp
-
-	tmp, err = new(types.Currency).SetString(defaultDraftDeposit, 10)
-	if err != nil {
-		return err
-	}
-	cfg.DraftDeposit = *tmp
 
 	b := app.store.GetAppConfig()
 	height := app.store.GetMerkleVersion()
@@ -252,62 +177,14 @@ func (app *AMOApp) loadAppConfig() error {
 		}
 
 		// TODO: remove these lines at v1.7.5
-		if upgradeProtocol.Height != defaultUpgradeProtocolHeight &&
+		if upgradeProtocol.Height != types.DefaultUpgradeProtocolHeight &&
 			height == upgradeProtocol.Height {
-			var bCfg struct {
-				MaxValidators          uint64         `json:"max_validators"`
-				WeightValidator        float64        `json:"weight_validator"`
-				WeightDelegator        float64        `json:"weight_delegator"`
-				MinStakingUnit         types.Currency `json:"min_staking_unit"`
-				BlkReward              types.Currency `json:"blk_reward"`
-				TxReward               types.Currency `json:"tx_reward"`
-				PenaltyRatioM          float64        `json:"penalty_ratio_m"`
-				PenaltyRatioL          float64        `json:"penalty_ratio_l"`
-				LazinessCounterWindow  int64          `json:"laziness_counter_window"`
-				LazinessThreshold      float64        `json:"laziness_threshold"`
-				BlockBindingWindow     int64          `json:"block_binding_window"`
-				LockupPeriod           int64          `json:"lockup_period"`
-				DraftOpenCount         int64          `json:"draft_open_count"`
-				DraftCloseCount        int64          `json:"draft_close_count"`
-				DraftApplyCount        int64          `json:"draft_apply_count"`
-				DraftDeposit           types.Currency `json:"draft_deposit"`
-				DraftQuorumRate        float64        `json:"draft_quorum_rate"`
-				DraftPassRate          float64        `json:"draft_pass_rate"`
-				DraftRefundRate        float64        `json:"draft_refund_rate"`
-				UpgradeProtocolHeight  int64          `json:"upgrade_protocol_height"`
-				UpgradeProtocolVersion uint64         `json:"upgrade_protocol_version"`
-			}
+			var bCfg types.AMOAppConfigGenesis
 			err = json.Unmarshal(b, &bCfg)
 			if err != nil {
 				return err
 			}
-
-			// explict config change process
-			cfg.LazinessWindow = bCfg.LazinessCounterWindow
-			cfg.LazinessThreshold = int64(float64(bCfg.LazinessCounterWindow) * bCfg.LazinessThreshold)
-			cfg.HibernateThreshold = defaultHibernateThreshold
-			cfg.HibernatePeriod = defaultHibernatePeriod
-
-			cfg.MaxValidators = bCfg.MaxValidators
-			cfg.WeightValidator = bCfg.WeightValidator
-			cfg.WeightDelegator = bCfg.WeightDelegator
-			cfg.MinStakingUnit = bCfg.MinStakingUnit
-			cfg.BlkReward = bCfg.BlkReward
-			cfg.TxReward = bCfg.TxReward
-			cfg.PenaltyRatioM = bCfg.PenaltyRatioM
-			cfg.PenaltyRatioL = bCfg.PenaltyRatioL
-			cfg.BlockBindingWindow = bCfg.BlockBindingWindow
-			cfg.LockupPeriod = bCfg.LockupPeriod
-			cfg.DraftOpenCount = bCfg.DraftOpenCount
-			cfg.DraftCloseCount = bCfg.DraftCloseCount
-			cfg.DraftApplyCount = bCfg.DraftApplyCount
-			cfg.DraftDeposit = bCfg.DraftDeposit
-			cfg.DraftQuorumRate = bCfg.DraftQuorumRate
-			cfg.DraftPassRate = bCfg.DraftPassRate
-			cfg.DraftRefundRate = bCfg.DraftRefundRate
-			cfg.UpgradeProtocolHeight = bCfg.UpgradeProtocolHeight
-			cfg.UpgradeProtocolVersion = bCfg.UpgradeProtocolVersion
-
+			cfg = bCfg.Migrate()
 			b, err := json.Marshal(cfg)
 			if err != nil {
 				return err
@@ -345,9 +222,20 @@ func (app *AMOApp) load() {
 	app.store.RebuildIndex()
 }
 
+func checkProtocolVersion(stateProtocolVersion, swProtocolVersion uint64) error {
+	if stateProtocolVersion != swProtocolVersion {
+		return fmt.Errorf("software protocol version(%d) doesn't "+
+			"match state protocol version(%d)",
+			swProtocolVersion, stateProtocolVersion)
+	}
+
+	return nil
+}
+
 func (app *AMOApp) upgradeProtocol() []abci.Event {
 	events := []abci.Event{}
-	if app.state.Height != app.config.UpgradeProtocolHeight {
+	if app.state.Height != app.config.UpgradeProtocolHeight ||
+		app.config.UpgradeProtocolHeight == types.DefaultUpgradeProtocolHeight {
 		return events
 	}
 	app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
@@ -360,16 +248,6 @@ func (app *AMOApp) upgradeProtocol() []abci.Event {
 	})
 
 	return events
-}
-
-func (app *AMOApp) checkProtocolVersion() error {
-	if app.state.ProtocolVersion != AMOProtocolVersion {
-		return fmt.Errorf("software protocol version(%d) doesn't "+
-			"match state protocol version(%d)",
-			AMOProtocolVersion, app.state.ProtocolVersion)
-	}
-
-	return nil
 }
 
 func (app *AMOApp) Info(req abci.RequestInfo) (resInfo abci.ResponseInfo) {
@@ -509,7 +387,7 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 	res.Events = append(res.Events, evs...)
 
 	// check if app's protocol version matches supported version
-	err := app.checkProtocolVersion()
+	err := checkProtocolVersion(app.state.ProtocolVersion, AMOProtocolVersion)
 	if err != nil {
 		panic(err)
 	}
@@ -783,4 +661,8 @@ func (app *AMOApp) Commit() abci.ResponseCommit {
 
 func (app *AMOApp) Close() {
 	app.store.Close()
+}
+
+func init() {
+	types.AMOGenesisProtocolVersion = AMOGenesisProtocolVersion
 }

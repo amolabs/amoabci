@@ -5,6 +5,44 @@ import (
 	"fmt"
 )
 
+var (
+	AMOGenesisProtocolVersion     uint64 // initialized by amo.go
+	DefaultUpgradeProtocolHeight  = int64(1)
+	DefaultUpgradeProtocolVersion = AMOGenesisProtocolVersion
+)
+
+const (
+	// hard-coded configs
+	DefaultMaxValidators   = uint64(100)
+	DefaultWeightValidator = float64(2)
+	DefaultWeightDelegator = float64(1)
+
+	DefaultMinStakingUnit = "1000000000000000000000000"
+
+	DefaultBlkReward = "0"
+	DefaultTxReward  = "10000000000000000000"
+
+	// TODO: not fixed Default ratios yet
+	DefaultPenaltyRatioM = float64(0.3)
+	DefaultPenaltyRatioL = float64(0.3)
+
+	DefaultLazinessWindow     = int64(10000)
+	DefaultLazinessThreshold  = int64(8000)
+	DefaultHibernateThreshold = int64(100)
+	DefaultHibernatePeriod    = int64(10000)
+
+	DefaultBlockBindingWindow = int64(10000)
+	DefaultLockupPeriod       = int64(1000000)
+
+	DefaultDraftOpenCount  = int64(10000)
+	DefaultDraftCloseCount = int64(10000)
+	DefaultDraftApplyCount = int64(10000)
+	DefaultDraftDeposit    = "1000000000000000000000000"
+	DefaultDraftQuorumRate = float64(0.3)
+	DefaultDraftPassRate   = float64(0.51)
+	DefaultDraftRefundRate = float64(0.2)
+)
+
 type AMOAppConfig struct {
 	MaxValidators          uint64   `json:"max_validators"`
 	WeightValidator        float64  `json:"weight_validator"`
@@ -29,6 +67,110 @@ type AMOAppConfig struct {
 	DraftRefundRate        float64  `json:"draft_refund_rate"`
 	UpgradeProtocolHeight  int64    `json:"upgrade_protocol_height"`
 	UpgradeProtocolVersion uint64   `json:"upgrade_protocol_version"`
+}
+
+func NewDefaultAMOAppConfig() (AMOAppConfig, error) {
+	cfg := AMOAppConfig{
+		MaxValidators:          DefaultMaxValidators,
+		WeightValidator:        DefaultWeightValidator,
+		WeightDelegator:        DefaultWeightDelegator,
+		PenaltyRatioM:          DefaultPenaltyRatioM,
+		PenaltyRatioL:          DefaultPenaltyRatioL,
+		LazinessWindow:         DefaultLazinessWindow,
+		LazinessThreshold:      DefaultLazinessThreshold,
+		HibernateThreshold:     DefaultHibernateThreshold,
+		HibernatePeriod:        DefaultHibernatePeriod,
+		BlockBindingWindow:     DefaultBlockBindingWindow,
+		LockupPeriod:           DefaultLockupPeriod,
+		DraftOpenCount:         DefaultDraftOpenCount,
+		DraftCloseCount:        DefaultDraftCloseCount,
+		DraftApplyCount:        DefaultDraftApplyCount,
+		DraftQuorumRate:        DefaultDraftQuorumRate,
+		DraftPassRate:          DefaultDraftPassRate,
+		DraftRefundRate:        DefaultDraftRefundRate,
+		UpgradeProtocolHeight:  DefaultUpgradeProtocolHeight,
+		UpgradeProtocolVersion: DefaultUpgradeProtocolVersion,
+	}
+
+	tmp, err := new(Currency).SetString(DefaultMinStakingUnit, 10)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.MinStakingUnit = *tmp
+
+	tmp, err = new(Currency).SetString(DefaultBlkReward, 10)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.BlkReward = *tmp
+
+	tmp, err = new(Currency).SetString(DefaultTxReward, 10)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.TxReward = *tmp
+
+	tmp, err = new(Currency).SetString(DefaultDraftDeposit, 10)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.DraftDeposit = *tmp
+
+	return cfg, nil
+}
+
+type AMOAppConfigGenesis struct {
+	MaxValidators          uint64   `json:"max_validators"`
+	WeightValidator        float64  `json:"weight_validator"`
+	WeightDelegator        float64  `json:"weight_delegator"`
+	MinStakingUnit         Currency `json:"min_staking_unit"`
+	BlkReward              Currency `json:"blk_reward"`
+	TxReward               Currency `json:"tx_reward"`
+	PenaltyRatioM          float64  `json:"penalty_ratio_m"`
+	PenaltyRatioL          float64  `json:"penalty_ratio_l"`
+	LazinessCounterWindow  int64    `json:"laziness_counter_window"`
+	LazinessThreshold      float64  `json:"laziness_threshold"`
+	BlockBindingWindow     int64    `json:"block_binding_window"`
+	LockupPeriod           int64    `json:"lockup_period"`
+	DraftOpenCount         int64    `json:"draft_open_count"`
+	DraftCloseCount        int64    `json:"draft_close_count"`
+	DraftApplyCount        int64    `json:"draft_apply_count"`
+	DraftDeposit           Currency `json:"draft_deposit"`
+	DraftQuorumRate        float64  `json:"draft_quorum_rate"`
+	DraftPassRate          float64  `json:"draft_pass_rate"`
+	DraftRefundRate        float64  `json:"draft_refund_rate"`
+	UpgradeProtocolHeight  int64    `json:"upgrade_protocol_height"`
+	UpgradeProtocolVersion uint64   `json:"upgrade_protocol_version"`
+}
+
+func (bCfg *AMOAppConfigGenesis) Migrate() AMOAppConfig {
+	var cfg AMOAppConfig
+	// explict config change process
+	cfg.LazinessWindow = bCfg.LazinessCounterWindow
+	cfg.LazinessThreshold = int64(float64(bCfg.LazinessCounterWindow) * bCfg.LazinessThreshold)
+	cfg.HibernateThreshold = DefaultHibernateThreshold
+	cfg.HibernatePeriod = DefaultHibernatePeriod
+
+	cfg.MaxValidators = bCfg.MaxValidators
+	cfg.WeightValidator = bCfg.WeightValidator
+	cfg.WeightDelegator = bCfg.WeightDelegator
+	cfg.MinStakingUnit = bCfg.MinStakingUnit
+	cfg.BlkReward = bCfg.BlkReward
+	cfg.TxReward = bCfg.TxReward
+	cfg.PenaltyRatioM = bCfg.PenaltyRatioM
+	cfg.PenaltyRatioL = bCfg.PenaltyRatioL
+	cfg.BlockBindingWindow = bCfg.BlockBindingWindow
+	cfg.LockupPeriod = bCfg.LockupPeriod
+	cfg.DraftOpenCount = bCfg.DraftOpenCount
+	cfg.DraftCloseCount = bCfg.DraftCloseCount
+	cfg.DraftApplyCount = bCfg.DraftApplyCount
+	cfg.DraftDeposit = bCfg.DraftDeposit
+	cfg.DraftQuorumRate = bCfg.DraftQuorumRate
+	cfg.DraftPassRate = bCfg.DraftPassRate
+	cfg.DraftRefundRate = bCfg.DraftRefundRate
+	cfg.UpgradeProtocolHeight = bCfg.UpgradeProtocolHeight
+	cfg.UpgradeProtocolVersion = bCfg.UpgradeProtocolVersion
+	return cfg
 }
 
 func (cfg *AMOAppConfig) Check(
