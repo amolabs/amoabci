@@ -24,11 +24,17 @@ import (
 )
 
 const (
-	// versions
-	AMOAppVersion             = "v1.7.5"
+	// current versions
+	AMOAppVersion      = "v1.7.5"
+	AMOProtocolVersion = uint64(0x4)
+
 	AMOGenesisProtocolVersion = uint64(0x3)
-	AMOProtocolVersion        = uint64(0x4)
 )
+
+var AMOAppVersions = map[uint64]string{
+	uint64(0x3): "<=v1.6.x",
+	uint64(0x4): "v1.7.x",
+}
 
 // Output are sorted by voting power.
 func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdates {
@@ -230,23 +236,17 @@ func checkProtocolVersion(stateProtocolVersion, swProtocolVersion uint64) error 
 	err := fmt.Sprintf("software protocol version(%d) doesn't "+
 		"match state protocol version(%d).", swProtocolVersion, stateProtocolVersion)
 
-	var inst, vers string
+	var inst string
 	if swProtocolVersion > stateProtocolVersion {
 		inst = "downgrade"
 	} else {
 		inst = "upgrade"
 	}
 	// TODO: map versions
-	switch stateProtocolVersion {
-	case uint64(0x3):
-		vers = "v1.6.x"
-		break
-	case uint64(0x4):
-		vers = "v1.7.x"
-	}
 	err += fmt.Sprintf(" please %s software to the one which "+
 		"supports protocol version(%d). %s versions support %d.",
-		inst, stateProtocolVersion, vers, stateProtocolVersion)
+		inst, stateProtocolVersion,
+		AMOAppVersions[stateProtocolVersion], stateProtocolVersion)
 
 	return errors.New(err)
 }
