@@ -29,6 +29,9 @@
     }
   ],
   "app_state": {
+    "state": {
+        "protocol_version": 4
+    },
     "config": {
         "min_staking_unit": "10000",
         "penalty_ratio_m": 0.5,
