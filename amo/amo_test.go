@@ -32,21 +32,21 @@ func TestAppConfig(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(
-		`{ "config": { "max_validators": 10, "lockup_period": 2 } }`)
+		`{ "state": { "protocol_version": 4 }, "config": { "max_validators": 10, "lockup_period": 2 } }`)
 	res := app.InitChain(req)
 	// TODO: need to check the contents of the response
 	assert.Equal(t, abci.ResponseInitChain{}, res)
 
 	// check
 	assert.Equal(t, uint64(10), app.config.MaxValidators)
-	assert.Equal(t, defaultWeightValidator, app.config.WeightValidator)
-	assert.Equal(t, defaultWeightDelegator, app.config.WeightDelegator)
+	assert.Equal(t, types.DefaultWeightValidator, app.config.WeightValidator)
+	assert.Equal(t, types.DefaultWeightDelegator, app.config.WeightDelegator)
 
-	tmp, err := new(types.Currency).SetString(defaultBlkReward, 10)
+	tmp, err := new(types.Currency).SetString(types.DefaultBlkReward, 10)
 	assert.NoError(t, err)
 	assert.Equal(t, *tmp, app.config.BlkReward)
 
-	tmp, err = new(types.Currency).SetString(defaultTxReward, 10)
+	tmp, err = new(types.Currency).SetString(types.DefaultTxReward, 10)
 	assert.NoError(t, err)
 	assert.Equal(t, *tmp, app.config.TxReward)
 
@@ -56,7 +56,7 @@ func TestAppConfig(t *testing.T) {
 func TestInitChain(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
-	req.AppStateBytes = []byte(`{ "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
+	req.AppStateBytes = []byte(`{ "state": { "protocol_version": 4 }, "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
 	res := app.InitChain(req)
 	// TODO: need to check the contents of the response
 	assert.Equal(t, abci.ResponseInitChain{}, res)
@@ -477,7 +477,9 @@ func TestSignedTransactionTest(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.state.ProtocolVersion = AMOProtocolVersion
+	req := abci.RequestInitChain{}
+	req.AppStateBytes = []byte(`{ "state": { "protocol_version": 4 } }`)
+	app.InitChain(req)
 
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
@@ -965,8 +967,9 @@ func TestEmptyBlock(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = AMOProtocolVersion
 
-	// init chain
-	app.InitChain(abci.RequestInitChain{})
+	req := abci.RequestInitChain{}
+	req.AppStateBytes = []byte(`{ "state": { "protocol_version": 4 } }`)
+	app.InitChain(req)
 
 	// setup
 	tx.ConfigAMOApp.LockupPeriod = 2                               // manipulate
@@ -1172,10 +1175,10 @@ func TestGovernance(t *testing.T) {
 	// total: 15, voters: 10(yay: 6, nay: 4), non-voters: 5
 
 	// check target value before draft application
-	tmp, err := new(types.Currency).SetString(defaultTxReward, 10)
+	tmp, err := new(types.Currency).SetString(types.DefaultTxReward, 10)
 	assert.NoError(t, err)
 	assert.Equal(t, *tmp, app.config.TxReward)
-	assert.Equal(t, defaultLockupPeriod, app.config.LockupPeriod)
+	assert.Equal(t, types.DefaultLockupPeriod, app.config.LockupPeriod)
 
 	// proposer propose a draft in height 1
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 1}})
@@ -1283,7 +1286,7 @@ func TestGovernance(t *testing.T) {
 	// total: 15, voters: 10(yay: 2, nay: 8), non-voters: 5
 
 	// check target value before draft application
-	assert.Equal(t, defaultBlockBindingWindow, app.config.BlockBindingWindow)
+	assert.Equal(t, types.DefaultBlockBindingWindow, app.config.BlockBindingWindow)
 
 	// proposer propose a draft in height 4
 	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 4}})
@@ -1367,7 +1370,7 @@ func TestGovernance(t *testing.T) {
 	assert.Equal(t, new(types.Currency).Set(1000), app.store.GetBalance(v14, false))
 
 	// after target: should be same as befor drafte
-	assert.Equal(t, defaultBlockBindingWindow, app.config.BlockBindingWindow)
+	assert.Equal(t, types.DefaultBlockBindingWindow, app.config.BlockBindingWindow)
 }
 
 func TestProtocolUpgrade(t *testing.T) {
@@ -1395,7 +1398,7 @@ func TestProtocolUpgrade(t *testing.T) {
 
 	assert.Equal(t, uint64(AMOProtocolVersion+1), app.state.ProtocolVersion)
 
-	err = app.checkProtocolVersion()
+	err = checkProtocolVersion(app.state.ProtocolVersion, AMOProtocolVersion)
 	assert.Error(t, err)
 }
 

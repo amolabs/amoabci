@@ -19,7 +19,7 @@ var (
 
 func (app *AMOApp) migrateTo(protocolVersion uint64, changes []string, operation func() error) {
 	// condition for migration
-	if app.config.UpgradeProtocolHeight == defaultUpgradeProtocolHeight ||
+	if app.config.UpgradeProtocolHeight == types.DefaultUpgradeProtocolHeight ||
 		app.state.Height != app.config.UpgradeProtocolHeight {
 		return
 	}

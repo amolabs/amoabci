@@ -6,7 +6,7 @@ import (
 )
 
 type State struct {
-	ProtocolVersion uint64 `json:"-"`
+	ProtocolVersion uint64 `json:"protocol_version"`
 	Height          int64  `json:"-"` // current block height
 	LastHeight      int64  `json:"-"` // last completed block height
 	LastAppHash     []byte `json:"-"`
