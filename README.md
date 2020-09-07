@@ -37,6 +37,14 @@ To build from source, you need to install the followings:
 * [golang](https://golang.org/dl/)
   * In some cases, you need to set `GOPATH` and `GOBIN` environment variables
 	manually. Check these variables before you proceed.
+* [leveldb](https://github.com/google/leveldb)
+  * For Debian or Ubuntu linux, you can install 'libleveldb-dev' package.
+  * In case you use different servers for building and production, install
+    `libleveldb1v5` package in the production server.
+* [rocksdb](https://github.com/facebook/rocksdb)
+  * For Debian or Ubuntu linux, you can install 'librocksdb-dev' package.
+  * In case you use different servers for building and production, install
+    `librocksdb5.8` package in the production server.
 
 If you want to run daemons in a docker container or execute some tests
 requiring docker, you need install the following:
@@ -50,7 +58,7 @@ mkdir -p $GOPATH/src/github.com/amolabs
 cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
-make install
+make install_c
 ```
 
 ### Install amocli

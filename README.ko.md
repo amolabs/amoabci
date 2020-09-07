@@ -37,6 +37,14 @@ sudo cp ./amod /usr/local/bin/amod
 * [golang](https://golang.org/dl/)
   * 경우에 따라서 `GOPATH`와 `GOBIN` 환경변수를 수동으로 설정해 줘야 할 수
 	있다. 이후 더 진행하기 전에 이 변수들을 확인하도록 한다.
+* [leveldb](https://github.com/google/leveldb)
+  * Debian이나 Ubuntu 리눅스의 경우에는 `libleveldb-dev` 패키지를 설치한다.
+  * 컴파일하는 서버와 실행하는 서버가 다를 경우 실행하는 서버에는
+    `libleveldb1v5` 패키지를 설치한다.
+* [rocksdb](https://github.com/facebook/rocksdb)
+  * Debian이나 Ubuntu 리눅스의 경우에는 `librocksdb-dev` 패키지를 설치한다.
+  * 컴파일하는 서버와 실행하는 서버가 다를 경우 실행하는 서버에는
+    `librocksdb5.8` 패키지를 설치한다.
 
 데몬 프로그램들을 docker 컨테이너에서 실행하거나 docker를 필요로 하는
 테스트들을 실행하기 위해서는 다음을 설치한다:
@@ -50,7 +58,7 @@ mkdir -p $GOPATH/src/github.com/amolabs
 cd $GOPATH/src/github.com/amolabs
 git clone https://github.com/amolabs/amoabci
 cd amoabci
-make install
+make install_c
 ```
 
 ### amocli 설치
