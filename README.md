@@ -90,14 +90,15 @@ the network, it is recommended to connect to one of **seed** nodes. If there is
 no appropriate seed node, connect to a node having enough **peers**.
 
 ### Network Information (Seed node)
-| chain | `node_id` | `node_ip_addr` | `node_p2p_port` | `node_rpc_port` |
+| chain id | `node_id` | `node_ip_addr` | `node_p2p_port` | `node_rpc_port` |
 |-|-|-|-|-|
-| mainnet | `fbd1cb0741e30308bf7aae562f65e3fd54359573` | `172.104.88.12` | `26656` | `26657` |
-| testnet | `a944a1fa8259e19a9bac2c2b41d050f04ce50e51` | `172.105.213.114` | `26656` | `26657` |
+| `amo-cherryblossom-01` | `fbd1cb0741e30308bf7aae562f65e3fd54359573` | `172.104.88.12` | `26656` | `26657` |
+| `amo-testnet-200706` | `a944a1fa8259e19a9bac2c2b41d050f04ce50e51` | `172.105.213.114` | `26656` | `26657` |
 
-**NOTE:** The network information can be modified without advance notice. If you
-have a trouble in connecting to any of these nodes, please feel free to submit 
-a new issue to [Issues](https://github.com/amolabs/amoabci/issues) section.
+**NOTE:** Mainnet's chain id is `amo-cherryblossom-01`. The network information
+can be modified without advance notice. If you have a trouble in connecting to
+any of these nodes, please feel free to submit a new issue to
+[Issues](https://github.com/amolabs/amoabci/issues) section.
 
 ### Get `genesis.json`
 A blockchain is an ever-changing [state
@@ -165,6 +166,40 @@ along with `config.toml` and `genesis.json`. Also, It is mandatory to write a
 proper seed node's `<node_id>@<node_ip_addr>:<node_p2p_port>` to `p2p.seeds`.
 For example, if you'd like to connect to mainnet seed node, `p2p.seeds` would
 be `fbd1cb0741e30308bf7aae562f65e3fd54359573@172.104.88.12:26656`.
+
+#### Setup snapshot
+Before running a node, there are two available options to sync blocks; sync
+from genesis block or sync from snapshot. As syncing from genesis block
+consumes lots of physical time, we offer snapshot of blocks taken at certain
+block height. The offerings are as follows:
+| chain id | `preset` | `version` | `db_backend` | `block_height` | size</br>(comp/raw) |
+|-|-|-|-|-|-|
+| `amo-cherryblossom-01` | `cherryblossom` | `v1.7.5` | `rocksdb` | `6451392` | 56GB / 116GB |
+| `amo-cherryblossom-01` | `cherryblossom` | `v1.6.5` | `rocksdb` | `2908399` | 21GB / 50GB |
+
+**NOTE:** Mainnet's chain id is `amo-cherryblossom-01`.
+
+To download and setup the snapshot, execute the following commands:
+```bash
+sudo wget http://us-east-1.linodeobjects.com/amo-archive/<preset>_<version>_<db_backend>_<block_height>.tar.bz2
+sudo tar -xjf <preset>_<version>_<db_backend>_<block_height>.tar.bz2
+sudo rm -rf <data_root>/amo/data/
+sudo mv amo-data/amo/data/ <data_root>/amo/
+```
+
+**NOTE:** The directory structure of files extracted from compressed `*.tar.bz2`
+file may differ from each one. Check out whether extracted `data/` directory is
+properly placed under `<data_root>/amo/` directory.
+
+For example, if chain id is `amo-cherryblossom-01`, version is `v1.7.5`, db
+backend is `rocksdb`, block height is `6451392`, and data root is `/mynode,
+then execute the following commands:
+```bash
+sudo wget http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.7.5_rocksdb_6451392.tar.bz2
+sudo tar -xjf cherryblossom_v1.7.5_rocksdb_6451392.tar.bz2
+sudo rm -rf /mynode/amo/data/
+sudo mv amo-data/amo/data/ /mynode/amo/
+```
 
 ## Usage
 

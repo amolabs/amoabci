@@ -90,15 +90,15 @@ AMO 블록체인 노드는 네트워크 응용프로그램이다. 다른 노드�
 적당한 seed 노드가 없다면 **peer**을 충분히 확보한 노드에 연결한다.
 
 ### 네트워크 정보 (Seed 노드)
-| chain | `node_id` | `node_ip_addr` | `node_p2p_port` | `node_rpc_port` |
+| chain id | `node_id` | `node_ip_addr` | `node_p2p_port` | `node_rpc_port` |
 |-|-|-|-|-|
-| mainnet | `fbd1cb0741e30308bf7aae562f65e3fd54359573` | `172.104.88.12` | `26656` | `26657` |
-| testnet | `a944a1fa8259e19a9bac2c2b41d050f04ce50e51` | `172.105.213.114` | `26656` | `26657` |
+| `amo-cherryblossom-01` | `fbd1cb0741e30308bf7aae562f65e3fd54359573` | `172.104.88.12` | `26656` | `26657` |
+| `amo-testnet-200706` | `a944a1fa8259e19a9bac2c2b41d050f04ce50e51` | `172.105.213.114` | `26656` | `26657` |
 
-**NOTE:** 네트워크 정보는 사전 공지 없이 수정될 수 있다. 해당 노드들 중 어느 한
-곳에라도 접속하는데 어려움을 겪는다면,
-[Issues](https://github.com/amolabs/amoabci/issues) 섹셕에 자유롭게 Issue를
-제출할 수 있다.
+**NOTE:** Mainnet의 chain id는 `amo-cherryblossom-01`이다. 네트워크 정보는 사전
+공지 없이 수정될 수 있다. 해당 노드들 중 어느 한 곳에라도 접속하는데 어려움을
+겪는다면, [Issues](https://github.com/amolabs/amoabci/issues) 섹셕에 자유롭게
+Issue를 제출할 수 있다.
 
 ### `genesis.json` 확보
 블록체인은 끊임 없이 변화하는 [상태
@@ -143,7 +143,6 @@ curl <node_ip_addr>:<node_rpc_port>/genesis | jq '.result.genesis' > genesis.jso
 
 &dagger; 이 파일들은 `amod`를 실행하기 전에 먼저 준비해야 한다.
 
-
 `data_root/amo/config/config.toml` 에서 주목해야 할 몇가지 설정 옵션들은 다음과
 같다:
 - `moniker`
@@ -166,6 +165,40 @@ curl <node_ip_addr>:<node_rpc_port>/genesis | jq '.result.genesis' > genesis.jso
 `<node_id>@<node_ip_addr>:<node_p2p_port>`를 작석해야 한다. 예를 들어, 메인넷의
 seed 노드에 연결하기 위해서는 `p2p.seeds`는
 `fbd1cb0741e30308bf7aae562f65e3fd54359573@172.104.88.12:26656`가 되어야 한다.
+
+#### 스냅샷 설정하기
+노드를 실행하기 전에, 블록을 동기화하는 방법에는 두 가지 방법이 있다; genesis
+블록부터 동기화 혹은 스냅샷부터 동기화. Genesis 블록부터 동기화하는 것은 많은
+물리적 시간을 소모하기에, 특정 블록 높이에서 찍은 블록 스냅샷을 제공한다.
+제공되는 스냅샷은 다음과 같다:
+| chain id | `preset` | `version` | `db_backend` | `block_height` | size</br>(comp/raw) |
+|-|-|-|-|-|-|
+| `amo-cherryblossom-01` | `cherryblossom` | `v1.7.5` | `rocksdb` | `6451392` | 56GB / 116GB |
+| `amo-cherryblossom-01` | `cherryblossom` | `v1.6.5` | `rocksdb` | `2908399` | 21GB / 50GB |
+
+**NOTE:** **mainne**t의 chain id 는 `amo-cherryblossom-01` 이다.
+
+스냅샷을 다운로드 하고 설정하기 위해서, 다음 명령을 실행한다:
+```bash
+sudo wget http://us-east-1.linodeobjects.com/amo-archive/<preset>_<version>_<db_backend>_<block_height>.tar.bz2
+sudo tar -xjf <preset>_<version>_<db_backend>_<block_height>.tar.bz2
+sudo rm -rf <data_root>/amo/data/
+sudo mv amo-data/amo/data/ <data_root>/amo/
+```
+
+**NOTE:** 압축된 `*.tar.bz2` 파일로부터 압축 해제된 파일의 디렉토리 구조가
+파일에 따라 다를 수 있다. 압축 해제된 `data/` 디렉토리가 `<data_root>/amo/`
+디렉토리 아래에 잘 위치해 있는지 확인하여야 한다.
+
+예를 들어, chain id 가 `amo-cherryblossom-01`, version 은 `v1.7.5`, db backend
+가 `rocksdb`, 블록 높이는 `6451392`, 데이터 디렉토리가 `/mynode` 이면, 다음
+명령을 실행한다:
+```bash
+sudo wget http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.7.5_rocksdb_6451392.tar.bz2
+sudo tar -xjf cherryblossom_v1.7.5_rocksdb_6451392.tar.bz2
+sudo rm -rf /mynode/amo/data/
+sudo mv data/ /mynode/amo/
+```
 
 ## 사용하기
 
