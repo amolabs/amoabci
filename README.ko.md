@@ -13,7 +13,7 @@ This document is available in [English](README.md) also.
 Tendermint ABCI 앱*을 구현하는 코드(`amoabci`)와 그외 필요한 스크립트의
 조합으로 구성된다.
 
-## 시작하기
+## 설치하기
 
 ### 컴파일된 바이너리 설치
 다음 명령을 실행해서 컴파일된 바이너리를 설치한다:
@@ -24,6 +24,25 @@ sudo cp ./amod /usr/local/bin/amod
 ```
 `amod`의 `<version>`을 명시해야 한다. [최신
 릴리즈](https://github.com/amolabs/amoabci/releases)를 확인해야 한다.
+
+#### Docker 이미지를 이용하여 설치 
+
+#### `docker` 설치
+Docker 공식 문서의 [Get Docker](https://docs.docker.com/get-docker/)을 참조하여
+컴파일된 바이너리 혹은 소스파일을 이용하여 `docker`를 설치한다.
+
+#### `amolabs/amod` 이미지 가져오기
+amolabs의 공식 `amod` 이미지를 가져오기 위해서, 다음 명령을 실행한다:
+```bash
+sudo docker pull amolabs/amod:<tag>
+```
+
+`amod` 이미지의 특정 버젼을 가리키는 적절한 `tag`를 입력한다. 최신 이미지를
+가져오기 위해서는 `tag`는 `latest`가 되거나 생략될 수 있다. 예를 들어, `1.7.6`
+버젼의 이미지를 가져오기 위해서는 다음 명령을 실행한다:
+```bash
+sudo docker pull amolabs/amod:1.7.6
+```
 
 ### 소스코드로부터 설치
 
@@ -46,13 +65,8 @@ sudo cp ./amod /usr/local/bin/amod
   * 컴파일하는 서버와 실행하는 서버가 다를 경우 실행하는 서버에는
     `librocksdb5.8` 패키지를 설치한다.
 
-데몬 프로그램들을 docker 컨테이너에서 실행하거나 docker를 필요로 하는
-테스트들을 실행하기 위해서는 다음을 설치한다:
-* [docker](https://www.docker.com) (Debian이나 Ubuntu에서는 `docker.io`를 설치)
-* [docker-compose](https://www.docker.com)
-
-#### amod 설치
-다음 명령을 실행해서 amod를 설치한다:
+#### `amod` 설치
+다음 명령을 실행해서 amod를 빌드하고 설치한다:
 ```bash
 mkdir -p $GOPATH/src/github.com/amolabs
 cd $GOPATH/src/github.com/amolabs
@@ -65,59 +79,62 @@ make install_c
 `amocli`가 없어도 필요한 데몬들을 실행할 수 있지만, 현재 일어나고 있는 상황을
 확인하이 위해 블록체인 노드 데몬들의 상태를 확인해야 할 수 있다. AMO Labs에서는
 참조 구현의 일환으로 AMO client(`amocli`)를 제공하며 이 프로그램을 설치해서 AMO
-블록체인 노드들과 통신을 할 수 있다.
-```bash
-mkdir -p $GOPATH/src/github.com/amolabs
-cd $GOPATH/src/github.com/amolabs
-git clone https://github.com/amolabs/amo-client-go
-cd amo-client-go
-make install
-```
+블록체인 노드들과 통신을 할 수 있다. 더 자세한 사항은
+[amo-client-go](https://github.com/amolabs/amo-client-go)를 참조하도록 한다.
 
-더 자세한 사항은 [amo-client-go](https://github.com/amolabs/amo-client-go)를
-참조하도록 한다.
-
-## 실행 준비
-### 네트워크 정보 수집
+## 준비하기
 AMO 블록체인 노드는 네트워크 응용프로그램이다. 다른 노드들에 연결되지 않으면
 별다은 의미 있는 동작을 하지 못한다. 따라서 첫번째로 알아내야 하는 것은 AMO
 블록체인 네트워크에 있는 다른 노드들의 주소이다. 네트워크에 있는 여러 노드
 중에서 **seed** 노드라 불리는 노드들 중 하나에 연결하는 것을 권장한다. 만약
-적당한 seed 노드가 없다면 **이웃**을 충분히 확보한 노드에 연결한다.
+적당한 seed 노드가 없다면 **peer**을 충분히 확보한 노드에 연결한다.
 
-* 메인넷 정보: http://mainnet.amolabs.io
-* 테스트넷 정보: http://testnet.amolabs.io
+### 네트워크 정보 (Seed 노드)
+| chain | `node_id` | `node_ip_addr` | `node_p2p_port` | `node_rpc_port` |
+|-|-|-|-|-|
+| mainnet | `fbd1cb0741e30308bf7aae562f65e3fd54359573` | `172.104.88.12` | `26656` | `26657` |
+| testnet | `a944a1fa8259e19a9bac2c2b41d050f04ce50e51` | `172.105.213.114` | `26656` | `26657` |
 
-*로컬에서 테스트넷을 실행하기 위한 정보는 다음에서 확인한다: TBA*
+**NOTE:** 네트워크 정보는 사전 공지 없이 수정될 수 있다. 해당 노드들 중 어느 한
+곳에라도 접속하는데 어려움을 겪는다면,
+[Issues](https://github.com/amolabs/amoabci/issues) 섹셕에 자유롭게 Issue를
+제출할 수 있다.
 
-### genesis.json 확보
+### `genesis.json` 확보
 블록체인은 끊임 없이 변화하는 [상태
 기계](https://en.wikipedia.org/wiki/Finite-state_machine)이다. 따라서
 블록체인의 초기 상태가 무엇인지 알아내야 한다. AMO 블록체인은 tendermint의
 방식을 사용하므로 체인의 초기 상태를 정의하는 `genesis.json` 파일을 확보해야
 한다.
 
-* 메인넷 정보: http://mainnet.amolabs.io
-* 테스트넷 정보: http://testnet.amolabs.io
+**NOTE:** 자신만의 체인을 론칭하고 싶다면, 기존에 존재하는 `genesis.json` 파일을
+다운받지 않고 tendermint-like scheme을 따르는 자신만의 `genesis.json` 파일을
+만들 수 있다.
+
+다음 명령을 실행하여 `genesis.json` 파일을 다운로드한다:
+```bash
+sudo apt install -y curl jq
+curl <node_ip_addr>:<node_rpc_port>/genesis | jq '.result.genesis' > genesis.json
+```
 
 ### 데이터 디렉토리 준비
 `amod`는 데이터 디렉토리가 필요하며, 여기에 `amod`의 설정 파일과 내부
-데이터베이스를 저장한다. 해당 디렉토리는 AMO 블록체인의 완전한 스냅샷이 된다.
-따라서 디렉토리 구조는 다음과 같은 형태가 되도록 할 것을 권장한다:
+데이터베이스가 저장된다. 해당 디렉토리는 AMO 블록체인의 완전한 스냅샷이 된다.
+따라서 디렉토리 구조는 다음과 같은 형태가 되어야만 한다:
 ```
-(node_data_root)
+(data_root)
 └── amo 
     ├── config
     └── data
 ```
 
-여기에서 `dataroot/amo/config` 디렉토리에는 특히 `node_key.json`과
+여기에서 `data_root/amo/config` 디렉토리에는 특히 `node_key.json`과
 `priv_validator_key.json`과 같은 민감한 파일들이 저장한다. 이 파일들은 읽기
 권한을 조정하여 안전하게 저장해야 한다. **이는 docker 컨테이너로 데몬들을
 실행하는 경우에도 해당한다.**
 
 ### 필요한 파일들 준비
-`amod`는 그 동작을 위해 몇가지 파일들을 필요로 한다:
+`amod`는 정상 동작을 위해 `data_root/amo/config`에 몇가지 파일들을 필요로 한다:
 - `config.toml`<sup>&dagger;</sup>: 설정
 - `genesis.json`<sup>&dagger;</sup>: 블록체인과 앱의 초기 상태
 - `node_key.json`<sup>&dagger;&dagger;</sup>: p2p 연결을 위한 노드 키
@@ -125,7 +142,10 @@ AMO 블록체인 노드는 네트워크 응용프로그램이다. 다른 노드�
   validator 키
 
 &dagger; 이 파일들은 `amod`를 실행하기 전에 먼저 준비해야 한다.
-주목해야 할 몇가지 설정 옵션들은 다음과 같다:
+
+
+`data_root/amo/config/config.toml` 에서 주목해야 할 몇가지 설정 옵션들은 다음과
+같다:
 - `moniker`
 - `rpc.laddr`
 - `rpc.cors_allowed_origins`
@@ -142,15 +162,21 @@ AMO 블록체인 노드는 네트워크 응용프로그램이다. 다른 노드�
 있다. 다만, 특정한 키를 사용하고자 한다면 실행 전에 미리 준비해야 한다. 가능한
 방법중 한가지는 `amod tendermint init` 명령으로 키들을 생성한 후
 `config.toml`과 `genesis.json` 파일이 있는 설정 디렉토리에 넣어 두는 것이다.
+또한, `p2p.seeds`에 적절한 seed 노드의
+`<node_id>@<node_ip_addr>:<node_p2p_port>`를 작석해야 한다. 예를 들어, 메인넷의
+seed 노드에 연결하기 위해서는 `p2p.seeds`는
+`fbd1cb0741e30308bf7aae562f65e3fd54359573@172.104.88.12:26656`가 되어야 한다.
 
-## 초기화 실행
+## 사용하기
+
+### 노드 초기화 
 ```bash
 amod --home <dataroot>/amo tendermint init
 ```
 *참고사항*: tendermint 명렁어를 실행하기 위해서는 단순히 `amod` 끝에
 `tendermint`를 붙이면 된다.
 
-## 데몬 실행
+### 노드 실행 
 ```bash
 amod --home <dataroot>/amo run
 ```
@@ -158,11 +184,9 @@ amod --home <dataroot>/amo run
 `<dataroot>`는 앞서 준비한 데이터 디렉토리이다. `amod`는 유입되는 P2P 연결을
 위해 포트 26656을 열고, 유입되는 RPC 연결을 위해 포트 26657을 연다. 
 
-## docker로 데몬 실행
-### 사전 조건
-* [docker](https://www.docker.com) (Debian이나 Ubuntu에서는 `docker.io`를 설치)
+## Docker로 노드 실행
 
-### docker 이미지 생성
+### Docker 이미지 생성
 AMO Labs에서 배포하는 `amod`의 공식 docker 이미지(`amolabs/amod`)는 [Docker
 hub](https://hub.docker.com)에서 다운로드할 수 있다. 물론 로컬 docker 이미지를
 직접 생성할 수도 있다.
@@ -181,7 +205,7 @@ make docker
 이미지는 `amolabs/amod:latest`로 태그된다. 이 이미지는 `amod`를 포함하고 있기
 때문에 하나의 이미지(따라서 하나의 컨테이너)만 있으면 된다.
 
-### 실행
+### Docker 컨테이너 실행
 컨테이너에서 데몬들을 실행하기 위해서는 다음과 같이 한다:
 ```bash
 docker run -it --rm -p 26656-26657 -v <dataroot>/amo:/amo:Z -d amolabs/amod:latest

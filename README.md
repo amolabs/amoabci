@@ -13,7 +13,7 @@ abstract blockchain state; validator control; and client query for blockchain
 state. This repository holds a collection of codes implementing *Tendermint
 ABCI app for AMO blockchain* (`amoabci`) and necessary helper scripts.
 
-## Getting Started 
+## Installation 
 
 ### Install from pre-built binary
 Run the following commands to install pre-built amod:
@@ -24,6 +24,25 @@ sudo cp ./amod /usr/local/bin/amod
 ```
 Specify `<version>` of `amod`. Check out its [latest
 releases](https://github.com/amolabs/amoabci/releases)
+
+### Install from Docker image
+
+#### Install `docker`
+Refer to [Get Docker](https://docs.docker.com/get-docker/) in Docker's official
+document to install `docker` from either pre-built binary or source.
+
+#### Pull `amolabs/amod` image
+To pull the official `amod` image from amolabs, execute the following commands:
+```bash
+sudo docker pull amolabs/amod:<tag>
+```
+
+Specify proper `tag` which indicates a specific version of `amod` image. To
+pull the latest image, `tag` should be `latest` or can be omitted. For example,
+if you would like to pull `1.7.6`, then execute the following commands: 
+```bash
+sudo docker pull amolabs/amod:1.7.6
+```
 
 ### Install from source
 
@@ -46,13 +65,8 @@ To build from source, you need to install the followings:
   * In case you use different servers for building and production, install
     `librocksdb5.8` package in the production server.
 
-If you want to run daemons in a docker container or execute some tests
-requiring docker, you need install the following:
-* [docker](https://www.docker.com) (In Debian or Ubuntu, install `docker.io`)
-* [docker-compose](https://www.docker.com)
-
-#### Install amod
-Run the following commands to install amod:
+#### Install `amod`
+Run the following commands to build and install `amod`:
 ```bash
 mkdir -p $GOPATH/src/github.com/amolabs
 cd $GOPATH/src/github.com/amolabs
@@ -65,60 +79,63 @@ make install_c
 You can run necessary daemons without `amocli`, but you may want to peek into
 blockchain node daemons to see what's going on there. AMO Labs provides a
 reference implementation of AMO client(`amocli`) and you may install it to
-communicate with AMO blockchain nodes.
-```bash
-mkdir -p $GOPATH/src/github.com/amolabs
-cd $GOPATH/src/github.com/amolabs
-git clone https://github.com/amolabs/amo-client-go
-cd amo-client-go
-make install
-```
+communicate with AMO blockchain nodes. See
+[amo-client-go](https://github.com/amolabs/amo-client-go) for more information.
 
-See [amo-client-go](https://github.com/amolabs/amo-client-go) for more
-information.
-
-## Prepare for launch
-### Get network information
+## Preparation
 AMO blockchain node is a networked application. It does nothing useful if not
 connected to other nodes. The first thing to figure out is to find out
 addresses of other nodes in a AMO blockchain network. Among various nodes in
 the network, it is recommended to connect to one of **seed** nodes. If there is
 no appropriate seed node, connect to a node having enough **peers**.
 
-* Mainnet information: http://mainnet.amolabs.io
-* Testnet information: http://testnet.amolabs.io
+### Network Information (Seed node)
+| chain | `node_id` | `node_ip_addr` | `node_p2p_port` | `node_rpc_port` |
+|-|-|-|-|-|
+| mainnet | `fbd1cb0741e30308bf7aae562f65e3fd54359573` | `172.104.88.12` | `26656` | `26657` |
+| testnet | `a944a1fa8259e19a9bac2c2b41d050f04ce50e51` | `172.105.213.114` | `26656` | `26657` |
 
-*For information about launching a local testnet, see TBA.*
+**NOTE:** The network information can be modified without advance notice. If you
+have a trouble in connecting to any of these nodes, please feel free to submit 
+a new issue to [Issues](https://github.com/amolabs/amoabci/issues) section.
 
-### Get genesis.json
+### Get `genesis.json`
 A blockchain is an ever-changing [state
 machine](https://en.wikipedia.org/wiki/Finite-state_machine). So you need to
 find out what is the initial state of the blockchain. Since AMO blockchain uses
 tendermint-like scheme, you need to get `genesis.json` file that defines the
 initial state of the chain.
 
-* Mainnet information: http://mainnet.amolabs.io
-* Testnet information: http://testnet.amolabs.io
+**NOTE:** If you'd like to launch your own chain for any kind of purposes, you'd
+rather generate your own version of `genesis.json` file following
+tendermint-like scheme than download existing `genesis.json` file.
+
+To download `genesis.json` file, execute the following command:
+```bash
+sudo apt install -y curl jq
+curl <node_ip_addr>:<node_rpc_port>/genesis | jq '.result.genesis' > genesis.json
+```
 
 ### Prepare data directory
-`amod` needs a data directory where they keep configuration file and internal
-databases of `amod`. The directory defines a complete snapshot of an AMO
-blockchain. So, it is recommended to a keep directory structure something like
-the following:
+`amod` needs a data directory where configuration file and internal databases
+of `amod` are stored. The directory defines a complete snapshot of an AMO
+blockchain. So, it is mandatory to keep a directory structure like the
+following:
 ```
-(node_data_root)
+(data_root)
 └── amo 
     ├── config
     └── data
 ```
 
-`dataroot/amo/config` directory stores some sensitive files such as
+`data_root/amo/config` directory stores some sensitive files such as
 `node_key.json` and `priv_validator_key.json`. You need to keep these files
-secure by control read permission of them. **Note that this applies to the case
-when you run daemons using a docker container**.
+secure by control of read permission. **Note that this applies to the case when
+you run daemons using a docker container as well**.
 
-### Prepare necessary files
-`amod` needs several files to operate properly:
+#### Prepare necessary files
+`amod` needs several files located under `data_root/amo/config` to operate
+properly:
 - `config.toml`<sup>&dagger;</sup>: configuration
 - `genesis.json`<sup>&dagger;</sup>: initial blockchain and app state
 - `node_key.json`<sup>&dagger;&dagger;</sup>: node key for p2p connection
@@ -126,7 +143,9 @@ when you run daemons using a docker container**.
   conesnsus process
 
 &dagger; These files must be prepared before launching `amod`.
-Some notable configuration options are as follows:
+
+Some notable configuration options of `data_root/amo/config/config.toml` are as
+follows:
 - `moniker`
 - `rpc.laddr`
 - `rpc.cors_allowed_origins`
@@ -142,28 +161,31 @@ document](https://tendermint.com/docs/tendermint-core/configuration.html).
 launching. But, if you want to use specific keys, of course you need to prepare
 it before launching. One possible way to do this is to generate these keys
 using `amod tendermint init` command and put them in a configuration directory
-along with `config.toml` and `genesis.json`.
+along with `config.toml` and `genesis.json`. Also, It is mandatory to write a
+proper seed node's `<node_id>@<node_ip_addr>:<node_p2p_port>` to `p2p.seeds`.
+For example, if you'd like to connect to mainnet seed node, `p2p.seeds` would
+be `fbd1cb0741e30308bf7aae562f65e3fd54359573@172.104.88.12:26656`.
 
-## Run initialization
+## Usage
+
+### Initialize node 
 ```bash
-amod --home <dataroot>/amo tendermint init
+amod --home <data_root>/amo tendermint init
 ```
-*NOTE*: To execute tendermint commands, simply append `tendermint` at the end
+**NOTE**: To execute tendermint commands, simply append `tendermint` at the end
 of `amod`. 
 
-## Run daemon
+### Run node 
 ```bash
-amod --home <dataroot>/amo run
+amod --home <data_root>/amo run
 ```
-To run the daemon in background mode, use `amod run &`. Here, `<dataroot>` is a
-data directory prepared previously. `amod` will open port 26656 for incoming
+To run the daemon in background mode, use `amod run &`. Here, `<data_root>` is
+a data directory prepared previously. `amod` will open port 26656 for incoming
 P2P connection and port 26657 for incoming RPC connection.
 
-## Run daemons using docker
-### Pre-requisites
-* [docker](https://www.docker.com) (In Debian or Ubuntu, install `docker.io`)
+## Run node using Docker
 
-### Build docker image
+### Build Docker image
 You may download the official `amod` docker image(`amolabs/amod`) released from
 AMO Labs from [Docker hub](https://hub.docker.com). Of cource, you can build
 your own local docker image.
@@ -182,18 +204,18 @@ make docker
 The image will be tagged as `amolabs/amod:latest`. This image includes `amod`,
 so you just need one image (and one container).
 
-### Run
+### Run Docker container
 Run the daemons in a container as follows:
 ```bash
-docker run -it --rm -p 26656-26657 -v <dataroot>/amo:/amo:Z -d amolabs/amod:latest
+docker run -it --rm -p 26656-26657 -v <data_root>/amo:/amo:Z -d amolabs/amod:latest
 ```
 Options above have the following meaning:
 - `-it`: make sure the terminal connects correctly
 - `--rm`: remove the container after daemons stop
 - `-p 26656-26657`: publish the container's ports to the host machine. This
   make sure that other nodes in the network can connect to our node.
-- `-v <dataroot>/amo:/amo:Z`: mount amod data directory.
-  **`<dataroot>` must be an absolute path.**
+- `-v <data_root>/amo:/amo:Z`: mount amod data directory.
+  **`<data_root>` must be an absolute path.**
 - `amolabs/amod:latest`: use this docker image when creating a container
 
 Make sure that you see series of logs as the daemons init and run.
