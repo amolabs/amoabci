@@ -171,17 +171,17 @@ seed 노드에 연결하기 위해서는 `p2p.seeds`는
 
 ### 노드 초기화 
 ```bash
-amod --home <dataroot>/amo tendermint init
+amod --home <data_root>/amo tendermint init
 ```
-*참고사항*: tendermint 명렁어를 실행하기 위해서는 단순히 `amod` 끝에
+*참고사항*: tendermint 명령어를 실행하기 위해서는 단순히 `amod` 끝에
 `tendermint`를 붙이면 된다.
 
 ### 노드 실행 
 ```bash
-amod --home <dataroot>/amo run
+amod --home <data_root>/amo run
 ```
 데몬을 백그라운드 모드로 실행하려면 `amod run &`와 같이 한다. 여기에서
-`<dataroot>`는 앞서 준비한 데이터 디렉토리이다. `amod`는 유입되는 P2P 연결을
+`<data_root>`는 앞서 준비한 데이터 디렉토리이다. `amod`는 유입되는 P2P 연결을
 위해 포트 26656을 열고, 유입되는 RPC 연결을 위해 포트 26657을 연다. 
 
 ## Docker로 노드 실행
@@ -208,15 +208,15 @@ make docker
 ### Docker 컨테이너 실행
 컨테이너에서 데몬들을 실행하기 위해서는 다음과 같이 한다:
 ```bash
-docker run -it --rm -p 26656-26657 -v <dataroot>/amo:/amo:Z -d amolabs/amod:latest
+docker run -it --rm -p 26656-26657 -v <data_root>/amo:/amo:Z -d amolabs/amod:latest
 ```
 위에 사용된 명령행 옵션들은 다음과 같은 의미를 갖는다:
 - `-it`: 터미널 연결 확보
 - `--rm`: 데몬들이 중지된 후에 컨테이너 삭제
 - `-p 26656-26657`: 컨테이너의 포트를 호스트 머신에 연결. 이를 통해 네트워크의
   다른 노드들이 이 노드에 정상적으로 연결할 수 있게 된다.
-- `-v <dataroot>/amo:/amo:Z`: amod 데이터 디렉토리 연결
-  **`<dataroot>` 는 절대 경로여야 한다.**
+- `-v <data_root>/amo:/amo:Z`: amod 데이터 디렉토리 연결
+  **`<data_root>` 는 절대 경로여야 한다.**
 - `amolabs/amod:latest`: 컨테이너를 생성할 때 이 이미지를 사용
 
 데몬들이 초기화하고 실행되는 동안 로그들이 정상적으로 표시되는지 확인한다.
