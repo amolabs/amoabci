@@ -1378,7 +1378,8 @@ func (s *Store) GetRequests(parcelID []byte, committed bool) []*types.RequestEx 
 				return false
 			}
 			request := types.RequestEx{
-				Request: requestValue,
+				Request:   requestValue,
+				Recipient: recipient,
 			}
 
 			requests = append(requests, &request)

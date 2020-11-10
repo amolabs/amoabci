@@ -209,7 +209,8 @@ func TestQueryParcel(t *testing.T) {
 		Parcel: &parcel,
 		Requests: []*types.RequestEx{
 			{
-				Request: &request,
+				Request:   &request,
+				Recipient: _addr,
 			},
 		},
 		Usages: []*types.UsageEx{},
