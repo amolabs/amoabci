@@ -20,8 +20,5 @@ jobs:
     - name: Build (go native)
       run: make build
 
-    - name: Build (cgo_enabled)
-      run: make build_c
-
     - name: Unit test
       run: make test
