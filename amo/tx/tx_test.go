@@ -3,6 +3,7 @@ package tx
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -111,7 +112,7 @@ func getTestStore() *store.Store {
 }
 
 func TestParseTx(t *testing.T) {
-	bytes := []byte(`{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"},"signature":{"pubkey":"0485FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B185FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B1EF1D55E9B1EF1D","sig_bytes":"FFFFFFFF"}}`)
+	bytes := []byte(`{"type":"transfer","sender":"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5","payload":{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"35000000000000000000000"},"signature":{"pubkey":"0485FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B185FE85FCE6AB426563E5E085FE85FCE6AB426563E5E0749EBCB95E9B1EF1D55E9B1EF1D","sig_bytes":"FFFFFFFF"}}`)
 	var sender, tmp, sigbytes tmbytes.HexBytes
 	err := json.Unmarshal(
 		[]byte(`"85FE85FCE6AB426563E5E0749EBCB95E9B1EF1D5"`),
@@ -138,11 +139,12 @@ func TestParseTx(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
+	bal, _ := new(types.Currency).SetString("35000000000000000000000", 10)
 	expected := &TxTransfer{
 		TxBase{
 			Type:    "transfer",
 			Sender:  sender,
-			Payload: []byte(`{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"1000"}`),
+			Payload: []byte(`{"to":"218B954DF74E7267E72541CE99AB9F49C410DB96","amount":"35000000000000000000000"}`),
 			Signature: Signature{
 				PubKey:   pubkey,
 				SigBytes: sigbytes,
@@ -150,7 +152,7 @@ func TestParseTx(t *testing.T) {
 		},
 		TransferParam{
 			To:     to,
-			Amount: *new(types.Currency).Set(1000),
+			Amount: *bal,
 		},
 	}
 	parsedTx, err := ParseTx(bytes)
@@ -693,12 +695,16 @@ func TestValidTransfer(t *testing.T) {
 	// env
 	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
-	s.SetBalanceUint64(makeTestAddress("alice"), 1230)
+	//s.SetBalanceUint64(makeTestAddress("alice"), 1230)
+	amo1, _ := new(types.Currency).SetString("45000000000000000000000", 10)
+	amo2, _ := new(types.Currency).SetString("35000000000000000000000", 10)
+	amo3, _ := new(types.Currency).SetString("10000000000000000000000", 10)
+	s.SetBalance(makeTestAddress("alice"), amo1)
 
 	// target
 	param := TransferParam{
 		To:     bob.addr,
-		Amount: *new(types.Currency).Set(1230),
+		Amount: *amo2,
 	}
 	payload, _ := json.Marshal(param)
 	trans := makeTestTx("transfer", "alice", payload)
@@ -710,10 +716,12 @@ func TestValidTransfer(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 
 	aliceBal := s.GetBalance(makeTestAddress("alice"), false)
-	assert.Equal(t, new(types.Currency).Set(0), aliceBal)
+	assert.Equal(t, amo3, aliceBal)
+	fmt.Println(aliceBal.String())
 
 	bobBal := s.GetBalance(bob.addr, false)
-	assert.Equal(t, new(types.Currency).Set(1230), bobBal)
+	assert.Equal(t, amo2, bobBal)
+	fmt.Println(bobBal.String())
 }
 
 func TestNonValidTransfer(t *testing.T) {
