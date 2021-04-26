@@ -25,14 +25,15 @@ import (
 
 const (
 	// current versions
-	AMOAppVersion             = "v1.7.7"
-	AMOProtocolVersion        = uint64(0x4)
+	AMOAppVersion             = "v1.8.0"
+	AMOProtocolVersion        = uint64(0x5)
 	AMOGenesisProtocolVersion = uint64(0x3)
 )
 
 var AMOAppVersions = map[uint64]string{
 	uint64(0x3): "<=v1.6.x",
-	uint64(0x4): "v1.7.x",
+	uint64(0x4): "<=v1.7.x",
+	uint64(0x5): "v1.8.x",
 }
 
 // Output are sorted by voting power.
