@@ -696,10 +696,27 @@ func TestValidTransfer(t *testing.T) {
 	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
 	//s.SetBalanceUint64(makeTestAddress("alice"), 1230)
+	amo0, _ := new(types.Currency).SetString("0", 10)
 	amo1, _ := new(types.Currency).SetString("45000000000000000000000", 10)
 	amo2, _ := new(types.Currency).SetString("35000000000000000000000", 10)
 	amo3, _ := new(types.Currency).SetString("10000000000000000000000", 10)
 	s.SetBalance(makeTestAddress("alice"), amo1)
+
+	// test zero-transfer
+	zeroParam := TransferParam{
+		To:     bob.addr,
+		Amount: *amo0,
+	}
+	zeroPayload, _ := json.Marshal(zeroParam)
+	zeroTrans := makeTestTx("transfer", "alice", zeroPayload)
+	rc, _ := zeroTrans.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = zeroTrans.Execute(s)
+	assert.Equal(t, code.TxCodeInvalidAmount, rc)
+	bal1 := s.GetBalance(makeTestAddress("alice"), false)
+	assert.Equal(t, amo1, bal1)
+	bal2 := s.GetBalance(makeTestAddress("bob"), false)
+	assert.Equal(t, amo0, bal2)
 
 	// target
 	param := TransferParam{
@@ -710,7 +727,7 @@ func TestValidTransfer(t *testing.T) {
 	trans := makeTestTx("transfer", "alice", payload)
 
 	// test
-	rc, _ := trans.Check()
+	rc, _ = trans.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	rc, _, _ = trans.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)

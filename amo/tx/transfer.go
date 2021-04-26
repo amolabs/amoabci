@@ -6,6 +6,7 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
@@ -14,9 +15,10 @@ import (
 
 type TransferParam struct {
 	// TODO: change to human-readable ascii string
-	UDC    uint32         `json:"udc,omitempty"`
-	To     crypto.Address `json:"to"`
-	Amount types.Currency `json:"amount"`
+	To     crypto.Address   `json:"to"`
+	UDC    uint32           `json:"udc,omitempty"`
+	Amount types.Currency   `json:"amount,omitempty"`
+	Parcel tmbytes.HexBytes `json:"parcel,omitempty"`
 }
 
 func parseTransferParam(raw []byte) (TransferParam, error) {
@@ -56,10 +58,16 @@ func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []abci.Event) 
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	if !txParam.Amount.GreaterThan(zero) {
+	if len(txParam.Parcel) > 0 {
+		return t.TransferParcel(store, txParam)
+	} else if txParam.Amount.GreaterThan(zero) {
+		return t.TransferCoin(store, txParam)
+	} else {
 		return code.TxCodeInvalidAmount, "invalid amount", nil
 	}
+}
 
+func (t *TxTransfer) TransferCoin(store *store.Store, txParam TransferParam) (uint32, string, []abci.Event) {
 	udc := txParam.UDC
 	udcLock := store.GetUDCLock(udc, t.GetSender(), false)
 	fromBalance := store.GetUDCBalance(udc, t.GetSender(), false)
@@ -73,5 +81,12 @@ func (t *TxTransfer) Execute(store *store.Store) (uint32, string, []abci.Event) 
 	toBalance.Add(&txParam.Amount)
 	store.SetUDCBalance(txParam.UDC, t.GetSender(), fromBalance)
 	store.SetUDCBalance(txParam.UDC, txParam.To, toBalance)
+	return code.TxCodeOK, "ok", nil
+}
+
+func (t *TxTransfer) TransferParcel(store *store.Store, txParam TransferParam) (uint32, string, []abci.Event) {
+	parcel := store.GetParcel(txParam.Parcel, false)
+	parcel.Owner = txParam.To
+	store.SetParcel(txParam.Parcel, parcel)
 	return code.TxCodeOK, "ok", nil
 }
