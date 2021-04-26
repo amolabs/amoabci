@@ -1,0 +1,27 @@
+name: Go
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.14
+
+    - name: Build (go native)
+      run: make build
+
+    - name: Build (cgo_enabled)
+      run: make build_c
+
+    - name: Unit test
+      run: make test
