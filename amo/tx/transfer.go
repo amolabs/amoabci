@@ -86,6 +86,10 @@ func (t *TxTransfer) TransferCoin(store *store.Store, txParam TransferParam) (ui
 
 func (t *TxTransfer) TransferParcel(store *store.Store, txParam TransferParam) (uint32, string, []abci.Event) {
 	parcel := store.GetParcel(txParam.Parcel, false)
+	sender := t.GetSender()
+	if !bytes.Equal(sender, parcel.Owner) {
+		return code.TxCodePermissionDenied, "permission denied", nil
+	}
 	parcel.Owner = txParam.To
 	store.SetParcel(txParam.Parcel, parcel)
 	return code.TxCodeOK, "ok", nil

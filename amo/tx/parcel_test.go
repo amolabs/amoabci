@@ -81,21 +81,31 @@ func TestTransfer(t *testing.T) {
 		Custody:      []byte("custody"),
 	})
 
-	// prepare test tx
+	// prepare test tx payload
 	payload, _ := json.Marshal(TransferParam{
 		To:     bob.addr,
 		Parcel: parcelID,
 	})
-	t1 := makeTestTx("transfer", "alice", payload)
+
+	// wrong ownership
+	t1 := makeTestTx("transfer", "carol", payload)
 	rc, _ := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
-
-	// shoot
 	rc, _, _ = t1.Execute(s)
-	assert.Equal(t, code.TxCodeOK, rc)
-
-	// check result
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+	// check result: no change in ownership
 	parcel := s.GetParcel(parcelID, false)
+	assert.NotNil(t, parcel)
+	assert.Equal(t, alice.addr, parcel.Owner)
+
+	// right ownership
+	t2 := makeTestTx("transfer", "alice", payload)
+	rc, _ = t2.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	// check result
+	parcel = s.GetParcel(parcelID, false)
 	assert.NotNil(t, parcel)
 	assert.Equal(t, bob.addr, parcel.Owner)
 }
