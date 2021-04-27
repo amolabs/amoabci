@@ -25,14 +25,15 @@ import (
 
 const (
 	// current versions
-	AMOAppVersion             = "v1.7.7"
-	AMOProtocolVersion        = uint64(0x4)
+	AMOAppVersion             = "v1.8.0"
+	AMOProtocolVersion        = uint64(0x5)
 	AMOGenesisProtocolVersion = uint64(0x3)
 )
 
 var AMOAppVersions = map[uint64]string{
 	uint64(0x3): "<=v1.6.x",
-	uint64(0x4): "v1.7.x",
+	uint64(0x4): "<=v1.7.x",
+	uint64(0x5): "v1.8.x",
 }
 
 // Output are sorted by voting power.
@@ -410,8 +411,9 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 		panic(err)
 	}
 
-	// migrate to 4
-	app.MigrateTo4()
+	// migrate to 5
+	// NOTE: no special migration is needed for protocol 5
+	//app.MigrateTo5()
 
 	app.doValUpdate = false
 	app.oldVals = app.store.GetValidators(app.config.MaxValidators, false)
