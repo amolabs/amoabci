@@ -171,40 +171,12 @@ func (app *AMOApp) loadAppConfig() error {
 	}
 
 	b := app.store.GetAppConfig()
-	height := app.store.GetMerkleVersion()
 
 	// if config exists
 	if len(b) > 0 {
-		var upgradeProtocol struct {
-			Height int64 `json:"upgrade_protocol_height"`
-		}
-		err = json.Unmarshal(b, &upgradeProtocol)
+		err = json.Unmarshal(b, &cfg)
 		if err != nil {
 			return err
-		}
-
-		// TODO: remove these lines at v1.7.5
-		if upgradeProtocol.Height != types.DefaultUpgradeProtocolHeight &&
-			height == upgradeProtocol.Height {
-			var bCfg types.AMOAppConfigGenesis
-			err = json.Unmarshal(b, &bCfg)
-			if err != nil {
-				return err
-			}
-			cfg = bCfg.Migrate()
-			b, err := json.Marshal(cfg)
-			if err != nil {
-				return err
-			}
-			err = app.store.SetAppConfig(b)
-			if err != nil {
-				return err
-			}
-		} else {
-			err = json.Unmarshal(b, &cfg)
-			if err != nil {
-				return err
-			}
 		}
 	}
 
