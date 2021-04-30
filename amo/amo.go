@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -88,6 +87,7 @@ func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdate
 
 type AMOProtocol interface {
 	Version() uint64
+	ParseTx(txBytes []byte) (tx.Tx, error)
 	//Info(abci.RequestInfo) abci.ResponseInfo
 	//SetOption(abci.RequestSetOption) abci.ResponseSetOption
 	//Query(abci.RequestQuery) abci.ResponseQuery
@@ -110,8 +110,7 @@ type AMOApp struct {
 	config types.AMOAppConfig
 
 	// state related variables
-	stateFile *os.File
-	state     State
+	state State
 
 	// abstraction of internal DBs to the outer world
 	store               *astore.Store
@@ -280,6 +279,9 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	err = FillGenesisState(&app.state, app.store, genAppState)
 	if err != nil {
 		panic(err)
+	}
+	if app.state.ProtocolVersion == 0 {
+		app.state.ProtocolVersion = uint64(AMOGenesisProtocolVersion)
 	}
 
 	hash, version, err := app.store.Save()
@@ -477,7 +479,7 @@ func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 }
 
 func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
-	t, err := tx.ParseTx(req.Tx)
+	t, err := app.proto.ParseTx(req.Tx)
 	if err != nil {
 		return abci.ResponseDeliverTx{
 			Code:      code.TxCodeBadParam,
