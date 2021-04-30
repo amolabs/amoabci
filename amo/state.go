@@ -2,7 +2,6 @@ package amo
 
 import (
 	"github.com/amolabs/amoabci/amo/store"
-	"github.com/amolabs/amoabci/amo/types"
 )
 
 type State struct {
@@ -13,7 +12,7 @@ type State struct {
 	NextDraftID     uint32 `json:"-"`
 }
 
-func (s *State) LoadFrom(sto *store.Store, cfg types.AMOAppConfig) {
+func (s *State) InferFrom(sto *store.Store) {
 	height := sto.GetMerkleVersion() - int64(1)
 	if height < int64(0) {
 		height = int64(0)
@@ -22,14 +21,11 @@ func (s *State) LoadFrom(sto *store.Store, cfg types.AMOAppConfig) {
 	hash := sto.Root()
 
 	nextDraftID := sto.GetLastDraftID() + uint32(1)
-	protocolVersion := cfg.UpgradeProtocolVersion
-	if height < cfg.UpgradeProtocolHeight {
-		protocolVersion -= uint64(1)
-	}
 
 	s.Height = height
 	s.LastHeight = height
 	s.LastAppHash = hash
 	s.NextDraftID = nextDraftID
-	s.ProtocolVersion = protocolVersion
+
+	s.ProtocolVersion = AMOGenesisProtocolVersion
 }

@@ -24,15 +24,20 @@ import (
 )
 
 const (
-	// current versions
 	AMOAppVersion             = "v1.8.0"
-	AMOProtocolVersion        = uint64(0x5)
-	AMOGenesisProtocolVersion = uint64(0x3)
+	AMOGenesisProtocolVersion = uint64(0x3) // TODO: remove this
 )
 
-var AMOAppVersions = map[uint64]string{
-	uint64(0x3): "<=v1.6.x",
-	uint64(0x4): "<=v1.7.x",
+// protocol versions supported by this app,
+var AMOProtocolVersions = map[uint64]AMOProtocol{
+	uint64(0x4): &AMOProtocolV4{},
+	uint64(0x5): &AMOProtocolV5{},
+}
+
+// protocol versions and app versions supporting them
+var AMOProtocolCompatMap = map[uint64]string{
+	uint64(0x3): "v1.6.x",
+	uint64(0x4): "v1.7.x, v1.8.x",
 	uint64(0x5): "v1.8.x",
 }
 
@@ -81,6 +86,21 @@ func findValUpdates(oldVals, newVals abci.ValidatorUpdates) abci.ValidatorUpdate
 	return updates
 }
 
+type AMOProtocol interface {
+	Version() uint64
+	//Info(abci.RequestInfo) abci.ResponseInfo
+	//SetOption(abci.RequestSetOption) abci.ResponseSetOption
+	//Query(abci.RequestQuery) abci.ResponseQuery
+	//CheckTx(abci.RequestCheckTx) abci.ResponseCheckTx
+	//InitChain(abci.RequestInitChain) abci.ResponseInitChain
+	//BeginBlock(abci.RequestBeginBlock) abci.ResponseBeginBlock
+	//DeliverTx(abci.RequestDeliverTx) abci.ResponseDeliverTx
+	//EndBlock(abci.RequestEndBlock) abci.ResponseEndBlock
+	//Commit() abci.ResponseCommit
+}
+
+var _ abci.Application = (*AMOApp)(nil)
+
 type AMOApp struct {
 	// app scaffold
 	abci.BaseApplication
@@ -101,20 +121,23 @@ type AMOApp struct {
 	doValUpdate bool
 	oldVals     abci.ValidatorUpdates
 
-	// fee related variables
+	// fee-related variables
 	staker          []byte
 	feeAccumulated  types.Currency
 	numDeliveredTxs int64
 
+	// penalty-related variables
 	pendingEvidences      []abci.Evidence
 	pendingLazyValidators []crypto.Address
 	missingVals           []crypto.Address
 
+	//
 	replayPreventer blockchain.ReplayPreventer
 	missRuns        *blockchain.MissRuns
-}
 
-var _ abci.Application = (*AMOApp)(nil)
+	// version-specific protocol executer
+	proto AMOProtocol
+}
 
 func NewAMOApp(checkpoint_interval int64, mdb, idxdb tmdb.DB, l log.Logger) *AMOApp {
 	if l == nil {
@@ -196,40 +219,36 @@ func (app *AMOApp) load() {
 		panic(err)
 	}
 
-	app.state.LoadFrom(app.store, app.config)
+	app.state.InferFrom(app.store)
 
 	app.store.RebuildIndex()
 }
 
-func checkProtocolVersion(stateProtocolVersion, swProtocolVersion uint64) error {
-	if stateProtocolVersion == swProtocolVersion {
+func checkProtocolVersion(version uint64) error {
+	if _, ok := AMOProtocolVersions[version]; ok {
 		return nil
 	}
-	err := fmt.Sprintf("software protocol version(%d) doesn't "+
-		"match state protocol version(%d).", swProtocolVersion, stateProtocolVersion)
 
-	var inst string
-	if swProtocolVersion > stateProtocolVersion {
-		inst = "downgrade"
-	} else {
-		inst = "upgrade"
-	}
-	// TODO: map versions
-	err += fmt.Sprintf(" please %s software to the one which "+
-		"supports protocol version(%d). %s versions support %d.",
-		inst, stateProtocolVersion,
-		AMOAppVersions[stateProtocolVersion], stateProtocolVersion)
+	err := fmt.Sprintf("This software version %s does not support "+
+		"current protocol version %d. Please use a software version %s.",
+		AMOAppVersion, version,
+		AMOProtocolCompatMap[version])
 
 	return errors.New(err)
 }
 
 func (app *AMOApp) upgradeProtocol() []abci.Event {
 	events := []abci.Event{}
-	if app.state.Height != app.config.UpgradeProtocolHeight ||
-		app.config.UpgradeProtocolHeight == types.DefaultUpgradeProtocolHeight {
+	if app.proto == nil { // fail-safe code for initialization
+		app.proto = AMOProtocolVersions[app.state.ProtocolVersion]
+	}
+	if app.state.Height != app.config.UpgradeProtocolHeight {
 		return events
 	}
 	app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
+	app.proto = AMOProtocolVersions[app.state.ProtocolVersion]
+	tx.StateProtocolVersion = app.state.ProtocolVersion
+
 	versionJson, _ := json.Marshal(app.state.ProtocolVersion)
 	events = append(events, abci.Event{
 		Type: "protocol_upgrade",
@@ -371,14 +390,13 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
 	app.state.Height = req.Header.Height
 	tx.StateBlockHeight = app.state.Height
-	tx.StateProtocolVersion = app.state.ProtocolVersion
 
 	// upgrade protocol version
 	evs := app.upgradeProtocol()
 	res.Events = append(res.Events, evs...)
 
 	// check if app's protocol version matches supported version
-	err := checkProtocolVersion(app.state.ProtocolVersion, AMOProtocolVersion)
+	err := checkProtocolVersion(app.state.ProtocolVersion)
 	if err != nil {
 		panic(err)
 	}
@@ -655,6 +673,4 @@ func (app *AMOApp) Close() {
 	app.store.Close()
 }
 
-func init() {
-	types.AMOGenesisProtocolVersion = AMOGenesisProtocolVersion
-}
+func init() {}

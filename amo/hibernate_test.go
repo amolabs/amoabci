@@ -57,7 +57,7 @@ func makeEB(height int64) abci.RequestEndBlock {
 func TestHibernate(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	assert.NotNil(t, app)
-	app.state.ProtocolVersion = AMOProtocolVersion // tweak
+	app.state.ProtocolVersion = 0x4 // tweak
 	memDB := tmdb.NewMemDB()
 	app.missRuns = blockchain.NewMissRuns(app.store, memDB, 10, 10, 10)
 	// to test ValidatorUpdates

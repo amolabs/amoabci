@@ -5,12 +5,6 @@ import (
 	"fmt"
 )
 
-var (
-	AMOGenesisProtocolVersion     uint64 // initialized by amo.go
-	DefaultUpgradeProtocolHeight  = int64(1)
-	DefaultUpgradeProtocolVersion = AMOGenesisProtocolVersion
-)
-
 const (
 	// hard-coded configs
 	DefaultMaxValidators   = uint64(100)
@@ -30,7 +24,6 @@ const (
 	DefaultLazinessThreshold  = int64(8000)
 	DefaultHibernateThreshold = int64(100)
 	DefaultHibernatePeriod    = int64(10000)
-
 	DefaultBlockBindingWindow = int64(10000)
 	DefaultLockupPeriod       = int64(1000000)
 
@@ -41,6 +34,9 @@ const (
 	DefaultDraftQuorumRate = float64(0.3)
 	DefaultDraftPassRate   = float64(0.51)
 	DefaultDraftRefundRate = float64(0.2)
+
+	DefaultUpgradeProtocolHeight  = int64(0)
+	DefaultUpgradeProtocolVersion = uint64(0)
 )
 
 type AMOAppConfig struct {

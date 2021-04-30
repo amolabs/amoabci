@@ -98,7 +98,7 @@ func repair(amoRoot string, doFix bool, rewindMerkle bool) {
 	}
 
 	amoState := amo.State{}
-	amoState.LoadFrom(amoStore, amoCfg)
+	amoState.InferFrom(amoStore)
 
 	tmBlockStore := tmstore.NewBlockStore(bsdb)
 	tmBlockStoreState := tmstore.LoadBlockStoreStateJSON(bsdb)

@@ -27,6 +27,60 @@ func makeAccAddr(seed string) crypto.Address {
 	return p256.GenPrivKeyFromSecret([]byte(seed)).PubKey().Address()
 }
 
+func TestProtocolUpgrade(t *testing.T) {
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+	assert.Equal(t, AMOGenesisProtocolVersion, app.state.ProtocolVersion)
+	assert.Equal(t, int64(0), app.config.UpgradeProtocolHeight)
+	assert.Equal(t, uint64(0), app.config.UpgradeProtocolVersion)
+	// This will not be nil when using SW version 1.6.x
+	assert.Nil(t, app.proto)
+
+	// manipulate
+	app.state.LastHeight = 8
+	app.state.ProtocolVersion = 0x4
+	app.config.UpgradeProtocolHeight = 10
+	app.config.UpgradeProtocolVersion = 0x5
+	b, err := json.Marshal(app.config)
+	assert.NoError(t, err)
+	err = app.store.SetAppConfig(b)
+	assert.NoError(t, err)
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 9}})
+	app.EndBlock(abci.RequestEndBlock{Height: 9})
+	app.Commit()
+
+	assert.Equal(t, uint64(0x4), app.state.ProtocolVersion)
+	assert.NotNil(t, app.proto)
+	assert.Equal(t, uint64(0x4), app.proto.Version())
+	err = checkProtocolVersion(app.state.ProtocolVersion)
+	assert.NoError(t, err)
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 10}})
+	app.EndBlock(abci.RequestEndBlock{Height: 10})
+	app.Commit()
+
+	assert.Equal(t, uint64(0x5), app.state.ProtocolVersion)
+	assert.NotNil(t, app.proto)
+	assert.Equal(t, uint64(0x5), app.proto.Version())
+	err = checkProtocolVersion(app.state.ProtocolVersion)
+	assert.NoError(t, err)
+
+	app.config.UpgradeProtocolHeight = 11
+	app.config.UpgradeProtocolVersion = 0x6
+
+	// The following will panic, so we will use a different testing point.
+	//app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 11}})
+	//app.EndBlock(abci.RequestEndBlock{Height: 11})
+	//app.Commit()
+	app.state.Height = 11
+	app.upgradeProtocol()
+
+	assert.Equal(t, uint64(0x6), app.state.ProtocolVersion)
+	assert.Nil(t, app.proto)
+	err = checkProtocolVersion(app.state.ProtocolVersion)
+	assert.Error(t, err) // protocol version 6 is not supported
+}
+
 func TestAppConfig(t *testing.T) {
 	// test genesis app config
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
@@ -548,7 +602,7 @@ func TestFuncValUpdates(t *testing.T) {
 
 func TestPenaltyEvidence(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.state.ProtocolVersion = AMOProtocolVersion
+	app.state.ProtocolVersion = 0x4
 
 	// setup
 	//
@@ -588,7 +642,7 @@ func TestPenaltyEvidence(t *testing.T) {
 		Height:    int64(2),
 	})
 
-	app.BeginBlock(abci.RequestBeginBlock{ByzantineValidators: evidences})
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 1}, ByzantineValidators: evidences})
 
 	// before effective stake
 	stakerbes := app.store.GetEffStake(staker.PubKey().Address(), false)
@@ -621,7 +675,7 @@ func TestPenaltyEvidence(t *testing.T) {
 
 func TestPenaltyLazyValidators(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.state.ProtocolVersion = AMOProtocolVersion
+	app.state.ProtocolVersion = 0x4
 	app.config.LazinessWindow = 4
 	app.config.LazinessThreshold = 2
 
@@ -737,7 +791,7 @@ func TestPenaltyLazyValidators(t *testing.T) {
 
 func TestEndBlock(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.state.ProtocolVersion = AMOProtocolVersion
+	app.state.ProtocolVersion = 0x4
 
 	// setup
 	tx.ConfigAMOApp.LockupPeriod = 1                               // manipulate
@@ -795,7 +849,7 @@ func DivCurrency(origin *types.Currency, divisor *types.Currency) *types.Currenc
 
 func TestIncentive(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.state.ProtocolVersion = AMOProtocolVersion
+	app.state.ProtocolVersion = 0x4
 	tx.ConfigAMOApp.MinStakingUnit = *new(types.Currency).Set(50)
 
 	validator, _ := ed25519.GenPrivKey().PubKey().(ed25519.PubKeyEd25519)
@@ -926,7 +980,7 @@ func TestIncentive(t *testing.T) {
 
 func TestIncentiveNoTouch(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.state.ProtocolVersion = AMOProtocolVersion
+	app.state.ProtocolVersion = 0x4
 
 	// setup
 	validator, _ := ed25519.GenPrivKeyFromSecret([]byte("test")).
@@ -966,7 +1020,7 @@ func TestIncentiveNoTouch(t *testing.T) {
 
 func TestEmptyBlock(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.state.ProtocolVersion = AMOProtocolVersion
+	app.state.ProtocolVersion = 0x4
 
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(`{ "state": { "protocol_version": 5 } }`)
@@ -1033,7 +1087,7 @@ func TestReplayAttack(t *testing.T) {
 	tx3 := makeTxStake(t1, "test1", 10000, "1")
 
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.state.ProtocolVersion = AMOProtocolVersion
+	app.state.ProtocolVersion = 0x4
 	app.config.BlockBindingWindow = int64(3)
 	app.replayPreventer = blockchain.NewReplayPreventer(
 		app.store,
@@ -1093,7 +1147,7 @@ func TestBindingBlock(t *testing.T) {
 	tx5 := makeTxStake(t1, "test1", 10000, "2")
 
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.state.ProtocolVersion = AMOProtocolVersion
+	app.state.ProtocolVersion = 0x4
 	app.config.BlockBindingWindow = int64(3)
 	app.replayPreventer = blockchain.NewReplayPreventer(
 		app.store,
@@ -1139,7 +1193,7 @@ func TestBindingBlock(t *testing.T) {
 
 func TestGovernance(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	app.state.ProtocolVersion = AMOProtocolVersion
+	app.state.ProtocolVersion = 0x4
 
 	// manipulate InitChain() func
 	app.state.NextDraftID = uint32(1)
@@ -1372,35 +1426,6 @@ func TestGovernance(t *testing.T) {
 
 	// after target: should be same as befor drafte
 	assert.Equal(t, types.DefaultBlockBindingWindow, app.config.BlockBindingWindow)
-}
-
-func TestProtocolUpgrade(t *testing.T) {
-	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-
-	// manipulate
-	app.state.LastHeight = 8
-	app.state.ProtocolVersion = AMOProtocolVersion
-	app.config.UpgradeProtocolHeight = 10
-	app.config.UpgradeProtocolVersion = AMOProtocolVersion + 1
-	b, err := json.Marshal(app.config)
-	assert.NoError(t, err)
-	err = app.store.SetAppConfig(b)
-	assert.NoError(t, err)
-
-	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 9}})
-	app.EndBlock(abci.RequestEndBlock{Height: 9})
-	app.Commit()
-
-	assert.Equal(t, uint64(AMOProtocolVersion), app.state.ProtocolVersion)
-
-	// manipulate to avoid panic
-	app.state.Height = 10
-	app.upgradeProtocol()
-
-	assert.Equal(t, uint64(AMOProtocolVersion+1), app.state.ProtocolVersion)
-
-	err = checkProtocolVersion(app.state.ProtocolVersion, AMOProtocolVersion)
-	assert.Error(t, err)
 }
 
 func makeTxStake(priv p256.PrivKeyP256, val string, amount uint64, lastHeight string) []byte {
