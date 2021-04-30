@@ -86,7 +86,7 @@ func TestAppConfig(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
 	req.AppStateBytes = []byte(
-		`{ "state": { "protocol_version": 5 }, "config": { "max_validators": 10, "lockup_period": 2 } }`)
+		`{ "state": { "protocol_version": 4 }, "config": { "max_validators": 10, "lockup_period": 2 } }`)
 	res := app.InitChain(req)
 	// TODO: need to check the contents of the response
 	assert.Equal(t, abci.ResponseInitChain{}, res)
@@ -110,7 +110,7 @@ func TestAppConfig(t *testing.T) {
 func TestInitChain(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	req := abci.RequestInitChain{}
-	req.AppStateBytes = []byte(`{ "state": { "protocol_version": 5 }, "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
+	req.AppStateBytes = []byte(`{ "state": { "protocol_version": 4 }, "balances": [ { "owner": "7CECB223B976F27D77B0E03E95602DABCC28D876", "amount": "100" } ] }`)
 	res := app.InitChain(req)
 	// TODO: need to check the contents of the response
 	assert.Equal(t, abci.ResponseInitChain{}, res)
@@ -532,9 +532,7 @@ func TestSignedTransactionTest(t *testing.T) {
 	from := p256.GenPrivKeyFromSecret([]byte("alice"))
 
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	req := abci.RequestInitChain{}
-	req.AppStateBytes = []byte(`{ "state": { "protocol_version": 5 } }`)
-	app.InitChain(req)
+	app.state.ProtocolVersion = 0x4
 
 	app.store.SetBalanceUint64(from.PubKey().Address(), 5000)
 
@@ -1021,10 +1019,6 @@ func TestIncentiveNoTouch(t *testing.T) {
 func TestEmptyBlock(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	app.state.ProtocolVersion = 0x4
-
-	req := abci.RequestInitChain{}
-	req.AppStateBytes = []byte(`{ "state": { "protocol_version": 5 } }`)
-	app.InitChain(req)
 
 	// setup
 	tx.ConfigAMOApp.LockupPeriod = 2                               // manipulate
