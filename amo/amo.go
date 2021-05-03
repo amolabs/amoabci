@@ -218,7 +218,7 @@ func (app *AMOApp) load() {
 		panic(err)
 	}
 
-	app.state.InferFrom(app.store)
+	app.state.InferFrom(app.store, app.config)
 
 	app.store.RebuildIndex()
 }
@@ -244,6 +244,7 @@ func (app *AMOApp) upgradeProtocol() []abci.Event {
 	if app.state.Height != app.config.UpgradeProtocolHeight {
 		return events
 	}
+	app.store.SetProtocolVersion(app.config.UpgradeProtocolVersion)
 	app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
 	app.proto = AMOProtocolVersions[app.state.ProtocolVersion]
 	tx.StateProtocolVersion = app.state.ProtocolVersion
@@ -279,9 +280,6 @@ func (app *AMOApp) InitChain(req abci.RequestInitChain) abci.ResponseInitChain {
 	err = FillGenesisState(&app.state, app.store, genAppState)
 	if err != nil {
 		panic(err)
-	}
-	if app.state.ProtocolVersion == 0 {
-		app.state.ProtocolVersion = uint64(AMOGenesisProtocolVersion)
 	}
 
 	hash, version, err := app.store.Save()

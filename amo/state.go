@@ -2,6 +2,7 @@ package amo
 
 import (
 	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 type State struct {
@@ -12,7 +13,7 @@ type State struct {
 	NextDraftID     uint32 `json:"-"`
 }
 
-func (s *State) InferFrom(sto *store.Store) {
+func (s *State) InferFrom(sto *store.Store, cfg types.AMOAppConfig) {
 	height := sto.GetMerkleVersion() - int64(1)
 	if height < int64(0) {
 		height = int64(0)
@@ -27,5 +28,17 @@ func (s *State) InferFrom(sto *store.Store) {
 	s.LastAppHash = hash
 	s.NextDraftID = nextDraftID
 
-	s.ProtocolVersion = AMOGenesisProtocolVersion
+	s.ProtocolVersion = sto.GetProtocolVersion(false)
+	if s.ProtocolVersion == 0 {
+		// NOTE: This can be done since we are writing a SW in a retrospective
+		// manner. That is, we already observed a state DB which holds data
+		// produced via protocol version greater than 3.
+		if cfg.UpgradeProtocolHeight > s.Height {
+			s.ProtocolVersion = cfg.UpgradeProtocolVersion - 1
+		} else if s.Height > 0 && cfg.UpgradeProtocolHeight <= s.Height {
+			s.ProtocolVersion = cfg.UpgradeProtocolVersion
+		} else {
+			s.ProtocolVersion = AMOGenesisProtocolVersion
+		}
+	}
 }

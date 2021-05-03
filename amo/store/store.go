@@ -28,6 +28,8 @@ const (
 )
 
 var (
+	protocolKey = []byte("protocol")
+
 	prefixBalance  = []byte("balance:")
 	prefixStake    = []byte("stake:")
 	prefixDraft    = []byte("draft:")
@@ -1492,6 +1494,30 @@ func (s *Store) GetValidators(max uint64, committed bool) abci.ValidatorUpdates 
 		}
 	}
 	return vals
+}
+
+func (s *Store) SetProtocolVersion(version uint64) error {
+	b, err := json.Marshal(version)
+	if err != nil {
+		return err
+	}
+	s.set(protocolKey, b)
+	return nil
+}
+
+func (s *Store) GetProtocolVersion(committed bool) uint64 {
+	b := s.get(protocolKey, committed)
+	if len(b) > 0 {
+		var version uint64
+		err := json.Unmarshal(b, &version)
+		if err == nil {
+			return version
+		}
+	}
+	// NOTE: We cannot get protocol version directly. But, this is how we can
+	// go, so just return 0 to indicate we cannot determine the current
+	// protocol version.
+	return 0
 }
 
 func (s *Store) RebuildIndex() {
