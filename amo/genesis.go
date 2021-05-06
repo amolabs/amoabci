@@ -36,11 +36,8 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 			return &genState, err
 		}
 	}
-	if genState.State.ProtocolVersion == 0 {
-		genState.State.ProtocolVersion = uint64(AMOGenesisProtocolVersion)
-	}
 
-	err := checkProtocolVersion(genState.State.ProtocolVersion, AMOProtocolVersion)
+	err := checkProtocolVersion(genState.State.ProtocolVersion)
 	if err != nil {
 		panic(err)
 	}

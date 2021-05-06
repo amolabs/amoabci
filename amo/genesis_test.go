@@ -19,7 +19,7 @@ const (
 	addr0Json = "BC4BAF38355C6CCF8422DD3D273B3DBB83B2370B"
 	t0json    = `{
 	  "state": {
-		"protocol_version": 5
+		"protocol_version": 4
 	  },
 	  "balances": [
 		{
@@ -30,7 +30,7 @@ const (
 	}`
 	t1json = `{
 	  "state": {
-		"protocol_version": 5
+		"protocol_version": 4
 	  },
 	  "balances": [
 		{
@@ -45,7 +45,7 @@ const (
 	}`
 	t2json = `{
 	  "state": {
-		"protocol_version": 5
+		"protocol_version": 4
 	  },
 	  "balances": [
 		{
@@ -61,7 +61,7 @@ const (
 	}`
 	s0json = `{
 	  "state": {
-		"protocol_version": 5
+		"protocol_version": 4
 	  },
 	  "stakes": [
 		{

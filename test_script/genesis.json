@@ -30,7 +30,7 @@
   ],
   "app_state": {
     "state": {
-        "protocol_version": 5
+        "protocol_version": 4
     },
     "config": {
         "min_staking_unit": "10000",
