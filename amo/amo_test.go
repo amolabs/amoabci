@@ -79,8 +79,10 @@ func TestQueryDefault(t *testing.T) {
 }
 
 func TestQueryVersion(t *testing.T) {
-	jsonstr1 := []byte(`{"app_version":"v1.8.0","app_protocol_versions":[4,5],"state_protocol_version":3}`)
-	jsonstr2 := []byte(`{"app_version":"v1.8.0","app_protocol_versions":[4,5],"state_protocol_version":4}`)
+	jsonstr1 := []byte(`{"app_version":"` + AMOAppVersion +
+		`","app_protocol_versions":[4,5],"state_protocol_version":3}`)
+	jsonstr2 := []byte(`{"app_version":"` + AMOAppVersion +
+		`","app_protocol_versions":[4,5],"state_protocol_version":4}`)
 
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 

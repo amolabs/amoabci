@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	AMOAppVersion             = "v1.8.0"
+	AMOAppVersion             = "v1.8.1"
 	AMOGenesisProtocolVersion = uint64(0x3) // TODO: remove this
 )
 
