@@ -9,6 +9,7 @@ import (
 	tmdb "github.com/tendermint/tm-db"
 
 	"github.com/amolabs/amoabci/amo/code"
+	"github.com/amolabs/amoabci/amo/types"
 )
 
 func TestProtocolUpgrade(t *testing.T) {
@@ -17,13 +18,17 @@ func TestProtocolUpgrade(t *testing.T) {
 
 	// app.store is in near-genesis state
 	assert.Equal(t, uint64(3), app.state.ProtocolVersion)
-	assert.Equal(t, int64(0), app.config.UpgradeProtocolHeight)
-	assert.Equal(t, uint64(0), app.config.UpgradeProtocolVersion)
+	assert.Equal(t, types.DefaultUpgradeProtocolHeight,
+		app.config.UpgradeProtocolHeight)
+	assert.Equal(t, types.DefaultUpgradeProtocolVersion,
+		app.config.UpgradeProtocolVersion)
 
 	app.InitChain(abci.RequestInitChain{})
 	assert.Equal(t, uint64(3), app.state.ProtocolVersion)
-	assert.Equal(t, int64(0), app.config.UpgradeProtocolHeight)
-	assert.Equal(t, uint64(0), app.config.UpgradeProtocolVersion)
+	assert.Equal(t, types.DefaultUpgradeProtocolHeight,
+		app.config.UpgradeProtocolHeight)
+	assert.Equal(t, types.DefaultUpgradeProtocolVersion,
+		app.config.UpgradeProtocolVersion)
 
 	// save protocol 3 config
 	var configV3 struct {
@@ -85,8 +90,10 @@ func TestProtocolUpgrade(t *testing.T) {
 func TestProtocolDifference(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	assert.Equal(t, uint64(3), app.state.ProtocolVersion)
-	assert.Equal(t, int64(0), app.config.UpgradeProtocolHeight)
-	assert.Equal(t, uint64(0), app.config.UpgradeProtocolVersion)
+	assert.Equal(t, types.DefaultUpgradeProtocolHeight,
+		app.config.UpgradeProtocolHeight)
+	assert.Equal(t, types.DefaultUpgradeProtocolVersion,
+		app.config.UpgradeProtocolVersion)
 	assert.Nil(t, app.proto)
 
 	// schedule protocol upgrade

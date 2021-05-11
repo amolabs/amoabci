@@ -35,7 +35,7 @@ const (
 	DefaultDraftPassRate   = float64(0.51)
 	DefaultDraftRefundRate = float64(0.2)
 
-	DefaultUpgradeProtocolHeight  = int64(0)
+	DefaultUpgradeProtocolHeight  = int64(1)
 	DefaultUpgradeProtocolVersion = uint64(0)
 )
 
