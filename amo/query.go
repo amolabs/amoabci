@@ -2,6 +2,7 @@ package amo
 
 import (
 	"encoding/json"
+	"sort"
 	"strconv"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -31,6 +32,9 @@ func queryVersion(app *AMOApp) (res abci.ResponseQuery) {
 	for k := range AMOProtocolVersions {
 		protoVersions = append(protoVersions, k)
 	}
+	sort.Slice(protoVersions, func(i, j int) bool {
+		return protoVersions[i] < protoVersions[j]
+	})
 	r.AppProtocolVersions = protoVersions
 	r.StateProtocolVersion = app.state.ProtocolVersion
 	jsonstr, _ := json.Marshal(r)
