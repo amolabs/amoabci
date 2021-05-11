@@ -11,7 +11,7 @@ import (
 	"github.com/amolabs/amoabci/amo/code"
 )
 
-func TestGetProtocolVersion(t *testing.T) {
+func TestProtocolUpgrade(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	assert.Nil(t, app.proto)
 
@@ -19,34 +19,65 @@ func TestGetProtocolVersion(t *testing.T) {
 	ver := app.state.ProtocolVersion
 	assert.Equal(t, AMOGenesisProtocolVersion, ver) // which is 0x3
 
-	// manipulate
-	// NOTE: This can be done since we are writing a SW in retrospective
-	// manner. That is, we already observed a state DB which holds data
-	// produced via protocol greater than 3.
-	app.config.UpgradeProtocolHeight = 3
-	app.config.UpgradeProtocolVersion = 4
-	jsonStr, _ := json.Marshal(app.config)
-	app.store.SetAppConfig(jsonStr)
 	app.store.Save() // emulate Save in InitChain
-
 	app.store.Save() // save height 1
-	// assume restart took place here
-	app.load()
-	assert.Equal(t, int64(2), app.store.GetMerkleVersion())
+
+	// save protocol 3 config
+	var configV3 struct {
+		LazinessCounterWindow  int64  `json:"laziness_counter_window"`
+		UpgradeProtocolHeight  int64  `json:"upgrade_protocol_height"`
+		UpgradeProtocolVersion uint64 `json:"upgrade_protocol_version"`
+	}
+	configV3.LazinessCounterWindow = 100
+	configV3.UpgradeProtocolHeight = 5
+	configV3.UpgradeProtocolVersion = 4
+	jsonStr, _ := json.Marshal(configV3)
+	app.store.SetAppConfig(jsonStr)
+	app.store.Save() // save height 2
+
+	app.load() // assume restart took place here
+	assert.Equal(t, int64(3), app.store.GetMerkleVersion())
 	// at height 1, still in protocol version 3
 	assert.Equal(t, uint64(0x3), app.state.ProtocolVersion)
 
-	app.store.Save() // save height 2
+	// NOTE: This sw cannot deal with protocol v3, so just save configV4 to
+	// simulate protocol upgrade from v3 to v4.
+	// save protocol 3 config
+	var configV4 struct {
+		LazinessWindow  int64  `json:"laziness_window"`
+		UpgradeProtocolHeight  int64  `json:"upgrade_protocol_height"`
+		UpgradeProtocolVersion uint64 `json:"upgrade_protocol_version"`
+	}
+	configV4.LazinessWindow = 100
+	configV4.UpgradeProtocolHeight = 10
+	configV4.UpgradeProtocolVersion = 5
+	jsonStr, _ = json.Marshal(configV4)
+	app.store.SetAppConfig(jsonStr)
 	app.store.Save() // save height 3
-	// assume restart took place here
-	app.load()
+
+	app.load() // assume restart took place here
 	assert.Equal(t, int64(4), app.store.GetMerkleVersion())
 	assert.Equal(t, int64(3), app.state.Height)
-	// at height 2, should be in protocol version 4
+	// at height 3, should be in protocol version 4
 	assert.Equal(t, uint64(0x4), app.state.ProtocolVersion)
+
+	app.store.Save() // save height 4
+	app.store.Save() // save height 5
+	app.store.Save() // save height 6
+	app.store.Save() // save height 7
+	app.store.Save() // save height 8
+	app.store.Save() // save height 9
+
+	app.load() // assume restart took place here
+	assert.Equal(t, int64(10), app.store.GetMerkleVersion())
+	assert.Equal(t, int64(9), app.state.Height)
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 10}})
+	assert.Equal(t, int64(10), app.state.Height)
+	// at height 10, should be in protocol version 4
+	assert.Equal(t, uint64(0x5), app.state.ProtocolVersion)
 }
 
-func TestProtocolUpgrade(t *testing.T) {
+func TestProtocolDifference(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	assert.Equal(t, AMOGenesisProtocolVersion, app.state.ProtocolVersion)
 	assert.Equal(t, int64(0), app.config.UpgradeProtocolHeight)

@@ -1,6 +1,8 @@
 package amo
 
 import (
+	"encoding/json"
+
 	"github.com/amolabs/amoabci/amo/store"
 	"github.com/amolabs/amoabci/amo/types"
 )
@@ -30,15 +32,25 @@ func (s *State) InferFrom(sto *store.Store, cfg types.AMOAppConfig) {
 
 	s.ProtocolVersion = sto.GetProtocolVersion(false)
 	if s.ProtocolVersion == 0 {
-		// NOTE: This can be done since we are writing a SW in a retrospective
-		// manner. That is, we already observed a state DB which holds data
-		// produced via protocol version greater than 3.
-		if cfg.UpgradeProtocolHeight > s.Height {
-			s.ProtocolVersion = cfg.UpgradeProtocolVersion - 1
-		} else if s.Height > 0 && cfg.UpgradeProtocolHeight <= s.Height {
-			s.ProtocolVersion = cfg.UpgradeProtocolVersion
-		} else {
+		// NOTE: Since we cannot determine the protocol version from the saved
+		// state, consult the config structure to infer the version. Possible
+		// candidate versions are 0x3 and 0x4.
+		b := sto.GetAppConfig()
+		if b == nil || len(b) == 0 {
+			// No config yet stored in the state DB.
+			// Assume AMOGenesisProtocolVersion.
 			s.ProtocolVersion = AMOGenesisProtocolVersion
+			return
 		}
+		var configV4 struct {
+			LazinessWindow *int64 `json:"laziness_window"`
+		}
+		err := json.Unmarshal(b, &configV4)
+		if err != nil || configV4.LazinessWindow == nil {
+			s.ProtocolVersion = AMOGenesisProtocolVersion
+			return
+		}
+		s.ProtocolVersion = 0x4
+		return
 	}
 }
