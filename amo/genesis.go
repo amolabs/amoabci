@@ -37,11 +37,6 @@ func ParseGenesisStateBytes(data []byte) (*GenAmoAppState, error) {
 		}
 	}
 
-	err := checkProtocolVersion(genState.State.ProtocolVersion)
-	if err != nil {
-		panic(err)
-	}
-
 	// To avoid conflicts while unmarshaling config
 	var genConfig struct {
 		Config types.AMOAppConfig `json:"config"`
@@ -149,7 +144,9 @@ func FillGenesisState(st *State, s *store.Store, genState *GenAmoAppState) error
 	}
 
 	// state
-	st.ProtocolVersion = genState.State.ProtocolVersion
+	if genState.State.ProtocolVersion != 0 {
+		st.ProtocolVersion = genState.State.ProtocolVersion
+	}
 
 	// app config
 	// TODO: use reflect package

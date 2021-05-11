@@ -38,7 +38,7 @@ func (s *State) InferFrom(sto *store.Store) {
 		if b == nil || len(b) == 0 {
 			// No config yet stored in the state DB.
 			// Assume AMOGenesisProtocolVersion.
-			s.ProtocolVersion = AMOGenesisProtocolVersion
+			s.ProtocolVersion = 0x3
 			return
 		}
 		var configV4 struct {
@@ -46,7 +46,7 @@ func (s *State) InferFrom(sto *store.Store) {
 		}
 		err := json.Unmarshal(b, &configV4)
 		if err != nil || configV4.LazinessWindow == nil {
-			s.ProtocolVersion = AMOGenesisProtocolVersion
+			s.ProtocolVersion = 0x3
 			return
 		}
 		s.ProtocolVersion = 0x4

@@ -24,7 +24,6 @@ import (
 
 const (
 	AMOAppVersion             = "v1.8.1"
-	AMOGenesisProtocolVersion = uint64(0x3) // TODO: remove this
 )
 
 // protocol versions supported by this app,
@@ -241,7 +240,8 @@ func (app *AMOApp) upgradeProtocol() []abci.Event {
 	if app.proto == nil { // fail-safe code for initialization
 		app.proto = AMOProtocolVersions[app.state.ProtocolVersion]
 	}
-	if app.state.Height != app.config.UpgradeProtocolHeight {
+	if app.state.Height != app.config.UpgradeProtocolHeight ||
+		app.config.UpgradeProtocolVersion == 0 {
 		return events
 	}
 	app.store.SetProtocolVersion(app.config.UpgradeProtocolVersion)

@@ -16,11 +16,14 @@ func TestProtocolUpgrade(t *testing.T) {
 	assert.Nil(t, app.proto)
 
 	// app.store is in near-genesis state
-	ver := app.state.ProtocolVersion
-	assert.Equal(t, AMOGenesisProtocolVersion, ver) // which is 0x3
+	assert.Equal(t, uint64(3), app.state.ProtocolVersion)
+	assert.Equal(t, int64(0), app.config.UpgradeProtocolHeight)
+	assert.Equal(t, uint64(0), app.config.UpgradeProtocolVersion)
 
-	app.store.Save() // emulate Save in InitChain
-	app.store.Save() // save height 1
+	app.InitChain(abci.RequestInitChain{})
+	assert.Equal(t, uint64(3), app.state.ProtocolVersion)
+	assert.Equal(t, int64(0), app.config.UpgradeProtocolHeight)
+	assert.Equal(t, uint64(0), app.config.UpgradeProtocolVersion)
 
 	// save protocol 3 config
 	var configV3 struct {
@@ -33,6 +36,8 @@ func TestProtocolUpgrade(t *testing.T) {
 	configV3.UpgradeProtocolVersion = 4
 	jsonStr, _ := json.Marshal(configV3)
 	app.store.SetAppConfig(jsonStr)
+	app.store.SetProtocolVersion(0) // this will be overriden by app.load()
+	app.store.Save() // save height 1
 	app.store.Save() // save height 2
 
 	app.load() // assume restart took place here
@@ -79,7 +84,7 @@ func TestProtocolUpgrade(t *testing.T) {
 
 func TestProtocolDifference(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
-	assert.Equal(t, AMOGenesisProtocolVersion, app.state.ProtocolVersion)
+	assert.Equal(t, uint64(3), app.state.ProtocolVersion)
 	assert.Equal(t, int64(0), app.config.UpgradeProtocolHeight)
 	assert.Equal(t, uint64(0), app.config.UpgradeProtocolVersion)
 	assert.Nil(t, app.proto)
