@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/amolabs/amoabci/amo/store"
-	"github.com/amolabs/amoabci/amo/types"
 )
 
 type State struct {
@@ -15,7 +14,7 @@ type State struct {
 	NextDraftID     uint32 `json:"-"`
 }
 
-func (s *State) InferFrom(sto *store.Store, cfg types.AMOAppConfig) {
+func (s *State) InferFrom(sto *store.Store) {
 	height := sto.GetMerkleVersion() - int64(1)
 	if height < int64(0) {
 		height = int64(0)

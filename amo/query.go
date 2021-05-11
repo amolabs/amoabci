@@ -20,6 +20,28 @@ import (
 //   So, it is mandatory to use 'true' for 'committed' arg input
 //   to query data from merkle tree
 
+func queryVersion(app *AMOApp) (res abci.ResponseQuery) {
+	var r struct {
+		AppVersion           string   `json:"app_version,omitempty"`
+		AppProtocolVersions  []uint64 `json:"app_protocol_versions,omitempty"`
+		StateProtocolVersion uint64   `json:"state_protocol_version,omitempty"`
+	}
+	r.AppVersion = AMOAppVersion
+	protoVersions := make([]uint64, 0, len(AMOProtocolVersions))
+	for k := range AMOProtocolVersions {
+		protoVersions = append(protoVersions, k)
+	}
+	r.AppProtocolVersions = protoVersions
+	r.StateProtocolVersion = app.state.ProtocolVersion
+	jsonstr, _ := json.Marshal(r)
+	res.Log = string(jsonstr)
+	res.Key = []byte("version")
+	res.Value = jsonstr
+	res.Code = code.QueryCodeOK
+
+	return
+}
+
 func queryAppConfig(config types.AMOAppConfig) (res abci.ResponseQuery) {
 	jsonstr, _ := json.Marshal(config)
 	res.Log = string(jsonstr)

@@ -218,7 +218,7 @@ func (app *AMOApp) load() {
 		panic(err)
 	}
 
-	app.state.InferFrom(app.store, app.config)
+	app.state.InferFrom(app.store)
 
 	app.store.RebuildIndex()
 }
@@ -334,6 +334,8 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 	}
 
 	switch reqs[0] {
+	case "version":
+		resQuery = queryVersion(app)
 	case "config":
 		resQuery = queryAppConfig(app.config)
 	case "balance":

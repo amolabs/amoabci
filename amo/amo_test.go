@@ -78,6 +78,23 @@ func TestQueryDefault(t *testing.T) {
 	assert.Equal(t, code.QueryCodeBadPath, res.Code)
 }
 
+func TestQueryVersion(t *testing.T) {
+	jsonstr1 := []byte(`{"app_version":"v1.8.0","app_protocol_versions":[4,5],"state_protocol_version":3}`)
+	jsonstr2 := []byte(`{"app_version":"v1.8.0","app_protocol_versions":[4,5],"state_protocol_version":4}`)
+
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	req := abci.RequestQuery{Path: "/version"}
+	res := app.Query(req)
+	assert.Equal(t, jsonstr1, res.GetValue())
+
+	app.state.ProtocolVersion = 4
+
+	req = abci.RequestQuery{Path: "/version"}
+	res = app.Query(req)
+	assert.Equal(t, jsonstr2, res.GetValue())
+}
+
 func TestQueryAppConfig(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	config := app.config
