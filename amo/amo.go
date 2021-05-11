@@ -244,8 +244,11 @@ func (app *AMOApp) upgradeProtocol() []abci.Event {
 		app.config.UpgradeProtocolVersion == 0 {
 		return events
 	}
-	app.store.SetProtocolVersion(app.config.UpgradeProtocolVersion)
+	oldVersion := app.state.ProtocolVersion
 	app.state.ProtocolVersion = app.config.UpgradeProtocolVersion
+	if app.state.ProtocolVersion > 4 {
+		app.store.SetProtocolVersion(app.config.UpgradeProtocolVersion)
+	}
 	app.proto = AMOProtocolVersions[app.state.ProtocolVersion]
 	tx.StateProtocolVersion = app.state.ProtocolVersion
 
@@ -256,6 +259,8 @@ func (app *AMOApp) upgradeProtocol() []abci.Event {
 			{Key: []byte("version"), Value: versionJson},
 		},
 	})
+	fmt.Printf("Protocol upgrade from %d to %d at height %d\n",
+		oldVersion, app.state.ProtocolVersion, app.state.Height)
 
 	return events
 }
