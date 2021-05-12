@@ -26,6 +26,7 @@ func queryVersion(app *AMOApp) (res abci.ResponseQuery) {
 		AppVersion           string   `json:"app_version,omitempty"`
 		AppProtocolVersions  []uint64 `json:"app_protocol_versions,omitempty"`
 		StateProtocolVersion uint64   `json:"state_protocol_version,omitempty"`
+		AppProtocolVersion   uint64   `json:"app_protocol_version,omitempty"`
 	}
 	r.AppVersion = AMOAppVersion
 	protoVersions := make([]uint64, 0, len(AMOProtocolVersions))
@@ -37,6 +38,7 @@ func queryVersion(app *AMOApp) (res abci.ResponseQuery) {
 	})
 	r.AppProtocolVersions = protoVersions
 	r.StateProtocolVersion = app.state.ProtocolVersion
+	r.AppProtocolVersion = app.proto.Version()
 	jsonstr, _ := json.Marshal(r)
 	res.Log = string(jsonstr)
 	res.Key = []byte("version")
