@@ -218,6 +218,7 @@ func (app *AMOApp) load() {
 	}
 
 	app.state.InferFrom(app.store)
+	app.upgradeProtocol()
 
 	app.store.RebuildIndex()
 }
