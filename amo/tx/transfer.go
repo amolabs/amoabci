@@ -22,10 +22,7 @@ type TransferParam struct {
 func parseTransferParam(raw []byte) (TransferParam, error) {
 	var param TransferParam
 	err := json.Unmarshal(raw, &param)
-	if err != nil {
-		return param, err
-	}
-	return param, nil
+	return param, err
 }
 
 type TxTransfer struct {
