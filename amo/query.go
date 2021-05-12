@@ -38,7 +38,11 @@ func queryVersion(app *AMOApp) (res abci.ResponseQuery) {
 	})
 	r.AppProtocolVersions = protoVersions
 	r.StateProtocolVersion = app.state.ProtocolVersion
-	r.AppProtocolVersion = app.proto.Version()
+	if app.proto != nil {
+		r.AppProtocolVersion = app.proto.Version()
+	} else {
+		r.AppProtocolVersion = 3
+	}
 	jsonstr, _ := json.Marshal(r)
 	res.Log = string(jsonstr)
 	res.Key = []byte("version")
