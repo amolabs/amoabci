@@ -442,7 +442,7 @@ func (app *AMOApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBegi
 // - check availability of binding tx to block
 // - check replay attack of txs which were processed before
 func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
-	t, err := tx.ParseTx(req.Tx)
+	t, err := app.proto.ParseTx(req.Tx)
 	if err != nil {
 		return abci.ResponseCheckTx{
 			Code:      code.TxCodeBadParam,
