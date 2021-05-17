@@ -518,6 +518,16 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	}
 
 	fee := t.GetFee()
+
+	if fee.LessThan(types.Zero) {
+		return abci.ResponseDeliverTx{
+			Code:      code.TxCodeNotEnoughBalance,
+			Log:       "not enough balance to pay fee",
+			Info:      "not enough balance to pay fee",
+			Codespace: "amo",
+		}
+	}
+
 	balance := app.store.GetBalance(t.GetSender(), false)
 
 	if balance.LessThan(&fee) {
