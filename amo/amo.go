@@ -453,6 +453,17 @@ func (app *AMOApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 		}
 	}
 
+	fee := t.GetFee()
+
+	if fee.LessThan(types.Zero) {
+		return abci.ResponseCheckTx{
+			Code:      code.TxCodeInvalidAmount,
+			Log:       "negative fee",
+			Info:      "negative fee",
+			Codespace: "amo",
+		}
+	}
+
 	if req.Type == abci.CheckTxType_New {
 		if !t.Verify() {
 			return abci.ResponseCheckTx{
@@ -521,9 +532,9 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 
 	if fee.LessThan(types.Zero) {
 		return abci.ResponseDeliverTx{
-			Code:      code.TxCodeNotEnoughBalance,
-			Log:       "not enough balance to pay fee",
-			Info:      "not enough balance to pay fee",
+			Code:      code.TxCodeInvalidAmount,
+			Log:       "negative fee",
+			Info:      "negative fee",
 			Codespace: "amo",
 		}
 	}
