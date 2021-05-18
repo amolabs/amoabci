@@ -51,7 +51,7 @@ func (t *TxIssue) Execute(s *store.Store) (uint32, string, []abci.Event) {
 	param := t.Param
 	sender := t.GetSender()
 
-	if !param.Amount.GreaterThan(zero) {
+	if param.Amount.LessThan(zero) {
 		return code.TxCodeInvalidAmount, "invalid amount", nil
 	}
 
