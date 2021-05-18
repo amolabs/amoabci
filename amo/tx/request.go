@@ -59,6 +59,13 @@ func (t *TxRequest) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
+	if txParam.Payment.LessThan(zero) {
+		return code.TxCodeInvalidAmount, "invalid amount", nil
+	}
+	if txParam.DealerFee.LessThan(zero) {
+		return code.TxCodeInvalidAmount, "invalid amount", nil
+	}
+
 	parcel := store.GetParcel(txParam.Target, false)
 	if parcel == nil {
 		return code.TxCodeParcelNotFound, "parcel not found", nil

@@ -48,6 +48,11 @@ func (t *TxSetup) Execute(s *store.Store) (uint32, string, []abci.Event) {
 	param := t.Param
 	sender := t.GetSender()
 
+	if param.RegistrationFee.LessThan(zero) ||
+		param.HostingFee.LessThan(zero) {
+		return code.TxCodeInvalidAmount, "invalid amount", nil
+	}
+
 	sto := s.GetStorage(param.Storage, false)
 	if sto == nil {
 		sto = &types.Storage{

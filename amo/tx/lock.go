@@ -46,6 +46,10 @@ func (t *TxLock) Execute(s *store.Store) (uint32, string, []abci.Event) {
 	param := t.Param
 	sender := t.GetSender()
 
+	if !param.Amount.GreaterThan(zero) {
+		return code.TxCodeInvalidAmount, "invalid amount", nil
+	}
+
 	udc := s.GetUDC(param.UDC, false)
 	if udc == nil {
 		return code.TxCodeUDCNotFound, "UDC not found", nil
