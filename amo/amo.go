@@ -529,16 +529,6 @@ func (app *AMOApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	}
 
 	fee := t.GetFee()
-
-	if fee.LessThan(types.Zero) {
-		return abci.ResponseDeliverTx{
-			Code:      code.TxCodeInvalidAmount,
-			Log:       "negative fee",
-			Info:      "negative fee",
-			Codespace: "amo",
-		}
-	}
-
 	balance := app.store.GetBalance(t.GetSender(), false)
 
 	if balance.LessThan(&fee) {
