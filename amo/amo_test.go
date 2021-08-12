@@ -84,7 +84,7 @@ func TestQueryVersion(t *testing.T) {
 	req := abci.RequestQuery{Path: "/version"}
 	res := app.Query(req)
 	jsonstr1 := []byte(`{"app_version":"` + AMOAppVersion +
-		`","app_protocol_versions":[4,5],"state_protocol_version":3,` +
+		`","app_protocol_versions":[4,5,6],"state_protocol_version":3,` +
 		`"app_protocol_version":3}`)
 	assert.Equal(t, jsonstr1, res.GetValue())
 
@@ -99,7 +99,7 @@ func TestQueryVersion(t *testing.T) {
 	req = abci.RequestQuery{Path: "/version"}
 	res = app.Query(req)
 	jsonstr2 := []byte(`{"app_version":"` + AMOAppVersion +
-		`","app_protocol_versions":[4,5],"state_protocol_version":4,` +
+		`","app_protocol_versions":[4,5,6],"state_protocol_version":4,` +
 		`"app_protocol_version":4}`)
 	assert.Equal(t, jsonstr2, res.GetValue())
 }

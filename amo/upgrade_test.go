@@ -12,7 +12,7 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-func TestProtocolUpgrade(t *testing.T) {
+func TestProtocolConfigMigration(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	assert.Nil(t, app.proto)
 
@@ -87,7 +87,7 @@ func TestProtocolUpgrade(t *testing.T) {
 	assert.Equal(t, uint64(0x5), app.state.ProtocolVersion)
 }
 
-func TestProtocolDifference(t *testing.T) {
+func TestProtocolUpgrade(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 	assert.Equal(t, uint64(3), app.state.ProtocolVersion)
 	assert.Equal(t, types.DefaultUpgradeProtocolHeight,
@@ -138,20 +138,34 @@ func TestProtocolDifference(t *testing.T) {
 	app.config.UpgradeProtocolHeight = 11
 	app.config.UpgradeProtocolVersion = 0x6
 
+	// protocol 5 -> 6
+	app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 11}})
+	// now protocol version 6
+	assert.Equal(t, uint64(0x6), app.state.ProtocolVersion)
+	assert.NotNil(t, app.proto)
+	assert.Equal(t, uint64(0x6), app.proto.Version())
+	//
+	app.EndBlock(abci.RequestEndBlock{Height: 11})
+	app.Commit()
+
+	app.config.UpgradeProtocolHeight = 12
+	app.config.UpgradeProtocolVersion = 0x7
+
+	// protocol 6 -> 7
 	// The following will panic, so we will use a different testing point.
 	//b, err = json.Marshal(app.config)
 	//assert.NoError(t, err)
 	//err = app.store.SetAppConfig(b)
 	//assert.NoError(t, err)
-	//app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 11}})
-	//app.EndBlock(abci.RequestEndBlock{Height: 11})
+	//app.BeginBlock(abci.RequestBeginBlock{Header: abci.Header{Height: 12}})
+	//app.EndBlock(abci.RequestEndBlock{Height: 12})
 	//app.Commit()
-	app.state.Height = 11
+	app.state.Height = 12
 	app.upgradeProtocol()
 
-	assert.Equal(t, uint64(0x6), app.state.ProtocolVersion)
+	assert.Equal(t, uint64(0x7), app.state.ProtocolVersion)
 	assert.Nil(t, app.proto)
 	err = checkProtocolVersion(app.state.ProtocolVersion)
-	assert.Error(t, err) // protocol version 6 is not supported
+	assert.Error(t, err) // protocol version 7 is not supported
 }
 
