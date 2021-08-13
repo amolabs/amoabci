@@ -10,7 +10,20 @@ import (
 
 	"github.com/amolabs/amoabci/amo/code"
 	"github.com/amolabs/amoabci/amo/store"
+	"github.com/amolabs/amoabci/crypto/p256"
 )
+
+func makeTestTxV6(txType string, seed string, payload []byte) Tx {
+	privKey := p256.GenPrivKeyFromSecret([]byte(seed))
+	addr := privKey.PubKey().Address()
+	trans := TxBase{
+		Type:    txType,
+		Sender:  addr,
+		Payload: payload,
+	}
+	trans.Sign(privKey)
+	return classifyTxV6(trans)
+}
 
 func TestTxClaim(t *testing.T) {
 	// env
@@ -60,6 +73,65 @@ func TestTxClaim(t *testing.T) {
 		Target: "myid",
 	})
 	t3 := makeTestTx("dismiss", "sender", payload)
+	rc, info = t3.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, "ok", info)
+	rc, _, _ = t3.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, "ok", info)
+
+	entry = s.GetDIDEntry("myid", false)
+	assert.Nil(t, entry)
+}
+
+func TestTxClaimV6(t *testing.T) {
+	// env
+	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
+	assert.NotNil(t, s)
+
+	entry := s.GetDIDEntry("myid", false)
+	assert.Nil(t, entry)
+
+	// first claim
+	payload, _ := json.Marshal(ClaimParam{
+		Target:   "myid",
+		Document: []byte(`{}`),
+	})
+	t1 := makeTestTxV6("claim", "sender", payload)
+	rc, info := t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, "ok", info)
+	rc, _, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, "ok", info)
+
+	entry = s.GetDIDEntry("myid", false)
+	assert.NotNil(t, entry)
+	assert.Nil(t, entry.Owner)
+	assert.True(t, bytes.Equal([]byte(`{}`), entry.Document))
+
+	// update claim
+	payload, _ = json.Marshal(ClaimParam{
+		Target:   "myid",
+		Document: []byte(`{"haha": "hoho"}`),
+	})
+	t2 := makeTestTxV6("claim", "sender", payload)
+	rc, _, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, "ok", info)
+
+	entry = s.GetDIDEntry("myid", false)
+	assert.NotNil(t, entry)
+	assert.Nil(t, entry.Owner)
+	// XXX note that retrieved document is a compact representation
+	assert.True(t, bytes.Equal([]byte(`{"haha":"hoho"}`), entry.Document))
+
+	// dsmiss
+	payload, _ = json.Marshal(DismissParam{
+		Target: "myid",
+	})
+	t3 := makeTestTxV6("dismiss", "sender", payload)
 	rc, info = t3.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
