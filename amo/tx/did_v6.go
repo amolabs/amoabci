@@ -22,22 +22,26 @@ type ClaimParamV6 struct {
 }
 
 type Document struct {
-	Context            string `json:"@context,omitempty"`
-	Id                 string `json:"id"`
-	Controller         string `json:"controller,omitempty"`
-	VerificationMethod struct {
-		Id           string `json:"id"`
-		Type         string `json:"type"`
-		Controller   string `json:"controller,omitempty"`
-		PublicKeyJwk struct {
-			Kty string `json:"kty"`
-			Crv string `json:"crv"`
-			X   string `json:"x"`
-			Y   string `json:"y"`
-		} `json:"publicKeyJwk"`
-	} `json:"verificationMethod"`
-	Authentication  string `json:"authentication"`
-	AssertionMethod string `json:"assertionMethod,omitempty"`
+	Context            string               `json:"@context,omitempty"`
+	Id                 string               `json:"id"`
+	Controller         string               `json:"controller,omitempty"`
+	VerificationMethod []VerificationMethod `json:"verificationMethod"`
+	Authentication     string               `json:"authentication"`
+	AssertionMethod    string               `json:"assertionMethod,omitempty"`
+}
+
+type VerificationMethod struct {
+	Id           string       `json:"id"`
+	Type         string       `json:"type"`
+	Controller   string       `json:"controller,omitempty"`
+	PublicKeyJwk PublicKeyJwk `json:"publicKeyJwk"`
+}
+
+type PublicKeyJwk struct {
+	Kty string `json:"kty"`
+	Crv string `json:"crv"`
+	X   string `json:"x"`
+	Y   string `json:"y"`
 }
 
 func parseClaimParamV6(raw []byte) (ClaimParamV6, error) {
@@ -51,7 +55,7 @@ func parseClaimParamV6(raw []byte) (ClaimParamV6, error) {
 
 type TxClaimV6 struct {
 	TxBase
-	Param ClaimParam `json:"-"`
+	Param ClaimParamV6 `json:"-"`
 }
 
 var _ Tx = &TxClaimV6{}
@@ -62,6 +66,7 @@ func (t *TxClaimV6) Check() (uint32, string) {
 		return code.TxCodeBadParam, err.Error()
 	}
 
+	// stateless validity check
 	ss := strings.Split(param.Target, ":")
 	if len(ss) != 3 || ss[0] != "did" || ss[1] != "amo" || len(ss[2]) != 40 {
 		return code.TxCodeBadParam, "invalid target did"
@@ -70,9 +75,18 @@ func (t *TxClaimV6) Check() (uint32, string) {
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
-
 	if param.Target != param.Document.Id {
 		return code.TxCodeBadParam, "mismatching did"
+	}
+
+	if len(param.Document.VerificationMethod) == 0 {
+		return code.TxCodeBadParam, "no verificationMethod"
+	}
+	if len(param.Document.Authentication) == 0 {
+		return code.TxCodeBadParam, "no authentication"
+	}
+	if param.Document.Authentication != param.Document.VerificationMethod[0].Id {
+		return code.TxCodeBadParam, "unknown verificationMethod for authentication"
 	}
 
 	return code.TxCodeOK, "ok"
@@ -84,11 +98,30 @@ func (t *TxClaimV6) Execute(store *store.Store) (uint32, string, []abci.Event) {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	b, err := json.Marshal(txParam.Document)
+	newDoc := txParam.Document
+	entry := store.GetDIDEntry(txParam.Target, false)
+	senderDID := "did:amo:" + t.GetSender().String()
+
+	if entry != nil {
+		var doc Document
+		err = json.Unmarshal(entry.Document, &doc)
+		if err != nil {
+			return code.TxCodeUnknown, "failed to unmarshal document", nil
+		}
+		if senderDID != doc.Id && senderDID != doc.Controller {
+			return code.TxCodePermissionDenied, "permission denied", nil
+		}
+	} else {
+		if senderDID != newDoc.Id {
+			return code.TxCodePermissionDenied, "permission denied", nil
+		}
+	}
+
+	b, err := json.Marshal(newDoc)
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
-	entry := &types.DIDEntry{
+	entry = &types.DIDEntry{
 		Document: b,
 	}
 	store.SetDIDEntry(txParam.Target, entry)

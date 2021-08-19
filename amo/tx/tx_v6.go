@@ -85,7 +85,7 @@ func classifyTxV6(base TxBase) Tx {
 			Param:  param,
 		}
 	case "claim":
-		param, _ := parseClaimParam(base.Payload)
+		param, _ := parseClaimParamV6(base.Payload)
 		t = &TxClaimV6{
 			TxBase: base,
 			Param:  param,
@@ -142,4 +142,3 @@ func ParseTxV6(txBytes []byte) (Tx, error) {
 
 	return classifyTxV6(base), nil
 }
-

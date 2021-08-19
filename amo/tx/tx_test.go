@@ -3,7 +3,6 @@ package tx
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -734,11 +733,9 @@ func TestValidTransfer(t *testing.T) {
 
 	aliceBal := s.GetBalance(makeTestAddress("alice"), false)
 	assert.Equal(t, amo3, aliceBal)
-	fmt.Println(aliceBal.String())
 
 	bobBal := s.GetBalance(bob.addr, false)
 	assert.Equal(t, amo2, bobBal)
-	fmt.Println(bobBal.String())
 }
 
 func TestNonValidTransfer(t *testing.T) {

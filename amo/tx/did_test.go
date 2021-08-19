@@ -43,7 +43,7 @@ func TestTxClaim(t *testing.T) {
 	rc, info := t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
-	rc, _, _ = t1.Execute(s)
+	rc, info, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
 
@@ -58,7 +58,7 @@ func TestTxClaim(t *testing.T) {
 		Document: []byte(`{"haha": "hoho"}`),
 	})
 	t2 := makeTestTx("claim", "sender", payload)
-	rc, _, _ = t2.Execute(s)
+	rc, info, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
 
@@ -76,7 +76,7 @@ func TestTxClaim(t *testing.T) {
 	rc, info = t3.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
-	rc, _, _ = t3.Execute(s)
+	rc, info, _ = t3.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
 
@@ -90,47 +90,108 @@ func TestTxClaimV6(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
-	entry := s.GetDIDEntry("myid", false)
-	assert.Nil(t, entry)
-
-	// tx check error
-	payload, _ := json.Marshal(ClaimParam{
-		// invalid AMO DID format
-		Target: "did:amo:Z0EAD5B53B11DFE78EC8CF131D7960F097D48D70",
-		// invalid DID document (no "id")
-		Document: []byte(`{}`),
-	})
-	t1 := makeTestTxV6("claim", "sender", payload)
-	rc, info := t1.Check()
-	assert.Equal(t, code.TxCodeBadParam, rc)
-	assert.Contains(t, info, "invalid byte")
-
-	payload, _ = json.Marshal(ClaimParam{
-		// valid AMO DID format
-		Target: "did:amo:70EAD5B53B11DFE78EC8CF131D7960F097D48D70",
-		// invalid DID document (no "id")
-		Document: []byte(`{}`),
-	})
-	t1 = makeTestTxV6("claim", "sender", payload)
-	rc, info = t1.Check()
-	assert.Equal(t, code.TxCodeBadParam, rc)
-	assert.Equal(t, "mismatching did", info)
-
-	// first claim
 	myid := "did:amo:70EAD5B53B11DFE78EC8CF131D7960F097D48D70"
 	mydoc := Document{
 		Id: myid,
 	}
 	mydocJson, _ := json.Marshal(mydoc)
+
+	// tx check error
+	payload, _ := json.Marshal(ClaimParamV6{
+		// invalid AMO DID format
+		Target:   "did:amo:Z0EAD5B53B11DFE78EC8CF131D7960F097D48D70",
+		Document: Document{},
+	})
+	t1 := makeTestTxV6("claim", "controller", payload)
+	rc, info := t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	assert.Contains(t, info, "invalid byte")
+
+	// tx check error (mismatching did)
+	payload, _ = json.Marshal(ClaimParamV6{
+		Target:   "did:amo:70EAD5B53B11DFE78EC8CF131D7960F097D48D70",
+		Document: Document{},
+	})
+	t1 = makeTestTxV6("claim", "controller", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	assert.Equal(t, "mismatching did", info)
+
+	// adjust test data
+	myid = "did:amo:" + makeTestAddress("subject").String()
+	mydoc.Id = myid
+	mydocJson, _ = json.Marshal(mydoc)
+
+	// tx check error (check verificationMethod)
 	payload, _ = json.Marshal(ClaimParamV6{
 		Target:   myid,
 		Document: mydoc,
 	})
-	t1 = makeTestTxV6("claim", "sender", payload)
+	t1 = makeTestTxV6("claim", "controller", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	assert.Equal(t, "no verificationMethod", info)
+
+	// adjust test data
+	mydoc.VerificationMethod = []VerificationMethod{{
+		Id:   "asdf#keys-1",
+		Type: "jsonWebKey",
+		PublicKeyJwk: PublicKeyJwk{
+			Kty: "EC",
+			Crv: "P-256",
+			X:   "FFFF",
+			Y:   "EEEE",
+		},
+	}}
+	mydoc.Authentication = "missingkey"
+
+	// tx check error (check authentication)
+	payload, _ = json.Marshal(ClaimParamV6{
+		Target:   myid,
+		Document: mydoc,
+	})
+	t1 = makeTestTxV6("claim", "controller", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	assert.Equal(t, "unknown verificationMethod for authentication", info)
+
+	// adjust test data
+	mydoc.Authentication = "asdf#keys-1"
+	controllerId := "did:amo:" + makeTestAddress("controller").String()
+	mydoc.Controller = controllerId
+	mydocJson, _ = json.Marshal(mydoc)
+
+	// tx check ok
+	payload, _ = json.Marshal(ClaimParamV6{
+		Target:   myid,
+		Document: mydoc,
+	})
+	t1 = makeTestTxV6("claim", "controller", payload)
 	rc, info = t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
-	rc, _, _ = t1.Execute(s)
+
+	// check nil before execute. This make the next claim tx will be for
+	// a previously non-existing document.
+	entry := s.GetDIDEntry(myid, false)
+	assert.Nil(t, entry)
+
+	// tx execute error
+	rc, info, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+	assert.Equal(t, "permission denied", info)
+
+	// first claim
+	payload, _ = json.Marshal(ClaimParamV6{
+		Target:   myid,
+		Document: mydoc,
+	})
+	// now tx from the ligitimate subject
+	t1 = makeTestTxV6("claim", "subject", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, "ok", info)
+	rc, info, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
 
@@ -138,24 +199,37 @@ func TestTxClaimV6(t *testing.T) {
 	assert.NotNil(t, entry)
 	assert.Nil(t, entry.Owner) // in protocl v6, entry.Owner becomes obsolete
 	assert.True(t, bytes.Equal(mydocJson, entry.Document))
+	var doc Document
+	_ = json.Unmarshal(entry.Document, &doc)
+	assert.Equal(t, controllerId, doc.Controller)
 
 	// update claim
-	mydoc.Controller = "did:amo:0687D766FF0563B86BFF078B7F560AFC070C81AD"
+	mydoc.Controller = ""
 	mydocJson, _ = json.Marshal(mydoc)
 	payload, _ = json.Marshal(ClaimParamV6{
 		Target:   myid,
 		Document: mydoc,
 	})
-	t2 := makeTestTxV6("claim", "sender", payload)
-	rc, _, _ = t2.Execute(s)
+	t2 := makeTestTxV6("claim", "controller", payload)
+	rc, info, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
 
 	entry = s.GetDIDEntry(myid, false)
 	assert.NotNil(t, entry)
 	assert.Nil(t, entry.Owner) // in protocl v6, entry.Owner becomes obsolete
-	// XXX note that retrieved document is a compact representation
 	assert.True(t, bytes.Equal(mydocJson, entry.Document))
+
+	// Now that controller property is null, further update from controller
+	// will fail.
+	payload, _ = json.Marshal(ClaimParamV6{
+		Target:   myid,
+		Document: mydoc,
+	})
+	t2 = makeTestTxV6("claim", "controller", payload)
+	rc, info, _ = t2.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+	assert.Equal(t, "permission denied", info)
 
 	// dsmiss
 	payload, _ = json.Marshal(DismissParam{
@@ -165,7 +239,7 @@ func TestTxClaimV6(t *testing.T) {
 	rc, info = t3.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
-	rc, _, _ = t3.Execute(s)
+	rc, info, _ = t3.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
 
