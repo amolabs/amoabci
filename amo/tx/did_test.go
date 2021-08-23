@@ -176,7 +176,7 @@ func TestTxClaimV6(t *testing.T) {
 	entry := s.GetDIDEntry(myid, false)
 	assert.Nil(t, entry)
 
-	// tx execute error
+	// claim execute error
 	rc, info, _ = t1.Execute(s)
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
 	assert.Equal(t, "permission denied", info)
@@ -231,11 +231,59 @@ func TestTxClaimV6(t *testing.T) {
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
 	assert.Equal(t, "permission denied", info)
 
-	// dsmiss
+	// tx check error
+	payload, _ = json.Marshal(DismissParam{
+		// invalid AMO DID format
+		Target: "did:amo:Z0EAD5B53B11DFE78EC8CF131D7960F097D48D70",
+	})
+	t1 = makeTestTxV6("dismiss", "controller", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	assert.Contains(t, info, "invalid byte")
+
+	// dsmiss execute error
 	payload, _ = json.Marshal(DismissParam{
 		Target: myid,
 	})
-	t3 := makeTestTxV6("dismiss", "sender", payload)
+	t3 := makeTestTxV6("dismiss", "controller", payload)
+	rc, info = t3.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, "ok", info)
+	rc, info, _ = t3.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+	assert.Equal(t, "permission denied", info)
+
+	// dismiss
+	payload, _ = json.Marshal(DismissParam{
+		Target: myid,
+	})
+	t3 = makeTestTxV6("dismiss", "subject", payload)
+	rc, info = t3.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, "ok", info)
+	rc, info, _ = t3.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, "ok", info)
+
+	// claim again with controller info
+	mydoc.Controller = controllerId
+	payload, _ = json.Marshal(ClaimParamV6{
+		Target:   myid,
+		Document: mydoc,
+	})
+	t1 = makeTestTxV6("claim", "subject", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, "ok", info)
+	rc, info, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Equal(t, "ok", info)
+
+	// dismiss from controller
+	payload, _ = json.Marshal(DismissParam{
+		Target: myid,
+	})
+	t3 = makeTestTxV6("dismiss", "controller", payload)
 	rc, info = t3.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)

@@ -139,7 +139,17 @@ type TxDismissV6 struct {
 var _ Tx = &TxDismissV6{}
 
 func (t *TxDismissV6) Check() (uint32, string) {
-	_, err := parseDismissParam(t.getPayload())
+	param, err := parseDismissParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
+	}
+
+	// stateless validity check
+	ss := strings.Split(param.Target, ":")
+	if len(ss) != 3 || ss[0] != "did" || ss[1] != "amo" || len(ss[2]) != 40 {
+		return code.TxCodeBadParam, "invalid target did"
+	}
+	_, err = hex.DecodeString(ss[2])
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -151,6 +161,22 @@ func (t *TxDismissV6) Execute(store *store.Store) (uint32, string, []abci.Event)
 	txParam, err := parseClaimParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	entry := store.GetDIDEntry(txParam.Target, false)
+	senderDID := "did:amo:" + t.GetSender().String()
+
+	if entry != nil {
+		var doc Document
+		err = json.Unmarshal(entry.Document, &doc)
+		if err != nil {
+			return code.TxCodeUnknown, "failed to unmarshal document", nil
+		}
+		if senderDID != doc.Id && senderDID != doc.Controller {
+			return code.TxCodePermissionDenied, "permission denied", nil
+		}
+	} else {
+		return code.TxCodeNotFound, "not found", nil
 	}
 
 	store.DeleteDIDEntry(txParam.Target)
