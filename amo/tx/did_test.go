@@ -25,6 +25,7 @@ func makeTestTxV6(txType string, seed string, payload []byte) Tx {
 	return classifyTxV6(trans)
 }
 
+// legacy
 func TestTxClaim(t *testing.T) {
 	// env
 	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
@@ -84,7 +85,7 @@ func TestTxClaim(t *testing.T) {
 	assert.Nil(t, entry)
 }
 
-func TestTxClaimV6(t *testing.T) {
+func TestTxDIDClaim(t *testing.T) {
 	// env
 	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
 	assert.NoError(t, err)
@@ -97,22 +98,22 @@ func TestTxClaimV6(t *testing.T) {
 	mydocJson, _ := json.Marshal(mydoc)
 
 	// tx check error
-	payload, _ := json.Marshal(ClaimParamV6{
+	payload, _ := json.Marshal(DIDClaimParam{
 		// invalid AMO DID format
 		Target:   "did:amo:Z0EAD5B53B11DFE78EC8CF131D7960F097D48D70",
 		Document: Document{},
 	})
-	t1 := makeTestTxV6("claim", "controller", payload)
+	t1 := makeTestTxV6("did.claim", "controller", payload)
 	rc, info := t1.Check()
 	assert.Equal(t, code.TxCodeBadParam, rc)
 	assert.Contains(t, info, "invalid byte")
 
 	// tx check error (mismatching did)
-	payload, _ = json.Marshal(ClaimParamV6{
+	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   "did:amo:70EAD5B53B11DFE78EC8CF131D7960F097D48D70",
 		Document: Document{},
 	})
-	t1 = makeTestTxV6("claim", "controller", payload)
+	t1 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info = t1.Check()
 	assert.Equal(t, code.TxCodeBadParam, rc)
 	assert.Equal(t, "mismatching did", info)
@@ -123,11 +124,11 @@ func TestTxClaimV6(t *testing.T) {
 	mydocJson, _ = json.Marshal(mydoc)
 
 	// tx check error (check verificationMethod)
-	payload, _ = json.Marshal(ClaimParamV6{
+	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
 		Document: mydoc,
 	})
-	t1 = makeTestTxV6("claim", "controller", payload)
+	t1 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info = t1.Check()
 	assert.Equal(t, code.TxCodeBadParam, rc)
 	assert.Equal(t, "no verificationMethod", info)
@@ -146,11 +147,11 @@ func TestTxClaimV6(t *testing.T) {
 	mydoc.Authentication = "missingkey"
 
 	// tx check error (check authentication)
-	payload, _ = json.Marshal(ClaimParamV6{
+	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
 		Document: mydoc,
 	})
-	t1 = makeTestTxV6("claim", "controller", payload)
+	t1 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info = t1.Check()
 	assert.Equal(t, code.TxCodeBadParam, rc)
 	assert.Equal(t, "unknown verificationMethod for authentication", info)
@@ -162,11 +163,11 @@ func TestTxClaimV6(t *testing.T) {
 	mydocJson, _ = json.Marshal(mydoc)
 
 	// tx check ok
-	payload, _ = json.Marshal(ClaimParamV6{
+	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
 		Document: mydoc,
 	})
-	t1 = makeTestTxV6("claim", "controller", payload)
+	t1 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info = t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
@@ -182,12 +183,12 @@ func TestTxClaimV6(t *testing.T) {
 	assert.Equal(t, "permission denied", info)
 
 	// first claim
-	payload, _ = json.Marshal(ClaimParamV6{
+	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
 		Document: mydoc,
 	})
 	// now tx from the ligitimate subject
-	t1 = makeTestTxV6("claim", "subject", payload)
+	t1 = makeTestTxV6("did.claim", "subject", payload)
 	rc, info = t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
@@ -206,11 +207,11 @@ func TestTxClaimV6(t *testing.T) {
 	// update claim
 	mydoc.Controller = ""
 	mydocJson, _ = json.Marshal(mydoc)
-	payload, _ = json.Marshal(ClaimParamV6{
+	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
 		Document: mydoc,
 	})
-	t2 := makeTestTxV6("claim", "controller", payload)
+	t2 := makeTestTxV6("did.claim", "controller", payload)
 	rc, info, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
@@ -222,30 +223,30 @@ func TestTxClaimV6(t *testing.T) {
 
 	// Now that controller property is null, further update from controller
 	// will fail.
-	payload, _ = json.Marshal(ClaimParamV6{
+	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
 		Document: mydoc,
 	})
-	t2 = makeTestTxV6("claim", "controller", payload)
+	t2 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info, _ = t2.Execute(s)
 	assert.Equal(t, code.TxCodePermissionDenied, rc)
 	assert.Equal(t, "permission denied", info)
 
 	// tx check error
-	payload, _ = json.Marshal(DismissParam{
+	payload, _ = json.Marshal(DIDDismissParam{
 		// invalid AMO DID format
 		Target: "did:amo:Z0EAD5B53B11DFE78EC8CF131D7960F097D48D70",
 	})
-	t1 = makeTestTxV6("dismiss", "controller", payload)
+	t1 = makeTestTxV6("did.dismiss", "controller", payload)
 	rc, info = t1.Check()
 	assert.Equal(t, code.TxCodeBadParam, rc)
 	assert.Contains(t, info, "invalid byte")
 
 	// dsmiss execute error
-	payload, _ = json.Marshal(DismissParam{
+	payload, _ = json.Marshal(DIDDismissParam{
 		Target: myid,
 	})
-	t3 := makeTestTxV6("dismiss", "controller", payload)
+	t3 := makeTestTxV6("did.dismiss", "controller", payload)
 	rc, info = t3.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
@@ -254,10 +255,10 @@ func TestTxClaimV6(t *testing.T) {
 	assert.Equal(t, "permission denied", info)
 
 	// dismiss
-	payload, _ = json.Marshal(DismissParam{
+	payload, _ = json.Marshal(DIDDismissParam{
 		Target: myid,
 	})
-	t3 = makeTestTxV6("dismiss", "subject", payload)
+	t3 = makeTestTxV6("did.dismiss", "subject", payload)
 	rc, info = t3.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
@@ -267,11 +268,11 @@ func TestTxClaimV6(t *testing.T) {
 
 	// claim again with controller info
 	mydoc.Controller = controllerId
-	payload, _ = json.Marshal(ClaimParamV6{
+	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
 		Document: mydoc,
 	})
-	t1 = makeTestTxV6("claim", "subject", payload)
+	t1 = makeTestTxV6("did.claim", "subject", payload)
 	rc, info = t1.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)
@@ -280,10 +281,10 @@ func TestTxClaimV6(t *testing.T) {
 	assert.Equal(t, "ok", info)
 
 	// dismiss from controller
-	payload, _ = json.Marshal(DismissParam{
+	payload, _ = json.Marshal(DIDDismissParam{
 		Target: myid,
 	})
-	t3 = makeTestTxV6("dismiss", "controller", payload)
+	t3 = makeTestTxV6("did.dismiss", "controller", payload)
 	rc, info = t3.Check()
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Equal(t, "ok", info)

@@ -85,14 +85,26 @@ func classifyTxV6(base TxBase) Tx {
 			Param:  param,
 		}
 	case "claim":
-		param, _ := parseClaimParamV6(base.Payload)
-		t = &TxClaimV6{
+		param, _ := parseClaimParam(base.Payload)
+		t = &TxClaim{
 			TxBase: base,
 			Param:  param,
 		}
 	case "dismiss":
 		param, _ := parseDismissParam(base.Payload)
-		t = &TxDismissV6{
+		t = &TxDismiss{
+			TxBase: base,
+			Param:  param,
+		}
+	case "did.claim":
+		param, _ := parseDIDClaimParam(base.Payload)
+		t = &TxDIDClaim{
+			TxBase: base,
+			Param:  param,
+		}
+	case "did.dismiss":
+		param, _ := parseDIDDismissParam(base.Payload)
+		t = &TxDIDDismiss{
 			TxBase: base,
 			Param:  param,
 		}

@@ -14,9 +14,9 @@ import (
 	"github.com/amolabs/amoabci/amo/types"
 )
 
-//// claim
+//// did.claim
 
-type ClaimParamV6 struct {
+type DIDClaimParam struct {
 	Target   string   `json:"target"`
 	Document Document `json:"document"`
 }
@@ -44,8 +44,8 @@ type PublicKeyJwk struct {
 	Y   string `json:"y"`
 }
 
-func parseClaimParamV6(raw []byte) (ClaimParamV6, error) {
-	var param ClaimParamV6
+func parseDIDClaimParam(raw []byte) (DIDClaimParam, error) {
+	var param DIDClaimParam
 	err := json.Unmarshal(raw, &param)
 	if err != nil {
 		return param, err
@@ -53,15 +53,15 @@ func parseClaimParamV6(raw []byte) (ClaimParamV6, error) {
 	return param, nil
 }
 
-type TxClaimV6 struct {
+type TxDIDClaim struct {
 	TxBase
-	Param ClaimParamV6 `json:"-"`
+	Param DIDClaimParam `json:"-"`
 }
 
-var _ Tx = &TxClaimV6{}
+var _ Tx = &TxDIDClaim{}
 
-func (t *TxClaimV6) Check() (uint32, string) {
-	param, err := parseClaimParamV6(t.getPayload())
+func (t *TxDIDClaim) Check() (uint32, string) {
+	param, err := parseDIDClaimParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -92,8 +92,8 @@ func (t *TxClaimV6) Check() (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func (t *TxClaimV6) Execute(store *store.Store) (uint32, string, []abci.Event) {
-	txParam, err := parseClaimParamV6(t.getPayload())
+func (t *TxDIDClaim) Execute(store *store.Store) (uint32, string, []abci.Event) {
+	txParam, err := parseDIDClaimParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
@@ -129,17 +129,31 @@ func (t *TxClaimV6) Execute(store *store.Store) (uint32, string, []abci.Event) {
 	return code.TxCodeOK, "ok", []abci.Event{}
 }
 
-//// dismiss
+//// did.dismiss
 
-type TxDismissV6 struct {
-	TxBase
-	Param DismissParam `json:"-"`
+type DIDDismissParam struct {
+	Target string `json:"target"`
 }
 
-var _ Tx = &TxDismissV6{}
+// NOTE: this is essentially the same as parseDismissParam()
+func parseDIDDismissParam(raw []byte) (DIDDismissParam, error) {
+	var param DIDDismissParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
+	}
+	return param, nil
+}
 
-func (t *TxDismissV6) Check() (uint32, string) {
-	param, err := parseDismissParam(t.getPayload())
+type TxDIDDismiss struct {
+	TxBase
+	Param DIDDismissParam `json:"-"`
+}
+
+var _ Tx = &TxDIDDismiss{}
+
+func (t *TxDIDDismiss) Check() (uint32, string) {
+	param, err := parseDIDDismissParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
@@ -157,8 +171,8 @@ func (t *TxDismissV6) Check() (uint32, string) {
 	return code.TxCodeOK, "ok"
 }
 
-func (t *TxDismissV6) Execute(store *store.Store) (uint32, string, []abci.Event) {
-	txParam, err := parseClaimParam(t.getPayload())
+func (t *TxDIDDismiss) Execute(store *store.Store) (uint32, string, []abci.Event) {
+	txParam, err := parseDIDClaimParam(t.getPayload())
 	if err != nil {
 		return code.TxCodeBadParam, err.Error(), nil
 	}
