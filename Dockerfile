@@ -59,7 +59,7 @@ COPY --from=0 /src/amoabci/amod /usr/bin/
 COPY DOCKER/run_node.sh DOCKER/config/* /
 
 ENV AMOHOME /amo
-VOLUME [ $AMOHOME ]
+VOLUME $AMOHOME
 
 WORKDIR /
 
