@@ -11,3 +11,8 @@ type DIDEntry struct {
 	Document json.RawMessage `json:"document"`
 	Meta     json.RawMessage `json:"meta,omitempty"`
 }
+
+type VCEntry struct {
+	Credential json.RawMessage `json:"credential"`
+	Meta       json.RawMessage `json:"meta,omitempty"`
+}

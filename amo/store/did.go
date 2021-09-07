@@ -8,7 +8,10 @@ import (
 
 var (
 	prefixDID = []byte("did:")
+	prefixVC  = []byte("vc:")
 )
+
+// did
 
 func makeDIDKey(did string) []byte {
 	return append(prefixDID, []byte(did)...)
@@ -38,4 +41,36 @@ func (s Store) GetDIDEntry(id string, committed bool) *types.DIDEntry {
 
 func (s Store) DeleteDIDEntry(id string) {
 	s.remove(makeDIDKey(id))
+}
+
+// Verifiable Credential
+
+func makeVCKey(vcId string) []byte {
+	return append(prefixVC, []byte(vcId)...)
+}
+
+func (s Store) SetVC(vcId string, value *types.VCEntry) error {
+	b, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	s.set(makeVCKey(vcId), b)
+	return nil
+}
+
+func (s Store) GetVC(vcId string, committed bool) *types.VCEntry {
+	b := s.get(makeVCKey(vcId), committed)
+	if len(b) == 0 {
+		return nil
+	}
+	var vc types.VCEntry
+	err := json.Unmarshal(b, &vc)
+	if err != nil {
+		return nil
+	}
+	return &vc
+}
+
+func (s Store) DeleteVC(vcId string) {
+	s.remove(makeVCKey(vcId))
 }

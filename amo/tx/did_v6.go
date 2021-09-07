@@ -124,7 +124,10 @@ func (t *TxDIDClaim) Execute(store *store.Store) (uint32, string, []abci.Event) 
 	entry = &types.DIDEntry{
 		Document: b,
 	}
-	store.SetDIDEntry(txParam.Target, entry)
+	err = store.SetDIDEntry(txParam.Target, entry)
+	if err != nil {
+		return code.TxCodeUnknown, err.Error(), nil
+	}
 
 	return code.TxCodeOK, "ok", []abci.Event{}
 }
@@ -194,6 +197,176 @@ func (t *TxDIDDismiss) Execute(store *store.Store) (uint32, string, []abci.Event
 	}
 
 	store.DeleteDIDEntry(txParam.Target)
+
+	return code.TxCodeOK, "ok", []abci.Event{}
+}
+
+//// did.issue issue VC
+
+type DIDIssueParam struct {
+	Target     string          `json:"target"`
+	Credential json.RawMessage `json:"credential"`
+}
+
+// minimal struct to handle Credential
+type CredentialMin struct {
+	Id     string `json:"id"`
+	Issuer string `json:"issuer"`
+	Issued string `json:"issued"`
+}
+
+func parseDIDIssueParam(raw []byte) (DIDIssueParam, error) {
+	var param DIDIssueParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
+	}
+	return param, nil
+}
+
+type TxDIDIssue struct {
+	TxBase
+	Param DIDIssueParam `json:"-"`
+}
+
+func (t *TxDIDIssue) Check() (uint32, string) {
+	param, err := parseDIDIssueParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
+	}
+
+	// stateless validity check
+	ss := strings.Split(param.Target, ":")
+	if len(ss) != 3 || ss[0] != "amo" || ss[1] != "cred" || len(ss[2]) != 64 {
+		return code.TxCodeBadParam, "invalid target VC id"
+	}
+	_, err = hex.DecodeString(ss[2])
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
+	}
+	newCred := CredentialMin{}
+	err = json.Unmarshal(param.Credential, &newCred)
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
+	}
+	if param.Target != newCred.Id {
+		return code.TxCodeBadParam, "mismatching VC id"
+	}
+	senderDID := "did:amo:" + t.GetSender().String()
+	if senderDID != newCred.Issuer {
+		return code.TxCodeBadParam, "mismatching VC issuer"
+	}
+	if newCred.Issued == "" {
+		return code.TxCodeBadParam, "missing property: issued"
+	}
+
+	return code.TxCodeOK, "ok"
+}
+
+func (t *TxDIDIssue) Execute(store *store.Store) (uint32, string, []abci.Event) {
+	param, err := parseDIDIssueParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	var newCred CredentialMin
+	err = json.Unmarshal(param.Credential, &newCred)
+	if err != nil {
+		// this should not happen, since all the tx would had been checked by
+		// t.Check()
+	}
+	entry := store.GetVC(param.Target, false)
+	senderDID := "did:amo:" + t.GetSender().String()
+
+	if entry != nil {
+		var cred CredentialMin
+		err = json.Unmarshal(entry.Credential, &cred)
+		if err != nil {
+			return code.TxCodeUnknown, "failed to unmarshal VC", nil
+		}
+		if senderDID != cred.Issuer {
+			return code.TxCodePermissionDenied, "permission denied", nil
+		}
+	} else {
+		// NOTE: This is redundant since it would be checked in Check()
+		if senderDID != newCred.Issuer {
+			return code.TxCodePermissionDenied, "permission denied", nil
+		}
+	}
+
+	entry = &types.VCEntry{
+		Credential: param.Credential,
+	}
+	err = store.SetVC(param.Target, entry)
+	if err != nil {
+		return code.TxCodeUnknown, err.Error(), nil
+	}
+
+	return code.TxCodeOK, "ok", []abci.Event{}
+}
+
+//// did.revoke revoke VC
+
+type DIDRevokeParam struct {
+	Target string `json:"target"`
+}
+
+func parseDIDRevokeParam(raw []byte) (DIDRevokeParam, error) {
+	var param DIDRevokeParam
+	err := json.Unmarshal(raw, &param)
+	if err != nil {
+		return param, err
+	}
+	return param, nil
+}
+
+type TxDIDRevoke struct {
+	TxBase
+	Param DIDRevokeParam `json:"-"`
+}
+
+func (t *TxDIDRevoke) Check() (uint32, string) {
+	param, err := parseDIDRevokeParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
+	}
+
+	// stateless validity check
+	ss := strings.Split(param.Target, ":")
+	if len(ss) != 3 || ss[0] != "amo" || ss[1] != "cred" || len(ss[2]) != 64 {
+		return code.TxCodeBadParam, "invalid target VC id"
+	}
+	_, err = hex.DecodeString(ss[2])
+	if err != nil {
+		return code.TxCodeBadParam, err.Error()
+	}
+
+	return code.TxCodeOK, "ok"
+}
+
+func (t *TxDIDRevoke) Execute(store *store.Store) (uint32, string, []abci.Event) {
+	param, err := parseDIDIssueParam(t.getPayload())
+	if err != nil {
+		return code.TxCodeBadParam, err.Error(), nil
+	}
+
+	entry := store.GetVC(param.Target, false)
+	senderDID := "did:amo:" + t.GetSender().String()
+
+	if entry != nil {
+		var cred CredentialMin
+		err = json.Unmarshal(entry.Credential, &cred)
+		if err != nil {
+			return code.TxCodeUnknown, "failed to unmarshal VC", nil
+		}
+		if senderDID != cred.Issuer {
+			return code.TxCodePermissionDenied, "permission denied", nil
+		}
+	} else {
+		return code.TxCodeNotFound, "not found", nil
+	}
+
+	store.DeleteVC(param.Target)
 
 	return code.TxCodeOK, "ok", []abci.Event{}
 }

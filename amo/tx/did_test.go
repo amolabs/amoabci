@@ -295,3 +295,204 @@ func TestTxDIDClaim(t *testing.T) {
 	entry = s.GetDIDEntry(myid, false)
 	assert.Nil(t, entry)
 }
+
+func TestTxDIDIssue(t *testing.T) {
+	// env
+	s, err := store.NewStore(nil, 1, tmdb.NewMemDB(), tmdb.NewMemDB())
+	assert.NoError(t, err)
+	assert.NotNil(t, s)
+
+	vcid := "amo:cred:70EAD5B53B11DFE78EC8CF131D7960F097D48D7047381938ABC34812DE849023"
+	issuerId := "did:amo:" + makeTestAddress("issuer").String()
+
+	// stateless validity check
+	invalidVC := `{"id":"amo:cred:80EAD5B53B11DFE78EC8CF131D7960F097D48D70"}`
+	payload, _ := json.Marshal(DIDIssueParam{
+		Target:     vcid[:64],
+		Credential: []byte(invalidVC),
+	})
+	t1 := makeTestTxV6("did.issue", "issuer", payload)
+	rc, info := t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	assert.Contains(t, info, "invalid target VC id")
+
+	payload, _ = json.Marshal(DIDIssueParam{
+		Target:     vcid,
+		Credential: []byte(invalidVC),
+	})
+	t1 = makeTestTxV6("did.issue", "issuer", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	assert.Contains(t, info, "mismatching VC id")
+
+	invalidVC = `{"id":"amo:cred:70EAD5B53B11DFE78EC8CF131D7960F097D48D7047381938ABC34812DE849023","issuer":"iiii"}`
+	payload, _ = json.Marshal(DIDIssueParam{
+		Target:     vcid,
+		Credential: []byte(invalidVC),
+	})
+	t1 = makeTestTxV6("did.issue", "issuer", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	assert.Contains(t, info, "mismatching VC issuer")
+
+	invalidVC = `{"id":"amo:cred:70EAD5B53B11DFE78EC8CF131D7960F097D48D7047381938ABC34812DE849023","issuer":"` + issuerId + `"}`
+	payload, _ = json.Marshal(DIDIssueParam{
+		Target:     vcid,
+		Credential: []byte(invalidVC),
+	})
+	t1 = makeTestTxV6("did.issue", "issuer", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	assert.Contains(t, info, "missing property: issued")
+
+	validVC := `{"id":"amo:cred:70EAD5B53B11DFE78EC8CF131D7960F097D48D7047381938ABC34812DE849023","issuer":"` + issuerId + `","issued":"ISO date string"}`
+	payload, _ = json.Marshal(DIDIssueParam{
+		Target:     vcid,
+		Credential: []byte(validVC),
+	})
+	t1 = makeTestTxV6("did.issue", "issuer", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Contains(t, info, "ok")
+
+	// ensure empty
+	entry := s.GetVC(vcid, false)
+	assert.Nil(t, entry)
+
+	// valid issue
+	vc := struct {
+		Id     string `json:"id"`
+		Issuer string `json:"issuer"`
+		Issued string `json:"issued"`
+		Any1   string `json:"any_1"`
+		Any2   int64  `json:"any_2"`
+	}{
+		Id:     vcid,
+		Issuer: issuerId,
+		Issued: "ISO date string",
+		Any1:   "any1",
+		Any2:   123,
+	}
+	vcJson, _ := json.Marshal(vc)
+
+	payload, _ = json.Marshal(DIDIssueParam{
+		Target:     vcid,
+		Credential: vcJson,
+	})
+	t1 = makeTestTxV6("did.issue", "issuer", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Contains(t, info, "ok")
+	rc, info, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Contains(t, info, "ok")
+
+	entry = s.GetVC(vcid, false)
+	assert.NotNil(t, entry)
+	assert.True(t, bytes.Equal(vcJson, entry.Credential))
+
+	// update vc (permission denied)
+	vc = struct {
+		Id     string `json:"id"`
+		Issuer string `json:"issuer"`
+		Issued string `json:"issued"`
+		Any1   string `json:"any_1"`
+		Any2   int64  `json:"any_2"`
+	}{
+		Id:     vcid,
+		Issuer: "did:amo:" + makeTestAddress("noissuer").String(),
+		Issued: "ISO date string",
+		Any1:   "any1",
+		Any2:   123,
+	}
+	vcJson, _ = json.Marshal(vc)
+
+	payload, _ = json.Marshal(DIDIssueParam{
+		Target:     vcid,
+		Credential: vcJson,
+	})
+	t1 = makeTestTxV6("did.issue", "noissuer", payload) // permission denied
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Contains(t, info, "ok")
+	rc, info, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+	assert.Contains(t, info, "permission denied")
+
+	// update vc
+	vc = struct {
+		Id     string `json:"id"`
+		Issuer string `json:"issuer"`
+		Issued string `json:"issued"`
+		Any1   string `json:"any_1"`
+		Any2   int64  `json:"any_2"`
+	}{
+		Id:     vcid,
+		Issuer: issuerId,
+		Issued: "ISO date string",
+		Any1:   "any1",
+		Any2:   123,
+	}
+	vcJson, _ = json.Marshal(vc)
+
+	payload, _ = json.Marshal(DIDIssueParam{
+		Target:     vcid,
+		Credential: vcJson,
+	})
+	t1 = makeTestTxV6("did.issue", "issuer", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Contains(t, info, "ok")
+	rc, info, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Contains(t, info, "ok")
+
+	entry = s.GetVC(vcid, false)
+	assert.NotNil(t, entry)
+	assert.True(t, bytes.Equal(vcJson, entry.Credential))
+
+	// revoke (validation)
+	payload, _ = json.Marshal(DIDRevokeParam{
+		Target: "asdf",
+	})
+	t1 = makeTestTxV6("did.revoke", "issuer", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	assert.Contains(t, info, "invalid target VC id")
+
+	// revoke vc
+	payload, _ = json.Marshal(DIDRevokeParam{
+		Target: vcid,
+	})
+	t1 = makeTestTxV6("did.revoke", "noissuer", payload) // permission denied
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Contains(t, info, "ok")
+	rc, info, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodePermissionDenied, rc)
+	assert.Contains(t, info, "permission denied")
+
+	// revoke vc
+	payload, _ = json.Marshal(DIDRevokeParam{
+		Target: vcid,
+	})
+	t1 = makeTestTxV6("did.revoke", "issuer", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Contains(t, info, "ok")
+	rc, info, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Contains(t, info, "ok")
+
+	// revoke vc (not found)
+	payload, _ = json.Marshal(DIDRevokeParam{
+		Target: vcid,
+	})
+	t1 = makeTestTxV6("did.revoke", "issuer", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeOK, rc)
+	assert.Contains(t, info, "ok")
+	rc, info, _ = t1.Execute(s)
+	assert.Equal(t, code.TxCodeNotFound, rc)
+	assert.Contains(t, info, "not found")
+}

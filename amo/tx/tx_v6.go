@@ -108,6 +108,18 @@ func classifyTxV6(base TxBase) Tx {
 			TxBase: base,
 			Param:  param,
 		}
+	case "did.issue":
+		param, _ := parseDIDIssueParam(base.Payload)
+		t = &TxDIDIssue{
+			TxBase: base,
+			Param:  param,
+		}
+	case "did.revoke":
+		param, _ := parseDIDRevokeParam(base.Payload)
+		t = &TxDIDRevoke{
+			TxBase: base,
+			Param:  param,
+		}
 	case "issue":
 		param, _ := parseIssueParam(base.Payload)
 		t = &TxIssue{
