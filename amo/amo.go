@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	AMOAppVersion = "v1.8.3"
+	AMOAppVersion = "v1.8.4"
 )
 
 // protocol versions supported by this app,
