@@ -84,12 +84,12 @@ func TestQueryVersion(t *testing.T) {
 	req := abci.RequestQuery{Path: "/version"}
 	res := app.Query(req)
 	jsonstr1 := []byte(`{"app_version":"` + AMOAppVersion +
-		`","app_protocol_versions":[4,5],"state_protocol_version":3,` +
+		`","app_protocol_versions":[4,5,6],"state_protocol_version":3,` +
 		`"app_protocol_version":3}`)
 	assert.Equal(t, jsonstr1, res.GetValue())
 
 	var configV4 struct {
-		LazinessWindow  int64  `json:"laziness_window"`
+		LazinessWindow int64 `json:"laziness_window"`
 	}
 	jsonStr, _ := json.Marshal(configV4)
 	app.store.SetAppConfig(jsonStr)
@@ -99,7 +99,7 @@ func TestQueryVersion(t *testing.T) {
 	req = abci.RequestQuery{Path: "/version"}
 	res = app.Query(req)
 	jsonstr2 := []byte(`{"app_version":"` + AMOAppVersion +
-		`","app_protocol_versions":[4,5],"state_protocol_version":4,` +
+		`","app_protocol_versions":[4,5,6],"state_protocol_version":4,` +
 		`"app_protocol_version":4}`)
 	assert.Equal(t, jsonstr2, res.GetValue())
 }
@@ -1494,6 +1494,38 @@ func TestQueryDID(t *testing.T) {
 	assert.Equal(t, jsonstr, res.Value)
 
 	app.store.DeleteDIDEntry("myid")
+	app.store.Save()
+
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
+}
+
+func TestQueryVC(t *testing.T) {
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	var req abci.RequestQuery
+	var res abci.ResponseQuery
+	var jsonstr []byte
+
+	req = abci.RequestQuery{Path: "/vc"}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoKey, res.Code)
+
+	var jsonDoc = []byte(`{"jsonkey":"jsonvalue"}`)
+	entry := &types.VCEntry{Credential: jsonDoc}
+	app.store.SetVCEntry("myid", entry)
+
+	req = abci.RequestQuery{Path: "/vc", Data: []byte(`"myid"`)}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
+	app.store.Save()
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeOK, res.Code)
+	assert.Equal(t, []byte(`"myid"`), res.Key)
+	jsonstr, _ = json.Marshal(entry)
+	assert.Equal(t, jsonstr, res.Value)
+
+	app.store.DeleteVCEntry("myid")
 	app.store.Save()
 
 	res = app.Query(req)

@@ -23,20 +23,22 @@ import (
 )
 
 const (
-	AMOAppVersion = "v1.8.4"
+	AMOAppVersion = "v1.9.0"
 )
 
 // protocol versions supported by this app,
 var AMOProtocolVersions = map[uint64]AMOProtocol{
 	uint64(0x4): &AMOProtocolV4{},
 	uint64(0x5): &AMOProtocolV5{},
+	uint64(0x6): &AMOProtocolV6{},
 }
 
 // protocol versions and app versions supporting them
 var AMOProtocolCompatMap = map[uint64]string{
 	uint64(0x3): "v1.6.x",
-	uint64(0x4): "v1.7.x, v1.8.x",
-	uint64(0x5): "v1.8.x",
+	uint64(0x4): "v1.7.x, v1.8.x, v1.9.x",
+	uint64(0x5): "v1.8.x, v1.9.x",
+	uint64(0x6): "v1.9.x",
 }
 
 // Output are sorted by voting power.
@@ -384,6 +386,8 @@ func (app *AMOApp) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQuer
 		resQuery = queryUsage(app.store, reqQuery.Data)
 	case "did":
 		resQuery = queryDIDEntry(app.store, reqQuery.Data)
+	case "vc":
+		resQuery = queryVCEntry(app.store, reqQuery.Data)
 	default:
 		resQuery.Code = code.QueryCodeBadPath
 		return resQuery

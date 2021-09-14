@@ -7,6 +7,12 @@ import (
 )
 
 type DIDEntry struct {
-	Owner    crypto.Address  `json:"owner"`
+	Owner    crypto.Address  `json:"owner,omitempty"` // obsolete
 	Document json.RawMessage `json:"document"`
+	Meta     json.RawMessage `json:"meta,omitempty"`
+}
+
+type VCEntry struct {
+	Credential json.RawMessage `json:"credential"`
+	Meta       json.RawMessage `json:"meta,omitempty"`
 }
