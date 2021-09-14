@@ -49,7 +49,7 @@ func makeVCKey(vcId string) []byte {
 	return append(prefixVC, []byte(vcId)...)
 }
 
-func (s Store) SetVC(vcId string, value *types.VCEntry) error {
+func (s Store) SetVCEntry(vcId string, value *types.VCEntry) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (s Store) SetVC(vcId string, value *types.VCEntry) error {
 	return nil
 }
 
-func (s Store) GetVC(vcId string, committed bool) *types.VCEntry {
+func (s Store) GetVCEntry(vcId string, committed bool) *types.VCEntry {
 	b := s.get(makeVCKey(vcId), committed)
 	if len(b) == 0 {
 		return nil
@@ -71,6 +71,6 @@ func (s Store) GetVC(vcId string, committed bool) *types.VCEntry {
 	return &vc
 }
 
-func (s Store) DeleteVC(vcId string) {
+func (s Store) DeleteVCEntry(vcId string) {
 	s.remove(makeVCKey(vcId))
 }

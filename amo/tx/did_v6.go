@@ -275,7 +275,7 @@ func (t *TxDIDIssue) Execute(store *store.Store) (uint32, string, []abci.Event) 
 		// this should not happen, since all the tx would had been checked by
 		// t.Check()
 	}
-	entry := store.GetVC(param.Target, false)
+	entry := store.GetVCEntry(param.Target, false)
 	senderDID := "did:amo:" + t.GetSender().String()
 
 	if entry != nil {
@@ -297,7 +297,7 @@ func (t *TxDIDIssue) Execute(store *store.Store) (uint32, string, []abci.Event) 
 	entry = &types.VCEntry{
 		Credential: param.Credential,
 	}
-	err = store.SetVC(param.Target, entry)
+	err = store.SetVCEntry(param.Target, entry)
 	if err != nil {
 		return code.TxCodeUnknown, err.Error(), nil
 	}
@@ -350,7 +350,7 @@ func (t *TxDIDRevoke) Execute(store *store.Store) (uint32, string, []abci.Event)
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	entry := store.GetVC(param.Target, false)
+	entry := store.GetVCEntry(param.Target, false)
 	senderDID := "did:amo:" + t.GetSender().String()
 
 	if entry != nil {
@@ -366,7 +366,7 @@ func (t *TxDIDRevoke) Execute(store *store.Store) (uint32, string, []abci.Event)
 		return code.TxCodeNotFound, "not found", nil
 	}
 
-	store.DeleteVC(param.Target)
+	store.DeleteVCEntry(param.Target)
 
 	return code.TxCodeOK, "ok", []abci.Event{}
 }

@@ -356,7 +356,7 @@ func TestTxDIDIssue(t *testing.T) {
 	assert.Contains(t, info, "ok")
 
 	// ensure empty
-	entry := s.GetVC(vcid, false)
+	entry := s.GetVCEntry(vcid, false)
 	assert.Nil(t, entry)
 
 	// valid issue
@@ -387,7 +387,7 @@ func TestTxDIDIssue(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Contains(t, info, "ok")
 
-	entry = s.GetVC(vcid, false)
+	entry = s.GetVCEntry(vcid, false)
 	assert.NotNil(t, entry)
 	assert.True(t, bytes.Equal(vcJson, entry.Credential))
 
@@ -447,7 +447,7 @@ func TestTxDIDIssue(t *testing.T) {
 	assert.Equal(t, code.TxCodeOK, rc)
 	assert.Contains(t, info, "ok")
 
-	entry = s.GetVC(vcid, false)
+	entry = s.GetVCEntry(vcid, false)
 	assert.NotNil(t, entry)
 	assert.True(t, bytes.Equal(vcJson, entry.Credential))
 
