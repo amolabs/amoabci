@@ -89,7 +89,7 @@ func TestQueryVersion(t *testing.T) {
 	assert.Equal(t, jsonstr1, res.GetValue())
 
 	var configV4 struct {
-		LazinessWindow  int64  `json:"laziness_window"`
+		LazinessWindow int64 `json:"laziness_window"`
 	}
 	jsonStr, _ := json.Marshal(configV4)
 	app.store.SetAppConfig(jsonStr)
