@@ -1500,6 +1500,38 @@ func TestQueryDID(t *testing.T) {
 	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
 }
 
+func TestQueryVC(t *testing.T) {
+	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
+
+	var req abci.RequestQuery
+	var res abci.ResponseQuery
+	var jsonstr []byte
+
+	req = abci.RequestQuery{Path: "/vc"}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoKey, res.Code)
+
+	var jsonDoc = []byte(`{"jsonkey":"jsonvalue"}`)
+	entry := &types.VCEntry{Credential: jsonDoc}
+	app.store.SetVCEntry("myid", entry)
+
+	req = abci.RequestQuery{Path: "/vc", Data: []byte(`"myid"`)}
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
+	app.store.Save()
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeOK, res.Code)
+	assert.Equal(t, []byte(`"myid"`), res.Key)
+	jsonstr, _ = json.Marshal(entry)
+	assert.Equal(t, jsonstr, res.Value)
+
+	app.store.DeleteVCEntry("myid")
+	app.store.Save()
+
+	res = app.Query(req)
+	assert.Equal(t, code.QueryCodeNoMatch, res.Code)
+}
+
 func TestQueryHibernate(t *testing.T) {
 	app := NewAMOApp(1, tmdb.NewMemDB(), tmdb.NewMemDB(), nil)
 
