@@ -27,7 +27,7 @@ type Document struct {
 	Controller         string               `json:"controller,omitempty"`
 	VerificationMethod []VerificationMethod `json:"verificationMethod"`
 	Authentication     []json.RawMessage    `json:"authentication,omitempty"`
-	AssertionMethod    string               `json:"assertionMethod,omitempty"`
+	AssertionMethod    []json.RawMessage    `json:"assertionMethod,omitempty"`
 }
 
 type VerificationMethod struct {
