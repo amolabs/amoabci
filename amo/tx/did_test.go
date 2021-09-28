@@ -144,7 +144,19 @@ func TestTxDIDClaim(t *testing.T) {
 			Y:   "EEEE",
 		},
 	}}
-	mydoc.Authentication = "missingkey"
+
+	// tx check error (no authentication)
+	payload, _ = json.Marshal(DIDClaimParam{
+		Target:   myid,
+		Document: mydoc,
+	})
+	t1 = makeTestTxV6("did.claim", "controller", payload)
+	rc, info = t1.Check()
+	assert.Equal(t, code.TxCodeBadParam, rc)
+	assert.Contains(t, info, "no authentication")
+
+	// adjust test data
+	mydoc.Authentication = []json.RawMessage{[]byte(`"unknown-key"`)}
 
 	// tx check error (check authentication)
 	payload, _ = json.Marshal(DIDClaimParam{
@@ -154,10 +166,11 @@ func TestTxDIDClaim(t *testing.T) {
 	t1 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info = t1.Check()
 	assert.Equal(t, code.TxCodeBadParam, rc)
-	assert.Equal(t, "unknown verificationMethod for authentication", info)
+	assert.Contains(t, info, "verificationMethod")
+	assert.Contains(t, info, "not in authentication")
 
 	// adjust test data
-	mydoc.Authentication = "asdf#keys-1"
+	mydoc.Authentication = []json.RawMessage{[]byte(`"asdf#keys-1"`)}
 	controllerId := "did:amo:" + makeTestAddress("controller").String()
 	mydoc.Controller = controllerId
 	mydocJson, _ = json.Marshal(mydoc)

@@ -26,7 +26,7 @@ type Document struct {
 	Id                 string               `json:"id"`
 	Controller         string               `json:"controller,omitempty"`
 	VerificationMethod []VerificationMethod `json:"verificationMethod"`
-	Authentication     string               `json:"authentication"`
+	Authentication     []json.RawMessage    `json:"authentication,omitempty"`
 	AssertionMethod    string               `json:"assertionMethod,omitempty"`
 }
 
@@ -85,8 +85,19 @@ func (t *TxDIDClaim) Check() (uint32, string) {
 	if len(param.Document.Authentication) == 0 {
 		return code.TxCodeBadParam, "no authentication"
 	}
-	if param.Document.Authentication != param.Document.VerificationMethod[0].Id {
-		return code.TxCodeBadParam, "unknown verificationMethod for authentication"
+	hit := false
+	auth := ""
+	for _, b := range param.Document.Authentication {
+		err = json.Unmarshal(b, &auth)
+		if err != nil {
+			continue
+		}
+		if auth == param.Document.VerificationMethod[0].Id {
+			hit = true
+		}
+	}
+	if !hit {
+		return code.TxCodeBadParam, "verificationMethod[0] not in authentication"
 	}
 
 	return code.TxCodeOK, "ok"
