@@ -221,9 +221,10 @@ type DIDIssueParam struct {
 
 // minimal struct to handle Credential
 type CredentialMin struct {
-	Id     string `json:"id"`
-	Issuer string `json:"issuer"`
-	Issued string `json:"issued"`
+	Id           string `json:"id"`
+	Issuer       string `json:"issuer"`
+	Issued       string `json:"issued,omitempty"`
+	IssuanceDate string `json:"issuanceDate,omitempty"`
 }
 
 func parseDIDIssueParam(raw []byte) (DIDIssueParam, error) {
@@ -267,8 +268,8 @@ func (t *TxDIDIssue) Check() (uint32, string) {
 	if senderDID != newCred.Issuer {
 		return code.TxCodeBadParam, "mismatching VC issuer"
 	}
-	if newCred.Issued == "" {
-		return code.TxCodeBadParam, "missing property: issued"
+	if newCred.Issued == "" && newCred.IssuanceDate == "" {
+		return code.TxCodeBadParam, "missing property: issued or issuanceDate"
 	}
 
 	return code.TxCodeOK, "ok"
