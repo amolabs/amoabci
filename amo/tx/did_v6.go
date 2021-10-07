@@ -17,11 +17,11 @@ import (
 //// did.claim
 
 type DIDClaimParam struct {
-	Target   string   `json:"target"`
-	Document Document `json:"document"`
+	Target   string          `json:"target"`
+	Document json.RawMessage `json:"document"`
 }
 
-type Document struct {
+type DocumentMin struct {
 	Context            string               `json:"@context,omitempty"`
 	Id                 string               `json:"id"`
 	Controller         string               `json:"controller,omitempty"`
@@ -75,24 +75,26 @@ func (t *TxDIDClaim) Check() (uint32, string) {
 	if err != nil {
 		return code.TxCodeBadParam, err.Error()
 	}
-	if param.Target != param.Document.Id {
+	newDoc := DocumentMin{}
+	err = json.Unmarshal(param.Document, &newDoc)
+	if param.Target != newDoc.Id {
 		return code.TxCodeBadParam, "mismatching did"
 	}
 
-	if len(param.Document.VerificationMethod) == 0 {
+	if len(newDoc.VerificationMethod) == 0 {
 		return code.TxCodeBadParam, "no verificationMethod"
 	}
-	if len(param.Document.Authentication) == 0 {
+	if len(newDoc.Authentication) == 0 {
 		return code.TxCodeBadParam, "no authentication"
 	}
 	hit := false
 	auth := ""
-	for _, b := range param.Document.Authentication {
+	for _, b := range newDoc.Authentication {
 		err = json.Unmarshal(b, &auth)
 		if err != nil {
 			continue
 		}
-		if auth == param.Document.VerificationMethod[0].Id {
+		if auth == newDoc.VerificationMethod[0].Id {
 			hit = true
 		}
 	}
@@ -109,12 +111,13 @@ func (t *TxDIDClaim) Execute(store *store.Store) (uint32, string, []abci.Event) 
 		return code.TxCodeBadParam, err.Error(), nil
 	}
 
-	newDoc := txParam.Document
+	newDoc := DocumentMin{}
+	err = json.Unmarshal(txParam.Document, &newDoc)
 	entry := store.GetDIDEntry(txParam.Target, false)
 	senderDID := "did:amo:" + t.GetSender().String()
 
 	if entry != nil {
-		var doc Document
+		var doc DocumentMin
 		err = json.Unmarshal(entry.Document, &doc)
 		if err != nil {
 			return code.TxCodeUnknown, "failed to unmarshal document", nil
@@ -128,12 +131,8 @@ func (t *TxDIDClaim) Execute(store *store.Store) (uint32, string, []abci.Event) 
 		}
 	}
 
-	b, err := json.Marshal(newDoc)
-	if err != nil {
-		return code.TxCodeBadParam, err.Error(), nil
-	}
 	entry = &types.DIDEntry{
-		Document: b,
+		Document: txParam.Document,
 	}
 	err = store.SetDIDEntry(txParam.Target, entry)
 	if err != nil {
@@ -195,7 +194,7 @@ func (t *TxDIDDismiss) Execute(store *store.Store) (uint32, string, []abci.Event
 	senderDID := "did:amo:" + t.GetSender().String()
 
 	if entry != nil {
-		var doc Document
+		var doc DocumentMin
 		err = json.Unmarshal(entry.Document, &doc)
 		if err != nil {
 			return code.TxCodeUnknown, "failed to unmarshal document", nil

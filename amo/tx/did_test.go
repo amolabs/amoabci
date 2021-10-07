@@ -92,7 +92,7 @@ func TestTxDIDClaim(t *testing.T) {
 	assert.NotNil(t, s)
 
 	myid := "did:amo:70EAD5B53B11DFE78EC8CF131D7960F097D48D70"
-	mydoc := Document{
+	mydoc := DocumentMin{
 		Id: myid,
 	}
 	mydocJson, _ := json.Marshal(mydoc)
@@ -101,7 +101,7 @@ func TestTxDIDClaim(t *testing.T) {
 	payload, _ := json.Marshal(DIDClaimParam{
 		// invalid AMO DID format
 		Target:   "did:amo:Z0EAD5B53B11DFE78EC8CF131D7960F097D48D70",
-		Document: Document{},
+		Document: []byte(`{}`),
 	})
 	t1 := makeTestTxV6("did.claim", "controller", payload)
 	rc, info := t1.Check()
@@ -111,7 +111,7 @@ func TestTxDIDClaim(t *testing.T) {
 	// tx check error (mismatching did)
 	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   "did:amo:70EAD5B53B11DFE78EC8CF131D7960F097D48D70",
-		Document: Document{},
+		Document: []byte(`{}`),
 	})
 	t1 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info = t1.Check()
@@ -126,7 +126,7 @@ func TestTxDIDClaim(t *testing.T) {
 	// tx check error (check verificationMethod)
 	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
-		Document: mydoc,
+		Document: mydocJson,
 	})
 	t1 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info = t1.Check()
@@ -144,11 +144,12 @@ func TestTxDIDClaim(t *testing.T) {
 			Y:   "EEEE",
 		},
 	}}
+	mydocJson, _ = json.Marshal(mydoc)
 
 	// tx check error (no authentication)
 	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
-		Document: mydoc,
+		Document: mydocJson,
 	})
 	t1 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info = t1.Check()
@@ -157,11 +158,12 @@ func TestTxDIDClaim(t *testing.T) {
 
 	// adjust test data
 	mydoc.Authentication = []json.RawMessage{[]byte(`"unknown-key"`)}
+	mydocJson, _ = json.Marshal(mydoc)
 
 	// tx check error (check authentication)
 	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
-		Document: mydoc,
+		Document: mydocJson,
 	})
 	t1 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info = t1.Check()
@@ -178,7 +180,7 @@ func TestTxDIDClaim(t *testing.T) {
 	// tx check ok
 	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
-		Document: mydoc,
+		Document: mydocJson,
 	})
 	t1 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info = t1.Check()
@@ -198,7 +200,7 @@ func TestTxDIDClaim(t *testing.T) {
 	// first claim
 	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
-		Document: mydoc,
+		Document: mydocJson,
 	})
 	// now tx from the ligitimate subject
 	t1 = makeTestTxV6("did.claim", "subject", payload)
@@ -213,7 +215,7 @@ func TestTxDIDClaim(t *testing.T) {
 	assert.NotNil(t, entry)
 	assert.Nil(t, entry.Owner) // in protocl v6, entry.Owner becomes obsolete
 	assert.True(t, bytes.Equal(mydocJson, entry.Document))
-	var doc Document
+	var doc DocumentMin
 	_ = json.Unmarshal(entry.Document, &doc)
 	assert.Equal(t, controllerId, doc.Controller)
 
@@ -222,7 +224,7 @@ func TestTxDIDClaim(t *testing.T) {
 	mydocJson, _ = json.Marshal(mydoc)
 	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
-		Document: mydoc,
+		Document: mydocJson,
 	})
 	t2 := makeTestTxV6("did.claim", "controller", payload)
 	rc, info, _ = t2.Execute(s)
@@ -238,7 +240,7 @@ func TestTxDIDClaim(t *testing.T) {
 	// will fail.
 	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
-		Document: mydoc,
+		Document: mydocJson,
 	})
 	t2 = makeTestTxV6("did.claim", "controller", payload)
 	rc, info, _ = t2.Execute(s)
@@ -281,9 +283,10 @@ func TestTxDIDClaim(t *testing.T) {
 
 	// claim again with controller info
 	mydoc.Controller = controllerId
+	mydocJson, _ = json.Marshal(mydoc)
 	payload, _ = json.Marshal(DIDClaimParam{
 		Target:   myid,
-		Document: mydoc,
+		Document: mydocJson,
 	})
 	t1 = makeTestTxV6("did.claim", "subject", payload)
 	rc, info = t1.Check()
