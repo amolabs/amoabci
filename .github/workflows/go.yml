@@ -23,9 +23,6 @@ jobs:
     - name: Set env var for ASSET_amod
       run: echo "ASSET_amod=amod-${RELEASE_VERSION/v/''}-linux-x86_64.tar.gz" >> $GITHUB_ENV
 
-    - name: Set env var for ASSET_repair
-      run: echo "ASSET_repair=repair-${RELEASE_VERSION/v/''}-linux-x86_64.tar.gz" >> $GITHUB_ENV
-
     - name: Set env var for ASSET_docker_tag
       run: echo "ASSET_docker_tag=${RELEASE_VERSION/v/''}" >> $GITHUB_ENV
 
@@ -40,9 +37,6 @@ jobs:
 
     - name: Wrap (amod)
       run: tar -czf ${{ env.ASSET_amod }} amod
-
-    - name: Wrap (repair)
-      run: tar -czf ${{ env.ASSET_repair }} repair
 
     - name: Create Release
       id: create_release
@@ -63,16 +57,6 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./${{ env.ASSET_amod }}
           asset_name: ${{ env.ASSET_amod }}
-          asset_content_type: application/gzip
-
-    - name: Upload Release Asset (repair)
-      uses: actions/upload-release-asset@v1
-      env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ env.ASSET_repair}}
-          asset_name: ${{ env.ASSET_repair}}
           asset_content_type: application/gzip
 
     - name: Access to Docker Hub
