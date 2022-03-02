@@ -164,7 +164,7 @@ curl <node_ip_addr>:<node_rpc_port>/genesis | jq '.result.genesis' > genesis.jso
 또한, `p2p.seeds`에 적절한 seed 노드의
 `<node_id>@<node_ip_addr>:<node_p2p_port>`를 작석해야 한다. 예를 들어, 메인넷의
 seed 노드에 연결하기 위해서는 `p2p.seeds`는
-`fbd1cb0741e30308bf7aae562f65e3fd54359573@172.104.88.12:26656`가 되어야 한다.
+`1b575612e9a5c0e1fc629e58e02070934832169a@20.194.0.193:26656`가 되어야 한다.
 
 #### 스냅샷 설정하기
 노드를 실행하기 전에, 블록을 동기화하는 방법에는 두 가지 방법이 있다; genesis
