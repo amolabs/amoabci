@@ -171,10 +171,15 @@ seed 노드에 연결하기 위해서는 `p2p.seeds`는
 블록부터 동기화 혹은 스냅샷부터 동기화. Genesis 블록부터 동기화하는 것은 많은
 물리적 시간을 소모하기에, 특정 블록 높이에서 찍은 블록 스냅샷을 제공한다.
 제공되는 스냅샷은 다음과 같다:
-| chain id | `preset` | `version` | `db_backend` | `block_height` | size</br>(comp/raw) |
+
+| Block height | DB backend | Size (uncompressed) | Protocol | SW ver. | Download |
 |-|-|-|-|-|-|
-| `amo-cherryblossom-01` | `cherryblossom` | `v1.7.5` | `rocksdb` | `6451392` | 56GB / 116GB |
-| `amo-cherryblossom-01` | `cherryblossom` | `v1.6.5` | `rocksdb` | `2908399` | 21GB / 50GB |
+| 19788000 | rocksdb | 142GB (268GB) | v5 | v1.8.3 | [link](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.8.3_rocksdb_19788000.tar.bz2)([sha256](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.8.3_rocksdb_19788000.tar.bz2.sha256)) |
+| 19538000 | rocksdb | 138GB (263GB) | v4 | v1.7.7, v1.8.3 | [link](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.7.7_rocksdb_19538000.tar.bz2)([sha256](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.7.7_rocksdb_19538000.tar.bz2.sha256)) |
+| 11762421 | rocksdb | 101GB (200GB) | v4 | v1.7.7 | [link](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.7.7_rocksdb_11762421.tar.bz2)([sha256](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.7.7_rocksdb_11762421.tar.bz2.sha256)) |
+| 7698783 | rocksdb | 70GB (141GB) | v4 | v1.7.5 | [link](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.7.5_rocksdb_7698783.tar.bz2)([sha256](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.7.5_rocksdb_7698783.tar.bz2.sha256)) |
+| 6451392 | rocksdb | 56GB (116GB) | v4 | v1.7.5 | [link](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.7.5_rocksdb_6451392.tar.bz2)([sha256](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.7.5_rocksdb_6451392.tar.bz2.sha256)) |
+| 2908399 | rocksdb | 21GB (50GB) | v3 | v1.6.5 | [link](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.6.5_rocksdb_2908399.tar.bz2)([sha256](http://us-east-1.linodeobjects.com/amo-archive/cherryblossom_v1.6.5_rocksdb_2908399.tar.bz2.sha256)) |
 
 **NOTE:** **mainne**t의 chain id 는 `amo-cherryblossom-01` 이다.
 
